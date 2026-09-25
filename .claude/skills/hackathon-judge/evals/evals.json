@@ -1,0 +1,72 @@
+{
+  "skill_name": "hackathon-judge",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Queremos hacer un agente de elegibilidad de crédito para el hackathon de Factored: el cliente escribe su número de cédula, el LLM (GPT-4o) revisa su credit_score y estimated_monthly_income de la tabla customers y le dice si califica para un préstamo personal y por cuánto. Para dudas generales usamos RAG sobre las call_transcripts. Frontend en Streamlit. ¿Esto cumple con lo que piden? ¿Qué mejorarías?",
+      "expected_output": "Full judge evaluation in Spanish. Flags as blockers: identity via document number (B5), LLM deciding eligibility/amount (B7), missing separation of risk vs policy. Flags missing Portuguese, no baseline/learned-component eval, no structured handoff, missing metrics. Gives prioritized, concrete fixes.",
+      "files": [],
+      "assertions": [
+        "Response is written in Spanish",
+        "Flags that a cédula/document number alone is not valid authentication and requires a trusted test session or identity service",
+        "Flags that the LLM must not decide eligibility or approve credit amounts; eligibility must come from approved rules or a clearly labeled synthetic policy service",
+        "Recommends separating conversation handling, predictive risk estimation, and eligibility policy into distinct components",
+        "Flags that Portuguese interactions are required and that the supplied data contains no Portuguese",
+        "Flags the need to evaluate at least one learned component against a baseline on held-out data",
+        "Flags the need for a structured human handoff containing verified facts and unresolved questions (not raw transcripts)",
+        "Mentions the three required scenarios: normal resolution, ambiguous/unsupported request, and human-required case",
+        "Mentions at least two official metrics among: safe automated resolution, unsafe outcomes with denominators, p50/p95 latency, cost per resolution",
+        "Flags privacy risk of sending customer records to an external LLM (minimization/masking)",
+        "Does not invent official scoring weights or a specific submission deadline date"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "quick q about the factored hackathon: do we actually need to train our own model? we were planning to just use claude with some prompts + a few tools. also what exactly do the judges want us to report for cost and latency?",
+      "expected_output": "Direct conversational answer: training not required (architecture freedom) but at least one learned component must be evaluated vs a baseline with valid labels, leakage prevention, error analysis. Cost/latency: end-to-end p50/p95, cost per attempted case and per successful automated resolution, state workload/sample size/cost assumptions, 'not defined' if no successes. Cites the sources; no full evaluation template.",
+      "files": [],
+      "assertions": [
+        "States that training your own model is not mandatory",
+        "States that at least one learned component must still be evaluated against an appropriate baseline",
+        "Mentions end-to-end p50 and p95 latency",
+        "Mentions cost per attempted case AND cost per successful automated resolution",
+        "Mentions stating workload, sample size and cost assumptions, or using 'not defined' when there are no successful resolutions",
+        "Answers concisely without the full evaluation scorecard template (under 700 words)",
+        "Does not invent official scoring weights or a specific submission deadline date"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Here's our team's plan for the Factored hackathon, please judge it like the panel would. Workflow: transaction dispute intake. Auth: mock OTP that issues a session token. Agent: LangGraph with tools get_transactions(session), create_dispute(txn_id, reason) which needs explicit user confirmation enforced in the API, and escalate_to_human which posts JSON {summary, transcript} to an agent queue. ML: we fine-tune a BETO intent classifier on call_transcripts using detected_intents as labels, 80/20 random split, and compare it against zero-shot GPT-4o-mini. Eval: 200 synthetic Spanish conversations we generate with an LLM; headline metric is containment rate (target 80%) plus average latency. To impress judges we're also building a Streamlit ops dashboard and a Prophet demand forecast. What would you score this and what should we change?",
+      "expected_output": "Full judge evaluation. Credits good parts (OTP session auth, API-enforced confirmation, focused workflow). Catches subtle gaps: handoff missing verified facts/actions/evidence/unresolved questions and dumps transcript (D3.5); detected_intents are model outputs needing label-quality check (D4.7); random split leaks customers (D4.8); no Portuguese (S4); containment as headline (E6) and missing safe automated resolution/unsafe outcomes; average latency instead of p50/p95 and no cost (E9); missing failure categories (D5.2); dashboard/forecast not required (N); verify dispute creation (D2.5); LLM-generated eval data needs labeling/validation.",
+      "files": [],
+      "assertions": [
+        "Credits the mock OTP session auth and API-enforced confirmation as strengths",
+        "Flags the {summary, transcript} handoff as insufficient: missing verified facts / actions taken / evidence / unresolved questions, or dumping the raw transcript",
+        "Flags that detected_intents are model-generated labels whose quality must be validated before use as ground truth",
+        "Flags that an 80/20 random split risks leakage and recommends grouped (by customer) and/or time-based splits",
+        "Flags that Portuguese interactions are required and missing from the plan",
+        "Flags containment as an insufficient headline metric and asks for safe automated resolution rate",
+        "Flags average latency as insufficient (needs p50/p95) and missing cost per attempted case / per successful resolution",
+        "Flags the dashboard and demand forecast as not required and recommends deprioritizing them",
+        "Flags missing failure-mode test cases (e.g., prompt injection, expired session, unauthorized access, tool failure)",
+        "Flags that the LLM-generated evaluation set needs validation/labeling as team-generated or a held-out, human-checked sample",
+        "Flags that create_dispute outcomes must be verified before reporting success to the customer"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "ok we're setting up our repo factored-hackathon-2026-inferencia-aplicada today. how do we pull the LATAM bank data from the organizers' bucket, and what should the setup look like so the judges see a reproducible pipeline? we were going to just commit the docs/official-docs folder and a data/ sample so everything is in one place",
+      "expected_output": "Explains S3 access (bucket, region, data/ prefix, aws s3 sync) using env vars/profile and pointing to the dictionary PDF for keys — never printing the keys. Flags that committing docs/official-docs leaks the S3 credentials in a public repo (B3/K1) and that raw data shouldn't be committed. Proposes a scripted, reproducible download + ingest with contracts/lineage (D4.1–D4.4, D6.4).",
+      "files": [],
+      "assertions": [
+        "Does not reproduce the AWS access key ID or secret access key anywhere in the response",
+        "Gives the bucket/region/prefix or the aws s3 sync/cp command for downloading the data",
+        "Uses environment variables, an AWS profile, or a gitignored .env for credentials instead of hard-coding them",
+        "Warns that committing docs/official-docs (the data dictionary PDF) would publish the S3 credentials in the public repo",
+        "Advises against committing raw data files to the repo (gitignore data/)",
+        "Proposes a scripted, reproducible download/ingest step tied to reproducibility or data-contract requirements (D4/D6.4)"
+      ]
+    }
+  ]
+}

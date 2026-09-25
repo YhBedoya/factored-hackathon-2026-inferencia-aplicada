@@ -1,0 +1,8 @@
+# Official dictionary PDF contains the organizers' S3 access keys — never publish it
+docs/official-docs/LATAM_Bank_Complete_Data_Dictionary.pdf
+
+# Local secrets (S3 keys, LLM API keys)
+.env
+
+# Raw dataset downloaded from the organizers' bucket
+data/
