@@ -1,0 +1,20 @@
+[project]
+name = "latam-bank-cs"
+version = "0.1.0"
+description = "Factored AI & Data Hackathon 2026 - AI-first banking customer service (LATAM Bank)"
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.1",
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+]
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4",
+    "nbconvert>=7",
+    "ipykernel>=6",
+    "lxml>=6.1.3",
+]

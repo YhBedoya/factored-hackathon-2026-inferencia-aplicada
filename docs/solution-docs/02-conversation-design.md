@@ -2,22 +2,22 @@
 
 ## 1. Intent catalog (closed enum)
 
-The NLU call must return intents from this list only. Anything else is `status = out_of_scope`. The queues come from the handoff domain.
+The NLU call must return intents from this list only. Anything else is `status = out_of_scope`. The queues come from the handoff domain. Tier **Core** is built and evaluated first; **If-time** items follow in the order given in decision-log ADR-019.
 
 | Intent | Feature(s) | Handler | Side effect | Tier |
 |---|---|---|---|---|
-| `card_status` | Card status and details | flow `card_info` | — | MVP |
-| `balance_due` | Balance, due date and minimum payment | flow `card_info` | — | MVP |
-| `decline_explain` | Decline explainer (51, 14, 05, 54) | flow `decline_explain` | — | MVP |
-| `transaction_search` | Natural-language transaction search | flow `tx_search` | — | MVP |
-| `pending_reversal_explain` | Pending and reversed explainer | flow `tx_explain` | — | MVP |
-| `card_block` | Lost/stolen block; temporary lock vs permanent block | flow `card_block` | lock / block | MVP |
-| `card_unlock` | Unblock with reason check | flow `card_unlock` | unlock | MVP |
-| `unrecognized_charge` | Unrecognized-charge intake; suspected-fraud triage | flow `unrecognized_charge` | block, claim, handoff | MVP |
-| `replacement_request` | Replacement and reissue | flow `replacement` | replacement order | MVP |
-| `human_request` | Explicit request for a human | rule → handoff | handoff | MVP |
-| `general_question` | Informational follow-ups that fit no flow | answer node (read-only) | — | MVP |
-| `greeting`, `thanks_close`, `affirm`, `deny` | Conversation management | router | — | MVP |
+| `card_status` | Card status and details | flow `card_info` | — | Core |
+| `balance_due` | Balance, due date and minimum payment (credit cards only) | flow `card_info` | — | Core |
+| `decline_explain` | Decline explainer (51, 14, 05, 54) | flow `decline_explain` | — | Core |
+| `transaction_search` | Natural-language transaction search | flow `tx_search` | — | If-time (2) |
+| `pending_reversal_explain` | Pending and reversed explainer | flow `tx_explain` | — | If-time (4) |
+| `card_block` | Lost/stolen block; temporary lock vs permanent block | flow `card_block` | lock / block | Core |
+| `card_unlock` | Unblock with reason check | flow `card_unlock` | unlock | If-time (1) |
+| `unrecognized_charge` | Unrecognized-charge intake; suspected-fraud triage | flow `unrecognized_charge` | block, claim, handoff | Core (priority flags: If-time (3)) |
+| `replacement_request` | Replacement and reissue | flow `replacement` | replacement order | Core |
+| `human_request` | Explicit request for a human | rule → handoff | handoff | Core |
+| `general_question` | Informational follow-ups that fit no flow | answer node (read-only); until it exists, abstain + list supported topics | — | If-time (5) |
+| `greeting`, `thanks_close`, `affirm`, `deny` | Conversation management | router | — | Core |
 | `travel_notice`, `spending_limits`, `card_doctor`, `expiry_renewal`, `benefits_info`, `card_activation`, `pin_reset`, `card_cancel`, `limit_increase`, `card_finder`, `prequalification` | Stretch features | flows added later | various | Stretch |
 
 `status` values: `clear`, `ambiguous`, `out_of_scope`, `out_of_market`, `injection_suspected` **(proposed)**.
@@ -61,6 +61,7 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 ### 4.2 `card_info` (status, details, balance, due date, minimum payment)
 1. `card_select` → T `cards.get_card_details(card_id)`.
 2. Facts: masked number, status, expiry, credit limit, available credit (= limit − balance, computed in code), interest rate, balance, `days_past_due` bucket, and the minimum payment from the **synthetic policy formula** (labeled as synthetic in the reply footnote). Each fact carries its source (`bank.products:<product_id>` or `policy:min_payment@<hash>`).
+3. **Debit cards** (ADR-020) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot says plainly that balance, due date and minimum payment apply to credit cards, and offers what it can show.
 
 ### 4.3 `decline_explain`
 1. `card_select` → T `transactions.search(status=Declined, …)` to find the decline (by default the most recent; otherwise ask which one).
@@ -95,7 +96,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 1. `card_select` → T `transactions.search(recent, include fraud_score)` → `ui.transaction_list` → the customer picks one or more transactions.
 2. **Recognize before you dispute** (Stretch): show the decoded merchant, city, channel and date first.
 3. Rules decide the path:
-   - **Suspected compromise** (several unrecognized transactions, card not in the customer's possession, or `fraud_score` > policy threshold) → offer a permanent block (**C**, **V**) → draft the claim → **handoff to Fraudes**.
+   - **Suspected compromise** (several unrecognized transactions, card not in the customer's possession, or `fraud_score` > policy threshold; the exact rule and threshold are decided while building this flow) → offer a permanent block (**C**, **V**) → draft the claim → **handoff to Fraudes**.
    - **Single charge** → required questions from `policies/disputes.yaml` (e.g., card in possession? tried contacting the merchant?). Amount, currency and date are filled from the record, never typed by the customer → **C** → T `disputes.create_claim` (appends to `bank.complaints`, `origin='app'`) → **V** re-read → case ID.
 4. **Priority flags** (`is_repeat_complainer`, regulator mention, amount > threshold, Critical priority) → the claim is created and then **always** handed off to Reclamos.
 
@@ -106,7 +107,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 
 ## 5. Clarification, abstention and escalation rules
 
-Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and after every tool result.
+Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and after every tool result. When `LLM_DISABLED` is set (cost guard, ADR-023), every turn takes the safe-fallback path.
 
 | Rule | Trigger | Outcome |
 |---|---|---|
@@ -119,6 +120,7 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Confirmed or suspected fraud | Fraud triage path | Handoff to Fraudes |
 | Legal / regulator mention | Keywords or NLU flag (demanda, abogado, Condusef, SIC, BCRA, Procon…) | Handoff to Reclamos with priority |
 | Claim priority flags | See 4.8 | Handoff to Reclamos |
+| Customer not active | Customer status is Closed, Suspended or Inactive (it takes precedence over card status, ADR-021) | Card info read-only, block still allowed, no unlock or replacement; handoff (Atención) |
 | Unauthorized access | Asks about another customer's card or account | Refuse, audit `access_denied`; repeated attempts → end the session **(proposed)** |
 | Tool / LLM failure | Retries exhausted | Safe fallback template + handoff |
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |

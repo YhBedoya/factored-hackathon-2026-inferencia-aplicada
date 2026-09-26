@@ -6,3 +6,8 @@ docs/official-docs/LATAM_Bank_Complete_Data_Dictionary.pdf
 
 # Raw dataset downloaded from the organizers' bucket
 data/
+
+# Python
+.venv/
+__pycache__/
+.ipynb_checkpoints/

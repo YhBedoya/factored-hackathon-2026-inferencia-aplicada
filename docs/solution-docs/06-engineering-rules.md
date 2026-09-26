@@ -16,7 +16,6 @@
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
 | R11 | Bounded retries only: 2 retries with backoff, then safe fallback + handoff. Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
 | R12 | Provided tables are changed only through domain services: an in-place update always writes a history row in the same transaction, and appended rows carry `origin='app'` | Lineage, audit | Repository layer + review |
-| R13 | Nothing is copied from deepflow or other proprietary repos. It is a style reference only | IP (public repo) | Review |
 
 ## 2. Architecture enforcement (import-linter)
 
@@ -61,7 +60,7 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 
 ## 5. Git workflow
 
-- Short-lived feature branches off `main` (`feat/<domain>-<topic>`), a PR for every change, **one reviewer**, green CI required, **squash merge**.
+- Short-lived feature branches off `main` (`feat/<domain>-<topic>`), a PR for every change, green CI required, **squash merge**. The author may self-merge after green CI. The other team member reviews safety-critical PRs (tool registry, policy, identity) before merge (ADR-018).
 - CI: Ruff, Biome, mypy, import-linter, unit tests, integration tests (ephemeral DB), gitleaks, the held-out freeze check, `dbt build` on a sample fixture.
 - `main` must always be deployable. Nobody commits directly to `main`.
 
@@ -79,4 +78,4 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 2. Unit and flow tests in ES and PT pass. At least one dev-suite scenario per behavior.
 3. Audit events and traces visible in the staff console timeline.
 4. Contracts (`04-contracts.md`) and the intent catalog (`02`) updated if they changed.
-5. Reviewed and squash-merged with green CI.
+5. Squash-merged with green CI, after review by the other team member when the PR is safety-critical.

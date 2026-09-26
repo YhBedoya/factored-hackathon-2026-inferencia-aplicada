@@ -8,7 +8,7 @@
 | S3 `data_backup_20260831/`, root `marketing_campaigns.csv` | Synthetic, older partial copies | **Not used**. Documented as excluded |
 | `policies/*.yaml` | **Team-generated synthetic** policy | Decline codes, min payment, limits, dispute questions, escalation thresholds |
 | `eval/scenarios/**` | **Team-generated** (seeds + LLM paraphrases, human-reviewed) | Evaluation and dev tuning |
-| Demo credentials, OTPs | **Team-generated** at load | Mock IdP |
+| Demo credentials, fixed step-up OTP | **Team-generated** (credentials at load; the OTP is a fixed code in an env var) | Mock IdP |
 
 S3 credentials come from env vars / an AWS profile (page 2 of the data dictionary). They are never written to the repo.
 
@@ -80,13 +80,13 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 | `system_metadata` | `load_date`, `date_offset_days`, dataset manifest hash, policy hash |
 
 ### `identity`
-`accounts` (`customer_id` or staff user, login email, password hash, role, status), `staff_users`, `otp_challenges` (or Redis only, **(proposed)**), `revoked_tokens`.
+`accounts` (`customer_id` or staff user, login email, password hash, role, status), `staff_users`, `revoked_tokens`. There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
 
 ### `audit`
 `audit_events` (append-only; see `04-contracts.md` §6), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
 
 ### Redis
-Confirmation tokens (`conf:<id>`, TTL 5 min, single-use), OTP codes (TTL 5 min), idempotency keys, rate limits, pub/sub channels `conv:<id>` and `handoff:<queue>`.
+Confirmation tokens (`conf:<id>`, TTL 5 min, single-use), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` and `handoff:<queue>`.
 
 ## 7. Golden DB and isolation
 

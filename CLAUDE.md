@@ -15,7 +15,6 @@ AI-first **card-support** service for the synthetic LATAM Bank (Factored AI & Da
 - Money, dates and card masks are formatted in code. Only tokenized (PII-masked) text goes to Bedrock or Langfuse.
 - LLM nodes that read tool output have no write tools. Policy lives in `policies/*.yaml`, never in prompts.
 - Never commit secrets, `data/`, credential exports or `docs/official-docs/LATAM_Bank_Complete_Data_Dictionary.pdf` (it contains S3 keys).
-- Nothing is copied from other proprietary repos (e.g., deepflow), which serve as a style reference only.
 - Never edit `eval/scenarios/heldout/`. It is frozen.
 
 ## Stack

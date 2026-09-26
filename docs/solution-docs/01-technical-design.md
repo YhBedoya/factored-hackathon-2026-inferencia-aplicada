@@ -2,7 +2,7 @@
 
 ## 1. Problem and scope
 
-**Workflow:** card-service support for LATAM Bank customers in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). This document covers the MVP items and leaves room for the Stretch items.
+**Workflow:** card-service support for LATAM Bank customers in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). The build is split into **Core** (built and evaluated first) and **if-time** items taken in a fixed order (decision-log ADR-019). This document covers the MVP items and leaves room for the Stretch items.
 
 **The three mandatory behaviors (S3a–c):**
 
@@ -36,7 +36,7 @@
          │                      │                     │
    PostgreSQL 16          Redis 7                Amazon Bedrock  ── masked text only
    bank · app · audit ·   confirmation tokens,   Langfuse Cloud  ── masked text only
-   identity · langgraph   OTP, pub/sub, limits   OTel → VictoriaMetrics/Logs/Traces
+   identity · langgraph   pub/sub, limits        OTel → VictoriaMetrics/Logs/Traces
          ▲
    pipeline: S3 → Parquet (manifest) → Pandera → dbt-duckdb → date shift → Postgres → golden DB
 ```
@@ -55,11 +55,11 @@
 | Reply wording | LLM composer from a fact list, with placeholders | Natural tone in the right language and register |
 | Money, dates, masked card numbers | Code (Babel), filled into placeholders | No hallucinated amounts or wrong formats |
 | Handoff packet | Deterministic assembly. LLM writes only the one-line request summary | D3.5 fields come from verified records |
-| Learned component (D4.6) | **OPEN**: see decision-log ADR-005 | — |
+| Learned component (D4.6) | The pretrained LLM intent classifier above, evaluated against the keyword/regex router on the frozen `eval/nlu/` set (ADR-005) | Training a new model is not mandatory; the comparison isolates what the learned component adds |
 
 ## 4. Domains (bounded contexts)
 
-Modular monolith following the deepflow conventions (used as a guide only, nothing copied): `backend/app/domains/<name>/` with `models.py`, `schemas.py`, `routes.py` and optional `repository.py`, `service.py`, `deps.py`. `backend/app/core/` holds shared infrastructure.
+Modular monolith: `backend/app/domains/<name>/` with `models.py`, `schemas.py`, `routes.py` and optional `repository.py`, `service.py`, `deps.py`. `backend/app/core/` holds shared infrastructure.
 
 | Domain | Owns | Depends on |
 |---|---|---|
@@ -94,11 +94,13 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 
 ## 6. Security and privacy (P1, B3–B6, D6.5)
 
-- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Email + password gives a JWT in an httpOnly cookie with CSRF double-submit. A simulated OTP (delivered to a dev inbox page) is required for step-up actions: address change, activation, unlock, travel notice. A document number or customer ID alone never authenticates anyone.
+- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Email + password gives a JWT in an httpOnly cookie with CSRF double-submit. A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
+- **Customer status precedence:** a Closed, Suspended or Inactive customer's cards are read-only (block still allowed), with no unlock or replacement, and the case goes to a handoff (ADR-021).
 - **Record isolation (B6):** tools never accept `customer_id`. The registry binds it from the session. Every repository query filters by it. A request for another customer's card returns a refusal and writes an `access_denied` audit event.
 - **PII minimization (B3):** only tokenized text goes to Bedrock and Langfuse. The Langfuse SDK `mask` hook redacts again as a second line of defense. Sensitive columns (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.
 - **Prompt injection:** user text only selects a flow, and flows enforce policy on their own. Tool output (e.g., `merchant_name`, complaint text) goes into prompts inside explicit data fences, and **LLM nodes that read tool output have no write tools**. An adversarial suite covers direct and data-field injection.
 - **Secrets:** AWS access through an IAM role / profile, never keys in code. `.env` stays local, with `.env.example` committed. The official data-dictionary PDF is git-ignored.
+- **Cost guard (ADR-023):** turn caps per conversation and per account per day, a login rate limit, an AWS Budgets alarm, and an `LLM_DISABLED` kill switch that routes every turn to the safe fallback + handoff.
 - **Retention (proposed):** vault entries are purged 24 h after a conversation closes. Conversations and audit are kept 30 days in the demo environment. Langfuse project retention is set to 30 days. The eval DB clones are dropped after each run.
 
 ## 7. Reliability (D6.2, D6.3)
@@ -115,7 +117,7 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 | LLM generations | Langfuse Cloud | Masked prompts/outputs, model ID, prompt version, tokens, cost, latency, eval scores |
 | Infra traces, logs, metrics | OTel → VictoriaTraces / VictoriaLogs / VictoriaMetrics (+ Grafana) | FastAPI, SQLAlchemy, Redis, httpx spans; structlog JSON with `request_id` / `trace_id` / `conversation_id` |
 | Business audit | Postgres `audit.audit_events`, `audit.llm_calls` | Rule hits, policy version hash, tool calls + results, confirmations, read-backs, handoffs, sources cited per reply |
-| Staff console | Frontend `/staff/*` | "Why did the bot say this?" timeline built from audit events plus a link to the Langfuse trace, **never chain-of-thought** |
+| Staff console | Frontend `/staff/*` | Handoff inbox with live takeover; conversation list filterable by language, country, intent, outcome, escalation and date; "why did the bot say this?" per-turn timeline (NLU result, rule hits, tool calls and results, sources, policy hash, model and prompt version, latency, cost) built from audit events plus a link to the Langfuse trace, **never chain-of-thought** (ADR-024) |
 
 MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` let coding agents query the running system during development.
 
@@ -123,7 +125,7 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 - **Reproducible setup:** `make setup` → `make data` (S3 sync with credentials from env/profile → pipeline → golden DB) → `make up`. Versions pinned (uv.lock, package-lock), seeds fixed.
 - **Environments:** Docker Compose layers `base / dev / test / prod / observability`.
-- **Deployment target: OPEN** (decision-log ADR-017). Must provide a public URL (K2) and Bedrock access through an IAM role.
+- **Deployment target: AWS** (decision-log ADR-017). The concrete setup is decided at the sprint midpoint (~2026-09-30 / 10-01), after an AWS smoke test on day 1–2. Must provide a public URL (K2) and Bedrock access through an IAM role.
 - **Capacity:** to be measured with the eval harness (turns/s per worker, DB size ≈ all 13 tables + indexes). `digital_events` (10M rows) dominates storage.
 - **Remaining work before real deployment** (kept honest for S6): a real IdP and fraud-grade authentication, security review / pentest, regulatory review of dispute handling, load testing, multi-region, human-agent workforce integration, real PT-BR market data.
 
@@ -142,10 +144,13 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 | ID | Item | Blocks |
 |---|---|---|
-| ADR-005 | Learned component evaluated against a baseline (D4.6). Candidate: local fallback intent classifier | Hard ML requirement |
-| ADR-017 | Deployment target | K2 |
+| ADR-017 | Concrete AWS setup, decided at the sprint midpoint | K2 |
 | — | Exact Bedrock model IDs per step (benchmark on the dev set) | Latency/cost numbers |
 | — | Time zone semantics of `transaction_date` (EDA saw a UTC-vs-local `process_date` shift) | Relative-date search correctness |
+| — | Suspected-compromise rule and threshold for `unrecognized_charge` | Fraud triage path |
+| — | Numeric targets for the D1.5 outcome metrics, set after the first dev eval run | D1.5 |
+
+The full list of deferred items, with when each is decided, is at the end of [`decision-log.md`](decision-log.md).
 
 ## 12. Requirements traceability
 
@@ -158,9 +163,9 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 | D2.1–D2.5 | Checkpointed flows, clarification rules, grounded composer, typed tools, read-back |
 | D3.1–D3.5 | Intent catalog, confirmation tokens, escalation rules, policy engine, handoff packet (`04`) |
 | D4.1–D4.5 | `03-data-architecture.md` (dbt, Pandera, lineage, freshness fixture) |
-| D4.6–D4.10 | LLM NLU vs keyword baseline, **learned component OPEN**, seed-grouped splits, error analysis |
+| D4.6–D4.10 | Learned component = LLM NLU vs keyword baseline (ADR-005), seed-grouped splits, error analysis |
 | D5.1–D5.3 | `05-evaluation-plan.md` suite categories |
 | D6.1–D6.6 | §7, §8, §9 |
 | B1–B8 | §6, §10; B7 applies only if the Stretch credit features are built |
 | E1–E11 | `05-evaluation-plan.md` §5 |
-| K1–K6 | Public repo, deployment (OPEN), slides and video (outside these docs) |
+| K1–K6 | Public repo, AWS deployment (setup at midpoint), slides and video (outside these docs) |

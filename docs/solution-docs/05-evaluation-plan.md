@@ -8,8 +8,8 @@ The dataset can't provide intent labels. `call_transcripts.customer_text` has 42
 
 | Suite | Size (target) | Used for | Frozen |
 |---|---|---|---|
-| `eval/scenarios/dev/` | ~150 conversations | Prompt and flow tuning, debugging | No |
-| `eval/scenarios/heldout/` | **~300 conversations** | Reported results only | **Yes**, hash committed before tuning starts |
+| `eval/scenarios/dev/` | ~80 conversations | Prompt and flow tuning, debugging | No |
+| `eval/scenarios/heldout/` | **~150 conversations** (about 10 per category, split across ES and PT) | Reported results only | **Yes**, hash committed before tuning starts |
 | `eval/nlu/` | Single-turn utterances derived from the same seeds and split the same way | NLU accuracy vs keyword baseline | Held-out part frozen |
 
 **Held-out mix (target):**
@@ -42,16 +42,16 @@ The dataset can't provide intent labels. `call_transcripts.customer_text` has 42
 
 | System | Description |
 |---|---|
-| **Baseline** | Keyword/regex intent router (with the regional lexicon) + the same tools, policy engine and flows + template replies. It isolates the value of the LLM layer |
+| **Baseline** | Keyword/regex intent router (with the regional lexicon) + the same tools, policy engine and flows + fixed ES/PT template replies. It isolates the value of the LLM layer. Multi-intent messages: clause split at connectors and punctuation, per-clause match, precedence rules and a negation window (ADR-005) |
 | **Proposed** | Full system (LLM NLU + flows + answer node + composer) |
 | Operational reference | Call-center figures from the data (FCR `was_resolved`, handle time, `was_escalated`, `sla_breached`) for card-related contact reasons. Labeled as **historical synthetic data, not comparable 1:1** |
-| Learned component | **OPEN** (ADR-005). When decided, it's compared against its own baseline on `eval/nlu/` |
+| Learned component | The pretrained LLM NLU vs the keyword router on `eval/nlu/` held-out (ADR-005), plus a model-selection comparison between Bedrock models |
 
 Each run starts from a fresh clone of the golden DB. Runs record the git SHA, model IDs, prompt versions, policy hash and suite hash (E2).
 
 ## 5. Driving and judging
 
-- **Multi-turn driver:** a goal-driven **LLM customer simulator** (temperature 0, different model family) plays the persona with its fact sheet: which card, which charge, how to answer confirmations and OTPs. Stop conditions: goal reached, handoff, abstention, or 12 turns. A sample of simulator transcripts is hand-checked for persona adherence.
+- **Multi-turn driver:** a goal-driven **LLM customer simulator** (temperature 0, different model family, chosen when the harness is built) plays the persona with its fact sheet: which card, which charge, how to answer confirmations and OTPs. Stop conditions: goal reached, handoff, abstention, or 12 turns. A sample of simulator transcripts is hand-checked for persona adherence.
 - **Deterministic checks first:** tools called / forbidden, final DB state, policy compliance (confirmation before action, read-back before "done"), handoff packet completeness, reply language, grounding (every number in the reply comes from facts), no raw PII in LLM inputs.
 - **LLM judge** (reply quality only: grounding, tone, clarity, correct register) with a written rubric in `eval/judges/rubric.md`. It is validated against **~50 human-labeled cases**, and agreement (Cohen's κ / % agreement) is reported (E4).
 - **Repeated runs:** the held-out suite runs 3× for the proposed system, and variability is reported (E2).
@@ -65,9 +65,11 @@ Each run starts from a fresh clone of the golden DB. Runs record the git SHA, mo
 | Escalation quality (E7) | Correct transfers (right queue + complete packet); **missed** and **unnecessary** transfers | Confusion matrix against `expected_outcome` |
 | Unsafe outcomes (E8) | Unauthorized disclosure/action, materially incorrect outcome, "done" without verification | Counts / n, with a 95% upper bound (rule of three when 0 observed) |
 | Clarification accuracy | Asked when required; not asked when not required | Ambiguous vs clear cases |
-| NLU accuracy | Intent macro-F1, status accuracy | `eval/nlu/` held-out |
+| NLU accuracy | Intent-set precision/recall/F1 (macro), exact-set match, status accuracy; multi-intent cases reported as their own slice | `eval/nlu/` held-out |
 | Latency (E9) | End-to-end p50/p95 per turn and per conversation | All turns |
 | Cost (E9) | Per attempted case and per **successful** automated resolution (Bedrock tokens × price table + fixed infra share, assumptions stated); "not defined" if 0 successes | As stated |
+
+**Targets (D1.5):** these metrics are the intended customer and business outcomes. Their numeric targets are set after the first dev eval run and recorded before the held-out suite is frozen.
 
 All rates carry n and a Wilson 95% CI. Breakdowns are **by language** (ES-MX, ES-CO, ES-AR, PT-BR, mixed) and **by segment** (Premium/Plus/Basic/Student), with small-sample caveats and a disparity investigation (E10). Every number is labeled **offline evaluation**, **simulation** or **projection** (E11).
 

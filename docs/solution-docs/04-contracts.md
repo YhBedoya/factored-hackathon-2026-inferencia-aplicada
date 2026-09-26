@@ -18,7 +18,7 @@ class ToolSpec(BaseModel):
     name: str                          # "cards.block_card"
     side_effect: bool
     requires_confirmation: bool        # server-issued single-use token
-    requires_step_up: bool             # OTP verified within the last N minutes
+    requires_step_up: bool             # step-up OTP (fixed demo code, ADR-008) verified within the last N minutes
     allowed_intents: list[str]         # from policies/tools.yaml
     timeout_s: float
     retries: int = 2
@@ -73,7 +73,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | Method & path | Role | Purpose |
 |---|---|---|
 | `POST /auth/login` · `POST /auth/logout` · `POST /auth/refresh` · `GET /auth/me` | any | Session (httpOnly cookie + CSRF) |
-| `POST /auth/otp/challenge` · `POST /auth/otp/verify` | customer | Step-up |
+| `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery) |
 | `POST /conversations` | customer | Start a conversation |
 | `POST /conversations/{id}/messages` | customer | Send a turn (`202`; output arrives on the stream) |
 | `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no") |
@@ -83,7 +83,6 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `POST /staff/actions/{tool}` | agent | One-click action through the policy engine |
 | `GET /staff/conversations?filters` · `GET /staff/conversations/{id}/timeline` | agent, admin | Traceability console |
 | `GET /staff/personas` · `GET /staff/personas/{customer_id}/credentials` | admin | Persona catalog and credential lookup |
-| `GET /dev/inbox` | dev only | Simulated OTP / SMS inbox |
 | `POST /admin/demo/reset` | admin | Restore from the golden DB |
 | `POST /test-idp/sessions` | eval only (disabled in prod) | Mint a session for any customer |
 
