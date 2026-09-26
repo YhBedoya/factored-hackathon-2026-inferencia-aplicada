@@ -63,7 +63,7 @@ Modular monolith: `backend/app/domains/<name>/` with `models.py`, `schemas.py`, 
 
 | Domain | Owns | Depends on |
 |---|---|---|
-| `identity` | Login, JWT cookie sessions, session expiry/resume, OTP step-up, roles (`customer`, `agent`, `admin`), test-IdP endpoint for eval (disabled in prod) | `core` |
+| `identity` | Login, JWT cookie sessions, session expiry/resume, OTP step-up, roles (`customer`, `agent`, `admin`), auth dependencies `get_session` / `require_role` (ADR-025), test-IdP endpoint for eval (disabled in prod) | `core` |
 | `customers` | Masked customer profile read model | `core` |
 | `cards` | Card read model, temporary lock / permanent block / unlock, replacement, `card_status_history`, `card_controls`; Stretch: activation, PIN-reset link, travel notices, limits | `policy`, `audit` |
 | `transactions` | Structured search, decline / pending / reversal explanations, duplicate detector (Stretch) | `policy` |
@@ -80,7 +80,7 @@ Outside `backend/`: `pipeline/` (data), `policies/` (synthetic YAML), `eval/` (s
 
 ## 5. Request lifecycle (one customer turn)
 
-1. `POST /api/v1/conversations/{id}/messages`. `identity` validates the cookie. If the session has expired, the API returns `401 session_expired`, the pending graph state stays in the checkpointer, and after re-login **as the same customer** the turn is replayed and the flow resumes at its pending node.
+1. `POST /api/v1/conversations/{id}/messages`. Router-level FastAPI dependencies (ADR-025) validate the cookie and CSRF token, require the `customer` role, and load the conversation only if it belongs to the session's customer (otherwise `404`). The validated session is passed to the graph in its run config. If the session has expired, the API returns `401 session_expired`, the pending graph state stays in the checkpointer, and after re-login **as the same customer** the turn is replayed and the flow resumes at its pending node.
 2. The graph runs inline (async) and streams events over `GET /conversations/{id}/stream` (SSE): `status` → `message` → `ui` (card picker, confirmation buttons) → `done`.
 3. `mask_pii` replaces PII with per-conversation tokens (`⟨CARD_1⟩`, `⟨DOC_1⟩`…) held in the Fernet-encrypted vault.
 4. `understand`: one Bedrock call returns `{language, intents[], status, slots, clarification}` (schema in `04-contracts.md`).
@@ -95,6 +95,7 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 ## 6. Security and privacy (P1, B3–B6, D6.5)
 
 - **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Email + password gives a JWT in an httpOnly cookie with CSRF double-submit. A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
+- **Login enforcement (ADR-025):** the whole chat requires login; there is no anonymous mode. Three layers: (1) router-level FastAPI dependencies (`get_session`, `require_role`, `get_owned_conversation`) reject a missing or expired session (`401`), the wrong role (`403`) and another customer's conversation (`404`) before the graph runs; (2) the session travels into the graph through the run config, `load_session` binds `customer_id` read-only, and the tool registry builds `ToolContext` from it; (3) step-up is checked per tool by the registry against `session.step_up_at`. Rule R13 and its route-introspection test keep new routes from skipping layer 1.
 - **Customer status precedence:** a Closed, Suspended or Inactive customer's cards are read-only (block still allowed), with no unlock or replacement, and the case goes to a handoff (ADR-021).
 - **Record isolation (B6):** tools never accept `customer_id`. The registry binds it from the session. Every repository query filters by it. A request for another customer's card returns a refusal and writes an `access_denied` audit event.
 - **PII minimization (B3):** only tokenized text goes to Bedrock and Langfuse. The Langfuse SDK `mask` hook redacts again as a second line of defense. Sensitive columns (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.

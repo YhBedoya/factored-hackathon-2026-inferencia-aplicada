@@ -117,6 +117,16 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 **Decision:** the "Control and traceability of LLM" feature is, for Core: the handoff inbox with live takeover; a conversation list filterable by language, country, intent, outcome, escalation and date; and a per-turn timeline (NLU result, rule hits, tool calls and results, sources, policy hash, model and prompt version, latency, cost, Langfuse link). It never shows chain-of-thought.
 **Alternatives:** also flag and annotate conversations and export them to the dev set (≈1 extra day); timeline only, with browsing in the Langfuse UI.
 
+### ADR-025 — Auth enforcement: router-level FastAPI dependencies + session passed into the graph · Accepted
+**Context:** the design said "`identity` validates the cookie" without naming the mechanism, and nothing checked that a conversation belongs to the session's customer (`conversations.customer_id`).
+**Decision:** the whole chat is behind login; there is no anonymous conversation mode. Enforcement has three layers:
+- **HTTP (FastAPI dependencies).** `identity/deps.py` provides `get_session()` (decodes the JWT cookie, checks CSRF on writes and `revoked_tokens`, returns `Session{account_id, role, customer_id, step_up_at}` or `401 session_expired`) and `require_role(...)` (`403` on the wrong role). Every router declares its role at router level (`APIRouter(dependencies=[Depends(require_role("customer"))])`), so a new route can't forget it. `conversation/deps.py` provides `get_owned_conversation()`, used by every `/conversations/{id}/…` route, which returns `404` unless `conversation.customer_id == session.customer_id` (404, not 403, so it doesn't reveal that the conversation exists). The test-IdP router is only mounted when the environment is `eval`.
+- **Graph.** LangGraph nodes are not FastAPI routes, so `Depends` can't reach them. The route passes the validated session in the run config (`config["configurable"]["session"]`), `load_session` copies `customer_id` into read-only state, and the tool registry builds `ToolContext` from it (R1). The registry is the second gate because it's also used by agent one-click actions and eval, where there's no customer request.
+- **Step-up** is not a route dependency. It's decided per tool (`requires_step_up`) in the middle of a flow, so the registry checks `session.step_up_at` and raises `StepUpRequired`.
+The SSE stream runs its dependencies once, when it opens; expiry while it stays open is not re-checked. That's acceptable because the stream is read-only and ownership-scoped, and every write (`/messages`, `/confirmations`) re-checks.
+**Enforced by:** R13 (`06`): a route-introspection unit test and a cross-customer integration test.
+**Alternatives:** per-route `Depends` only (easy to forget on a new route); ASGI middleware that checks the cookie (no typed session object, and still no ownership check); a public anonymous mode for general questions (more surface area, and no Core feature needs it).
+
 ---
 
 ## Deferred to implementation
@@ -129,6 +139,7 @@ These are known and owned, and they're decided while building the related featur
 | Numeric targets for the D1.5 outcome metrics (the metrics themselves are defined in `05` §6) | After the first dev eval run, before freezing held-out |
 | Model family for the customer simulator, paraphrases and LLM judge (non-Claude, to avoid self-grading bias) | Building the eval harness |
 | Exact Bedrock model IDs per step | Benchmark on the dev set |
+| Step-up validity window (N minutes after a successful OTP) and what happens to an open confirmation token when the session expires during it | Building identity + the first step-up flow (ADR-025) |
 | Concrete AWS setup | Sprint midpoint (ADR-017) |
 | Time zone semantics of `transaction_date` | Building the pipeline |
 | Demo and video script | After Core is built (ADR-019) |

@@ -86,6 +86,8 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `POST /admin/demo/reset` | admin | Restore from the golden DB |
 | `POST /test-idp/sessions` | eval only (disabled in prod) | Mint a session for any customer |
 
+**Auth (ADR-025):** the Role column is enforced by router-level dependencies (`Depends(require_role(...))`), not per route. Every `/conversations/{id}/…` route also depends on `get_owned_conversation`. Errors: `401 session_expired` (no or expired session), `403 forbidden_role`, `404 not_found` (the conversation doesn't exist *or* belongs to another customer). Only `/auth/login`, `/auth/refresh` and the health check are public.
+
 **SSE events:** `status {step}` · `message {role, text, sources[]}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}`.
 
 ## 4. Handoff packet (D3.5)

@@ -16,6 +16,7 @@
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
 | R11 | Bounded retries only: 2 retries with backoff, then safe fallback + handoff. Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
 | R12 | Provided tables are changed only through domain services: an in-place update always writes a history row in the same transaction, and appended rows carry `origin='app'` | Lineage, audit | Repository layer + review |
+| R13 | Every non-public route declares its role through a router-level dependency, and every `/conversations/{id}/…` route loads the conversation through `get_owned_conversation` (another customer's conversation → `404`). The graph gets the session only from the route, via the run config (ADR-025) | B5, B6 | Route-introspection unit test over `app.routes` + cross-customer integration test (customer B posts, confirms and streams on A's conversation → `404`) |
 
 ## 2. Architecture enforcement (import-linter)
 
@@ -66,7 +67,7 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 
 ## 6. Testing standards
 
-- Unit tests for every rule R1–R6 and R11 (they are the safety case).
+- Unit tests for every rule R1–R6, R11 and R13 (they are the safety case).
 - Flow tests: each MVP flow has scripted-turn tests in ES and PT covering the happy path, clarification, denial and failure (fake LLM with fixed NLU outputs, so they're deterministic and free).
 - Integration tests against an ephemeral Postgres + Redis started from a small fixture DB.
 - E2E (Playwright): login → block card → read-back; session expiry → resume; handoff → agent takeover.
