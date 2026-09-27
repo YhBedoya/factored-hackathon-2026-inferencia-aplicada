@@ -24,20 +24,21 @@ class ToolSpec(BaseModel):
     retries: int = 2
 ```
 
-Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to another customer; audited), `PolicyDenied(reason_code)`, `ConfirmationRequired`, `StepUpRequired`, `Conflict` (e.g., already blocked), `ToolUnavailable`.
+Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to another customer; audited), `PolicyDenied(reason_code)`, `ConfirmationRequired`, `StepUpRequired`, `Conflict` (e.g., already blocked), `ToolUnavailable`. K3 ships the read-side errors only (`NotFound`, `AccessDenied`, `ToolUnavailable`); D2 adds the rest.
 
 ### MVP tools
 
 | Tool | Side effect | Confirm | Step-up | Returns |
 |---|---|---|---|---|
+| `customers.get_profile()` | — | — | — | `CustomerProfile{country, customer_status}` |
 | `cards.list_cards()` | — | — | — | `[CardSummary{card_id, kind, last4, status, locked}]` |
-| `cards.get_card_details(card_id)` | — | — | — | `CardDetails{…, available_credit, source}` |
+| `cards.get_card_details(card_id)` | — | — | — | `CardDetails{card_id, kind, last4, status, locked, currency, expiration_date, credit_limit, current_balance, interest_rate, days_past_due, source, available_credit}` (`available_credit` computed as `credit_limit − current_balance`; all credit-only fields are `None` for debit cards) |
 | `cards.get_block_origin(card_id)` | — | — | — | `BlockOrigin{kind: customer_lock/customer_block/bank_side/none, reason}` |
 | `cards.lock_card(card_id, token)` | ✓ | ✓ | — | `ActionResult` |
 | `cards.unlock_card(card_id, token)` | ✓ | ✓ | ✓ | `ActionResult` |
 | `cards.block_card(card_id, reason, token)` | ✓ | ✓ | — | `ActionResult` |
 | `cards.order_replacement(card_id, address_ref, token)` | ✓ | ✓ | ✓ if address changed | `ActionResult{tracking_id}` |
-| `transactions.search(filter: TxFilter)` | — | — | — | `[TxView]`, max 10 |
+| `transactions.search(filter: TxFilter)` | — | — | — | `[TxView{tx_id, card_id, occurred_at, amount, currency, amount_usd, type, category, merchant_name, merchant_category, channel, city, country, status, response_code, fraud_score}]`, max 10, newest first |
 | `transactions.get(tx_id)` | — | — | — | `TxView` |
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, source}` |
 | `disputes.create_claim(tx_ids, answers, token)` | ✓ | ✓ | — | `ActionResult{case_id, priority_flags}` |
@@ -45,7 +46,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 
 `ActionResult` = `{status: "applied", verified: bool, readback: {...}, audit_event_id}`. The flow may report success **only** when `verified = true`.
 
-`TxFilter` = `{date_from, date_to, merchant_ids[], amount_min, amount_max, currency, status[], card_id}`. Dates are resolved by code and validated (max 12-month window **(proposed)**).
+`TxFilter` = `{date_from, date_to, merchant_names[], amount_min, amount_max, currency, status[], card_id}`. Dates are resolved by code and validated (`date_from <= date_to`, window at most 366 days when both are set).
 
 ## 2. NLU output (`understand` node)
 
