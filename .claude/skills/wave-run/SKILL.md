@@ -104,25 +104,41 @@ for it by name.**
    Slug: `<card-id-lowercase>-<short-name>`, kebab-case, e.g.
    `d1-a5-data-v0`, `d2-b-card-info-block`.
 
-2. **Resolve the base branch.** Everything merges to `main` at the end of each
-   day (squash merge), so the default base is `main`.
+2. **Resolve the base branch.** Feature branches start from `develop` and
+   merge back into `develop` (squash merge), so the default base is `develop`.
+   `main` is not a base for card work. Run `git fetch origin` first and make
+   sure local `develop` is not behind `origin/develop`; if it is, ask before
+   fast-forwarding it.
    - If the card depends on a card whose branch is **not yet merged**
-     (`git branch --no-merged main`), say so. Offer to stack on that branch
+     (`git branch --no-merged develop`), say so. Offer to stack on that branch
      or to wait for it. Warn that a squash merge of the base forces a rebase
      of the stacked branch.
    - If the card needs a **contracts PR** from the other developer (07 §1,
-     "Contracts first") that isn't on `main` yet, stop and say so.
+     "Contracts first") that isn't on `develop` yet, stop and say so.
    - State the resolved base and get a nod before creating anything.
 
-3. **Create the branch** in the main checkout. This repo does not use
-   worktrees for its own work:
+3. **Create the feature branch and check it out**, always, in the current
+   checkout:
    ```bash
-   git switch -c feat/<slug> <base-branch>
+   git switch -c feat/<slug> <base-branch>   # creates the branch and checks it out
+   git branch --show-current                 # must print feat/<slug>
    ```
-   The checkout stays on this branch for the whole card, so run one card per
-   checkout at a time. (If the harness itself put this session inside a
-   worktree, for example in a background job, work there instead, and give the
-   human the merge command at the end.)
+   If `feat/<slug>` already exists (a resumed card), `git switch feat/<slug>`
+   instead. If the working tree is dirty, stop and ask the human before
+   switching. All work for the card (spec, plan, state file, code) happens
+   directly on this branch, and the checkout stays on it for the whole card,
+   so run one card per checkout at a time.
+
+   **No worktrees by default.** Don't call `EnterWorktree`, don't run
+   `git worktree add`, and don't spawn any subagent with
+   `isolation: "worktree"`. A worktree is created only when:
+   - the human asks for one, or
+   - it is necessary (for example, the harness blocks edits to the shared
+     checkout in a background job, or another card already holds this
+     checkout) **and** the human accepts it after you explain why.
+   In that case, create `feat/<slug>` inside the worktree, work there, and
+   give the human the merge command at the end. Record the choice in the
+   ledger `notes`.
 
 4. **Open the ledger** at `.claude/runs/<slug>.json` (git-ignored, local to
    each developer's machine):
@@ -131,7 +147,7 @@ for it by name.**
      "card": "D1-A5", "slug": "d1-a5-data-v0",
      "plan_doc": "docs/solution-docs/07-execution-plan.md",
      "day_lines": "72-116", "group": "G2", "owner": "A",
-     "base_branch": "main", "branch": "feat/d1-a5-data-v0",
+     "base_branch": "develop", "branch": "feat/d1-a5-data-v0",
      "phase": "spec", "spec": null, "plan": null, "state_file": null,
      "agents": {"spec": null, "plan": null, "verify": null},
      "tasks": [],
@@ -241,8 +257,10 @@ For each task in order:
    task's heading, and a brief that leaks the next task invites an agent to
    start it. For the last task, use `awk '/^- \[ \] T6:/{f=1} f'`.)
 2. Mark it `in progress` on the board.
-3. Spawn a **fresh** `card-implementer` with a short, literal brief:
-   - the card id and the branch;
+3. Spawn a **fresh** `card-implementer` (no `isolation` option, so it works
+   in this checkout on `feat/<slug>`) with a short, literal brief:
+   - the card id and the branch, and "work directly on this branch; don't
+     create a branch or a worktree";
    - **this task's block, pasted verbatim**, and nothing from the other tasks;
    - the state file path: read it first, append your entry last;
    - the spec path **plus the section to read**, e.g. `docs/specs/<slug>.md`
@@ -308,7 +326,7 @@ catalog in `02` (definition of done, `06` §7).
 **GATE.** Present the table, the diffstat and the branch name. Say whether the
 PR is **safety-critical** (it touches identity, tools, policy, PII or
 escalation), because then the other developer must approve it before merge
-(ADR-018). Ask what to do: commit, commit + push + open a PR, revise, or stop.
+(ADR-018). Ask what to do: commit, commit + push + open a PR into `develop`, revise, or stop.
 Commit and push only on an explicit yes, with Conventional Commits
 (`feat(cards): …`). Merge only on an explicit yes after green CI, as a squash
 merge, and never self-merge a safety-critical PR.

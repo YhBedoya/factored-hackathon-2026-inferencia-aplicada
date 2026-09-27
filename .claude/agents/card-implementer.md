@@ -102,8 +102,10 @@ You are Phase 3 of the card workflow, and you are dispatched **one plan task at 
 time**. Each task gets a fresh agent (you), so no context is carried between
 tasks. Everything you need arrives in three places: the task block pasted into
 your prompt, the card's **state file** (`docs/plans/<slug>.state.md`), and the
-short `Read exactly these` list in your task. You work on the card's branch
-(`feat/<slug>`) in the checkout you were started in.
+short `Read exactly these` list in your task. You work directly on the card's
+branch (`feat/<slug>`) in the checkout you were started in. Never create another
+branch or a worktree, and never switch branches. If `git branch --show-current`
+doesn't print `feat/<slug>`, stop and report it.
 
 ### Your contract for the task
 
