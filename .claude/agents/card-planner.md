@@ -33,7 +33,7 @@ Write `docs/plans/<slug>.md`. Ground it in what is on disk. Before writing a
 task, open the files it will touch, and name real modules, real fixtures and
 real test files. The repo is being built day by day, so early cards will find
 little code. Then ground the plan in `06` §3 (layout), `04` (contracts) and
-whatever earlier cards left on `main`, and say which files are new. A plan that
+whatever earlier cards left on `develop`, and say which files are new. A plan that
 cites a file as existing when it doesn't is worse than no plan.
 
 ```markdown
@@ -43,7 +43,7 @@ Spec: [`docs/specs/<slug>.md`](../specs/<slug>.md) · Branch: `feat/<slug>`
 
 ## Facts checked against the repo
 <Things the spec leaves implicit and that you confirmed on disk: what already
-exists on main, the current alembic head, a dependency already in
+exists on `develop`, the current alembic head, a dependency already in
 pyproject.toml, the helper a new module must reuse, the command that exists
 today (make targets are planned, not guaranteed). Facts, not decisions — a
 decision goes back to the human. The orchestrator seeds the card's state file

@@ -1,0 +1,86 @@
+# CI (D20, 06 §4-5). No caching anywhere (If-behind cut) — every job starts
+# clean so a stale cache never hides a real dependency-resolution failure.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+      - name: uv sync
+        working-directory: backend
+        run: uv sync
+      - name: ruff check
+        working-directory: backend
+        run: uv run ruff check app tests
+      - name: ruff format --check
+        working-directory: backend
+        run: uv run ruff format --check app tests
+      - name: mypy
+        working-directory: backend
+        run: uv run mypy app
+      - name: lint-imports
+        working-directory: backend
+        run: uv run lint-imports
+      - name: pytest
+        working-directory: backend
+        run: uv run pytest tests/unit -q
+
+  pipeline:
+    name: pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+      - name: uv sync
+        working-directory: pipeline
+        run: uv sync
+      - name: ruff check
+        working-directory: pipeline
+        run: uv run ruff check ingest load tests
+      - name: ruff format --check
+        working-directory: pipeline
+        run: uv run ruff format --check ingest load tests
+      - name: pytest
+        working-directory: pipeline
+        run: uv run pytest tests -q
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: biome ci
+        working-directory: frontend
+        run: npx biome ci .
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks detect (full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo --redact -v

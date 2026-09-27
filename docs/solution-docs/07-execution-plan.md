@@ -44,9 +44,9 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 ### Daily rhythm
 | When | What |
 |---|---|
-| Start (15–20 min) | Check that yesterday's test still passes on `main`, agree any new contract, pick tasks |
+| Start (15–20 min) | Check that yesterday's test still passes on `develop`, agree any new contract, pick tasks |
 | Pairing slot | D2 late afternoon (read path), D3 afternoon (write path), then only when needed |
-| End of day (30 min) | **Merge everything to `main`, run the app (`make up`; the public URL from D4), and run the day's test script together.** Record any decisions in §8 |
+| End of day (30 min) | **Merge everything to `develop`, run the app (`make up`; the public URL from D4), and run the day's test script together.** Record any decisions in §8 |
 | If behind | Apply the day's named cut line. Never take time from the next day's MVP work |
 
 **Git:** short branches, PRs, squash merge, self-merge after green CI (ADR-018). PRs that touch identity, tools, policy, PII or escalation need the other dev's approval first.
@@ -77,7 +77,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 |---|---|---|
 | K1 | Anthropic API key for B in the git-ignored `.env` (never in the repo), `LLM_PROVIDER=anthropic`. B's LLM work doesn't wait for Bedrock (ADR-028) | B can call Claude from D1 |
 | K2 | Bedrock: pick the region, enable models (a small Claude model such as Haiku 4.5, plus a non-Claude family for later), AWS profiles on both laptops, one test call each. A leads, and it doesn't block B. Once it passes, B's connection switches to Bedrock (ADR-028) | Both of you can call Bedrock |
-| K3 | Contracts PR to `main` (A writes, B reviews): `backend/` skeleton, read-tool interfaces (`list_cards`, `get_card_details`, `search_transactions` + result models + `ToolContext`), `NLUResult`, graph state | B starts from `main` |
+| K3 | Contracts PR to `develop` (A writes, B reviews): `backend/` skeleton, read-tool interfaces (`list_cards`, `get_card_details`, `search_transactions` + result models + `ToolContext`), `NLUResult`, graph state | B starts from `develop` |
 
 **Dev A: G1 platform foundation and G2 bank data v0**
 | # | Task | Done when |
@@ -119,7 +119,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 ### D2 · Mon 28 Sep — The agent runs inside the app
 **Goal:** a persona logs in through the API and asks about their cards. The agent answers from Postgres and streams the reply. Block, lock, unlock and replacement run end to end in the sandbox.
 
-**Kickoff (20 min):** check D1 on `main`. A pushes the **write-side contracts** PR:
+**Kickoff (20 min):** check D1 on `develop`. A pushes the **write-side contracts** PR:
 - write tools: `lock_card`, `unlock_card`, `block_card`, `get_block_origin`, `order_replacement`
 - `ActionResult{verified, readback}`
 - the confirmation interface: `issue(tool, args) → token`, `consume(token)`
@@ -433,7 +433,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D1–D4 | When B's connection moves from the Anthropic API to Bedrock (ADR-028) | As soon as K2 passes; before the D4 deploy at the latest |
 | D4 | Whether the public deployment runs Langfuse too (ADR-006) | Decided with the AWS setup |
 | D5 | When self-hosted Langfuse is set up | A adds it with D5 A1 (mask hook). Earlier if the observability layer has room |
-| D1 | Time zone of `transaction_date` | A decides while building A5 |
+| D1 | Time zone of `transaction_date` | **Decided (A5, D1-A D1):** every `bank.*` TIMESTAMP column is UTC (`timestamptz`); local display uses `BANK_TZ` per country (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`) |
 | D2 | Minimum payment formula (synthetic) | `max(5% × balance, floor)` with floors USD 10 / COP 40.000 / ARS 5.000, plus overdue amounts when `days_past_due > 0` |
 | D2 | Final persona list | B's 10 + ~20 found by query |
 | D4 | AWS setup (ADR-017) | Single EC2 + Compose + IAM role |

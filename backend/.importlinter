@@ -1,38 +1,59 @@
+# Import boundaries (06 §2, D21). Wildcards on the two forbidden-source
+# contracts below match "app.core.llm" and "app.domains.<name>.repository"
+# by shape (single path segment), not by literal name, so the contracts stay
+# KEPT before those modules exist and start enforcing the moment they land —
+# no edit needed here when app/core/llm/ or a domain's repository.py is added.
 [importlinter]
-root_packages =
+root_packages=
     app
-include_external_packages = True
+include_external_packages=True
 
-[importlinter:contract:1]
-name = Layers: domains above core
-type = layers
-layers =
-    app.domains
-    app.core
+[importlinter:contract:layers]
+name=Layered architecture: api -> domains -> core (core never imports domains)
+type=layers
+containers=
+    app
+layers=
+    api
+    domains
+    core
 
-[importlinter:contract:2]
-name = Only app.core.llm imports LLM provider SDKs
-type = forbidden
-source_modules =
-    app.domains
-forbidden_modules =
+[importlinter:contract:llm-sdk-only-in-core-llm]
+name=Only app.core.llm may import an LLM provider SDK (R7)
+type=forbidden
+source_modules=
+    app
+forbidden_modules=
     anthropic
     langchain_anthropic
-    langchain_aws
     boto3
-allow_indirect_imports = True
-
-[importlinter:contract:3]
-name = Only app.core.llm imports LLM provider SDKs (within app.core)
-type = forbidden
-source_modules =
-    app.core
-forbidden_modules =
-    anthropic
-    langchain_anthropic
+    aioboto3
     langchain_aws
-    boto3
-ignore_imports =
+ignore_imports=
+    app.core.llm -> anthropic
     app.core.llm.** -> anthropic
+    app.core.llm -> langchain_anthropic
     app.core.llm.** -> langchain_anthropic
+    app.core.llm -> boto3
+    app.core.llm.** -> boto3
+    app.core.llm -> aioboto3
+    app.core.llm.** -> aioboto3
+    app.core.llm -> langchain_aws
     app.core.llm.** -> langchain_aws
+unmatched_ignore_imports_alerting=none
+
+[importlinter:contract:conversation-no-repository]
+name=app.domains.conversation reaches bank data only through its tools registry
+type=forbidden
+source_modules=
+    app.domains.conversation
+forbidden_modules=
+    app.domains.*.repository
+
+[importlinter:contract:llm-no-repository]
+name=app.core.llm never imports a domain repository (LLM code can't touch the DB)
+type=forbidden
+source_modules=
+    app.core.*
+forbidden_modules=
+    app.domains.*.repository

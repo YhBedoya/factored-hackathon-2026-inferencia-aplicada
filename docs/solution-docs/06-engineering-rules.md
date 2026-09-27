@@ -61,9 +61,9 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 
 ## 5. Git workflow
 
-- Short-lived feature branches off `main` (`feat/<domain>-<topic>`), a PR for every change, green CI required, **squash merge**. The author may self-merge after green CI. The other team member reviews safety-critical PRs (tool registry, policy, identity) before merge (ADR-018).
+- Short-lived feature branches off `develop` (`feat/<domain>-<topic>`), a PR into `develop` for every change, green CI required, **squash merge**. The author may self-merge after green CI. The other team member reviews safety-critical PRs (tool registry, policy, identity) before merge (ADR-018).
 - CI: Ruff, Biome, mypy, import-linter, unit tests, integration tests (ephemeral DB), gitleaks, the held-out freeze check, `dbt build` on a sample fixture.
-- `main` must always be deployable. Nobody commits directly to `main`.
+- `main` must always be deployable. Nobody commits directly to `main` or `develop`.
 
 ## 6. Testing standards
 
