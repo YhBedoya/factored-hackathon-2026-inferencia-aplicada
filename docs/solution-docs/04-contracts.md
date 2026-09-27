@@ -62,7 +62,8 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
     "amount": 350.0,
     "amount_approx": true,
     "currency": "COP | ARS | USD | MXN | null",
-    "pending_answer": "affirm | deny | <slot value> | null"
+    "pending_answer": "affirm | deny | <slot value> | null",
+    "topic": "loans | accounts | investments | insurance | transfers | pix_boleto | other | null"
   },
   "clarification": "lock_vs_block | which_card | which_transaction | null"
 }
@@ -135,7 +136,7 @@ codes:
   "54": {cause_key: expired_card, next_step_key: offer_replacement, self_service: true}
 ```
 
-Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags), `escalation.yaml` (rules and thresholds, queues), `min_payment.yaml` (synthetic formula per currency), `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `out_of_market.yaml` (Pix, boleto, CPF…), and the Stretch files (limits bounds, benefits catalog, retention offers).
+Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags), `escalation.yaml` (rules and thresholds, queues), `min_payment.yaml` (synthetic formula per currency), `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), and the Stretch files (limits bounds, benefits catalog, retention offers).
 
 ## 6. Audit event
 
@@ -154,4 +155,4 @@ Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags)
 
 ## 7. Confirmation token
 
-Issued by `policy` when a flow reaches a side-effecting step. Stored in Redis as `conf:<id>` with value `{conversation_id, customer_id, tool, args_hash, expires_at}`. It is single-use (`GETDEL`) and has a 5-minute TTL. The tool executor rejects the call unless the token exists, matches the tool and args hash, and belongs to the same session customer.
+Issued by `policy` when a flow reaches one or more side-effecting steps. Every token is a **plan** (ADR-027): an ordered list of steps, where a single action is a plan of one. It's stored in Redis as `conf:<id>` with value `{conversation_id, customer_id, steps: [{tool, args_hash}], cursor, expires_at}`, TTL 5 minutes. The tool executor rejects a call unless the token exists, belongs to the same session customer, and the call matches the step at `cursor` (tool and args hash). It advances the cursor atomically (a Lua script, replacing a plain `GETDEL`). The key is deleted after the last step, on the first failed or unverified step, or at TTL, so a token can't be reused and steps can't be reordered or added. `ui.confirm` carries `{token_id, steps: [{tool, summary_key, facts}]}`, and the frontend lists every step.

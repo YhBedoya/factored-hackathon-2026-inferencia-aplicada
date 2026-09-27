@@ -127,6 +127,29 @@ The SSE stream runs its dependencies once, when it opens; expiry while it stays 
 **Enforced by:** R13 (`06`): a route-introspection unit test and a cross-customer integration test.
 **Alternatives:** per-route `Depends` only (easy to forget on a new route); ASGI middleware that checks the cookie (no typed session object, and still no ownership check); a public anonymous mode for general questions (more surface area, and no Core feature needs it).
 
+### ADR-026 — Structured abstain replies · Accepted
+**Context:** out-of-scope and out-of-market questions, and every `general_question` until the answer node exists (if-time 5), got "I can help with: …". That is the most robotic moment in the conversation.
+**Decision:** every abstain reply has four parts. Code assembles them as facts and `compose` phrases them:
+1. **Acknowledge** what was asked, using the NLU `topic` label ("Entiendo que quieres saber sobre un préstamo").
+2. **Say why** this chat can't do it (this chat handles cards; the bank doesn't operate Pix or boleto in MX, CO or AR), from a `reason_key`.
+3. **Offer the closest supported action** when one exists, as a one-tap suggestion (e.g. a failed payment → `decline_explain`).
+4. **Offer a human.** It's an offer, not an automatic handoff. After two abstains in a row it becomes a button **(proposed)**.
+
+The NLU gets a new slot `topic`, a closed enum from `policies/scope.yaml`. That file replaces `out_of_market.yaml`, covers both `out_of_scope` and `out_of_market` topics, and maps each topic to `{kind, reason_key, closest_intents[], human_queue}`. The composer may only use those keys. It never names channels, phone numbers or products that aren't in the YAML, and the grounding check applies. An abstain during a pending flow keeps `pending` and restates the pending question, the same as a digression. The answer node stays at if-time 5. Once it exists, `general_question` goes to it, and structured abstain remains for `out_of_scope` and `out_of_market`.
+**Alternatives:** a plain list of topics (the previous design); moving a minimal answer node up to if-time 1 (more natural sooner, but it adds tool-calling LLM work ahead of the other if-time items); a free LLM reply to out-of-scope questions (risks invented banking information).
+
+### ADR-027 — Plan confirmation: one confirmation for a multi-step action · Accepted
+**Context:** the suspected-compromise path asked for a confirmation per write (block, then claim), which felt bureaucratic at a stressful moment.
+**Decision:** every confirmation token is a **plan**: an ordered list of steps. A single action is a plan of one, so there's only one token format. When a flow needs several side-effecting steps back to back, the policy domain issues **one** token for all of them:
+- Redis `conf:<id>` = `{conversation_id, customer_id, steps: [{tool, args_hash}], cursor, expires_at}`, TTL 5 minutes.
+- `ui.confirm` lists every step in plain language ("Bloquear tu crédito •••• 6475 · Abrir un reclamo por 3 compras"). One "sí" or button tap authorizes exactly those steps, in that order.
+- The executor checks each call against the step at `cursor` (same tool, same args hash, same session customer) and advances the cursor atomically (Lua script). The key is deleted after the last step, on the first failure, or at TTL.
+- Every step keeps its own read-back. Execution stops at the first failed or unverified step and hands off (`action_unverified`), listing which steps were applied and verified. There is no automatic rollback, because a block is a safety action.
+- All arguments must be known when the plan is issued. If any step needs step-up, the step-up happens before the plan is shown. `handoff.create` is internal and never a plan step.
+
+First user: `unrecognized_charge` with suspected compromise, where the plan is `[cards.block_card, disputes.create_claim]` followed by the handoff to Fraudes. Other flows keep one-step plans unless they chain writes the same way.
+**Alternatives:** one token per write (the previous design; safest but repetitive); a blanket consent for the rest of the session (too broad, weakens R2); confirming only the first step (the later writes would be unconfirmed).
+
 ---
 
 ## Deferred to implementation
@@ -158,3 +181,4 @@ These are known and owned, and they're decided while building the related featur
 | Card status and details; balance, due date and minimum payment | Balance, due date and minimum payment apply to credit cards only | ADR-020 |
 | Mock identity provider and session token | The OTP is a fixed demo code shared with judges; a real OTP system is out of scope | ADR-008 |
 | Control and traceability of LLM | Core scope defined | ADR-024 |
+| Out-of-market requests (and out-of-scope replies) | Structured abstain: acknowledge the topic, say why, offer the closest supported action and a human | ADR-026 |

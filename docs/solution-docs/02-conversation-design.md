@@ -16,7 +16,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 | `unrecognized_charge` | Unrecognized-charge intake; suspected-fraud triage | flow `unrecognized_charge` | block, claim, handoff | Core (priority flags: If-time (3)) |
 | `replacement_request` | Replacement and reissue | flow `replacement` | replacement order | Core |
 | `human_request` | Explicit request for a human | rule → handoff | handoff | Core |
-| `general_question` | Informational follow-ups that fit no flow | answer node (read-only); until it exists, abstain + list supported topics | — | If-time (5) |
+| `general_question` | Informational follow-ups that fit no flow | answer node (read-only); until it exists, structured abstain (ADR-026) | — | If-time (5) |
 | `greeting`, `thanks_close`, `affirm`, `deny` | Conversation management | router | — | Core |
 | `travel_notice`, `spending_limits`, `card_doctor`, `expiry_renewal`, `benefits_info`, `card_activation`, `pin_reset`, `card_cancel`, `limit_increase`, `card_finder`, `prequalification` | Stretch features | flows added later | various | Stretch |
 
@@ -26,7 +26,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 - **One** Bedrock structured-output call per turn. Temperature 0, pinned model ID and prompt version.
 - Input: the masked user message, the last N masked turns, the pending flow and the slot it is waiting for, the customer's country (for regional vocabulary). **No tool output** is ever passed to this node.
-- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
+- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
 - If validation fails, the node retries once with the validation error, then falls back (see §6).
 - **Confidence** is not a number. It comes from explicit labels (`ambiguous`) plus counters in the graph state (ADR-004).
 
@@ -96,7 +96,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 1. `card_select` → T `transactions.search(recent, include fraud_score)` → `ui.transaction_list` → the customer picks one or more transactions.
 2. **Recognize before you dispute** (Stretch): show the decoded merchant, city, channel and date first.
 3. Rules decide the path:
-   - **Suspected compromise** (several unrecognized transactions, card not in the customer's possession, or `fraud_score` > policy threshold; the exact rule and threshold are decided while building this flow) → offer a permanent block (**C**, **V**) → draft the claim → **handoff to Fraudes**.
+   - **Suspected compromise** (several unrecognized transactions, card not in the customer's possession, or `fraud_score` > policy threshold; the exact rule and threshold are decided while building this flow) → **one plan confirmation** (ADR-027) that lists both steps, the permanent block and the claim draft → T `cards.block_card` → **V** → T `disputes.create_claim` → **V** → **handoff to Fraudes**. If a step fails or can't be verified, execution stops and the handoff lists what was applied.
    - **Single charge** → required questions from `policies/disputes.yaml` (e.g., card in possession? tried contacting the merchant?). Amount, currency and date are filled from the record, never typed by the customer → **C** → T `disputes.create_claim` (appends to `bank.complaints`, `origin='app'`) → **V** re-read → case ID.
 4. **Priority flags** (`is_repeat_complainer`, regulator mention, amount > threshold, Critical priority) → the claim is created and then **always** handed off to Reclamos.
 
@@ -113,8 +113,8 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 |---|---|---|
 | Clarify | `status = ambiguous` or a required slot is missing | Ask one targeted question and increment `clarification_failures` |
 | Clarification exhausted | `clarification_failures ≥ 2` in the same flow | Handoff (Atención) |
-| Out of market | Pix, boleto, a Brazilian account, CPF | Abstain: say the bank doesn't serve that market and offer what it can do |
-| Out of scope | Non-card banking topics, anything else | Abstain + list the supported card topics |
+| Out of market | Pix, boleto, a Brazilian account, CPF | Structured abstain (below): the bank doesn't serve that market, plus the closest thing it can do |
+| Out of scope | Non-card banking topics, anything else | Structured abstain (below) |
 | Human request | `human_request` | Handoff (queue chosen by the current flow, otherwise Atención) |
 | Bank-side block | Unlock attempt on a bank-side block | Handoff to Fraudes / Cobranza |
 | Confirmed or suspected fraud | Fraud triage path | Handoff to Fraudes |
@@ -126,6 +126,8 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |
 
 Queues **(proposed)**: `fraudes`, `cobranza`, `reclamos`, `retencion`, `creditos`, `atencion`.
+
+**Structured abstain (ADR-026).** An abstain reply is never just a list of topics. Code builds four facts from `policies/scope.yaml` using the NLU `topic`, and `compose` phrases them: (1) acknowledge the topic, (2) the `reason_key` (why this chat can't do it), (3) the closest supported action, if `closest_intents` has one, as a one-tap suggestion, and (4) an offer of a human (`human_queue`). After two abstains in a row, the human offer becomes a button **(proposed)**. If a flow is pending, it stays pending and the reply restates its question. Example: "¿Me das un préstamo?" → "Por aquí no puedo gestionar préstamos: este chat atiende tus tarjetas. Si quieres, reviso el cupo disponible de tu tarjeta de crédito, o te paso con un asesor."
 
 ## 6. Live takeover (handoff UX)
 

@@ -52,6 +52,7 @@
 | Policy (allowed tools, limits, min payment, decline explanations) | Versioned synthetic YAML + code | B7, D3.4. The model never invents policy |
 | Natural-language transaction search | LLM extracts a filter, code validates and runs it | The LLM never writes SQL. Dates are resolved in code, in the customer's time zone |
 | Informational follow-ups | **LLM answer node** with read-only tools, max 3 calls, no write tools | Flexibility for digressions without write risk |
+| Out-of-scope / out-of-market replies | Structured abstain: code picks the reason, closest action and human offer from `policies/scope.yaml`; the LLM phrases it (ADR-026) | Feels like a conversation, not a menu, without inventing banking information |
 | Reply wording | LLM composer from a fact list, with placeholders | Natural tone in the right language and register |
 | Money, dates, masked card numbers | Code (Babel), filled into placeholders | No hallucinated amounts or wrong formats |
 | Handoff packet | Deterministic assembly. LLM writes only the one-line request summary | D3.5 fields come from verified records |

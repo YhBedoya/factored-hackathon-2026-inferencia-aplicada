@@ -5,7 +5,7 @@
 | # | Rule | Why | Enforced by |
 |---|---|---|---|
 | R1 | `customer_id` comes **only** from the session context. No tool, route or prompt accepts it from the LLM or the chat | B5, B6 | Tool registry signature check (unit test) + import-linter + unauthorized-access eval cases |
-| R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so) | D3.2 | Tool executor + unit tests |
+| R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so). A token may cover an ordered plan of steps; each call must match the next step exactly (ADR-027) | D3.2 | Tool executor + unit tests (reordered, extra, replayed and cross-customer steps are rejected) |
 | R3 | The bot never reports an action as done without a verified read-back | D2.5 | `ActionResult.verified` required by the composer + eval check |
 | R4 | Money, dates and card masks are formatted in code and inserted through placeholders. The LLM never writes them | Correctness, localization | Composer grounding check (every number must come from facts) |
 | R5 | Only tokenized text goes to Bedrock or Langfuse | B3 | `core/llm` client refuses un-masked input (vault check) + Langfuse `mask` hook + unit tests |
