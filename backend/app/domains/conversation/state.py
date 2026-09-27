@@ -14,10 +14,11 @@ reviews the change.
 from datetime import date, datetime
 from decimal import Decimal
 from operator import add
-from typing import Annotated, Any, Literal, NotRequired, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.actions import ActionResult
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
 
 __all__ = ["RESET_FACTS", "Fact", "Pending", "TurnState", "bind_once"]
@@ -38,7 +39,14 @@ def bind_once(current: str | None, update: str) -> str:
 
 
 class Pending(TypedDict):
-    """A flow paused waiting on one slot (`02` §3)."""
+    """A flow paused waiting on one slot (`02` §3).
+
+    `awaiting_slot` names the slot outside `slots` that a resume fills.
+    `"confirmation"` (D15) waits on `TurnInput.confirmation` or an NLU
+    affirm/deny against an issued plan; `"otp"` (D15, ADR-027) waits on
+    step-up completing before a plan can even be issued. The type stays
+    `str | None` so a flow's own domain slots (e.g. `"card_id"`) keep working.
+    """
 
     flow: str
     node: str
@@ -101,5 +109,5 @@ class TurnState(TypedDict):
     clarification_failures: NotRequired[int]
     confirmation_token_id: NotRequired[str | None]
     facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
-    actions: NotRequired[Annotated[list[dict[str, Any]], add]]
+    actions: NotRequired[Annotated[list[ActionResult], add]]
     escalation_reason: NotRequired[str | None]

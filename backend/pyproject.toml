@@ -54,7 +54,7 @@ warn_unused_configs = true
 warn_redundant_casts = true
 
 [[tool.mypy.overrides]]
-module = ["app.core.*", "app.domains.conversation.*"]
+module = ["app.core.*", "app.domains.conversation.*", "app.domains.policy.*"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 disallow_untyped_calls = true

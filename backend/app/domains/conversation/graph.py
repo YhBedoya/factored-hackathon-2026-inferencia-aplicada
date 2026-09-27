@@ -36,20 +36,55 @@ from pydantic import BaseModel, ConfigDict
 
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import TurnState
+from app.domains.conversation.ui import UIEvent
 
-__all__ = ["DebugInfo", "GraphState", "TurnInput", "TurnOutput", "build_graph", "run_turn"]
+__all__ = [
+    "ConfirmationDecision",
+    "DebugInfo",
+    "GraphState",
+    "TurnInput",
+    "TurnOutput",
+    "build_graph",
+    "run_turn",
+]
+
+
+class ConfirmationDecision(BaseModel):
+    """The button-resume input for a paused plan (D17, `04` §3).
+
+    `token_id` must match `TurnState.confirmation_token_id` for the resume to
+    execute anything; a stale or mismatched token is a no-op (B5 checks it).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    token_id: str
+    decision: Literal["confirm", "cancel"]
 
 
 class TurnInput(TypedDict):
-    """One turn's raw input channel: the sandbox's user message (Q2)."""
+    """One turn's raw input channel: the sandbox's user message (Q2).
+
+    `confirmation` is the button-resume path (D17): every caller passes it
+    explicitly (`None` on a typed turn) so a checkpointed value never leaks
+    into the next turn, and when it is set the turn skips `understand` (no
+    LLM call; the routing that does the skipping is B5).
+    """
 
     user_text: str
+    confirmation: NotRequired[ConfirmationDecision | None]
 
 
 class TurnOutput(TypedDict):
-    """One turn's raw output channel: the composed reply (Q2)."""
+    """One turn's raw output channel: the composed reply (Q2) and UI events.
+
+    `ui` (D16) is this turn's push events for the frontend (`ui.py`) -- a
+    confirmation card, an OTP prompt, and so on -- appended by whichever flow
+    node paused or resumed.
+    """
 
     reply: str
+    ui: NotRequired[list[UIEvent]]
 
 
 class GraphState(TurnState):
@@ -68,6 +103,8 @@ class GraphState(TurnState):
 
     user_text: NotRequired[str]
     reply: NotRequired[str]
+    confirmation: NotRequired[ConfirmationDecision | None]
+    ui: NotRequired[list[UIEvent]]
 
 
 class DebugInfo(BaseModel):
@@ -153,7 +190,9 @@ async def run_turn(
     language: Literal["es", "pt"] = "es"
     reply = ""
 
-    async for update in graph.astream({"user_text": text}, config=config, stream_mode="updates"):
+    async for update in graph.astream(
+        {"user_text": text, "confirmation": None}, config=config, stream_mode="updates"
+    ):
         for node_name, values in update.items():
             if node_name == "understand":
                 nlu = values.get("nlu")

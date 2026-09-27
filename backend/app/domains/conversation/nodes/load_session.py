@@ -12,6 +12,10 @@ repeat, raise-on-change semantics as before.
 `facts`, `nlu` and `escalation_reason` are reset here at the start of every
 turn (Q3) so a later `compose` node only ever sees facts a flow wrote this
 turn, not ones left over from an earlier one.
+
+`ui` (D16) is reset to `[]` here too: it is a graph-local, non-checkpointed
+channel, so a turn only ever reports the events an emitting node appended
+this turn, never a stale one from an earlier turn.
 """
 
 from typing import Any
@@ -39,4 +43,5 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "facts": RESET_FACTS,
         "nlu": None,
         "escalation_reason": None,
+        "ui": [],
     }
