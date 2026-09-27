@@ -27,7 +27,7 @@ points at.
 | ORM | SQLModel on SQLAlchemy 2 async + asyncpg; Alembic migrations for all schemas (`bank`, `app`, `identity`, `audit`) |
 | Stores | Postgres 16 (app data, audit, LangGraph checkpoints) · Redis 7 (confirmation tokens, pub/sub, limits) |
 | Agent | LangGraph turn graph with the Postgres checkpointer, one subgraph per flow in `backend/app/domains/conversation/flows/` |
-| LLM | Amazon Bedrock, **only** through `backend/app/core/llm/`, traced to Langfuse Cloud with masked text only |
+| LLM | **Only** through `backend/app/core/llm/`. Anthropic API during the build, then Amazon Bedrock (`LLM_PROVIDER`, ADR-028). Traced to self-hosted Langfuse (Docker, localhost) once it runs; until then the tracing hook is a no-op (ADR-006) |
 | Pipeline | S3 → Parquet → Pandera → dbt-duckdb → date shift → Postgres → golden DB (`pipeline/`) |
 | Frontend | React 19 + Vite + TanStack Router/Query, React Hook Form + Zod, Radix + Tailwind v4, Biome; generated API client (never hand-edited) |
 | Tooling | Python 3.12, `uv`, Ruff, mypy (strict on `core/`, `policy/`, `conversation/`), pytest, import-linter |
@@ -42,10 +42,10 @@ The full list is `06` §1 (R1–R13). The ones you are most likely to break:
    (R2), and **no "done" without `ActionResult.verified = true`** (R3).
 3. **Money, dates and card masks are formatted in code** (R4) and inserted
    through placeholders. The LLM never writes them.
-4. **Only tokenized (PII-masked) text reaches Bedrock or Langfuse** (R5).
+4. **Only tokenized (PII-masked) text reaches the LLM provider or Langfuse** (R5).
 5. **LLM nodes that read tool output have no write tools**, and tool output
    enters prompts only inside data fences (R6).
-6. **Bedrock only through `app.core.llm`** (R7). It pins the model ID, prompt
+6. **LLM providers only through `app.core.llm`** (R7): no `anthropic`, `boto3` or `langchain_aws` import anywhere else. It pins the model ID, prompt
    version and temperature. Prompts live in
    `conversation/prompts/<step>@v<N>.md`, and any change bumps the version.
 7. **Policy lives in `policies/*.yaml`** with a `provenance` header (R8), never

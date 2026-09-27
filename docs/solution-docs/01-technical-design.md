@@ -31,11 +31,11 @@
 │   → compose (LLM phrasing + code formatting + grounding check) → unmask → emit        │
 │ policy (YAML) · safety (token vault, data fencing) · localization · audit             │
 │ bank tools (customer-scoped): cards · transactions · disputes · customers             │
-│ core/llm: Bedrock model registry, retries, cost, Langfuse                             │
+│ core/llm: model registry (Anthropic API → Bedrock), retries, cost, Langfuse         │
 └────────┬──────────────────────┬─────────────────────┬─────────────────────────────────┘
          │                      │                     │
    PostgreSQL 16          Redis 7                Amazon Bedrock  ── masked text only
-   bank · app · audit ·   confirmation tokens,   Langfuse Cloud  ── masked text only
+   bank · app · audit ·   confirmation tokens,   Langfuse (self-hosted) ── masked
    identity · langgraph   pub/sub, limits        OTel → VictoriaMetrics/Logs/Traces
          ▲
    pipeline: S3 → Parquet (manifest) → Pandera → dbt-duckdb → date shift → Postgres → golden DB
@@ -75,7 +75,7 @@ Modular monolith: `backend/app/domains/<name>/` with `models.py`, `schemas.py`, 
 | `localization` | Money / date / card-mask formatting per country, regional lexicon, MXN estimate | `core` |
 | `conversation` | Conversations, messages, LangGraph turn graph, SSE endpoint, tool registry | everything above, **only through public service interfaces and the tool registry** |
 | `audit` | Append-only audit events, timeline API for the staff console, `llm_calls` ledger | `core` |
-| `core/llm` | Bedrock model registry (per-step model IDs), bounded retries, cost accounting, Langfuse client | `core` |
+| `core/llm` | Model registry (per-step model IDs per provider: Anthropic API during the build, then Bedrock; ADR-028), bounded retries, cost accounting, Langfuse client | `core` |
 
 Outside `backend/`: `pipeline/` (data), `policies/` (synthetic YAML), `eval/` (suite, simulator, baseline, judges), `frontend/`. See [`06-engineering-rules.md`](06-engineering-rules.md) for the layout and the import contracts that enforce these boundaries.
 
@@ -84,7 +84,7 @@ Outside `backend/`: `pipeline/` (data), `policies/` (synthetic YAML), `eval/` (s
 1. `POST /api/v1/conversations/{id}/messages`. Router-level FastAPI dependencies (ADR-025) validate the cookie and CSRF token, require the `customer` role, and load the conversation only if it belongs to the session's customer (otherwise `404`). The validated session is passed to the graph in its run config. If the session has expired, the API returns `401 session_expired`, the pending graph state stays in the checkpointer, and after re-login **as the same customer** the turn is replayed and the flow resumes at its pending node.
 2. The graph runs inline (async) and streams events over `GET /conversations/{id}/stream` (SSE): `status` → `message` → `ui` (card picker, confirmation buttons) → `done`.
 3. `mask_pii` replaces PII with per-conversation tokens (`⟨CARD_1⟩`, `⟨DOC_1⟩`…) held in the Fernet-encrypted vault.
-4. `understand`: one Bedrock call returns `{language, intents[], status, slots, clarification}` (schema in `04-contracts.md`).
+4. `understand`: one LLM call returns `{language, intents[], status, slots, clarification}` (schema in `04-contracts.md`).
 5. `route`: deterministic rules decide between continuing the pending flow, starting a new flow (intent queue for multi-intent turns), the answer node, clarification, or escalation.
 6. Flow / answer node calls **bank tools** through the tool registry. The registry injects `customer_id` from the session, checks the policy allowlist, and requires a confirmation token (plus OTP step-up where configured) for side effects.
 7. Side effects are followed by a **verified read-back**. A mismatch leads to handoff with `action_unverified`, never "done".
@@ -99,7 +99,7 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 - **Login enforcement (ADR-025):** the whole chat requires login; there is no anonymous mode. Three layers: (1) router-level FastAPI dependencies (`get_session`, `require_role`, `get_owned_conversation`) reject a missing or expired session (`401`), the wrong role (`403`) and another customer's conversation (`404`) before the graph runs; (2) the session travels into the graph through the run config, `load_session` binds `customer_id` read-only, and the tool registry builds `ToolContext` from it; (3) step-up is checked per tool by the registry against `session.step_up_at`. Rule R13 and its route-introspection test keep new routes from skipping layer 1.
 - **Customer status precedence:** a Closed, Suspended or Inactive customer's cards are read-only (block still allowed), with no unlock or replacement, and the case goes to a handoff (ADR-021).
 - **Record isolation (B6):** tools never accept `customer_id`. The registry binds it from the session. Every repository query filters by it. A request for another customer's card returns a refusal and writes an `access_denied` audit event.
-- **PII minimization (B3):** only tokenized text goes to Bedrock and Langfuse. The Langfuse SDK `mask` hook redacts again as a second line of defense. Sensitive columns (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.
+- **PII minimization (B3):** only tokenized text goes to the LLM provider and Langfuse. The Langfuse SDK `mask` hook redacts again as a second line of defense. Sensitive columns (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.
 - **Prompt injection:** user text only selects a flow, and flows enforce policy on their own. Tool output (e.g., `merchant_name`, complaint text) goes into prompts inside explicit data fences, and **LLM nodes that read tool output have no write tools**. An adversarial suite covers direct and data-field injection.
 - **Secrets:** AWS access through an IAM role / profile, never keys in code. `.env` stays local, with `.env.example` committed. The official data-dictionary PDF is git-ignored.
 - **Cost guard (ADR-023):** turn caps per conversation and per account per day, a login rate limit, an AWS Budgets alarm, and an `LLM_DISABLED` kill switch that routes every turn to the safe fallback + handoff.
@@ -116,7 +116,7 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 
 | Signal | Where | Content |
 |---|---|---|
-| LLM generations | Langfuse Cloud | Masked prompts/outputs, model ID, prompt version, tokens, cost, latency, eval scores |
+| LLM generations | Langfuse, self-hosted in Docker (ADR-006) | Masked prompts/outputs, model ID, prompt version, tokens, cost, latency, eval scores |
 | Infra traces, logs, metrics | OTel → VictoriaTraces / VictoriaLogs / VictoriaMetrics (+ Grafana) | FastAPI, SQLAlchemy, Redis, httpx spans; structlog JSON with `request_id` / `trace_id` / `conversation_id` |
 | Business audit | Postgres `audit.audit_events`, `audit.llm_calls` | Rule hits, policy version hash, tool calls + results, confirmations, read-backs, handoffs, sources cited per reply |
 | Staff console | Frontend `/staff/*` | Handoff inbox with live takeover; conversation list filterable by language, country, intent, outcome, escalation and date; "why did the bot say this?" per-turn timeline (NLU result, rule hits, tool calls and results, sources, policy hash, model and prompt version, latency, cost) built from audit events plus a link to the Langfuse trace, **never chain-of-thought** (ADR-024) |

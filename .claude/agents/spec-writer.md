@@ -120,9 +120,9 @@ question set instead, so say so and ask.
 Rules R1–R13 in `06` §1 and the import-linter contracts in `06` §2. In short:
 `customer_id` only from the session; side effects only with a server-issued
 confirmation token; "done" only after a verified read-back; money, dates and
-card masks formatted in code; only tokenized text to Bedrock or Langfuse; LLM
+card masks formatted in code; only tokenized text to the LLM provider or Langfuse; LLM
 nodes that read tool output have no write tools; policy in `policies/*.yaml`,
-never in prompts; Bedrock only through `backend/app/core/llm/`; never touch
+never in prompts; LLM providers (Anthropic API, then Bedrock) only through `backend/app/core/llm/`; never touch
 `eval/scenarios/heldout/`; never commit secrets, `data/` or the dictionary PDF.
 
 If the card itself contradicts one of these rules or a design doc, that is your

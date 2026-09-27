@@ -51,14 +51,14 @@ Tests exist to protect two things, and nothing else:
    LLM client. These tests are not optional and not cut for time.
 2. **The card's "Done when".** One test (or one runnable command) per "Done
    when" line, proving it. Where the line is a manual check (`make up` serves
-   a page, a trace shows up in Langfuse), the proof is a command the verifier
+   a page, an LLM call returns a validated object), the proof is a command the verifier
    runs, not a test.
 
 Beyond that:
 - **Flows: one ES and one PT scripted test for the happy path.** Add a denial
   or failure case only when it guards a safety rule. No language × variant ×
   category matrices. That is the eval suite's job (`05`), not pytest's.
-- **Always use a fake LLM.** No test calls Bedrock or Langfuse.
+- **Always use a fake LLM.** No test calls the Anthropic API, Bedrock or Langfuse.
 - **No tests for** glue, settings, Pydantic schemas, trivial getters,
   migrations that `upgrade head` already proves, or UI rendering (except the
   Playwright flows the plan names explicitly).

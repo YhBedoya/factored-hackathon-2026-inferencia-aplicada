@@ -55,7 +55,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 
 | Day | Goal: what we test by hand at end of day | Dev A | Dev B |
 |---|---|---|---|
-| **D1** Sun 27 | The stack runs with real data. **In a terminal**, the agent answers card status in ES/PT | G1 Platform + frontend tooling · G2 Bank data v0 · kickoff: Bedrock access, contracts | G3 Agent core in the sandbox · card status workflow |
+| **D1** Sun 27 | The stack runs with real data. **In a terminal**, the agent answers card status in ES/PT | G1 Platform + frontend tooling · G2 Bank data v0 · kickoff: Anthropic API key for B, Bedrock access, contracts | G3 Agent core in the sandbox · card status workflow |
 | **D2** Mon 28 | A persona logs in **through the API** and asks about their cards; answers come from Postgres. Block/lock/unlock/replacement run in the sandbox | G4 Login + personas · Postgres read tools · conversation API + streaming · host the agent | G7 Card info complete + formatting · G8 Block/unblock workflows in the sandbox |
 | **D3** Tue 29 | **First day in the browser:** card info + block, lock, unlock and replacement with confirm → read-back | G6a Policy, confirmation tokens, write tools + read-back, OTP, audit log · move B's workflows onto the real write tools | G5 Design + landing, login, chat, widgets (card picker, confirm, OTP) |
 | **D4** Wed 30 | **Fraud claim and human handoff on the public URL.** Pix → abstain. "Quiero un humano" → handoff | G10 Escalation rules, handoff packet, abstention, live-takeover backend · G12a AWS deploy | G9 Disputes & fraud workflow · transaction-list and handoff widgets · staff inbox + takeover screens |
@@ -75,8 +75,8 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 **Kickoff (first hour, both)**
 | # | What | Output |
 |---|---|---|
-| K1 | Bedrock: pick the region, enable models (a small Claude model such as Haiku 4.5, plus a non-Claude family for later), AWS profiles on both laptops, one test call each. A leads | Both of you can call Bedrock |
-| K2 | Langfuse Cloud project; keys shared through a password manager, never in the repo | `.env` on both laptops |
+| K1 | Anthropic API key for B in the git-ignored `.env` (never in the repo), `LLM_PROVIDER=anthropic`. B's LLM work doesn't wait for Bedrock (ADR-028) | B can call Claude from D1 |
+| K2 | Bedrock: pick the region, enable models (a small Claude model such as Haiku 4.5, plus a non-Claude family for later), AWS profiles on both laptops, one test call each. A leads, and it doesn't block B. Once it passes, B's connection switches to Bedrock (ADR-028) | Both of you can call Bedrock |
 | K3 | Contracts PR to `main` (A writes, B reviews): `backend/` skeleton, read-tool interfaces (`list_cards`, `get_card_details`, `search_transactions` + result models + `ToolContext`), `NLUResult`, graph state | B starts from `main` |
 
 **Dev A: G1 platform foundation and G2 bank data v0**
@@ -93,7 +93,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 | # | Task | Done when |
 |---|---|---|
 | B1 | `FakeBank` on DuckDB over local `data/`, always filtered by the customer in `ToolContext`. ~10 hand-picked test customers (several cards, debit only, blocked card, MX/CO/AR) | Tests return the right cards per customer and never another customer's |
-| B2 | Thin LLM client in `core/llm`: structured output (Pydantic in, validated object out, one retry on invalid output) + Langfuse tracing | A call shows up in Langfuse |
+| B2 | Thin LLM client in `core/llm`: structured output (Pydantic in, validated object out, one retry on invalid output), provider behind `LLM_PROVIDER=anthropic\|bedrock` (Anthropic API first, ADR-028), and a tracing hook that is a no-op until self-hosted Langfuse runs (ADR-006) | A call through the Anthropic API returns a validated object. Switching the provider changes nothing outside `core/llm` |
 | B3 | Turn graph v0: `load_session → understand → route → flow → compose`, in-memory state | Graph compiles; a picture of it is exported |
 | B4 | Intent-detection prompt `nlu@v1`: closed intent list, statuses, slots, ES/PT/voseo/portuñol examples | 20 hand-written messages → 20 valid outputs |
 | B5 | Card status workflow: one card is used directly; several → masked options; "la de crédito" / "termina en 6475" resolved in code | Works for one-card and multi-card customers |
@@ -110,7 +110,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
    - "qual é o status do meu cartão?" → the answer comes back in PT
    - "¿me podés decir si mi tarjeta está activa?" → understood
    - "quiero pagar con Pix" → the debug line shows `out_of_market`
-5. The Langfuse traces for those turns are visible.
+5. The log lines for those turns show each LLM call's provider, model ID and prompt version (Langfuse isn't needed yet).
 
 **If behind:** A leaves the observability stack and CI caching for later, and loads `digital_events` on D2. B moves the card-hint resolution to D2 morning.
 
@@ -238,7 +238,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 **Dev A: G6b privacy and grounding, and G11 runner and baseline**
 | # | Task | Done when |
 |---|---|---|
-| A1 | Harden `core/llm`:<br>• PII masking before every call (card numbers, document numbers, emails, phones, names → tokens), with an encrypted per-conversation vault that is unmasked only in the customer's view<br>• the client refuses unmasked input<br>• Langfuse mask hook<br>• `audit.llm_calls` ledger (tokens, cost, latency, model, prompt version) | Unit tests; an LLM call with a raw card number raises an error |
+| A1 | Harden `core/llm`:<br>• PII masking before every call (card numbers, document numbers, emails, phones, names → tokens), with an encrypted per-conversation vault that is unmasked only in the customer's view<br>• the client refuses unmasked input<br>• self-hosted Langfuse in the Compose observability layer (localhost, ADR-006) + its mask hook<br>• `audit.llm_calls` ledger (tokens, cost, latency, model, prompt version) | Unit tests; an LLM call with a raw card number raises an error |
 | A2 | Grounding check in the reply writer: every number comes from a fact, the language matches, no raw PII → regenerate once → otherwise a safe template | An injected wrong amount is caught and never sent |
 | A3 | Eval runner: a golden-DB clone per run, test-IdP sessions, deterministic checks (tools called and forbidden, DB state, confirm before act, read-back before "done", language, grounding, packet fields), metrics with n + Wilson CI, `report.md`, run metadata. `make eval SUITE= SYSTEM=` | A broken flow fails the right check |
 | A4 | Keyword baseline (`SYSTEM=baseline`): clause split, precedence rules, negation window, ES/PT template replies, same tools and policy | Runs on the same cases as the proposed system |
@@ -350,7 +350,7 @@ If everything after D5 failed, this is what we'd submit.
   - human request
 - [ ] A staff agent claims a handoff, chats live and returns the conversation to the bot
 - [ ] Unit tests for R1–R5 and R12 green. Only masked text reaches the LLM
-- [ ] `make data` reproduces the golden DB. Langfuse and the audit log record every turn
+- [ ] `make data` reproduces the golden DB. Langfuse (local) and the audit log record every turn. LLM calls go through Bedrock
 - [ ] Held-out frozen (hash + CI check). Dev report for proposed vs baseline, with CIs. D1.5 targets recorded
 - [ ] The README quickstart works on a fresh clone
 
@@ -393,7 +393,7 @@ If everything after D5 failed, this is what we'd submit.
 | | Verified read-back | G6 | D3 A |
 | | PII minimization | G6 | D5 A |
 | | Injection hardening, including data fields | G6 | D6 A |
-| | Tracing and audit timeline | G3, G6, G13 | D1 B (Langfuse), D3 A (audit log), D7 A + B (console) |
+| | Tracing and audit timeline | G3, G6, G13 | D1 B (LLM client), D3 A (audit log), D5 A (Langfuse), D7 A + B (console) |
 | | Bounded retries and safe fallback | G12 | D6 A |
 | | Evaluation harness | G11 | D5 A + B, D6 B, D7 A |
 | | Intent classifier vs keyword baseline | G11 | D5 A (baseline), D7 A (report), D8 B (error analysis) |
@@ -417,7 +417,8 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 
 | Risk | Signal | Mitigation |
 |---|---|---|
-| Bedrock access or quotas missing | K1 fails on D1 | Switch region the same day and request quota. B keeps going with the fake LLM |
+| Bedrock access or quotas missing | K2 fails on D1 | Switch region the same day and request quota. B keeps going on the Anthropic API (ADR-028) |
+| The Bedrock switch changes behavior | Sandbox answers or structured outputs differ after the switch | Switch as soon as K2 passes, not on deploy day. Rerun B's scripted conversations on both providers |
 | A overloaded on D4–D6 | End-of-day tests slip twice in a row | Apply the cut lines. B already builds the disputes tools on D4; B can also take the data-quality fixtures on D6 |
 | Deploy slips | No URL at the end of D4 | A finishes it on D5 morning. The gate needs the URL |
 | Held-out review takes longer than 2 h | Test sets not finished at 16:00 on D5 | Shrink held-out to ~120 while keeping the mix. Never skip review |
@@ -429,6 +430,9 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | Day | Decision | Proposal |
 |---|---|---|
 | D1 | Bedrock region, model per step | Haiku 4.5 for intent detection and replies to start |
+| D1–D4 | When B's connection moves from the Anthropic API to Bedrock (ADR-028) | As soon as K2 passes; before the D4 deploy at the latest |
+| D4 | Whether the public deployment runs Langfuse too (ADR-006) | Decided with the AWS setup |
+| D5 | When self-hosted Langfuse is set up | A adds it with D5 A1 (mask hook). Earlier if the observability layer has room |
 | D1 | Time zone of `transaction_date` | A decides while building A5 |
 | D2 | Minimum payment formula (synthetic) | `max(5% × balance, floor)` with floors USD 10 / COP 40.000 / ARS 5.000, plus overdue amounts when `days_past_due > 0` |
 | D2 | Final persona list | B's 10 + ~20 found by query |

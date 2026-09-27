@@ -46,15 +46,15 @@ the agent that wrote the code, and you verify claims.
    names (a `curl`, `make data`, `alembic upgrade head`, a CLI call). Never
    quote an implementer's claim that something passed. Run it and quote your
    own output. If the suite can't run, that is a `FAIL` on every criterion that
-   depends on it, not an excuse. Don't call Bedrock unless a criterion
+   depends on it, not an excuse. Don't call a real LLM provider unless a criterion
    explicitly requires a live call.
 4. **Check the standing rules independently**, because a green suite isn't
    proof the card obeyed them. Check only the rules the diff can reach:
    `customer_id` taken from anything other than the session (R1); a side
    effect without a confirmation token (R2); success reported without
    `verified` (R3); money, dates or masks written by the LLM (R4); unmasked text
-   to Bedrock or Langfuse (R5); an LLM node that reads tool output holding a
-   write tool (R6); Bedrock imported outside `app.core.llm` (R7); policy in a
+   to the LLM provider or Langfuse (R5); an LLM node that reads tool output holding a
+   write tool (R6); an LLM SDK (`anthropic`, `boto3`, `langchain_aws`) imported outside `app.core.llm` (R7); policy in a
    prompt or constant instead of `policies/*.yaml` (R8); any change under
    `eval/scenarios/heldout/` (R9); a secret, `data/` file or the dictionary PDF
    staged (R10); unbounded retries (R11); a provided table updated without its

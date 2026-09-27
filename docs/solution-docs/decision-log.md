@@ -34,9 +34,10 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 **Keyword baseline on multi-intent messages:** split the message into clauses at connectors and punctuation (`y / e / también / además / além disso / , / ; / ?`), match each clause against the regional lexicon, keep intents in order of appearance with duplicates removed, apply precedence rules (e.g., "no reconozco" + "bloquear" → only `unrecognized_charge`) and a negation window of about 3 tokens ("no quiero bloquearla" drops `card_block`). The baseline stays a reasonable competitor. Implicit multi-intent, pronoun references and portuñol are where the LLM is expected to win.
 **Alternatives:** a trained fallback classifier (embeddings + logistic regression) used when Bedrock is down; a language/variety detector vs a langid baseline. Both are optional extras if time allows.
 
-### ADR-006 — Observability: Langfuse Cloud + OTel/Victoria stack + own audit tables · Accepted
-**Decision:** Langfuse Cloud for LLM generations, prompt versions, costs and eval scores (masked text only). OTel → VictoriaTraces/Logs/Metrics for infrastructure. The staff traceability console reads our own `audit` tables and links to Langfuse traces.
-**Alternatives:** OTel-only (build prompt/cost/eval tracking ourselves); self-hosted Langfuse (ClickHouse + S3 + Redis is heavy).
+### ADR-006 — Observability: self-hosted Langfuse + OTel/Victoria stack + own audit tables · Accepted (amended 2026-09-26)
+**Decision:** Langfuse for LLM generations, prompt versions, costs and eval scores (masked text only), **self-hosted with Docker on localhost** (the Langfuse compose services in our observability layer), not Langfuse Cloud. OTel → VictoriaTraces/Logs/Metrics for infrastructure. The staff traceability console reads our own `audit` tables and links to Langfuse traces.
+**Amendment:** Langfuse is **not required to start**. Until it runs, the `core/llm` tracing hook is a no-op when no Langfuse host is configured, and the `audit.llm_calls` ledger is the record of every call. Whether the public deployment also runs Langfuse is **Open**, decided with the AWS setup (ADR-017). Without it, the console's Langfuse link only works locally.
+**Alternatives:** Langfuse Cloud (the original choice; replaced to keep traces local); OTel-only (build prompt/cost/eval tracking ourselves).
 
 ### ADR-007 — Conversation state and transport · Accepted
 **Decision:** LangGraph `AsyncPostgresSaver` (psycopg 3 pool next to asyncpg) keyed by conversation. Chat turns run inline and async, and results stream over SSE. TaskIQ is used only for batch jobs (ingest, eval runs, simulator).
@@ -150,6 +151,12 @@ The NLU gets a new slot `topic`, a closed enum from `policies/scope.yaml`. That 
 First user: `unrecognized_charge` with suspected compromise, where the plan is `[cards.block_card, disputes.create_claim]` followed by the handoff to Fraudes. Other flows keep one-step plans unless they chain writes the same way.
 **Alternatives:** one token per write (the previous design; safest but repetitive); a blanket consent for the rest of the session (too broad, weakens R2); confirming only the first step (the later writes would be unconfirmed).
 
+### ADR-028 — LLM provider during the build: Anthropic API first, then Bedrock · Accepted
+**Context:** Bedrock access (region, model enablement, AWS profiles, quotas) takes time to set up, and Dev B needs a real LLM from D1 to build the agent.
+**Decision:** while Bedrock is being configured, Dev B calls Claude models through the **Anthropic API** with a personal API key (`ANTHROPIC_API_KEY` in the git-ignored `.env`, never in the repo). The connection then **migrates to Amazon Bedrock**, which stays the target for the deployed system (ADR-017). `core/llm` hides the provider behind one setting (`LLM_PROVIDER=anthropic|bedrock`, **proposed** name), and its model registry maps each step to a model ID per provider. Graph nodes, prompts and tests don't change when the provider switches. All the rules still apply to both providers: masked text only (R5), pinned model and prompt version (R7), `core/llm` as the only place that imports an LLM SDK (`06` §2).
+**When to switch (proposed):** as soon as the Bedrock kickoff check (K2 in `07`) passes, and before the D4 deploy at the latest, since the deploy's IAM role is for Bedrock. The non-Claude model family for paraphrases, the simulator and the judge comes from Bedrock, so Bedrock must work by D5.
+**Alternatives:** wait for Bedrock before any LLM work (blocks B on D1); build only on the Anthropic API (the deployment plan and the model comparison assume Bedrock).
+
 ---
 
 ## Deferred to implementation
@@ -162,6 +169,8 @@ These are known and owned, and they're decided while building the related featur
 | Numeric targets for the D1.5 outcome metrics (the metrics themselves are defined in `05` §6) | After the first dev eval run, before freezing held-out |
 | Model family for the customer simulator, paraphrases and LLM judge (non-Claude, to avoid self-grading bias) | Building the eval harness |
 | Exact Bedrock model IDs per step | Benchmark on the dev set |
+| Moment of the Anthropic API → Bedrock switch (ADR-028) | When K2 in `07` passes; before the D4 deploy at the latest |
+| Whether the public deployment runs Langfuse (ADR-006) | With the AWS setup (ADR-017) |
 | Step-up validity window (N minutes after a successful OTP) and what happens to an open confirmation token when the session expires during it | Building identity + the first step-up flow (ADR-025) |
 | Concrete AWS setup | Sprint midpoint (ADR-017) |
 | Time zone semantics of `transaction_date` | Building the pipeline |

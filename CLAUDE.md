@@ -12,13 +12,13 @@ AI-first **card-support** service for the synthetic LATAM Bank (Factored AI & Da
 ## Critical rules (summary; the full list is in 06)
 - `customer_id` comes only from the session, never from the LLM or the chat.
 - Side effects need a server-issued confirmation token. Say "done" only after a verified read-back.
-- Money, dates and card masks are formatted in code. Only tokenized (PII-masked) text goes to Bedrock or Langfuse.
+- Money, dates and card masks are formatted in code. Only tokenized (PII-masked) text goes to the LLM provider or Langfuse.
 - LLM nodes that read tool output have no write tools. Policy lives in `policies/*.yaml`, never in prompts.
 - Never commit secrets, `data/`, credential exports or `docs/official-docs/LATAM_Bank_Complete_Data_Dictionary.pdf` (it contains S3 keys).
 - Never edit `eval/scenarios/heldout/`. It is frozen.
 
 ## Stack
-FastAPI + SQLModel/asyncpg + Alembic + Redis · LangGraph (Postgres checkpointer) + Amazon Bedrock · React 19 + Vite + TanStack · dbt-duckdb + Pandera · Docker Compose + Nginx · OTel → VictoriaMetrics/Logs/Traces · Langfuse Cloud.
+FastAPI + SQLModel/asyncpg + Alembic + Redis · LangGraph (Postgres checkpointer) + Amazon Bedrock (Anthropic API until Bedrock is set up, ADR-028) · React 19 + Vite + TanStack · dbt-duckdb + Pandera · Docker Compose + Nginx · OTel → VictoriaMetrics/Logs/Traces · Langfuse self-hosted in Docker (not needed to start, ADR-006).
 
 ## Planned commands
 ```bash
