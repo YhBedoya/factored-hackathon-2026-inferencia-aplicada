@@ -48,6 +48,8 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 
 `TxFilter` = `{date_from, date_to, merchant_names[], amount_min, amount_max, currency, status[], card_id}`. Dates are resolved by code and validated (`date_from <= date_to`, window at most 366 days when both are set).
 
+`TxView.occurred_at` is an aware UTC datetime; display in `BANK_TZ` of the customer's country (D1-A D1).
+
 ## 2. NLU output (`understand` node)
 
 ```json
@@ -74,6 +76,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 
 | Method & path | Role | Purpose |
 |---|---|---|
+| `GET /api/v1/health` | public | Liveness: `HealthResponse{status, db, redis}`, `200` when DB and Redis are both up, `503` otherwise (D15) |
 | `POST /auth/login` · `POST /auth/logout` · `POST /auth/refresh` · `GET /auth/me` | any | Session (httpOnly cookie + CSRF) |
 | `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery) |
 | `POST /conversations` | customer | Start a conversation |

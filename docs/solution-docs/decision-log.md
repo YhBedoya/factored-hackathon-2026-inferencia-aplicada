@@ -55,6 +55,7 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 ### ADR-010 — Simulated "now": whole-week date shift at load · Accepted
 **Decision:** `date_offset_days = 7 × floor((load_date − 2026-06-17) / 7)`, applied to every temporal column in the dbt serving layer. The data ends on deploy/load day. The real clock is used afterwards.
 **Alternatives:** a frozen business clock; exact-day shift (breaks weekday patterns).
+**Amendment (D1-A D1):** time zone semantics of `transaction_date` are decided: every TIMESTAMP column in `bank.*` is interpreted as UTC and stored as `timestamptz`; local display and relative-date resolution use `BANK_TZ` per country (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`).
 
 ### ADR-011 — Write model: update + history, append new entities, golden DB clones · Accepted
 **Decision:** the app writes into the provided tables. In-place updates (e.g., `products.product_status`) always write a history row in the same transaction, and new entities (claims) are appended with `origin='app'`. Complementary tables cover what the dataset lacks (controls, replacements, conversations, handoffs, audit, vault). Demo reset and every eval run start from `CREATE DATABASE … TEMPLATE latam_golden`.
@@ -173,7 +174,6 @@ These are known and owned, and they're decided while building the related featur
 | Whether the public deployment runs Langfuse (ADR-006) | With the AWS setup (ADR-017) |
 | Step-up validity window (N minutes after a successful OTP) and what happens to an open confirmation token when the session expires during it | Building identity + the first step-up flow (ADR-025) |
 | Concrete AWS setup | Sprint midpoint (ADR-017) |
-| Time zone semantics of `transaction_date` | Building the pipeline |
 | Demo and video script | After Core is built (ADR-019) |
 
 ---

@@ -1,0 +1,30 @@
+-- Final column set for bank.digital_events, in the migration's column order
+-- (0001, T11). `event_date` and `process_date` are shifted (D11).
+select
+    event_id,
+    {{ shift_timestamp('event_date') }} as event_date,
+    {{ shift_date('process_date') }} as process_date,
+    customer_id,
+    session_id,
+    event_type,
+    event_category,
+    channel,
+    platform,
+    browser,
+    app_version,
+    page_url,
+    page_title,
+    action,
+    element_id,
+    product_id,
+    event_value,
+    duration_seconds,
+    ip_address,
+    ip_country,
+    ip_city,
+    is_mobile,
+    referrer,
+    utm_source,
+    utm_medium,
+    utm_campaign
+from {{ ref('stg_digital_events') }}

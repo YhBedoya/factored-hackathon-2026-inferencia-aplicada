@@ -141,6 +141,7 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 - All Mexican cards are denominated in **USD**. MXN is shown only as a labeled estimate.
 - Observed values deviate from the dictionary: Spanish enum values ("Tarjeta Crédito"), missing transcript columns, row counts 84–156% of documented.
 - Dates are shifted at load (whole weeks) so the data ends on deploy day. All "now" behavior is simulated.
+- `process_date` follows UTC−6 in all three countries, including CO and AR: rows stamped 00:00–05:59 carry the previous day (D1.3, D1-A D1).
 
 ## 11. Open items
 
@@ -148,7 +149,6 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 |---|---|---|
 | ADR-017 | Concrete AWS setup, decided at the sprint midpoint | K2 |
 | — | Exact Bedrock model IDs per step (benchmark on the dev set) | Latency/cost numbers |
-| — | Time zone semantics of `transaction_date` (EDA saw a UTC-vs-local `process_date` shift) | Relative-date search correctness |
 | — | Suspected-compromise rule and threshold for `unrecognized_charge` | Fraud triage path |
 | — | Numeric targets for the D1.5 outcome metrics, set after the first dev eval run | D1.5 |
 
