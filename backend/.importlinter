@@ -31,10 +31,15 @@ forbidden_modules=
     langchain_aws
 ignore_imports=
     app.core.llm -> anthropic
+    app.core.llm.** -> anthropic
     app.core.llm -> langchain_anthropic
+    app.core.llm.** -> langchain_anthropic
     app.core.llm -> boto3
+    app.core.llm.** -> boto3
     app.core.llm -> aioboto3
+    app.core.llm.** -> aioboto3
     app.core.llm -> langchain_aws
+    app.core.llm.** -> langchain_aws
 unmatched_ignore_imports_alerting=none
 
 [importlinter:contract:conversation-no-repository]

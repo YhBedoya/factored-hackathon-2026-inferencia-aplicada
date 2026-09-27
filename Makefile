@@ -6,7 +6,7 @@ export
 
 COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.observability.yml
 
-.PHONY: setup mcp-setup up down test check client data demo-reset
+.PHONY: setup mcp-setup up down test check client data demo-reset chat-sandbox chat-ui nlu-smoke graph-diagram
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -52,3 +52,19 @@ data: ## Ingest (S3 by default, or SOURCE=local:<path>) -> dbt -> golden DB -> d
 
 demo-reset: ## Reset latam_app from latam_golden (03 §7).
 	cd pipeline && uv run python -m load.demo_reset
+
+# --- D1-B sandbox (FakeBank over DuckDB, no API or Postgres needed) ----------
+
+chat-sandbox: ## CLI chat against FakeBank: make chat-sandbox CUSTOMER=<customer_id>.
+	@test -n "$(CUSTOMER)" || (echo "Usage: make chat-sandbox CUSTOMER=<customer_id>" && exit 1)
+	cd backend && uv run python -m app.domains.conversation.sandbox --customer "$(CUSTOMER)"
+
+chat-ui: ## Streamlit sandbox page on http://localhost:8501.
+	@echo "Sandbox UI: http://localhost:8501"
+	cd backend && uv run streamlit run scripts/sandbox_ui.py
+
+nlu-smoke: ## Live NLU smoke set (needs ANTHROPIC_API_KEY).
+	cd backend && uv run python scripts/nlu_smoke.py
+
+graph-diagram: ## Regenerate the turn-graph Mermaid diagram.
+	cd backend && uv run python -m app.domains.conversation.graph --mermaid > ../docs/diagrams/turn-graph-v0.mmd

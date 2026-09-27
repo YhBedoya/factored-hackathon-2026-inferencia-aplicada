@@ -140,7 +140,7 @@ codes:
   "54": {cause_key: expired_card, next_step_key: offer_replacement, self_service: true}
 ```
 
-Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags), `escalation.yaml` (rules and thresholds, queues), `min_payment.yaml` (synthetic formula per currency), `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), and the Stretch files (limits bounds, benefits catalog, retention offers).
+Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags), `escalation.yaml` (rules and thresholds, queues), `min_payment.yaml` (synthetic formula per currency), `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
 
 ## 6. Audit event
 

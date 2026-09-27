@@ -18,6 +18,12 @@ dependencies = [
     "opentelemetry-exporter-otlp-proto-http>=1.27",
     "opentelemetry-instrumentation-asyncpg>=0.48b0",
     "opentelemetry-instrumentation-redis>=0.48b0",
+    "langgraph>=0.2",
+    "langchain-anthropic>=0.2",
+    "langchain-aws>=0.2",
+    "duckdb>=1",
+    "pyyaml>=6",
+    "babel>=2.16",
 ]
 
 [dependency-groups]
@@ -27,6 +33,8 @@ dev = [
     "pytest>=8",
     "httpx>=0.27",
     "import-linter>=2.15",
+    "types-PyYAML",
+    "streamlit>=1.38",
 ]
 
 [tool.uv]
