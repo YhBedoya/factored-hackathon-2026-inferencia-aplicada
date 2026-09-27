@@ -15,15 +15,15 @@ Sources: `LATAM_Bank_Dataset_Summary (1).pdf` and `LATAM_Bank_Complete_Data_Dict
 
 Per the data dictionary (page 2, "Data Access Credentials"):
 - Hosted on **Amazon S3**, **read-only** for Datathon participants.
-- Bucket: `factored-datathon-2026-s3-157725502942-us-east-2-an` · Region: `us-east-2` · Prefix: `data/`
+- Bucket: `<S3_BUCKET from .env>` · Region: `us-east-2` · Prefix: `data/`
 - Documented commands:
   ```bash
   aws configure set aws_access_key_id     "$AWS_ACCESS_KEY_ID"      # value: see dictionary PDF, page 2
   aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"  # value: see dictionary PDF, page 2
   aws configure set region us-east-2
-  aws s3 ls   s3://factored-datathon-2026-s3-157725502942-us-east-2-an/data/
-  aws s3 cp   s3://factored-datathon-2026-s3-157725502942-us-east-2-an/data/customers.csv ./
-  aws s3 sync s3://factored-datathon-2026-s3-157725502942-us-east-2-an/data/ ./data/
+  aws s3 ls   s3://<S3_BUCKET from .env>/data/
+  aws s3 cp   s3://<S3_BUCKET from .env>/data/customers.csv ./
+  aws s3 sync s3://<S3_BUCKET from .env>/data/ ./data/
   ```
 - Organizers' note: "Do not share these credentials outside of Datathon participants."
 

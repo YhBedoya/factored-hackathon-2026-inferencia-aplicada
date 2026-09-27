@@ -16,6 +16,7 @@ S3 credentials come from env vars / an AWS profile (page 2 of the data dictionar
 
 ```
 S3 data/ ──(1) ingest──► data/raw/<table>/year=…/month=…/day=…/*.parquet   + data/raw/_manifest.json (key, size, ETag, downloaded_at)
+         (step 1 also accepts `SOURCE=local:<path>`, an existing local mirror of the same layout; no AWS credentials needed then, D6)
          ──(2) contracts (Pandera, per partition) ──► data/quality/<run_id>/contract_report.json
          ──(3) dbt-duckdb
                staging/   stg_<table>: typed, renamed, enums normalized, dedup on PK (dups kept in stg_<table>__rejects)
@@ -35,6 +36,7 @@ S3 data/ ──(1) ingest──► data/raw/<table>/year=…/month=…/day=…/*
 - Contracts are defined from the **observed** schema, with deviations from the dictionary documented: Spanish enum values ("Tarjeta Crédito", "Transaccional"…), missing transcript columns (`full_text`, `agent_text`), row counts 84–156% of documented.
 - Pandera checks per raw partition: column presence and types, nullability, enum domains, ranges (`fraud_score` 0–100, `credit_score` 300–850), PK uniqueness.
 - dbt tests on staging and serving: PK uniqueness, FK relationships (orphans are counted and flagged, never silently dropped), accepted values, semantic checks from the EDA (transactions before card opening or after expiry, future `last_updated`, the `process_date` UTC/local shift).
+- D1.3 finding: `process_date` follows UTC−6 in all three countries (MX, CO, AR); rows stamped 00:00–05:59 carry the previous day (D1-A D1).
 - Output: a quality report per run (counts, rates, failing rows sample) that feeds the D1.3 analysis.
 
 ## 4. Freshness and update policy (D4.5)
@@ -52,6 +54,7 @@ S3 data/ ──(1) ingest──► data/raw/<table>/year=…/month=…/day=…/*
 - Applied in the dbt `serving` layer to **every** DATE/TIMESTAMP column (including `date_of_birth`, expiration dates, exchange-rate dates, partition columns), so ages and intervals are unchanged. Raw and staging are never shifted.
 - The offset and `load_date` are recorded in `app.system_metadata` and shown in the staff console.
 - After load, the app uses the real clock (`BANK_TZ` per country). Data ages naturally after deploy day.
+- Time zone (D1-A D1): every `bank.*` TIMESTAMP column is UTC, stored as `timestamptz`. Local display and relative-date resolution use `BANK_TZ` per country: MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`.
 
 ## 6. Postgres schemas
 

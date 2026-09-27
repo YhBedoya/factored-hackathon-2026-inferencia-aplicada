@@ -433,7 +433,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D1–D4 | When B's connection moves from the Anthropic API to Bedrock (ADR-028) | As soon as K2 passes; before the D4 deploy at the latest |
 | D4 | Whether the public deployment runs Langfuse too (ADR-006) | Decided with the AWS setup |
 | D5 | When self-hosted Langfuse is set up | A adds it with D5 A1 (mask hook). Earlier if the observability layer has room |
-| D1 | Time zone of `transaction_date` | A decides while building A5 |
+| D1 | Time zone of `transaction_date` | **Decided (A5, D1-A D1):** every `bank.*` TIMESTAMP column is UTC (`timestamptz`); local display uses `BANK_TZ` per country (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`) |
 | D2 | Minimum payment formula (synthetic) | `max(5% × balance, floor)` with floors USD 10 / COP 40.000 / ARS 5.000, plus overdue amounts when `days_past_due > 0` |
 | D2 | Final persona list | B's 10 + ~20 found by query |
 | D4 | AWS setup (ADR-017) | Single EC2 + Compose + IAM role |
