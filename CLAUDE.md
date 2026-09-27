@@ -29,5 +29,10 @@ make check      # lint + types + import-linter + unit tests
 make eval SUITE=dev SYSTEM=proposed
 ```
 
+## Development flow
+Build work runs through `/wave-run <card>` (`.claude/skills/wave-run/`). A card is a task row (`D1-A5`) or a day track (`D2-B`) of [`07-execution-plan.md`](docs/solution-docs/07-execution-plan.md). The flow is spec (gate) → plan → one fresh implementer per task → independent verifier (gate), with specs in `docs/specs/` and plans in `docs/plans/`.
+- **Keep tests minimal.** We need to pivot fast. Test only the safety rules a change touches (R1–R6, R11, R13) and the card's "Done when" lines, plus one ES and one PT happy path per flow, always with a fake LLM. Each task runs only its own tests. The full suite runs once per card.
+- When a choice isn't settled by the docs, ask. Don't pick the plausible option.
+
 ## Where code goes
 Backend domains: `backend/app/domains/<name>/` · shared: `backend/app/core/` · LLM access only via `backend/app/core/llm/` · flows: `backend/app/domains/conversation/flows/` · policies: `policies/` · pipeline: `pipeline/` · eval: `eval/`.
