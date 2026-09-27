@@ -117,6 +117,39 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 **Decision:** the "Control and traceability of LLM" feature is, for Core: the handoff inbox with live takeover; a conversation list filterable by language, country, intent, outcome, escalation and date; and a per-turn timeline (NLU result, rule hits, tool calls and results, sources, policy hash, model and prompt version, latency, cost, Langfuse link). It never shows chain-of-thought.
 **Alternatives:** also flag and annotate conversations and export them to the dev set (≈1 extra day); timeline only, with browsing in the Langfuse UI.
 
+### ADR-025 — Auth enforcement: router-level FastAPI dependencies + session passed into the graph · Accepted
+**Context:** the design said "`identity` validates the cookie" without naming the mechanism, and nothing checked that a conversation belongs to the session's customer (`conversations.customer_id`).
+**Decision:** the whole chat is behind login; there is no anonymous conversation mode. Enforcement has three layers:
+- **HTTP (FastAPI dependencies).** `identity/deps.py` provides `get_session()` (decodes the JWT cookie, checks CSRF on writes and `revoked_tokens`, returns `Session{account_id, role, customer_id, step_up_at}` or `401 session_expired`) and `require_role(...)` (`403` on the wrong role). Every router declares its role at router level (`APIRouter(dependencies=[Depends(require_role("customer"))])`), so a new route can't forget it. `conversation/deps.py` provides `get_owned_conversation()`, used by every `/conversations/{id}/…` route, which returns `404` unless `conversation.customer_id == session.customer_id` (404, not 403, so it doesn't reveal that the conversation exists). The test-IdP router is only mounted when the environment is `eval`.
+- **Graph.** LangGraph nodes are not FastAPI routes, so `Depends` can't reach them. The route passes the validated session in the run config (`config["configurable"]["session"]`), `load_session` copies `customer_id` into read-only state, and the tool registry builds `ToolContext` from it (R1). The registry is the second gate because it's also used by agent one-click actions and eval, where there's no customer request.
+- **Step-up** is not a route dependency. It's decided per tool (`requires_step_up`) in the middle of a flow, so the registry checks `session.step_up_at` and raises `StepUpRequired`.
+The SSE stream runs its dependencies once, when it opens; expiry while it stays open is not re-checked. That's acceptable because the stream is read-only and ownership-scoped, and every write (`/messages`, `/confirmations`) re-checks.
+**Enforced by:** R13 (`06`): a route-introspection unit test and a cross-customer integration test.
+**Alternatives:** per-route `Depends` only (easy to forget on a new route); ASGI middleware that checks the cookie (no typed session object, and still no ownership check); a public anonymous mode for general questions (more surface area, and no Core feature needs it).
+
+### ADR-026 — Structured abstain replies · Accepted
+**Context:** out-of-scope and out-of-market questions, and every `general_question` until the answer node exists (if-time 5), got "I can help with: …". That is the most robotic moment in the conversation.
+**Decision:** every abstain reply has four parts. Code assembles them as facts and `compose` phrases them:
+1. **Acknowledge** what was asked, using the NLU `topic` label ("Entiendo que quieres saber sobre un préstamo").
+2. **Say why** this chat can't do it (this chat handles cards; the bank doesn't operate Pix or boleto in MX, CO or AR), from a `reason_key`.
+3. **Offer the closest supported action** when one exists, as a one-tap suggestion (e.g. a failed payment → `decline_explain`).
+4. **Offer a human.** It's an offer, not an automatic handoff. After two abstains in a row it becomes a button **(proposed)**.
+
+The NLU gets a new slot `topic`, a closed enum from `policies/scope.yaml`. That file replaces `out_of_market.yaml`, covers both `out_of_scope` and `out_of_market` topics, and maps each topic to `{kind, reason_key, closest_intents[], human_queue}`. The composer may only use those keys. It never names channels, phone numbers or products that aren't in the YAML, and the grounding check applies. An abstain during a pending flow keeps `pending` and restates the pending question, the same as a digression. The answer node stays at if-time 5. Once it exists, `general_question` goes to it, and structured abstain remains for `out_of_scope` and `out_of_market`.
+**Alternatives:** a plain list of topics (the previous design); moving a minimal answer node up to if-time 1 (more natural sooner, but it adds tool-calling LLM work ahead of the other if-time items); a free LLM reply to out-of-scope questions (risks invented banking information).
+
+### ADR-027 — Plan confirmation: one confirmation for a multi-step action · Accepted
+**Context:** the suspected-compromise path asked for a confirmation per write (block, then claim), which felt bureaucratic at a stressful moment.
+**Decision:** every confirmation token is a **plan**: an ordered list of steps. A single action is a plan of one, so there's only one token format. When a flow needs several side-effecting steps back to back, the policy domain issues **one** token for all of them:
+- Redis `conf:<id>` = `{conversation_id, customer_id, steps: [{tool, args_hash}], cursor, expires_at}`, TTL 5 minutes.
+- `ui.confirm` lists every step in plain language ("Bloquear tu crédito •••• 6475 · Abrir un reclamo por 3 compras"). One "sí" or button tap authorizes exactly those steps, in that order.
+- The executor checks each call against the step at `cursor` (same tool, same args hash, same session customer) and advances the cursor atomically (Lua script). The key is deleted after the last step, on the first failure, or at TTL.
+- Every step keeps its own read-back. Execution stops at the first failed or unverified step and hands off (`action_unverified`), listing which steps were applied and verified. There is no automatic rollback, because a block is a safety action.
+- All arguments must be known when the plan is issued. If any step needs step-up, the step-up happens before the plan is shown. `handoff.create` is internal and never a plan step.
+
+First user: `unrecognized_charge` with suspected compromise, where the plan is `[cards.block_card, disputes.create_claim]` followed by the handoff to Fraudes. Other flows keep one-step plans unless they chain writes the same way.
+**Alternatives:** one token per write (the previous design; safest but repetitive); a blanket consent for the rest of the session (too broad, weakens R2); confirming only the first step (the later writes would be unconfirmed).
+
 ---
 
 ## Deferred to implementation
@@ -129,6 +162,7 @@ These are known and owned, and they're decided while building the related featur
 | Numeric targets for the D1.5 outcome metrics (the metrics themselves are defined in `05` §6) | After the first dev eval run, before freezing held-out |
 | Model family for the customer simulator, paraphrases and LLM judge (non-Claude, to avoid self-grading bias) | Building the eval harness |
 | Exact Bedrock model IDs per step | Benchmark on the dev set |
+| Step-up validity window (N minutes after a successful OTP) and what happens to an open confirmation token when the session expires during it | Building identity + the first step-up flow (ADR-025) |
 | Concrete AWS setup | Sprint midpoint (ADR-017) |
 | Time zone semantics of `transaction_date` | Building the pipeline |
 | Demo and video script | After Core is built (ADR-019) |
@@ -147,3 +181,4 @@ These are known and owned, and they're decided while building the related featur
 | Card status and details; balance, due date and minimum payment | Balance, due date and minimum payment apply to credit cards only | ADR-020 |
 | Mock identity provider and session token | The OTP is a fixed demo code shared with judges; a real OTP system is out of scope | ADR-008 |
 | Control and traceability of LLM | Core scope defined | ADR-024 |
+| Out-of-market requests (and out-of-scope replies) | Structured abstain: acknowledge the topic, say why, offer the closest supported action and a human | ADR-026 |

@@ -86,7 +86,7 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 `audit_events` (append-only; see `04-contracts.md` §6), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
 
 ### Redis
-Confirmation tokens (`conf:<id>`, TTL 5 min, single-use), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` and `handoff:<queue>`.
+Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor, ADR-027), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` and `handoff:<queue>`.
 
 ## 7. Golden DB and isolation
 

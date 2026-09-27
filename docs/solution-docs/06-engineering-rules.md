@@ -5,7 +5,7 @@
 | # | Rule | Why | Enforced by |
 |---|---|---|---|
 | R1 | `customer_id` comes **only** from the session context. No tool, route or prompt accepts it from the LLM or the chat | B5, B6 | Tool registry signature check (unit test) + import-linter + unauthorized-access eval cases |
-| R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so) | D3.2 | Tool executor + unit tests |
+| R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so). A token may cover an ordered plan of steps; each call must match the next step exactly (ADR-027) | D3.2 | Tool executor + unit tests (reordered, extra, replayed and cross-customer steps are rejected) |
 | R3 | The bot never reports an action as done without a verified read-back | D2.5 | `ActionResult.verified` required by the composer + eval check |
 | R4 | Money, dates and card masks are formatted in code and inserted through placeholders. The LLM never writes them | Correctness, localization | Composer grounding check (every number must come from facts) |
 | R5 | Only tokenized text goes to Bedrock or Langfuse | B3 | `core/llm` client refuses un-masked input (vault check) + Langfuse `mask` hook + unit tests |
@@ -16,6 +16,7 @@
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
 | R11 | Bounded retries only: 2 retries with backoff, then safe fallback + handoff. Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
 | R12 | Provided tables are changed only through domain services: an in-place update always writes a history row in the same transaction, and appended rows carry `origin='app'` | Lineage, audit | Repository layer + review |
+| R13 | Every non-public route declares its role through a router-level dependency, and every `/conversations/{id}/…` route loads the conversation through `get_owned_conversation` (another customer's conversation → `404`). The graph gets the session only from the route, via the run config (ADR-025) | B5, B6 | Route-introspection unit test over `app.routes` + cross-customer integration test (customer B posts, confirms and streams on A's conversation → `404`) |
 
 ## 2. Architecture enforcement (import-linter)
 
@@ -66,7 +67,7 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 
 ## 6. Testing standards
 
-- Unit tests for every rule R1–R6 and R11 (they are the safety case).
+- Unit tests for every rule R1–R6, R11 and R13 (they are the safety case).
 - Flow tests: each MVP flow has scripted-turn tests in ES and PT covering the happy path, clarification, denial and failure (fake LLM with fixed NLU outputs, so they're deterministic and free).
 - Integration tests against an ephemeral Postgres + Redis started from a small fixture DB.
 - E2E (Playwright): login → block card → read-back; session expiry → resume; handoff → agent takeover.
