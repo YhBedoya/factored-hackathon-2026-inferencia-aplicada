@@ -1,0 +1,85 @@
+# Observability overlay (D5, T18): OTel collector + VictoriaMetrics/Logs/
+# Traces + Grafana. Cuttable (spec D5) — if dropped, don't add
+# `-f docker/docker-compose.observability.yml` to the Makefile's `COMPOSE`.
+# Modest resource defaults throughout: this is a single dev box (15 GiB),
+# not a sized deployment.
+services:
+  backend:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+  otel-collector:
+    # Core distribution: the config only uses the `otlp` receiver,
+    # `memory_limiter`/`batch` processors and `otlphttp` exporters, all
+    # shipped in core — no contrib-only component needed (T17's refined
+    # exporter now emits a plain-string log body itself, so the `transform`
+    # processor this used to need is gone; see `docker/otel/collector.yaml`).
+    image: otel/opentelemetry-collector:0.161.0
+    command: ["--config=/etc/otel-collector/collector.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otel-collector/collector.yaml:ro
+    # OTLP in only; no ports published (compose-network only, per D5).
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.152.0
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+      # OTel metric names/labels use dots (`http.server.duration`) by
+      # default; this sanitizes them to Prometheus-style underscores
+      # (`http_server_duration`) on ingest, across all protocols.
+      - "--usePromCompatibleNaming"
+    volumes:
+      - victoriametrics_data:/storage
+    ports:
+      - "8428:8428"
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.52.0
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+    volumes:
+      - victorialogs_data:/storage
+    ports:
+      - "9428:9428"
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:v0.9.4
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+    volumes:
+      - victoriatraces_data:/storage
+    ports:
+      - "10428:10428"
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    environment:
+      # Anonymous dev access (D5 acceptance: no new `.env` variable). Viewer
+      # is the lowest basic role that still carries the RBAC
+      # `datasources:read` permission needed to list provisioned
+      # datasources (`GET /api/datasources`).
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+volumes:
+  victoriametrics_data:
+  victorialogs_data:
+  victoriatraces_data:
+  grafana_data:

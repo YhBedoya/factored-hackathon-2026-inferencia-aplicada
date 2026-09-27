@@ -3,11 +3,11 @@
 See `docs/solution-docs/04-contracts.md` §1 (`transactions.search`).
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 __all__ = ["TxFilter", "TxStatus", "TxView"]
 
@@ -51,8 +51,8 @@ class TxView(BaseModel):
     tx_id: str
     """`"TRX-…"`."""
     card_id: str
-    occurred_at: datetime
-    """Stored `transaction_date`; time zone per A5 (`07` §8)."""
+    occurred_at: AwareDatetime
+    """UTC; display in `BANK_TZ` of the customer's country (D1-A D1)."""
     amount: Decimal
     currency: str
     amount_usd: Decimal | None

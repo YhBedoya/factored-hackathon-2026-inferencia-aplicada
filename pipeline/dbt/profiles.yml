@@ -1,0 +1,38 @@
+# dbt-duckdb profile for the card-support pipeline (D9).
+#
+# The warehouse file lives under the repo's git-ignored `data/` directory
+# (`.gitignore` already ignores all of `data/`), one level above `pipeline/`.
+# The path below is relative to the process's working directory, which by
+# this card's fixed dbt invocation convention is always `pipeline/dbt`
+# (`cd pipeline/dbt && uv run --project .. dbt ... --project-dir . --profiles-dir .`,
+# recorded in the state file). That keeps the resolved path anchored at the
+# repo root regardless of where the enclosing `make`/`uv` command itself was
+# launched from.
+card_support_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../../data/pipeline.duckdb"
+      threads: 4
+      # Every TIMESTAMP in bank.* is interpreted as UTC end to end (D1). Fixing
+      # the session time zone here means a bare CAST(... AS TIMESTAMPTZ) never
+      # picks up the host machine's local time zone instead.
+      settings:
+        TimeZone: "UTC"
+        # Cap DuckDB's RAM (default is 80% of the host) so the 10M-row
+        # digital_events build stays laptop-friendly; excess spills to disk.
+        memory_limit: "3GB"
+        preserve_insertion_order: false
+        # No explicit `temp_directory` here: dbt-duckdb's local environment
+        # re-issues `SET temp_directory = ...` on every cursor it opens
+        # (including the one it opens again during post-run cleanup), and
+        # DuckDB raises `Not implemented Error: Cannot switch temporary
+        # directory after the current one has been used` the second time
+        # that runs, once any model has actually spilled once — reproduced
+        # with both threads=4 and threads=1, so it isn't a concurrency bug.
+        # Leaving `temp_directory` unset lets DuckDB pick (and keep) its own
+        # default spill location next to the database file; `memory_limit`
+        # and `preserve_insertion_order` don't have this restriction and
+        # stay set. Confirmed: `dbt build --select staging` completes
+        # (PASS=26) within the 3GB cap this way.

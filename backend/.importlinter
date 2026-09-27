@@ -1,0 +1,54 @@
+# Import boundaries (06 §2, D21). Wildcards on the two forbidden-source
+# contracts below match "app.core.llm" and "app.domains.<name>.repository"
+# by shape (single path segment), not by literal name, so the contracts stay
+# KEPT before those modules exist and start enforcing the moment they land —
+# no edit needed here when app/core/llm/ or a domain's repository.py is added.
+[importlinter]
+root_packages=
+    app
+include_external_packages=True
+
+[importlinter:contract:layers]
+name=Layered architecture: api -> domains -> core (core never imports domains)
+type=layers
+containers=
+    app
+layers=
+    api
+    domains
+    core
+
+[importlinter:contract:llm-sdk-only-in-core-llm]
+name=Only app.core.llm may import an LLM provider SDK (R7)
+type=forbidden
+source_modules=
+    app
+forbidden_modules=
+    anthropic
+    langchain_anthropic
+    boto3
+    aioboto3
+    langchain_aws
+ignore_imports=
+    app.core.llm -> anthropic
+    app.core.llm -> langchain_anthropic
+    app.core.llm -> boto3
+    app.core.llm -> aioboto3
+    app.core.llm -> langchain_aws
+unmatched_ignore_imports_alerting=none
+
+[importlinter:contract:conversation-no-repository]
+name=app.domains.conversation reaches bank data only through its tools registry
+type=forbidden
+source_modules=
+    app.domains.conversation
+forbidden_modules=
+    app.domains.*.repository
+
+[importlinter:contract:llm-no-repository]
+name=app.core.llm never imports a domain repository (LLM code can't touch the DB)
+type=forbidden
+source_modules=
+    app.core.*
+forbidden_modules=
+    app.domains.*.repository
