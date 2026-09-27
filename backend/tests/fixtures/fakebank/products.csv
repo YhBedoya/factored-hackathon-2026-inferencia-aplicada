@@ -1,0 +1,7 @@
+﻿product_id,customer_id,product_type,product_number,currency,current_balance,credit_limit,interest_rate,opening_date,expiration_date,opening_branch_id,product_status,opening_channel,has_linked_app,days_past_due,last_transaction_date,last_updated
+PRD-TFM1CRED0001,CLI-TFMULTI00001,Tarjeta Crédito,0000000000006475,USD,1234.50,5000.00,24.9,2022-01-15,2027-08-31,BR-001,Active,Sucursal,true,0,2026-03-25,2026-03-26
+PRD-TFM1DEBT0002,CLI-TFMULTI00001,Tarjeta Débito,0000000000001203,USD,850.00,,0.0,2021-06-01,2028-06-30,BR-001,Active,Sucursal,true,,2026-03-20,2026-03-21
+PRD-TFM1DEBT0003,CLI-TFMULTI00001,Tarjeta Débito,0000000000009001,USD,0.00,,0.0,2019-02-10,2024-02-28,BR-001,Closed,Sucursal,false,,2023-12-01,2023-12-02
+PRD-TFM1SAVE0004,CLI-TFMULTI00001,Cuenta Ahorro,0000000000005000,USD,10000.00,,0.0,2020-05-01,,BR-001,Active,Sucursal,true,,2026-03-26,2026-03-27
+PRD-TFS2CRED0001,CLI-TFSINGLE0002,Tarjeta Crédito,0000000000002222,COP,1234567,8000000,32.5,2021-11-11,2027-11-30,BR-002,Active,Sucursal,true,0,2026-03-24,2026-03-25
+PRD-TFB3DEBT0001,CLI-TFBLOCKD0003,Tarjeta Débito,0000000000003333,ARS,50000.00,,0.0,2020-08-08,2026-08-31,BR-003,Blocked,Sucursal,false,,2026-01-15,2026-01-16

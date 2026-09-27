@@ -1,0 +1,38 @@
+[importlinter]
+root_packages =
+    app
+include_external_packages = True
+
+[importlinter:contract:1]
+name = Layers: domains above core
+type = layers
+layers =
+    app.domains
+    app.core
+
+[importlinter:contract:2]
+name = Only app.core.llm imports LLM provider SDKs
+type = forbidden
+source_modules =
+    app.domains
+forbidden_modules =
+    anthropic
+    langchain_anthropic
+    langchain_aws
+    boto3
+allow_indirect_imports = True
+
+[importlinter:contract:3]
+name = Only app.core.llm imports LLM provider SDKs (within app.core)
+type = forbidden
+source_modules =
+    app.core
+forbidden_modules =
+    anthropic
+    langchain_anthropic
+    langchain_aws
+    boto3
+ignore_imports =
+    app.core.llm.** -> anthropic
+    app.core.llm.** -> langchain_anthropic
+    app.core.llm.** -> langchain_aws

@@ -1,0 +1,81 @@
+"""The raw NLU call: one turn's text in, one `NLUResult` out (`02` §2).
+
+`run_nlu` takes exactly what the prompt needs as arguments -- it does not
+read `TurnState` or any graph config. `understand` below is the graph-level
+wrapper: it reads `state["user_text"]`/`state["pending"]`/`state["country"]`
+and `config["configurable"]["llm"]`, and writes `state["nlu"]`/
+`state["language"]` (D8, D16).
+"""
+
+from typing import Any
+
+from langchain_core.runnables import RunnableConfig
+
+from app.core.llm import LLMClient, LLMError, PromptRef
+from app.domains.conversation.graph import GraphState
+from app.domains.conversation.prompts import load_prompt
+from app.domains.conversation.schemas import NLUResult
+from app.domains.conversation.state import Pending
+
+__all__ = ["run_nlu", "understand"]
+
+_PROMPT = PromptRef("nlu", 1)
+
+
+async def run_nlu(
+    llm: LLMClient, text: str, *, pending: Pending | None, country: str | None
+) -> NLUResult:
+    """Classify one turn: intents, status and slots (`02` §2, D16, D18).
+
+    The user's message is wrapped in a delimited block in the user message
+    (R6: even though this is the customer's own text and not tool output,
+    it never blends into the system prompt as free-form instructions). No
+    tool output ever reaches this node (`02` §2: "No tool output is ever
+    passed to this node").
+    """
+    system = load_prompt(_PROMPT)
+    user = _build_user_message(text, pending=pending, country=country)
+    return await llm.structured(
+        step="nlu", prompt=_PROMPT, system=system, user=user, schema=NLUResult
+    )
+
+
+def _build_user_message(text: str, *, pending: Pending | None, country: str | None) -> str:
+    """Country and the pending question as plain context lines, then the
+    delimited user message (see the prompt's "La pregunta pendiente" section).
+    """
+    lines = [f"Pais: {country or 'desconocido'}"]
+    if pending is None:
+        lines.append("Pregunta pendiente: ninguna.")
+    else:
+        lines.append(
+            f"Pregunta pendiente: el flujo '{pending['flow']}' (nodo "
+            f"'{pending['node']}') espera el slot '{pending['awaiting_slot']}'."
+        )
+    lines.append("Mensaje del cliente:")
+    lines.append("```")
+    lines.append(text)
+    lines.append("```")
+    return "\n".join(lines)
+
+
+async def understand(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+    """Graph wrapper around `run_nlu`: writes `nlu` and the reply language (D16).
+
+    On `LLMError` (unavailable, or still invalid after the client's one
+    retry) `nlu` is written as `None` so `route` falls back with no crash.
+    Either way the turn still needs a reply language: `nlu.language` when
+    it's `es`/`pt`, otherwise (a `mixed` result, or no result at all) the
+    previous `state["language"]`, or `es` on the very first turn (D16).
+    """
+    llm: LLMClient = config["configurable"]["llm"]
+    previous_language = state.get("language", "es")
+    try:
+        nlu = await run_nlu(
+            llm, state["user_text"], pending=state.get("pending"), country=state.get("country")
+        )
+    except LLMError:
+        return {"nlu": None, "language": previous_language}
+
+    language = nlu.language if nlu.language in ("es", "pt") else previous_language
+    return {"nlu": nlu, "language": language}

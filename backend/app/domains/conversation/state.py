@@ -4,6 +4,11 @@
 no graph-framework dependency (D-facts, this card). The graph framework
 itself will read the `Annotated[..., bind_once]` / `Annotated[..., add]`
 metadata once B3 wires this state into a graph.
+
+B3 (D1-B, `docs/plans/d1-b-agent-sandbox.md` Q3) changes `facts`'s reducer
+from a plain `operator.add` append to "append, or reset on a marker": see
+`RESET_FACTS` below. This is the one K3 field this card touches; Dev A
+reviews the change.
 """
 
 from datetime import date, datetime
@@ -15,7 +20,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
 
-__all__ = ["Fact", "Pending", "TurnState", "bind_once"]
+__all__ = ["RESET_FACTS", "Fact", "Pending", "TurnState", "bind_once"]
 
 
 def bind_once(current: str | None, update: str) -> str:
@@ -50,6 +55,33 @@ class Fact(BaseModel):
     source: str
 
 
+class _FactsReset(list[Fact]):
+    """Marker subclass for `TurnState.facts` (Q3).
+
+    An instance of this class means "start this turn's facts over", not
+    "append these facts". `_reduce_facts` tells the two apart with
+    `isinstance`, so any plain `list[Fact]` (including an empty one built by
+    hand) still appends.
+    """
+
+
+RESET_FACTS: list[Fact] = _FactsReset()
+"""The single marker instance flows/nodes write to reset `facts` (Q3).
+
+`load_session` writes this at the start of every turn so a later `compose`
+node sees only facts a flow wrote *this* turn (the K3 open question on
+`facts` accumulating across turns). Every other write to `facts` is a plain
+`list[Fact]` and appends, same as the old `operator.add` reducer.
+"""
+
+
+def _reduce_facts(current: list[Fact], update: list[Fact]) -> list[Fact]:
+    """Reducer for `TurnState.facts`: reset on `RESET_FACTS`, else append (Q3)."""
+    if isinstance(update, _FactsReset):
+        return []
+    return current + update
+
+
 class TurnState(TypedDict):
     """Checkpointed graph state, keyed by `conversation_id` (`02` §3, D3)."""
 
@@ -64,6 +96,6 @@ class TurnState(TypedDict):
     selected_card_id: NotRequired[str | None]
     clarification_failures: NotRequired[int]
     confirmation_token_id: NotRequired[str | None]
-    facts: NotRequired[Annotated[list[Fact], add]]
+    facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
     actions: NotRequired[Annotated[list[dict[str, Any]], add]]
     escalation_reason: NotRequired[str | None]

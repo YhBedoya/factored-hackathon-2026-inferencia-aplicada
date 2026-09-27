@@ -1,0 +1,60 @@
+# B1/D19: ~10 real customer IDs picked from local `data/` with traits only
+# (country, card count, card kinds, whether any card is blocked). No names,
+# documents, emails, phones, addresses, card numbers or balances (R10) --
+# those columns are never queried past the aggregate counts used to choose
+# these IDs, and never appear below.
+personas:
+  - customer_id: CLI-U6NAXZG11P97
+    country: MX
+    card_count: 2
+    card_kinds: [credit, debit]
+    blocked: false
+    notes: >-
+      Multi-card with exactly one credit card, so the "credit" hint resolves
+      unambiguously (D12). Demo persona for the `07` D1 end-of-day step-4
+      sandbox script.
+  - customer_id: CLI-15CX29YY6SS9
+    country: CO
+    card_count: 2
+    card_kinds: [credit, debit]
+    blocked: false
+  - customer_id: CLI-AO5PZVMZCL1V
+    country: AR
+    card_count: 2
+    card_kinds: [credit, debit]
+    blocked: false
+  - customer_id: CLI-H7CHAE6NGLYQ
+    country: MX
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+  - customer_id: CLI-H24P25YVOAJY
+    country: CO
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+  - customer_id: CLI-BCWKVTMY5S99
+    country: AR
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+  - customer_id: CLI-UZ7Z6C3JFXGX
+    country: MX
+    card_count: 2
+    card_kinds: [credit]
+    blocked: true
+  - customer_id: CLI-8U06DH6VYHA3
+    country: CO
+    card_count: 3
+    card_kinds: [credit, debit]
+    blocked: true
+  - customer_id: CLI-HYFIB9VMDJRR
+    country: AR
+    card_count: 2
+    card_kinds: [credit]
+    blocked: true
+  - customer_id: CLI-2FKTNVMZ3HVH
+    country: MX
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false

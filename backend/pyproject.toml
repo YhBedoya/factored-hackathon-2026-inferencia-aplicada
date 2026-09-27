@@ -5,6 +5,14 @@ description = "LATAM Bank card-support backend"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic>=2",
+    "langgraph>=0.2",
+    "langchain-anthropic>=0.2",
+    "langchain-aws>=0.2",
+    "pydantic-settings>=2",
+    "structlog>=24",
+    "duckdb>=1",
+    "pyyaml>=6",
+    "babel>=2.16",
 ]
 
 [dependency-groups]
@@ -12,6 +20,9 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pytest>=8",
+    "import-linter>=2",
+    "types-PyYAML",
+    "streamlit>=1.38",
 ]
 
 [tool.uv]
@@ -44,6 +55,10 @@ warn_unused_ignores = true
 no_implicit_reexport = true
 strict_equality = true
 extra_checks = true
+
+[[tool.mypy.overrides]]
+module = ["babel.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -1,0 +1,6 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 1
+card_status:
+  # Closed excluded from card_select's own options; a hint may still resolve
+  # to a Closed card (D12, backend/app/domains/conversation/flows/card_select.py).
+  eligible_statuses: [Active, Blocked, Suspended]

@@ -1,0 +1,28 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	load_session(load_session)
+	understand(understand)
+	card_info(card_info)
+	unsupported(unsupported)
+	fallback(fallback)
+	compose(compose)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> load_session;
+	card_info -.-> compose;
+	card_info -.-> fallback;
+	load_session --> understand;
+	understand -.-> card_info;
+	understand -.-> fallback;
+	understand -.-> unsupported;
+	compose --> __end__;
+	fallback --> __end__;
+	unsupported --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+

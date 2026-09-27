@@ -1,0 +1,10 @@
+# Dev-only sandbox page (`make chat-ui`). Headless skips Streamlit's first-run
+# email prompt; bind to localhost only, since the page reads local `data/` and
+# uses the API key from `.env`.
+[server]
+headless = true
+address = "localhost"
+port = 8501
+
+[browser]
+gatherUsageStats = false
