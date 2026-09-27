@@ -24,7 +24,7 @@ class ToolSpec(BaseModel):
     retries: int = 2
 ```
 
-Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to another customer; audited), `PolicyDenied(reason_code)`, `ConfirmationRequired`, `StepUpRequired`, `Conflict` (e.g., already blocked), `ToolUnavailable`. K3 ships the read-side errors only (`NotFound`, `AccessDenied`, `ToolUnavailable`); D2 adds the rest.
+Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to another customer; audited), `ToolUnavailable`, `PolicyDenied(reason_code)`, `ConfirmationRequired(reason: unknown_or_expired | step_mismatch | wrong_owner)`, `StepUpRequired`, `Conflict` (e.g., already blocked). K3 ships the read-side errors only (`NotFound`, `AccessDenied`, `ToolUnavailable`); the write-side four are defined in `docs/specs/d2-k-write-contracts.md` (Decision D14).
 
 ### MVP tools
 
@@ -34,17 +34,23 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `cards.list_cards()` | — | — | — | `[CardSummary{card_id, kind, last4, status, locked}]` |
 | `cards.get_card_details(card_id)` | — | — | — | `CardDetails{card_id, kind, last4, status, locked, currency, expiration_date, credit_limit, current_balance, interest_rate, days_past_due, source, available_credit}` (`available_credit` computed as `credit_limit − current_balance`; all credit-only fields are `None` for debit cards) |
 | `cards.get_block_origin(card_id)` | — | — | — | `BlockOrigin{kind: customer_lock/customer_block/bank_side/none, reason}` |
-| `cards.lock_card(card_id, token)` | ✓ | ✓ | — | `ActionResult` |
-| `cards.unlock_card(card_id, token)` | ✓ | ✓ | ✓ | `ActionResult` |
-| `cards.block_card(card_id, reason, token)` | ✓ | ✓ | — | `ActionResult` |
-| `cards.order_replacement(card_id, address_ref, token)` | ✓ | ✓ | ✓ if address changed | `ActionResult{tracking_id}` |
+| `cards.lock_card(card_id, token_id)` | ✓ | ✓ | — | `ActionResult` |
+| `cards.unlock_card(card_id, token_id)` | ✓ | ✓ | ✓ | `ActionResult` |
+| `cards.block_card(card_id, reason, token_id)` | ✓ | ✓ | — | `ActionResult` |
+| `cards.order_replacement(card_id, address_ref, token_id)` | ✓ | ✓ | ✓ if address changed | `ActionResult{tracking_id}` |
 | `transactions.search(filter: TxFilter)` | — | — | — | `[TxView{tx_id, card_id, occurred_at, amount, currency, amount_usd, type, category, merchant_name, merchant_category, channel, city, country, status, response_code, fraud_score}]`, max 10, newest first |
 | `transactions.get(tx_id)` | — | — | — | `TxView` |
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, source}` |
 | `disputes.create_claim(tx_ids, answers, token)` | ✓ | ✓ | — | `ActionResult{case_id, priority_flags}` |
 | `handoff.create(queue, reason)` | ✓ (internal) | — | — | `HandoffRef` |
 
-`ActionResult` = `{status: "applied", verified: bool, readback: {...}, audit_event_id}`. The flow may report success **only** when `verified = true`.
+`BlockOrigin.kind` is `customer_lock | customer_block | bank_side | none`; `reason` is `past_due | fraud | customer_status | bank_status | None` (non-`None` only when `kind = bank_side`). `BlockReason` (the `reason` argument of `cards.block_card`) is `Literal["lost_or_stolen", "suspected_fraud"]`. `address_ref` (the argument of `cards.order_replacement`) is either `"on_file"` (the address in `bank.customers`) or a PII-vault token for an address the customer typed (`⟨ADDR_n⟩`, `01` §5 token style, D12); the raw address never reaches the LLM, state or checkpoint.
+
+`ActionResult` (`app/core/actions.py`, frozen, `extra="forbid"`) = `{tool: str, status: "applied", verified: bool (REQUIRED, no default, R3), readback: dict[str, ReadbackValue], audit_event_id: UUID | None, tracking_id: str | None}`. The flow may report success **only** when `verified = true`. The `disputes.create_claim` row's `{case_id, priority_flags}` extra fields land with the disputes card (D9).
+
+Two layers implement the write tools (spec `docs/specs/d2-k-write-contracts.md`, Decisions D3–D5): `BankWriteTools` (`app/domains/conversation/tools/write.py`) is the raw, session-bound facade bound to one `ToolContext`; it never sees a token, and each method takes only the write's own arguments (`card_id`, `reason`, `address_ref`). `ConfirmedWriteTools` (`app/domains/conversation/tools/executor.py`) is the one R2 enforcement point: for each write, in order, it (1) checks the step-up rule and raises `StepUpRequired` without consuming the token if step-up is needed and missing, (2) calls `consume_step(token_id, tool, args)` on the `ConfirmationStore`, (3) calls the raw method, and (4) cancels the plan (`cancel(token_id)`) if the raw call raises or returns `verified=False`, re-raising the error or returning the unverified result unchanged. The graph reaches writes only through `config["configurable"]["bank_write_tools"]`, which holds a `ConfirmedWriteTools`, never a raw `BankWriteTools` (R6). The step-up rule (which tools require it — e.g. `unlock_card` always, `order_replacement` when the address changed) is injected, not hard-coded: the source of truth is `policies/tools.yaml` (D3-A1).
+
+The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `step_index` as returned by `consume_step` (0-based). Storage and the replay lookup are D3-A3.
 
 `TxFilter` = `{date_from, date_to, merchant_names[], amount_min, amount_max, currency, status[], card_id}`. Dates are resolved by code and validated (`date_from <= date_to`, window at most 366 days when both are set).
 
@@ -81,7 +87,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery) |
 | `POST /conversations` | customer | Start a conversation |
 | `POST /conversations/{id}/messages` | customer | Send a turn (`202`; output arrives on the stream) |
-| `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no") |
+| `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no"); maps to `TurnInput.confirmation{token_id, decision: confirm \| cancel}`. A `token_id` that doesn't match the state's `confirmation_token_id` is stale and executes nothing |
 | `GET /conversations/{id}/stream` | customer, agent | SSE |
 | `GET /staff/handoffs?queue=` · `POST /staff/handoffs/{id}/claim` · `POST /staff/handoffs/{id}/return` | agent | Inbox and live takeover |
 | `POST /staff/conversations/{id}/messages` | agent | Agent reply |
@@ -94,6 +100,8 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 **Auth (ADR-025):** the Role column is enforced by router-level dependencies (`Depends(require_role(...))`), not per route. Every `/conversations/{id}/…` route also depends on `get_owned_conversation`. Errors: `401 session_expired` (no or expired session), `403 forbidden_role`, `404 not_found` (the conversation doesn't exist *or* belongs to another customer). Only `/auth/login`, `/auth/refresh` and the health check are public.
 
 **SSE events:** `status {step}` · `message {role, text, sources[]}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}`.
+
+The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up.
 
 ## 4. Handoff packet (D3.5)
 
@@ -159,4 +167,12 @@ Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags)
 
 ## 7. Confirmation token
 
-Issued by `policy` when a flow reaches one or more side-effecting steps. Every token is a **plan** (ADR-027): an ordered list of steps, where a single action is a plan of one. It's stored in Redis as `conf:<id>` with value `{conversation_id, customer_id, steps: [{tool, args_hash}], cursor, expires_at}`, TTL 5 minutes. The tool executor rejects a call unless the token exists, belongs to the same session customer, and the call matches the step at `cursor` (tool and args hash). It advances the cursor atomically (a Lua script, replacing a plain `GETDEL`). The key is deleted after the last step, on the first failed or unverified step, or at TTL, so a token can't be reused and steps can't be reordered or added. `ui.confirm` carries `{token_id, steps: [{tool, summary_key, facts}]}`, and the frontend lists every step.
+Issued by `policy` (`app/domains/policy/confirmation.py`) when a flow reaches one or more side-effecting steps. Every token is a **plan** (ADR-027): an ordered list of steps, where a single action is a plan of one. The `ConfirmationStore` protocol, bound to one customer + conversation at construction:
+
+- `issue(steps) -> ConfirmationPlan{token_id, steps, expires_at}`
+- `consume_step(token_id, tool, args) -> int` — checks the step at the cursor, advances it atomically, and returns the consumed step's 0-based `step_index`. Raises `ConfirmationRequired` with reason `unknown_or_expired` (the key is absent: never issued, expired or already fully used), `step_mismatch` (the tool or args hash differs from the step at the cursor) or `wrong_owner` (another customer or conversation)
+- `cancel(token_id) -> None` — idempotent; an unknown id is a no-op
+
+`args_hash(tool, args)` is the hex SHA-256 of the canonical JSON (`sort_keys=True`, `separators=(",", ":")`, `ensure_ascii=False`) of `{"tool": tool, "args": args}`.
+
+Storage is unchanged: it's stored in Redis as `conf:<id>` with value `{conversation_id, customer_id, steps: [{tool, args_hash}], cursor, expires_at}`, TTL 5 minutes. The tool executor rejects a call unless the token exists, belongs to the same session customer, and the call matches the step at `cursor` (tool and args hash). It advances the cursor atomically (a Lua script, replacing a plain `GETDEL`). The key is deleted after the last step, on the first failed or unverified step, or at TTL, so a token can't be reused and steps can't be reordered or added. `ui.confirm` carries `{token_id, steps: [{tool, summary_key, facts}]}`, and the frontend lists every step.
