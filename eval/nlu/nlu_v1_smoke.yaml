@@ -1,4 +1,4 @@
-# Smoke set for `nlu@v1` (D18, B4). 20 hand-written, invented messages: no
+# Smoke set for `nlu@v1` and `nlu@v2` (D18, B4). 20 hand-written, invented messages: no
 # real-looking PII (no full card numbers, no documents, no emails) and no
 # customer id in any message. `country` and `pending` feed `run_nlu`'s
 # context; `expected` is compared field-by-field against the `NLUResult`

@@ -1,6 +1,6 @@
-# Solution docs — LATAM Bank Card Support
+# Solution docs — Swip Card Support (Cardy)
 
-Technical design for our Factored AI & Data Hackathon 2026 submission: an AI-first **card-support** service for the synthetic LATAM Bank (Spanish + Portuguese).
+Technical design for our Factored AI & Data Hackathon 2026 submission: an AI-first **card-support** service for Swip, the project's fictional card fintech, built on the synthetic LATAM Bank dataset (Spanish + Portuguese). The assistant is Cardy; see [`../brand.md`](../brand.md).
 
 Decisions were taken collaboratively in design rounds on 2026-09-26. Anything marked **(proposed)** has not been confirmed by the team yet. Anything marked **OPEN** is a known gap that still needs a decision. Items deliberately left for implementation time are listed under *Deferred to implementation* in the decision log.
 

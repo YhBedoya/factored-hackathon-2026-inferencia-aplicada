@@ -1,7 +1,7 @@
 [project]
 name = "card-support-pipeline"
 version = "0.1.0"
-description = "LATAM Bank card-support data pipeline (S3 -> Parquet -> dbt-duckdb -> Postgres)"
+description = "Swip card-support data pipeline for the LATAM Bank dataset (S3 -> Parquet -> dbt-duckdb -> Postgres)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "boto3>=1.34",

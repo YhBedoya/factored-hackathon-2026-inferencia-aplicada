@@ -31,7 +31,7 @@ from app.domains.localization import format_date, format_money, kind_label, mask
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 1)
+_PROMPT = PromptRef("compose", 2)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Goal = Literal["card_status", "ask_which_card"]

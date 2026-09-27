@@ -14,6 +14,8 @@ from uuid import uuid4
 
 from langgraph.checkpoint.memory import MemorySaver
 
+from app.core.errors import ToolUnavailable
+from app.domains.cards.schemas import CardSummary
 from app.domains.conversation.graph import build_graph, run_turn
 from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
@@ -121,3 +123,49 @@ def test_pix_routes_out_of_market(fakebank_dir: Path) -> None:
     assert debug.route == "unsupported"
     assert reply == get_template("out_of_market", "es")
     assert all(call.step != "compose" for call in llm.calls)
+
+
+def test_es_greeting_gets_cardy_template(fakebank_dir: Path) -> None:
+    """Brand: a lone greeting gets Cardy's fixed intro, no compose call."""
+    ctx = ToolContext(
+        customer_id="CLI-TFMULTI00001",
+        conversation_id=uuid4(),
+        actor="customer",
+        policy_version="unversioned",
+        trace_id="test-trace",
+    )
+    bank_tools = FakeBank(ctx, fakebank_dir)
+    nlu = NLUResult(language="es", intents=["greeting"], status="clear", slots=NLUSlots())
+    llm = ScriptedLLM({"nlu": [nlu]})
+    graph = build_graph(MemorySaver())
+    config = _config(ctx, bank_tools, llm, "t-greeting")
+
+    reply, debug = asyncio.run(run_turn(graph, "hola", config=config))
+    assert debug.route == "unsupported"
+    assert reply == get_template("greeting", "es")
+    assert all(call.step != "compose" for call in llm.calls)
+
+
+class _DownBank(FakeBank):
+    async def list_cards(self) -> list[CardSummary]:
+        raise ToolUnavailable("down")
+
+
+def test_pt_tool_unavailable_gets_tool_error_template(fakebank_dir: Path) -> None:
+    """Brand/D15: a failed card read says so and that nothing changed, in PT."""
+    ctx = ToolContext(
+        customer_id="CLI-TFSINGLE0002",
+        conversation_id=uuid4(),
+        actor="customer",
+        policy_version="unversioned",
+        trace_id="test-trace",
+    )
+    bank_tools = _DownBank(ctx, fakebank_dir)
+    nlu = NLUResult(language="pt", intents=["card_status"], status="clear", slots=NLUSlots())
+    llm = ScriptedLLM({"nlu": [nlu]})
+    graph = build_graph(MemorySaver())
+    config = _config(ctx, bank_tools, llm, "t-tool-down")
+
+    reply, debug = asyncio.run(run_turn(graph, "qual e o status do meu cartao?", config=config))
+    assert debug.route == "card_info"
+    assert reply == get_template("tool_error", "pt")

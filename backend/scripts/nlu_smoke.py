@@ -1,8 +1,8 @@
-"""Local smoke gate for `nlu@v1` (D18, B4). Not a CI test.
+"""Local smoke gate for `nlu@v2` (D18, B4). Not a CI test.
 
 `--dry-run` checks the smoke set and the prompt file with no network call:
 every entry's `expected` block parses as an `NLUResult` (so every intent is
-one of the closed 26, D18), and `prompts/nlu@v1.md` loads. Without
+one of the closed 26, D18), and `prompts/nlu@v2.md` loads. Without
 `--dry-run`, it calls the real NLU through `get_llm_client()` for each of
 the 20 messages, prints how many came back matching their label, and flags
 any of the 4 end-of-day utterances (`07` D1 step 4) that came back wrong.
@@ -65,7 +65,7 @@ def _diff(actual: NLUResult, expected: dict[str, Any]) -> list[str]:
 
 def _run_dry(entries: list[dict[str, Any]]) -> int:
     """Validate every label and the prompt file. No network (`--dry-run`)."""
-    load_prompt(PromptRef("nlu", 1))  # raises if the file is missing
+    load_prompt(PromptRef("nlu", 2))  # raises if the file is missing
     valid = 0
     for entry in entries:
         try:
