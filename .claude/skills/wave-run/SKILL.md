@@ -253,6 +253,11 @@ For each task in order:
    and move to the next. That verify output is your gate. You never run the
    commands yourself, and you never read the task's diff.
 
+An implementer may use the `playwright`, `victorialogs` and `victoriatraces`
+MCPs (`.mcp.json`) for its own `Verify` on a UI or observability task, and
+`deepwiki` for docs or repo lookups. That's a task detail, not something you
+arrange.
+
 ### 3c — When a task escalates or fails
 
 - **Escalation.** Relay it to the human exactly as in Step 1. `SendMessage`
@@ -272,12 +277,21 @@ For each task in order:
 
 ## Step 4 — VERIFY (gate)
 
+Before spawning it, make sure the dev stack is up (`make up`) and the three
+runtime-harness MCP servers — `playwright`, `victorialogs`, `victoriatraces`
+(`.mcp.json`) — are loaded in this session. If you changed `.mcp.json` this
+run, the human needs to restart or resume Claude Code and approve the project
+servers before the verifier can use them; ask and wait.
+
 Spawn `card-verifier`, a **fresh** agent and deliberately not the implementer,
 so nothing is self-graded. Give it the card id, the day's line range in `07`,
 the spec path, the plan path, the state file path and the branch. It re-reads
 the card's "Done when" lines and the spec's success criteria, inspects the
-diff, runs `make check` once plus each "Done when" proof, and returns a table
-of `PASS / FAIL / UNVERIFIABLE` with one line of evidence per row.
+diff, runs `make check` once plus each "Done when" proof, runs the three MCP
+harnesses (Playwright, VictoriaLogs, VictoriaTraces) against the stack, and
+returns a table of `PASS / FAIL / UNVERIFIABLE` with one line of evidence per
+row. The test budget doesn't grow for this: the harnesses are runtime proof,
+not new test files.
 
 - Any `FAIL` → send the failing rows to the **implementer of the task that owns
   them** (same agent, `SendMessage`), then re-run the verifier. Allow at most
