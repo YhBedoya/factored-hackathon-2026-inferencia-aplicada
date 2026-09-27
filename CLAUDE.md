@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-AI-first **card-support** service for the synthetic LATAM Bank (Factored AI & Data Hackathon 2026), in Spanish (MX/CO/AR) and Brazilian Portuguese. The repo is **public**.
+AI-first **card-support** service for **Swip**, a fictional card fintech built on the synthetic LATAM Bank dataset (Factored AI & Data Hackathon 2026). The assistant is **Cardy**; voice and visual identity live in [`docs/brand.md`](docs/brand.md). It speaks Spanish (MX/CO/AR) and Brazilian Portuguese. The repo is **public**.
 
 **Status:** implementation in progress. The D1-A platform (`make setup`, `up`, `down`, `data`, `demo-reset`, `client`, `check`, `test`) exists — see [`README.md`](README.md) for the steps to run it. `make eval` is still planned.
 

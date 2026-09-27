@@ -31,7 +31,7 @@ from app.domains.localization import format_date, format_money, kind_label, mask
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 1)
+_PROMPT = PromptRef("compose", 2)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Goal = Literal["card_status", "ask_which_card"]
@@ -120,7 +120,7 @@ def _format_fact(
         currency_fact = facts_by_key.get("currency")
         currency = str(currency_fact.value) if currency_fact is not None else ""
         return format_money(cast(Decimal, value), currency, country)
-    if key == "card_options":
+    if key in ("card_options", "customer_name"):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")
 
@@ -131,17 +131,24 @@ async def compose(state: GraphState, config: RunnableConfig) -> TurnOutput:
     The goal is `ask_which_card` while a flow is waiting on the `card_hint`
     slot (`state["pending"]`), else `card_status` (D8, D12). `facts` are read
     straight off `state` -- the per-turn reset in `load_session` (Q3) is what
-    makes that safe to pass through unfiltered.
+    makes that safe to pass through unfiltered. When the profile has a first
+    name, it is offered as one more fact, `customer_name`: the LLM sees only
+    the key and decides whether addressing the customer by name sounds
+    natural (`docs/brand.md`); the value is filled in here, in code (R5).
     """
     llm: LLMClient = config["configurable"]["llm"]
     pending = state.get("pending")
     awaits_card_hint = pending is not None and pending["awaiting_slot"] == "card_hint"
     goal: Goal = "ask_which_card" if awaits_card_hint else "card_status"
+    facts = list(state.get("facts", []))
+    customer_name = state.get("customer_name")
+    if customer_name:
+        facts.append(Fact(key="customer_name", value=customer_name, source="customers.get_profile"))
     text = await compose_reply(
         llm,
         language=state["language"],
         country=state["country"],
         goal=goal,
-        facts=state.get("facts", []),
+        facts=facts,
     )
     return {"reply": text}

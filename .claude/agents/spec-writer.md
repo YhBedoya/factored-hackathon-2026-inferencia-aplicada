@@ -6,7 +6,7 @@ model: opus
 reasoning_effort: high
 ---
 
-You write the specification for a single card of the **LATAM Bank card-support**
+You write the specification for a single card of the **Swip (Cardy) card-support**
 build (Factored AI & Data Hackathon 2026). You are the first phase of the
 `/wave-run` workflow. You never write source code.
 

@@ -30,7 +30,7 @@ __all__ = ["load_session"]
 
 
 async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-    """Bind `customer_id`/`country` from the session and reset per-turn state."""
+    """Bind `customer_id`/`country`/`customer_name` from the session and reset per-turn state."""
     configurable = config["configurable"]
     session: ToolContext = configurable["session"]
     bank_tools: BankReadTools = configurable["bank_tools"]
@@ -39,6 +39,7 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
     return {
         "customer_id": session.customer_id,
         "country": profile.country,
+        "customer_name": profile.first_name,
         "facts": RESET_FACTS,
         "nlu": None,
         "escalation_reason": None,

@@ -2,7 +2,7 @@
 
 ## 1. Problem and scope
 
-**Workflow:** card-service support for LATAM Bank customers in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). The build is split into **Core** (built and evaluated first) and **if-time** items taken in a fixed order (decision-log ADR-019). This document covers the MVP items and leaves room for the Stretch items.
+**Workflow:** card-service support for Swip customers (the LATAM Bank dataset) in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). The build is split into **Core** (built and evaluated first) and **if-time** items taken in a fixed order (decision-log ADR-019). This document covers the MVP items and leaves room for the Stretch items.
 
 **The three mandatory behaviors (S3a–c):**
 

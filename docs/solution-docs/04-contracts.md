@@ -30,7 +30,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 
 | Tool | Side effect | Confirm | Step-up | Returns |
 |---|---|---|---|---|
-| `customers.get_profile()` | — | — | — | `CustomerProfile{country, customer_status}` |
+| `customers.get_profile()` | — | — | — | `CustomerProfile{country, customer_status, first_name}` (`first_name` is PII: it reaches the LLM only as the `{customer_name}` key, ADR-029) |
 | `cards.list_cards()` | — | — | — | `[CardSummary{card_id, kind, last4, status, locked}]` |
 | `cards.get_card_details(card_id)` | — | — | — | `CardDetails{card_id, kind, last4, status, locked, currency, expiration_date, credit_limit, current_balance, interest_rate, days_past_due, source, available_credit}` (`available_credit` computed as `credit_limit − current_balance`; all credit-only fields are `None` for debit cards) |
 | `cards.get_block_origin(card_id)` | — | — | — | `BlockOrigin{kind: customer_lock/customer_block/bank_side/none, reason}` |

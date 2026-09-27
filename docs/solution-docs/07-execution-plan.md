@@ -180,7 +180,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 **Dev B: G5 design and customer screens**
 | # | Task | Done when |
 |---|---|---|
-| B1 | Design (~2 h): shadcn/ui, theme for the synthetic "LATAM Bank" brand, layouts for landing, login and chat, ES/PT text dictionary, browser-language default + ES \| PT toggle | Screens reviewed by A at the midday check |
+| B1 | Design (~2 h): shadcn/ui, theme for the Swip brand (palette, fonts and UI rules in `docs/brand.md`), layouts for landing, login and chat, ES/PT text dictionary, browser-language default + ES \| PT toggle | Screens reviewed by A at the midday check |
 | B2 | Landing + login on the generated client: cookie session, error messages | Log in / log out in the browser |
 | B3 | Chat page: start a conversation, send a message, render the stream, status indicator, reconnect | The D2 card-info questions work in the browser |
 | B4 | Widgets: card picker, quick-reply chips (pause / cancel), confirm buttons, OTP modal | Clicking works the same as typing "sí" or the card name |
