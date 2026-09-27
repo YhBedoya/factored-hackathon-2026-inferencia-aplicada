@@ -6,8 +6,8 @@ other than `card_status`, including a lone `greeting`. `route` already
 guarantees `state["nlu"]` is not `None` by the time this node runs (a
 missing NLU result goes to `fallback` instead), so the only decision left
 here is which of the four templates matches `nlu.status`; a clear lone
-`greeting` gets Cardy's `greeting`; anything else falls through to the
-generic `unsupported_intent` text. No LLM call (D14):
+`greeting` gets Cardy's greeting, by first name when the profile has
+one; anything else falls through to the generic `unsupported_intent` text. No LLM call (D14):
 D4 (G10) replaces this with structured abstain.
 """
 
@@ -33,5 +33,9 @@ def unsupported(state: GraphState) -> dict[str, Any]:
     if nlu is not None:
         kind = _STATUS_TEMPLATES.get(nlu.status, "unsupported_intent")
         if nlu.status == "clear" and nlu.intents == ["greeting"]:
+            customer_name = state.get("customer_name")
+            if customer_name:
+                text = get_template("greeting_named", language)
+                return {"reply": text.replace("{customer_name}", customer_name)}
             kind = "greeting"
     return {"reply": get_template(kind, language)}

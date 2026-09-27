@@ -102,6 +102,15 @@ cartão {card_mask}."
   formateado como una lista lista para mostrar); no repitas las opciones
   vos mismo con otras palabras.
 
+## El nombre del cliente (`customer_name`)
+
+Si la lista de claves incluye `customer_name`, es el nombre de pila del
+cliente. Podes usarlo como `{customer_name}` cuando suene natural y cercano,
+por ejemplo al empezar una respuesta ("{customer_name}, tu tarjeta...").
+Usalo como maximo una vez por respuesta, nunca lo inventes ni lo cambies, y
+no lo uses si la lista no lo ofrece. No hace falta usarlo en todas las
+respuestas: si ya suena natural sin el nombre, omitilo.
+
 ## Ejemplo (objetivo `card_status`, idioma `es`, claves ofrecidas:
 `card_mask`, `card_kind`, `status`, `expiry`)
 
@@ -122,3 +131,8 @@ cartão {card_mask}."
 `card_options`)
 
 "Sobre qual cartão você quer saber? Estas são suas opções: {card_options}"
+
+## Ejemplo (objetivo `card_status`, idioma `es`, claves ofrecidas:
+`customer_name`, `card_mask`, `card_kind`, `status`)
+
+"{customer_name}, tu tarjeta {card_kind} {card_mask} está {status}."

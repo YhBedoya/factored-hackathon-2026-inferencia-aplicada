@@ -88,7 +88,7 @@ class FakeBank:
     async def get_profile(self) -> CustomerProfile:
         rows = await self._query(
             f"""
-            SELECT country, customer_status
+            SELECT country, customer_status, first_name
             FROM read_csv({_sql_literal(self._customers_csv)}, all_varchar=true)
             WHERE customer_id = ?
             """,
@@ -100,7 +100,11 @@ class FakeBank:
         country = _COUNTRY_LABELS.get(row["country"])
         if country is None:
             raise ToolUnavailable(f"unknown country {row['country']!r}")
-        return CustomerProfile(country=country, customer_status=row["customer_status"])
+        return CustomerProfile(
+            country=country,
+            customer_status=row["customer_status"],
+            first_name=(row["first_name"] or "").strip() or None,
+        )
 
     async def list_cards(self) -> list[CardSummary]:
         rows = await self._query(

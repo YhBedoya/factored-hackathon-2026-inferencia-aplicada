@@ -7,7 +7,7 @@ verified result, escalation, tool error) come from here so Cardy can never
 report an action that did not happen.
 
 No template contains a digit. The ones that must carry a value
-(`action_confirm`, `action_done`) use `{placeholder}` keys that code fills
+(`greeting_named`, `action_confirm`, `action_done`) use `{placeholder}` keys that code fills
 with already-formatted values, the same way `compose` drafts are filled.
 `get_template` returns the raw text; filling is the caller's job.
 
@@ -21,6 +21,7 @@ __all__ = ["Language", "TemplateKind", "get_template"]
 Language = Literal["es", "pt"]
 TemplateKind = Literal[
     "greeting",
+    "greeting_named",
     "out_of_market",
     "out_of_scope",
     "injection_suspected",
@@ -36,7 +37,12 @@ TemplateKind = Literal[
 ]
 
 _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
-    # A lone greeting (intent `greeting`, nothing else asked).
+    # A lone greeting when the profile has the customer's first name.
+    "greeting_named": {
+        "es": "Hola, {customer_name}. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?",
+        "pt": "Oi, {customer_name}. Sou a Cardy, do Swip. Como posso ajudar com seu cartão hoje?",
+    },
+    # A lone greeting (intent `greeting`, nothing else asked), no name on file.
     "greeting": {
         "es": "Hola. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?",
         "pt": "Oi. Sou a Cardy, do Swip. Como posso ajudar com seu cartão hoje?",

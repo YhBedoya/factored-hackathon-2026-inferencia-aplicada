@@ -88,6 +88,10 @@ class TurnState(TypedDict):
     customer_id: Annotated[str, bind_once]
     language: NotRequired[Literal["es", "pt"]]
     country: NotRequired[Literal["MX", "CO", "AR"]]
+    # The customer's first name as registered (PII). Written only by
+    # `load_session` from `customers.get_profile`; the LLM sees it only as
+    # the `{customer_name}` placeholder key, filled in code (R5).
+    customer_name: NotRequired[str | None]
     mode: NotRequired[Literal["bot", "human"]]
     nlu: NotRequired[NLUResult | None]
     intent_queue: NotRequired[list[Intent]]

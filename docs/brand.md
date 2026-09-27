@@ -96,6 +96,7 @@ The dark space palette stays, and each color has one fixed meaning in the conver
 
 ## Where the brand lives in code
 1. **Persona block** in the reply-writer prompt [`compose@v2.md`](../backend/app/domains/conversation/prompts/compose@v2.md), written in English with ES/PT examples.
-2. **Deterministic templates** in [`templates.py`](../backend/app/domains/conversation/templates.py) for greeting, out of scope, tool error, no cards, confirmation, verified result, escalation and session expired. The code fills them with tool data, so Cardy cannot report an action that didn't happen.
-3. **UI fixed text** (buttons, banners, session notices): `es.json`/`pt.json` with no LLM, planned for B1.
-4. **Handoff JSON has no personality.** It is neutral and factual for the human agent: the request, verified facts, actions, evidence, open questions and the customer's language.
+2. **The customer's first name.** `load_session` reads it from the profile. The greeting template uses it ("Hola, Ana."), and `compose` offers it as the `{customer_name}` key so the model can address the customer by name when it sounds natural. The model never sees the name itself; code fills it in.
+3. **Deterministic templates** in [`templates.py`](../backend/app/domains/conversation/templates.py) for greeting, out of scope, tool error, no cards, confirmation, verified result, escalation and session expired. The code fills them with tool data, so Cardy cannot report an action that didn't happen.
+4. **UI fixed text** (buttons, banners, session notices): `es.json`/`pt.json` with no LLM, planned for B1.
+5. **Handoff JSON has no personality.** It is neutral and factual for the human agent: the request, verified facts, actions, evidence, open questions and the customer's language.
