@@ -46,7 +46,7 @@ flow finished ─► pop next queued intent (if any) ─► …   compose ─►
 ```
 
 **Graph state** (checkpointed in Postgres, keyed by `conversation_id`):
-`customer_id` (bound from the validated session passed in the run config, read-only; ADR-025), `language`, `country`, `mode` (`bot` / `human`), `intent_queue`, `pending` (`flow`, `node`, `awaiting_slot`), `slots`, `selected_card_id`, `clarification_failures`, `confirmation_token_id`, `facts[]` (for the composer), `actions[]` (tool results), `escalation_reason`.
+`customer_id` (bound from the validated session passed in the run config, read-only; ADR-025), `language`, `country`, `mode` (`bot` / `human`), `nlu` (the current turn's `NLUResult`, or none), `intent_queue`, `pending` (`flow`, `node`, `awaiting_slot`), `slots`, `selected_card_id`, `clarification_failures`, `confirmation_token_id`, `facts[]` (for the composer), `actions[]` (tool results), `escalation_reason`.
 
 **Digressions:** if a flow is waiting for a slot and the user asks a `general_question`, the answer node replies and `pending` stays intact. The next composer message restates the pending question.
 
