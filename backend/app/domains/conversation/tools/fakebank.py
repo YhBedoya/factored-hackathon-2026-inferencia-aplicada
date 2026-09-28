@@ -26,6 +26,11 @@ neither Postgres nor `app.card_controls` exist yet. `FakeBank` reads apply it
 re-reads it before returning `verified=True` (R3). `make_fakebank_factory`
 returns one read factory and one write factory sharing a single overlay, so
 a session's writes are visible to its own reads.
+
+D11: `FakeBankOverlay.results` maps a caller-supplied `idempotency_key` to the
+`ActionResult` it produced. Each `FakeBankWrites` write checks that map first:
+a replayed key returns the stored result untouched (nothing mutated, nothing
+re-read); a new key runs the write as before and stores the result under it.
 """
 
 import asyncio
@@ -64,6 +69,7 @@ class FakeBankOverlay:
     locked: set[str] = field(default_factory=set)
     blocked: set[str] = field(default_factory=set)
     replacements: dict[str, str] = field(default_factory=dict)
+    results: dict[str, ActionResult] = field(default_factory=dict)
 
 
 _COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
@@ -368,15 +374,23 @@ class FakeBankWrites:
             return BlockOrigin(kind="bank_side", reason="bank_status")
         return BlockOrigin(kind="none", reason=None)
 
-    async def lock_card(self, card_id: str) -> ActionResult:
+    async def lock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
         await self._reads.get_card_details(card_id)  # ownership probe (R1)
         self._overlay.locked.add(card_id)
-        return self._lock_readback("cards.lock_card", card_id, expected_locked=True)
+        result = self._lock_readback("cards.lock_card", card_id, expected_locked=True)
+        self._overlay.results[idempotency_key] = result
+        return result
 
-    async def unlock_card(self, card_id: str) -> ActionResult:
+    async def unlock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
         await self._reads.get_card_details(card_id)  # ownership probe (R1)
         self._overlay.locked.discard(card_id)
-        return self._lock_readback("cards.unlock_card", card_id, expected_locked=False)
+        result = self._lock_readback("cards.unlock_card", card_id, expected_locked=False)
+        self._overlay.results[idempotency_key] = result
+        return result
 
     def _lock_readback(self, tool: str, card_id: str, *, expected_locked: bool) -> ActionResult:
         locked = card_id in self._overlay.locked  # re-read (R3)
@@ -387,33 +401,45 @@ class FakeBankWrites:
             readback={"locked": locked, "at": datetime.now(UTC)},
         )
 
-    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+    async def block_card(
+        self, card_id: str, reason: BlockReason, *, idempotency_key: str
+    ) -> ActionResult:
         # `reason` picks the reply template upstream (D11); the fake dataset
         # has no column to record it in, so the read-back doesn't carry it.
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
         await self._reads.get_card_details(card_id)  # ownership probe (R1)
         self._overlay.blocked.add(card_id)
         blocked = card_id in self._overlay.blocked  # re-read (R3)
-        return ActionResult(
+        result = ActionResult(
             tool="cards.block_card",
             status="applied",
             verified=blocked,
             readback={"status": "Blocked" if blocked else "unknown", "at": datetime.now(UTC)},
         )
+        self._overlay.results[idempotency_key] = result
+        return result
 
-    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+    async def order_replacement(
+        self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
+    ) -> ActionResult:
         # `address_ref` is `"on_file"` or a vault token (`⟨ADDR_n⟩`, R5): the
         # fake has nowhere to ship to, so it only records the tracking id.
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
         await self._reads.get_card_details(card_id)  # ownership probe (R1)
         tracking_id = "RPL-" + secrets.token_hex(4).upper()
         self._overlay.replacements[card_id] = tracking_id
         ordered = self._overlay.replacements.get(card_id) == tracking_id  # re-read (R3)
-        return ActionResult(
+        result = ActionResult(
             tool="cards.order_replacement",
             status="applied",
             verified=ordered,
             readback={"status": "ordered" if ordered else "unknown", "at": datetime.now(UTC)},
             tracking_id=tracking_id,
         )
+        self._overlay.results[idempotency_key] = result
+        return result
 
 
 def make_fakebank_factory(data_dir: Path) -> tuple[BankToolsFactory, BankWriteToolsFactory]:

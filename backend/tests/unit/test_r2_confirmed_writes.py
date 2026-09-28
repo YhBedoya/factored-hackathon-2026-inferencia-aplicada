@@ -1,25 +1,34 @@
 """R2 (no side effect without a server-issued, single-use confirmation token)
 contract tests.
 
-See `docs/specs/d2-k-write-contracts.md` §"Test list". T2 adds
+See `docs/specs/d2-k-write-contracts.md` §"Test list" and
+`docs/specs/d3-a-guardrails-write-path.md` §"Test list". T2 adds
 `test_args_hash_binds_tool_and_args`; T4 appends
 `test_raw_write_runs_only_after_its_step_is_consumed`,
 `test_step_up_checked_before_token_is_consumed` and
-`test_failed_or_unverified_step_cancels_the_plan` against the
-`ConfirmedWriteTools` executor.
+`test_failed_or_unverified_step_cancels_the_plan`; T9 adds the allowlist gate
+(`_ALLOW_ALL`, `_ListRecorder`, `test_intent_not_allowed_is_refused`) against
+the `ConfirmedWriteTools` executor.
 """
 
 import asyncio
 from collections.abc import Sequence
 from typing import Any
+from uuid import UUID, uuid4
 
 import pytest
 
 from app.core.actions import ActionResult
-from app.core.errors import ConfirmationRequired, StepUpRequired, ToolUnavailable
+from app.core.errors import ConfirmationRequired, PolicyDenied, StepUpRequired, ToolUnavailable
+from app.domains.audit.schemas import AuditType
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.policy.confirmation import ConfirmationPlan, PlanStep, ToolArgs, args_hash
+from app.domains.policy.tools_policy import load_tools_policy, tool_allowed
+
+
+def _allow_all(intent: str, tool: str) -> bool:
+    return True
 
 
 def test_args_hash_binds_tool_and_args() -> None:
@@ -69,6 +78,21 @@ class _StubGate:
         return self.valid
 
 
+class _ListRecorder:
+    """A `Recorder` that keeps every recorded event, for tests that assert
+    on the audit trail's shape rather than only the executor's return value.
+    """
+
+    def __init__(self) -> None:
+        self.events: list[tuple[AuditType, dict[str, Any]]] = []
+
+    async def record(
+        self, type: AuditType, payload: dict[str, Any], sources: Sequence[str] = ()
+    ) -> UUID:
+        self.events.append((type, payload))
+        return uuid4()
+
+
 class _StubRawWrites:
     """Records calls; returns a configurable `ActionResult` or raises."""
 
@@ -78,24 +102,30 @@ class _StubRawWrites:
         self._result = result
         self._error = error
         self.calls: list[tuple[str, tuple[Any, ...]]] = []
+        self.idempotency_keys: list[str] = []
 
     async def get_block_origin(self, card_id: str) -> BlockOrigin:
         raise NotImplementedError
 
-    async def lock_card(self, card_id: str) -> ActionResult:
-        return await self._call("lock_card", card_id)
+    async def lock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
+        return await self._call("lock_card", (card_id,), idempotency_key)
 
-    async def unlock_card(self, card_id: str) -> ActionResult:
-        return await self._call("unlock_card", card_id)
+    async def unlock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
+        return await self._call("unlock_card", (card_id,), idempotency_key)
 
-    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
-        return await self._call("block_card", card_id, reason)
+    async def block_card(
+        self, card_id: str, reason: BlockReason, *, idempotency_key: str
+    ) -> ActionResult:
+        return await self._call("block_card", (card_id, reason), idempotency_key)
 
-    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
-        return await self._call("order_replacement", card_id, address_ref)
+    async def order_replacement(
+        self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
+    ) -> ActionResult:
+        return await self._call("order_replacement", (card_id, address_ref), idempotency_key)
 
-    async def _call(self, name: str, *args: Any) -> ActionResult:
+    async def _call(self, name: str, args: tuple[Any, ...], idempotency_key: str) -> ActionResult:
         self.calls.append((name, args))
+        self.idempotency_keys.append(idempotency_key)
         if self._error is not None:
             raise self._error
         assert self._result is not None
@@ -128,8 +158,10 @@ def test_raw_write_runs_only_after_its_step_is_consumed(
     expected_args: dict[str, str],
 ) -> None:
     """R2: the store receives exactly `(token_id, tool, args)` with no token
-    in `args`, and raw is called with the same args. A `ConfirmationRequired`
-    from the store stops the raw call and propagates untouched.
+    in `args`, and raw is called with the same args plus the D11 idempotency
+    key `<token_id>:<step_index>` (the stub store's `consume_step` returns
+    index 0). A `ConfirmationRequired` from the store stops the raw call and
+    propagates untouched.
     """
 
     async def _run() -> None:
@@ -137,18 +169,33 @@ def test_raw_write_runs_only_after_its_step_is_consumed(
         raw = _StubRawWrites(result=result)
         store = _StubStore()
         gate = _StubGate(valid=True)
-        executor = ConfirmedWriteTools(raw, store, gate, requires_step_up=lambda t, a: False)
+        executor = ConfirmedWriteTools(
+            raw,
+            store,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=_allow_all,
+            audit=_ListRecorder(),
+        )
 
         out = await getattr(executor, method)(*call_args, "tok-1")
 
-        assert out is result
+        # D16 step 5: the `readback` event's id becomes `audit_event_id`
+        # (`model_copy`), so `out` is a copy of `result`, not the same object.
+        assert out.model_copy(update={"audit_event_id": None}) == result
         assert store.consumed == [("tok-1", tool, expected_args)]
         assert raw.calls == [(method, call_args)]
+        assert raw.idempotency_keys == ["tok-1:0"]
 
         raw_rejected = _StubRawWrites(result=result)
         store_rejected = _StubStore(consume_error=ConfirmationRequired("step_mismatch"))
         rejected = ConfirmedWriteTools(
-            raw_rejected, store_rejected, gate, requires_step_up=lambda t, a: False
+            raw_rejected,
+            store_rejected,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=_allow_all,
+            audit=_ListRecorder(),
         )
 
         with pytest.raises(ConfirmationRequired):
@@ -171,7 +218,14 @@ def test_step_up_checked_before_token_is_consumed() -> None:
         raw = _StubRawWrites(result=result)
         store = _StubStore()
         gate = _StubGate(valid=False)
-        executor = ConfirmedWriteTools(raw, store, gate, requires_step_up=lambda t, a: True)
+        executor = ConfirmedWriteTools(
+            raw,
+            store,
+            gate,
+            requires_step_up=lambda t, a: True,
+            allowed=_allow_all,
+            audit=_ListRecorder(),
+        )
 
         with pytest.raises(StepUpRequired):
             await executor.unlock_card("PRD-1", "tok-1")
@@ -182,7 +236,7 @@ def test_step_up_checked_before_token_is_consumed() -> None:
         gate.valid = True
         out = await executor.unlock_card("PRD-1", "tok-1")
 
-        assert out is result
+        assert out.model_copy(update={"audit_event_id": None}) == result
 
     asyncio.run(_run())
 
@@ -197,7 +251,14 @@ def test_failed_or_unverified_step_cancels_the_plan() -> None:
 
         store = _StubStore()
         raw = _StubRawWrites(error=ToolUnavailable("down"))
-        executor = ConfirmedWriteTools(raw, store, gate, requires_step_up=lambda t, a: False)
+        executor = ConfirmedWriteTools(
+            raw,
+            store,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=_allow_all,
+            audit=_ListRecorder(),
+        )
 
         with pytest.raises(ToolUnavailable):
             await executor.lock_card("PRD-1", "tok-1")
@@ -209,11 +270,56 @@ def test_failed_or_unverified_step_cancels_the_plan() -> None:
         )
         store2 = _StubStore()
         raw2 = _StubRawWrites(result=unverified)
-        executor2 = ConfirmedWriteTools(raw2, store2, gate, requires_step_up=lambda t, a: False)
+        executor2 = ConfirmedWriteTools(
+            raw2,
+            store2,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=_allow_all,
+            audit=_ListRecorder(),
+        )
 
         out = await executor2.lock_card("PRD-1", "tok-2")
 
         assert out is unverified
         assert store2.cancelled == ["tok-2"]
+
+    asyncio.run(_run())
+
+
+def test_intent_not_allowed_is_refused() -> None:
+    """D3: `cards.lock_card` isn't in `card_unlock`'s `allowed_intents`
+    (`policies/tools.yaml`) -- `issue_plan` refuses before the store's
+    `issue` is ever touched (the stub store's `issue` raises), and records
+    exactly one `rule_hit`.
+    """
+
+    async def _run() -> None:
+        store = _StubStore()
+        gate = _StubGate(valid=True)
+        recorder = _ListRecorder()
+        raw = _StubRawWrites()
+        executor = ConfirmedWriteTools(
+            raw,
+            store,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=tool_allowed(load_tools_policy()),
+            audit=recorder,
+        )
+
+        with pytest.raises(PolicyDenied) as exc_info:
+            await executor.issue_plan(
+                [PlanStep(tool="cards.lock_card", args={"card_id": "PRD-1"})],
+                "card_unlock",
+            )
+
+        assert exc_info.value.reason_code == "tool_not_allowed"
+        assert recorder.events == [
+            (
+                "rule_hit",
+                {"rule_id": "tool_not_allowed", "tool": "cards.lock_card", "intent": "card_unlock"},
+            )
+        ]
 
     asyncio.run(_run())

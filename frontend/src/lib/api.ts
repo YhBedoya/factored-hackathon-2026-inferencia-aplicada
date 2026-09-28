@@ -169,7 +169,7 @@ export async function postConfirmation(
 
 export async function verifyOtp(code: string): Promise<void> {
 	const result = await withAuthRetry(() =>
-		client.post<{ 204: undefined }, unknown>({
+		client.post<{ 200: MeResponse }, unknown>({
 			url: "/api/v1/auth/otp/verify",
 			body: { code },
 		}),

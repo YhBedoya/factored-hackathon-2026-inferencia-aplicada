@@ -5,6 +5,18 @@ export type ClientOptions = {
 };
 
 /**
+ * ConfirmationRequest
+ *
+ * `POST /confirmations/{token_id}` body (D7).
+ */
+export type ConfirmationRequest = {
+    /**
+     * Decision
+     */
+    decision: 'confirm' | 'cancel';
+};
+
+/**
  * CreateConversationRequest
  */
 export type CreateConversationRequest = {
@@ -89,13 +101,34 @@ export type MeResponse = {
 };
 
 /**
+ * OtpVerifyRequest
+ *
+ * `POST /auth/otp/verify` body (D3-A4 D5). `extra="forbid"` so a
+ * mistyped field is a `422`, not a silently ignored one.
+ */
+export type OtpVerifyRequest = {
+    /**
+     * Code
+     */
+    code: string;
+};
+
+/**
  * PostMessageRequest
+ *
+ * `{text}` for a typed turn, or `{resume: "step_up"}` for the OTP-resume
+ * turn (D6) -- exactly one, or `422`. `resume` is not persisted as a
+ * customer message; only `text` is.
  */
 export type PostMessageRequest = {
     /**
      * Text
      */
-    text: string;
+    text?: string | null;
+    /**
+     * Resume
+     */
+    resume?: 'step_up' | null;
 };
 
 /**
@@ -223,6 +256,31 @@ export type MeApiV1AuthMeGetResponses = {
 
 export type MeApiV1AuthMeGetResponse = MeApiV1AuthMeGetResponses[keyof MeApiV1AuthMeGetResponses];
 
+export type VerifyOtpApiV1AuthOtpVerifyPostData = {
+    body: OtpVerifyRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/otp/verify';
+};
+
+export type VerifyOtpApiV1AuthOtpVerifyPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type VerifyOtpApiV1AuthOtpVerifyPostError = VerifyOtpApiV1AuthOtpVerifyPostErrors[keyof VerifyOtpApiV1AuthOtpVerifyPostErrors];
+
+export type VerifyOtpApiV1AuthOtpVerifyPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeResponse;
+};
+
+export type VerifyOtpApiV1AuthOtpVerifyPostResponse = VerifyOtpApiV1AuthOtpVerifyPostResponses[keyof VerifyOtpApiV1AuthOtpVerifyPostResponses];
+
 export type CreateConversationApiV1ConversationsPostData = {
     body: CreateConversationRequest;
     path?: never;
@@ -277,6 +335,40 @@ export type PostMessageApiV1ConversationsConversationIdMessagesPostResponses = {
 };
 
 export type PostMessageApiV1ConversationsConversationIdMessagesPostResponse = PostMessageApiV1ConversationsConversationIdMessagesPostResponses[keyof PostMessageApiV1ConversationsConversationIdMessagesPostResponses];
+
+export type PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData = {
+    body: ConfirmationRequest;
+    path: {
+        /**
+         * Token Id
+         */
+        token_id: string;
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversation_id}/confirmations/{token_id}';
+};
+
+export type PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostError = PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors[keyof PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors];
+
+export type PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses = {
+    /**
+     * Successful Response
+     */
+    202: PostMessageResponse;
+};
+
+export type PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponse = PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses[keyof PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses];
 
 export type StreamConversationApiV1ConversationsConversationIdStreamGetData = {
     body?: never;

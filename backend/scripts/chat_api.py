@@ -1,5 +1,5 @@
 """Live HTTP chat client against the running API (D2-A, `07` D2 end-of-day
-steps 2-4, A5).
+steps 2-4, A5; D3-A D18 adds the guardrail commands below).
 
 Usage: `make chat-api PERSONA=<customer_id>` or directly
 `cd backend && uv run python scripts/chat_api.py --persona <customer_id> [--base-url http://localhost]`.
@@ -18,12 +18,24 @@ The `debug` line mirrors (not imports) `sandbox.py`'s own format, so A5 can
 compare this output against `make chat-sandbox` on the same persona: dates
 and card masks may differ (Postgres is date-shifted, `FakeBank` reads raw
 CSVs), everything else should match.
+
+Commands (D3-A D18), in addition to a plain-text line for a normal turn:
+- `/otp <code>` -- `POST /auth/otp/verify {code}` (never prints the code),
+  then, on `200`, runs the `resume: step_up` turn.
+- `/confirm` / `/cancel` -- runs a turn against
+  `/conversations/{id}/confirmations/{token_id}` for the last `ui.confirm`
+  token seen, with `{"decision": "confirm"}` / `{"decision": "cancel"}`.
+  Prints `no open confirmation` if no `ui.confirm` event has arrived yet.
+- `/replay` -- re-posts the last token this script itself posted to the
+  confirmations route with `{"decision": "confirm"}`, without opening a
+  stream, to show the server rejects a reused token (R2).
 """
 
 import argparse
 import csv
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +53,19 @@ _CONNECTED_LINE = ": connected"
 
 class _PersonaNotSeeded(Exception):
     """No `credentials.csv` row for the requested persona (D5, D8)."""
+
+
+@dataclass
+class _ChatState:
+    """Cross-turn state D18's commands need: the last `ui.confirm` token
+    seen (for `/confirm`, `/cancel`) and the last token this script itself
+    posted to the confirmations route (for `/replay`). Neither is cleared
+    on use -- the server is the single-use enforcement point (R2); this
+    script only remembers what to point `/replay` back at.
+    """
+
+    last_confirm_token: str | None = None
+    last_posted_token: str | None = None
 
 
 def _load_persona(customer_id: str) -> tuple[str, str, str]:
@@ -121,9 +146,11 @@ def _print_debug(data: dict[str, Any]) -> None:
     )
 
 
-def _handle_event(event: str, data: dict[str, Any]) -> bool:
+def _handle_event(event: str, data: dict[str, Any], state: _ChatState) -> bool:
     """Print one line for `(event, data)` (`04` §3 SSE events). Returns
-    `True` once `done` is seen, so the caller stops reading the stream.
+    `True` once `done` is seen, so the caller stops reading the stream. A
+    `ui.confirm` event also updates `state.last_confirm_token` (D18) for a
+    later `/confirm` or `/cancel` line.
     """
     if event == "status":
         print(f"status {data['step']}")
@@ -131,6 +158,8 @@ def _handle_event(event: str, data: dict[str, Any]) -> bool:
         print(f"bot: {data['text']}")
     elif event == "ui":
         print(f"ui {data['kind']}")
+        if data["kind"] == "confirm":
+            state.last_confirm_token = data["payload"]["token_id"]
     elif event == "debug":
         _print_debug(data)
     elif event == "error":
@@ -140,14 +169,23 @@ def _handle_event(event: str, data: dict[str, Any]) -> bool:
     return False
 
 
-def _run_turn(client: httpx.Client, conversation_id: str, text: str) -> None:
-    """One turn: open the stream, wait for `: connected`, post the message,
-    then print events until `done` (D14). A `409` means another turn already
-    holds this conversation's lock -- print `turn in progress` and stop,
-    without posting anything else for this line.
+def _run_turn(
+    client: httpx.Client,
+    conversation_id: str,
+    state: _ChatState,
+    *,
+    post_url: str,
+    post_json: dict[str, Any],
+) -> None:
+    """One turn-starting post: open the stream, wait for `: connected`, post
+    `post_json` to `post_url`, then print events until `done` (D14). Used
+    for a plain-text message, the `resume: step_up` turn (`/otp`) and a
+    confirmation decision (`/confirm`, `/cancel`) alike (D18) -- only
+    `/replay` bypasses this, since it opens no stream. A `409` means another
+    turn already holds this conversation's lock -- print `turn in progress`
+    and stop, without posting anything else for this line.
     """
     stream_url = f"{_API_PREFIX}/conversations/{conversation_id}/stream"
-    messages_url = f"{_API_PREFIX}/conversations/{conversation_id}/messages"
 
     with client.stream("GET", stream_url) as response:
         lines = response.iter_lines()
@@ -155,9 +193,7 @@ def _run_turn(client: httpx.Client, conversation_id: str, text: str) -> None:
             if line == _CONNECTED_LINE:
                 break
 
-        post_response = client.post(
-            messages_url, json={"text": text}, headers=_csrf_headers(client)
-        )
+        post_response = client.post(post_url, json=post_json, headers=_csrf_headers(client))
         if post_response.status_code == 409:
             print("turn in progress")
             return
@@ -169,11 +205,81 @@ def _run_turn(client: httpx.Client, conversation_id: str, text: str) -> None:
                 event = line[len("event: ") :]
             elif line.startswith("data: "):
                 data = json.loads(line[len("data: ") :])
-                if event is not None and _handle_event(event, data):
+                if event is not None and _handle_event(event, data, state):
                     return
                 event = None
             # A blank frame separator or an `: ping` keep-alive comment
             # carries no data; only `event:`/`data:` lines matter here.
+
+
+def _response_detail(response: httpx.Response) -> Any:
+    """The `detail` field of a JSON error/response body, or `None` if the
+    body isn't JSON or carries no `detail` (a success body, e.g.).
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body.get("detail") if isinstance(body, dict) else None
+
+
+def _run_otp(client: httpx.Client, conversation_id: str, state: _ChatState, code: str) -> None:
+    """`/otp <code>`: verify the code and print only the status and
+    `detail` -- never the code itself. On `200` the session is stepped up,
+    so this runs the `resume: step_up` turn to let the paused flow continue
+    (D6, D18).
+    """
+    response = client.post(
+        f"{_API_PREFIX}/auth/otp/verify",
+        json={"code": code},
+        headers=_csrf_headers(client),
+    )
+    print(f"otp {response.status_code} {_response_detail(response)}")
+    if response.status_code == 200:
+        _run_turn(
+            client,
+            conversation_id,
+            state,
+            post_url=f"{_API_PREFIX}/conversations/{conversation_id}/messages",
+            post_json={"resume": "step_up"},
+        )
+
+
+def _run_confirmation(
+    client: httpx.Client, conversation_id: str, state: _ChatState, decision: str
+) -> None:
+    """`/confirm` or `/cancel`: post `decision` for the last `ui.confirm`
+    token seen (D7). Prints `no open confirmation` if none has arrived yet.
+    """
+    token_id = state.last_confirm_token
+    if token_id is None:
+        print("no open confirmation")
+        return
+    state.last_posted_token = token_id
+    _run_turn(
+        client,
+        conversation_id,
+        state,
+        post_url=f"{_API_PREFIX}/conversations/{conversation_id}/confirmations/{token_id}",
+        post_json={"decision": decision},
+    )
+
+
+def _replay(client: httpx.Client, conversation_id: str, state: _ChatState) -> None:
+    """`/replay`: re-post the last token this script posted to the
+    confirmations route, with `{"decision": "confirm"}`, and print the raw
+    result -- no stream, since the token is expected to be rejected (R2).
+    """
+    token_id = state.last_posted_token
+    if token_id is None:
+        print("no open confirmation")
+        return
+    response = client.post(
+        f"{_API_PREFIX}/conversations/{conversation_id}/confirmations/{token_id}",
+        json={"decision": "confirm"},
+        headers=_csrf_headers(client),
+    )
+    print(f"replay -> {response.status_code} {_response_detail(response)}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -195,12 +301,25 @@ def main(argv: list[str] | None = None) -> None:
             password=password,
         )
         conversation_id = _create_conversation(client)
+        state = _ChatState()
+        messages_url = f"{_API_PREFIX}/conversations/{conversation_id}/messages"
 
         for line in sys.stdin:
             text = line.rstrip("\n")
             if not text:
                 continue
-            _run_turn(client, conversation_id, text)
+            if text.startswith("/otp "):
+                _run_otp(client, conversation_id, state, text[len("/otp ") :].strip())
+            elif text == "/confirm":
+                _run_confirmation(client, conversation_id, state, "confirm")
+            elif text == "/cancel":
+                _run_confirmation(client, conversation_id, state, "cancel")
+            elif text == "/replay":
+                _replay(client, conversation_id, state)
+            else:
+                _run_turn(
+                    client, conversation_id, state, post_url=messages_url, post_json={"text": text}
+                )
 
 
 if __name__ == "__main__":

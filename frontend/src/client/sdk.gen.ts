@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses } from './types.gen';
+import type { CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -64,6 +64,25 @@ export const logoutApiV1AuthLogoutPost = <ThrowOnError extends boolean = false>(
 export const meApiV1AuthMeGet = <ThrowOnError extends boolean = false>(options?: Options<MeApiV1AuthMeGetData, ThrowOnError>): RequestResult<MeApiV1AuthMeGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeApiV1AuthMeGetResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/me', ...options });
 
 /**
+ * Verify Otp
+ *
+ * Step `session` up with a demo OTP code (D3-A4 D4, D5), and re-issue
+ * the session and CSRF cookies exactly as `refresh()` does, so the old
+ * token stays valid until its own `exp`. A wrong code is `401
+ * otp_invalid`; hitting `rl:otp:<account_id>`'s limit is `429
+ * too_many_attempts`, checked before the code, so it wins even when the
+ * code in this same request is right.
+ */
+export const verifyOtpApiV1AuthOtpVerifyPost = <ThrowOnError extends boolean = false>(options: Options<VerifyOtpApiV1AuthOtpVerifyPostData, ThrowOnError>): RequestResult<VerifyOtpApiV1AuthOtpVerifyPostResponses, VerifyOtpApiV1AuthOtpVerifyPostErrors, ThrowOnError> => (options.client ?? client).post<VerifyOtpApiV1AuthOtpVerifyPostResponses, VerifyOtpApiV1AuthOtpVerifyPostErrors, ThrowOnError>({
+    url: '/api/v1/auth/otp/verify',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Create Conversation
  *
  * Start a new conversation for the caller's own `customer_id` (R1).
@@ -80,12 +99,34 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
 /**
  * Post Message
  *
- * Take the turn lock, persist the customer message and schedule the
- * turn (D14). `409 turn_in_progress` when another turn already holds the
- * lock for this conversation.
+ * Take the turn lock, persist the customer message (a typed turn only,
+ * D6) and schedule the turn (D14). `409 turn_in_progress` when another turn
+ * already holds the lock for this conversation; `409 conversation_closed`
+ * once the customer said goodbye (the client starts a new conversation
+ * instead).
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Post Confirmation
+ *
+ * Resolve a button confirm/cancel (D7). Before scheduling anything,
+ * checks that `token_id` is still an open plan owned by this customer and
+ * conversation (`RedisConfirmationStore.is_open`) *and* is the token the
+ * graph's last checkpoint actually paused on
+ * (`runner.checkpointed_confirmation_token`) -- either failing is `409
+ * confirmation_invalid`, and no turn is scheduled. `409 turn_in_progress`
+ * works the same as on `/messages`.
+ */
+export const postConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPost = <ThrowOnError extends boolean = false>(options: Options<PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, ThrowOnError>): RequestResult<PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, ThrowOnError> => (options.client ?? client).post<PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, ThrowOnError>({
+    url: '/api/v1/conversations/{conversation_id}/confirmations/{token_id}',
     ...options,
     headers: {
         'Content-Type': 'application/json',

@@ -24,7 +24,7 @@ type OtpModalProps = {
  * `ui.otp_required` (D2). The code lives only in this component's local
  * state: it never joins the transcript, sessionStorage or a log line (R5,
  * D2). On success it resumes the paused turn with `{resume: "step_up"}`;
- * on `invalid_otp` it shows the inline error and stays open.
+ * on `otp_invalid` / `too_many_attempts` it shows the inline error and stays open.
  */
 export function OtpModal({ conversationId, onVerified }: OtpModalProps) {
 	const { t } = useI18n();
@@ -41,10 +41,13 @@ export function OtpModal({ conversationId, onVerified }: OtpModalProps) {
 			onVerified();
 			await postResume(conversationId);
 		} catch (err) {
+			const errCode = err instanceof ApiError ? err.code : null;
 			setError(
-				err instanceof ApiError && err.code === "invalid_otp"
-					? t("errors.invalid_otp")
-					: t("errors.generic"),
+				errCode === "otp_invalid"
+					? t("errors.otp_invalid")
+					: errCode === "too_many_attempts"
+						? t("errors.too_many_attempts")
+						: t("errors.generic"),
 			);
 			setSubmitting(false);
 		}

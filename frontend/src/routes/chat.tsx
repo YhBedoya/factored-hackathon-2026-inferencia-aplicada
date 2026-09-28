@@ -42,7 +42,8 @@ const KNOWN_ERROR_CODES = new Set([
 	"turn_failed",
 	"turn_in_progress",
 	"conversation_closed",
-	"invalid_otp",
+	"otp_invalid",
+	"confirmation_invalid",
 ]);
 
 function errorKey(code: string): TKey {

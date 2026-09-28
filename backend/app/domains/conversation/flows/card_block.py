@@ -252,6 +252,7 @@ async def _start_block_plan(
         summary_key=summary_key,
         view_facts=view_facts,
         confirm_values=confirm_values,
+        intent="card_block",
     )
 
 

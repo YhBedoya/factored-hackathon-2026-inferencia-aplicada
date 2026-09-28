@@ -32,7 +32,7 @@ def test_writes_read_back_and_block_origin() -> None:
     reads = FakeBank(ctx, _FIXTURE_DIR, overlay)
     credit_card_id = "PRD-TFM1CRED0001"
 
-    lock_result = asyncio.run(writes.lock_card(credit_card_id))
+    lock_result = asyncio.run(writes.lock_card(credit_card_id, idempotency_key="k-lock"))
     assert lock_result.verified is True
     assert lock_result.readback["locked"] is True
 
@@ -40,11 +40,13 @@ def test_writes_read_back_and_block_origin() -> None:
     assert origin_after_lock.kind == "customer_lock"
     assert origin_after_lock.reason is None
 
-    unlock_result = asyncio.run(writes.unlock_card(credit_card_id))
+    unlock_result = asyncio.run(writes.unlock_card(credit_card_id, idempotency_key="k-unlock"))
     assert unlock_result.verified is True
     assert unlock_result.readback["locked"] is False
 
-    block_result = asyncio.run(writes.block_card(credit_card_id, "lost_or_stolen"))
+    block_result = asyncio.run(
+        writes.block_card(credit_card_id, "lost_or_stolen", idempotency_key="k-block")
+    )
     assert block_result.verified is True
     assert block_result.readback["status"] == "Blocked"
 
@@ -52,7 +54,9 @@ def test_writes_read_back_and_block_origin() -> None:
     assert origin_after_block.kind == "customer_block"
     assert origin_after_block.reason is None
 
-    replacement_result = asyncio.run(writes.order_replacement(credit_card_id, "on_file"))
+    replacement_result = asyncio.run(
+        writes.order_replacement(credit_card_id, "on_file", idempotency_key="k-replace")
+    )
     assert replacement_result.verified is True
     assert replacement_result.readback["status"] == "ordered"
     assert replacement_result.tracking_id is not None

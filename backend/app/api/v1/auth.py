@@ -1,5 +1,5 @@
 """Auth routes (D2, D6, D7, D9): `POST /auth/login`, `POST /auth/logout`,
-`GET /auth/me`.
+`GET /auth/me`, `POST /auth/otp/verify` (D3-A4).
 
 `public_router` carries `/auth/login`, the one non-GET route CSRF never
 guards (D6): there is no cookie yet to double-submit against. `router`
@@ -20,13 +20,20 @@ on `public_router` too (D6): it proves the caller through the `session`
 cookie plus CSRF, not a role dependency, since a session past `exp` has
 nothing left for `require_role` to check.
 
+`POST /auth/otp/verify` (D3-A4 D5) sits on `router`, not `public_router`:
+unlike refresh, stepping up needs a live, role-checked session to step up.
+It mirrors `refresh()`'s re-issue shape exactly -- new `session` and
+`csrf_token` cookies, the old token left unrevoked -- except the re-issued
+session carries a fresh `step_up_at` instead of the same one.
+
 See `docs/specs/d2-a-login-read-tools-api.md` "Contracts" -> "HTTP",
-D6, D7, D9.
+D6, D7, D9 and `docs/specs/d3-a-guardrails-write-path.md` D4, D5.
 """
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, ConfigDict
 
 from app.core.config import Settings, get_settings
 from app.domains.identity import service as identity_service
@@ -40,7 +47,18 @@ from app.domains.identity.tokens import (
     new_csrf_token,
 )
 
-__all__ = ["public_router", "router"]
+__all__ = ["OtpVerifyRequest", "public_router", "router"]
+
+
+class OtpVerifyRequest(BaseModel):
+    """`POST /auth/otp/verify` body (D3-A4 D5). `extra="forbid"` so a
+    mistyped field is a `422`, not a silently ignored one.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    code: str
+
 
 public_router = APIRouter()
 router = APIRouter(dependencies=[Depends(require_role("customer")), Depends(require_csrf)])
@@ -136,3 +154,33 @@ async def me(session: Annotated[Session, Depends(get_session)]) -> MeResponse:
     """The masked profile for the caller's own session (D9)."""
 
     return await identity_service.me(session)
+
+
+@router.post("/auth/otp/verify", response_model=MeResponse)
+async def verify_otp(
+    req: OtpVerifyRequest,
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+) -> MeResponse:
+    """Step `session` up with a demo OTP code (D3-A4 D4, D5), and re-issue
+    the session and CSRF cookies exactly as `refresh()` does, so the old
+    token stays valid until its own `exp`. A wrong code is `401
+    otp_invalid`; hitting `rl:otp:<account_id>`'s limit is `429
+    too_many_attempts`, checked before the code, so it wins even when the
+    code in this same request is right.
+    """
+
+    settings = get_settings()
+    try:
+        new_session = await identity_service.verify_otp(session, req.code, settings=settings)
+    except identity_service.TooManyAttempts as exc:
+        raise HTTPException(status_code=429, detail="too_many_attempts") from exc
+    except identity_service.OtpInvalid as exc:
+        raise HTTPException(status_code=401, detail="otp_invalid") from exc
+
+    token, _claims = issue_token(
+        new_session, secret=settings.jwt_secret, ttl_minutes=settings.session_ttl_minutes
+    )
+    csrf_token = new_csrf_token()
+    _set_auth_cookies(response, token=token, csrf_token=csrf_token, settings=settings)
+    return await identity_service.me(new_session)

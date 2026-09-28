@@ -81,13 +81,15 @@ def test_writes_refuse_foreign_cards() -> None:
     with pytest.raises(AccessDenied):
         asyncio.run(writes.get_block_origin(foreign_card_id))
     with pytest.raises(AccessDenied):
-        asyncio.run(writes.lock_card(foreign_card_id))
+        asyncio.run(writes.lock_card(foreign_card_id, idempotency_key="k-lock"))
     with pytest.raises(AccessDenied):
-        asyncio.run(writes.unlock_card(foreign_card_id))
+        asyncio.run(writes.unlock_card(foreign_card_id, idempotency_key="k-unlock"))
     with pytest.raises(AccessDenied):
-        asyncio.run(writes.block_card(foreign_card_id, "lost_or_stolen"))
+        asyncio.run(writes.block_card(foreign_card_id, "lost_or_stolen", idempotency_key="k-block"))
     with pytest.raises(AccessDenied):
-        asyncio.run(writes.order_replacement(foreign_card_id, "on_file"))
+        asyncio.run(
+            writes.order_replacement(foreign_card_id, "on_file", idempotency_key="k-replace")
+        )
 
     assert overlay.locked == set()
     assert overlay.blocked == set()

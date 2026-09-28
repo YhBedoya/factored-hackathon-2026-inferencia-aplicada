@@ -40,6 +40,7 @@ from langgraph.graph.state import CompiledStateGraph
 from app.core.actions import ActionResult
 from app.core.config import get_settings
 from app.core.llm import LLMClient, get_llm_client
+from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
 from app.domains.conversation.graph import (
     ConfirmationDecision,
@@ -58,7 +59,8 @@ from app.domains.customers.schemas import CustomerProfile
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
-from app.domains.policy.tools_policy import load_tools_policy, step_up_rule
+from app.domains.policy.registry import get_policies
+from app.domains.policy.tools_policy import step_up_rule, tool_allowed
 from app.domains.safety.vault import InMemoryAddressVault
 from app.domains.transactions.schemas import TxFilter, TxView
 
@@ -114,21 +116,27 @@ class _RecordingWriteTools:
         self._calls.append("get_block_origin")
         return await self._inner.get_block_origin(card_id)
 
-    async def lock_card(self, card_id: str) -> ActionResult:
+    async def lock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         self._calls.append("lock_card")
-        return await self._inner.lock_card(card_id)
+        return await self._inner.lock_card(card_id, idempotency_key=idempotency_key)
 
-    async def unlock_card(self, card_id: str) -> ActionResult:
+    async def unlock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         self._calls.append("unlock_card")
-        return await self._inner.unlock_card(card_id)
+        return await self._inner.unlock_card(card_id, idempotency_key=idempotency_key)
 
-    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+    async def block_card(
+        self, card_id: str, reason: BlockReason, *, idempotency_key: str
+    ) -> ActionResult:
         self._calls.append("block_card")
-        return await self._inner.block_card(card_id, reason)
+        return await self._inner.block_card(card_id, reason, idempotency_key=idempotency_key)
 
-    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+    async def order_replacement(
+        self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
+    ) -> ActionResult:
         self._calls.append("order_replacement")
-        return await self._inner.order_replacement(card_id, address_ref)
+        return await self._inner.order_replacement(
+            card_id, address_ref, idempotency_key=idempotency_key
+        )
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -174,11 +182,12 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
     conversation_id = uuid4()
     structlog.contextvars.bind_contextvars(trace_id=trace_id, conversation_id=str(conversation_id))
 
+    bundle = get_policies()
     session = ToolContext(
         customer_id=customer_id,
         conversation_id=conversation_id,
         actor="customer",
-        policy_version="unversioned",
+        policy_version=bundle.hash,
         trace_id=trace_id,
     )
     read_factory, write_factory = make_fakebank_factory(data_dir)
@@ -188,7 +197,12 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
     gate = FakeStepUpGate(get_settings().demo_otp_code)
     store = InMemoryConfirmationStore(customer_id, str(conversation_id))
     bank_write_tools = ConfirmedWriteTools(
-        write_tools, store, gate, step_up_rule(load_tools_policy())
+        write_tools,
+        store,
+        gate,
+        step_up_rule(bundle.tools),
+        tool_allowed(bundle.tools),
+        NullAuditRecorder(),
     )
 
     llm: LLMClient = get_llm_client()

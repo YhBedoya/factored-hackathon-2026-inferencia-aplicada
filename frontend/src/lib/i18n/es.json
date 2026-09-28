@@ -47,5 +47,6 @@
 	"errors.turn_failed": "No pude procesar tu mensaje. Intenta de nuevo.",
 	"errors.turn_in_progress": "Todavía estoy con tu mensaje anterior. Espera un momento.",
 	"errors.conversation_closed": "Esta conversación se cerró.",
-	"errors.invalid_otp": "El código no es correcto. Intenta de nuevo."
+	"errors.otp_invalid": "El código no es correcto. Intenta de nuevo.",
+	"errors.confirmation_invalid": "Esa confirmación ya no es válida. Pídeme la acción de nuevo."
 }

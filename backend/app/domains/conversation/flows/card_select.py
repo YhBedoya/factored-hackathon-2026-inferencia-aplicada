@@ -64,7 +64,7 @@ class CardSelectPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    provenance: str
+    provenance: Literal["team-generated-synthetic"]
     version: int
     card_status: CardStatusPolicy
 
