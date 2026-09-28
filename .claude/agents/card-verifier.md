@@ -20,6 +20,22 @@ The card id and the day's line range in
 `docs/solution-docs/07-execution-plan.md`, the spec path, the plan path, the
 **state file** path (`docs/plans/<slug>.state.md`) and the branch.
 
+You are usually also given a **slice**: the criteria, rules or harnesses you
+own (the orchestrator runs several verifiers in parallel, one per slice).
+When you have a slice:
+- Verify only what it names. Read the whole criteria list for context, but
+  report rows only for your slice. The other slices are covered by other
+  verifiers, so don't mark them `UNVERIFIABLE`.
+- Run `make check` or the full suite only if your slice says so. Otherwise run
+  targeted commands.
+- Never run a stack-disruptive step (`docker compose restart`, `make up`/`down`,
+  `make data`, `make demo-reset`, `make seed-identity`, anything that drops a
+  table the stack uses) unless your slice names it. Other verifiers are using
+  the same stack right now.
+- Write nothing in the checkout. Temp files go under `mktemp`.
+- Keep the reply under about 25 lines.
+With no slice, you own everything below.
+
 The card was implemented task by task, by a different fresh agent per plan task.
 The state file holds that history. Its **Human decisions taken mid-card** block
 records answers the human gave during implementation. Those are amendments to
