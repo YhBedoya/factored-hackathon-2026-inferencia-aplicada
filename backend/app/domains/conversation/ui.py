@@ -4,7 +4,9 @@
 graph-local `ui` channel (`graph.py`, D16) so the frontend can render a
 confirmation card or an OTP prompt without the LLM ever writing money, dates
 or a card mask itself (R4): `ConfirmStepView.facts` carries only pre-formatted
-`Fact`s built in code. `card_picker`, `transaction_list` and `handoff_banner`
+`Fact`s built in code. `conversation_closed` tells the caller the customer said goodbye and the
+conversation ended (the API marks it closed; the next message needs a new
+conversation). `card_picker`, `transaction_list` and `handoff_banner`
 are not defined here -- they arrive with the cards that emit them.
 """
 
@@ -18,6 +20,8 @@ __all__ = [
     "ConfirmEvent",
     "ConfirmPayload",
     "ConfirmStepView",
+    "ConversationClosedEvent",
+    "ConversationClosedPayload",
     "OtpRequiredEvent",
     "OtpRequiredPayload",
     "UIEvent",
@@ -69,4 +73,21 @@ class OtpRequiredEvent(BaseModel):
     payload: OtpRequiredPayload
 
 
-UIEvent = Annotated[ConfirmEvent | OtpRequiredEvent, Field(discriminator="kind")]
+class ConversationClosedPayload(BaseModel):
+    """`ui.conversation_closed` payload: nothing to carry, the kind is the signal."""
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ConversationClosedEvent(BaseModel):
+    """Push event: the customer closed the conversation after `anything_else`."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["conversation_closed"]
+    payload: ConversationClosedPayload = ConversationClosedPayload()
+
+
+UIEvent = Annotated[
+    ConfirmEvent | OtpRequiredEvent | ConversationClosedEvent, Field(discriminator="kind")
+]

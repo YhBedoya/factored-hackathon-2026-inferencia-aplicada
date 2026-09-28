@@ -124,8 +124,11 @@ async def post_message(
 ) -> PostMessageResponse:
     """Take the turn lock, persist the customer message and schedule the
     turn (D14). `409 turn_in_progress` when another turn already holds the
-    lock for this conversation.
+    lock for this conversation; `409 conversation_closed` once the customer
+    said goodbye (the client starts a new conversation instead).
     """
+    if conversation.status == "closed":
+        raise HTTPException(status_code=409, detail="conversation_closed")
 
     try:
         turn_id = await start_turn(
