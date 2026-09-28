@@ -1,4 +1,4 @@
-"""Turn start: bind the session's `customer_id`, then reset per-turn state (D8, D9).
+"""Turn start: bind the session's `customer_id`, then reset per-turn state (D8, D9, B3).
 
 This is the only node that reads `config["configurable"]["session"]` (the
 `ToolContext` the sandbox/API built) and `["bank_tools"]` (the bound
@@ -11,7 +11,9 @@ repeat, raise-on-change semantics as before.
 
 `facts`, `nlu` and `escalation_reason` are reset here at the start of every
 turn (Q3) so a later `compose` node only ever sees facts a flow wrote this
-turn, not ones left over from an earlier one.
+turn, not ones left over from an earlier one. `segments` (B3) gets the same
+treatment through `RESET_SEGMENTS`, so `finish` only ever joins the
+segments this turn's nodes actually wrote.
 
 `ui` (D16) is reset to `[]` here too: it is a graph-local, non-checkpointed
 channel, so a turn only ever reports the events an emitting node appended
@@ -23,7 +25,7 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import RESET_FACTS
+from app.domains.conversation.state import RESET_FACTS, RESET_SEGMENTS
 from app.domains.conversation.tools import BankReadTools, ToolContext
 
 __all__ = ["load_session"]
@@ -41,6 +43,7 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "country": profile.country,
         "customer_name": profile.first_name,
         "facts": RESET_FACTS,
+        "segments": RESET_SEGMENTS,
         "nlu": None,
         "escalation_reason": None,
         "ui": [],

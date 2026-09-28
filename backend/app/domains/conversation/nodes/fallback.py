@@ -28,4 +28,4 @@ def fallback(state: GraphState) -> dict[str, Any]:
     """Fixed ES/PT template for the escalation reason, no LLM call (D15)."""
     language = state.get("language", "es")
     kind = _REASON_TEMPLATES.get(state.get("escalation_reason") or "", "fallback")
-    return {"reply": get_template(kind, language)}
+    return {"segments": [get_template(kind, language)]}

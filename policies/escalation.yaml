@@ -1,0 +1,5 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 1
+customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card], queue: atencion}
+bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
+action_queues:       {action_unverified: atencion}

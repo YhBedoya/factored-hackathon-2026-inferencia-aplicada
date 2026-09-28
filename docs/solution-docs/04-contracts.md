@@ -30,7 +30,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 
 | Tool | Side effect | Confirm | Step-up | Returns |
 |---|---|---|---|---|
-| `customers.get_profile()` | — | — | — | `CustomerProfile{country, customer_status, first_name}` (`first_name` is PII: it reaches the LLM only as the `{customer_name}` key, ADR-029) |
+| `customers.get_profile()` | — | — | — | `CustomerProfile{country, customer_status, first_name, city}` (`first_name` is PII: it reaches the LLM only as the `{customer_name}` key, ADR-029; `city` is PII too, D2-B D4, and reaches a reply only as the masked `•••, <city>` delivery-address label) |
 | `cards.list_cards()` | — | — | — | `[CardSummary{card_id, kind, last4, status, locked}]` |
 | `cards.get_card_details(card_id)` | — | — | — | `CardDetails{card_id, kind, last4, status, locked, currency, expiration_date, credit_limit, current_balance, interest_rate, days_past_due, source, available_credit}` (`available_credit` computed as `credit_limit − current_balance`; all credit-only fields are `None` for debit cards) |
 | `cards.get_block_origin(card_id)` | — | — | — | `BlockOrigin{kind: customer_lock/customer_block/bank_side/none, reason}` |
@@ -43,10 +43,13 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, source}` |
 | `disputes.create_claim(tx_ids, answers, token)` | ✓ | ✓ | — | `ActionResult{case_id, priority_flags}` |
 | `handoff.create(queue, reason)` | ✓ (internal) | — | — | `HandoffRef` |
+| `reference.get_fx_rate(source, target)` | — | — | — | `FxRate{source, target, rate, as_of}`: the latest `daily_exchange_rates` row for the pair (`exchange_rate` column); `NotFound` if the pair has none. Reference data, so there is no customer filter (D2-B D3) |
 
 `BlockOrigin.kind` is `customer_lock | customer_block | bank_side | none`; `reason` is `past_due | fraud | customer_status | bank_status | None` (non-`None` only when `kind = bank_side`). `BlockReason` (the `reason` argument of `cards.block_card`) is `Literal["lost_or_stolen", "suspected_fraud"]`. `address_ref` (the argument of `cards.order_replacement`) is either `"on_file"` (the address in `bank.customers`) or a PII-vault token for an address the customer typed (`⟨ADDR_n⟩`, `01` §5 token style, D12); the raw address never reaches the LLM, state or checkpoint.
 
 `ActionResult` (`app/core/actions.py`, frozen, `extra="forbid"`) = `{tool: str, status: "applied", verified: bool (REQUIRED, no default, R3), readback: dict[str, ReadbackValue], audit_event_id: UUID | None, tracking_id: str | None}`. The flow may report success **only** when `verified = true`. The `disputes.create_claim` row's `{case_id, priority_flags}` extra fields land with the disputes card (D9).
+
+`ActionResult.readback` keys per write (FakeBank now, Postgres D3-A3; D2-B D7): `lock_card` → `{"locked": True, "at": datetime}`; `unlock_card` → `{"locked": False, "at": datetime}`; `block_card` → `{"status": "Blocked", "at": datetime}`; `order_replacement` → `{"status": "ordered", "at": datetime}`, with `tracking_id` set alongside. `verified = true` only when a re-read after the write matches; `at` fills `action_done`'s `{time}` (`HH:MM` in `BANK_TZ`, D2-B D17).
 
 Two layers implement the write tools (spec `docs/specs/d2-k-write-contracts.md`, Decisions D3–D5): `BankWriteTools` (`app/domains/conversation/tools/write.py`) is the raw, session-bound facade bound to one `ToolContext`; it never sees a token, and each method takes only the write's own arguments (`card_id`, `reason`, `address_ref`). `ConfirmedWriteTools` (`app/domains/conversation/tools/executor.py`) is the one R2 enforcement point: for each write, in order, it (1) checks the step-up rule and raises `StepUpRequired` without consuming the token if step-up is needed and missing, (2) calls `consume_step(token_id, tool, args)` on the `ConfirmationStore`, (3) calls the raw method, and (4) cancels the plan (`cancel(token_id)`) if the raw call raises or returns `verified=False`, re-raising the error or returning the unverified result unchanged. The graph reaches writes only through `config["configurable"]["bank_write_tools"]`, which holds a `ConfirmedWriteTools`, never a raw `BankWriteTools` (R6). The step-up rule (which tools require it — e.g. `unlock_card` always, `order_replacement` when the address changed) is injected, not hard-coded: the source of truth is `policies/tools.yaml` (D3-A1).
 
@@ -84,7 +87,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 |---|---|---|
 | `GET /api/v1/health` | public | Liveness: `HealthResponse{status, db, redis}`, `200` when DB and Redis are both up, `503` otherwise (D15) |
 | `POST /auth/login` · `POST /auth/logout` · `POST /auth/refresh` · `GET /auth/me` | any | Session (httpOnly cookie + CSRF) |
-| `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery) |
+| `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery). On success, the frontend runs the next turn with `TurnInput.resume="step_up"` |
 | `POST /conversations` | customer | Start a conversation |
 | `POST /conversations/{id}/messages` | customer | Send a turn (`202`; output arrives on the stream) |
 | `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no"); maps to `TurnInput.confirmation{token_id, decision: confirm \| cancel}`. A `token_id` that doesn't match the state's `confirmation_token_id` is stale and executes nothing |
@@ -96,6 +99,8 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `GET /staff/personas` · `GET /staff/personas/{customer_id}/credentials` | admin | Persona catalog and credential lookup |
 | `POST /admin/demo/reset` | admin | Restore from the golden DB |
 | `POST /test-idp/sessions` | eval only (router included under `/api/v1` only when `APP_ENV=eval`) | Mint a session for any customer |
+
+`TurnInput` gains `resume: Literal["step_up"] | None` (D2-B D1, amends D2-K D17): `None` on every typed or button turn, and `"step_up"` for the one that follows a successful `/auth/otp/verify`. The graph checks it right after `load_session`, before `confirmation` or a fresh `understand` call would otherwise run, and resumes the flow paused at `pending.awaiting_slot == "otp"` only when that pause is actually open; with no matching pause, or the step-up gate still invalid, nothing executes and the turn replies with the `otp_required` template again (no LLM call either way). In the sandbox, `/otp <code>` calls the fake step-up gate's `verify(code)` directly and, on success, runs the resume turn the same way.
 
 **Auth (ADR-025):** the Role column is enforced by router-level dependencies (`Depends(require_role(...))`), not per route. Every `/conversations/{id}/…` route also depends on `get_owned_conversation`. Errors: `401 session_expired` (no or expired session), `403 forbidden_role`, `404 not_found` (the conversation doesn't exist *or* belongs to another customer). Only `/auth/login`, `/auth/refresh` and the health check are public.
 
@@ -148,9 +153,26 @@ codes:
   "14": {cause_key: invalid_card_number, next_step_key: check_card_number, self_service: false}
   "05": {cause_key: do_not_honor, next_step_key: contact_or_retry, self_service: false}
   "54": {cause_key: expired_card, next_step_key: offer_replacement, self_service: true}
+
+# policies/tools.yaml (D2-B D2, provisional; D3-A1 extends it): per-tool confirmation/step-up flags
+tools:
+  cards.lock_card:         {requires_confirmation: true, step_up: never}
+  cards.unlock_card:       {requires_confirmation: true, step_up: always}
+  cards.block_card:        {requires_confirmation: true, step_up: never}
+  cards.order_replacement: {requires_confirmation: true, step_up: when_address_changed}
+  cards.get_block_origin:  {requires_confirmation: false, step_up: never}
+
+# policies/min_payment.yaml (D2-B D5): synthetic formula, no overdue term
+min_payment: {percent_of_balance: "0.05", floors: {USD: "10", COP: "40000", ARS: "5000"}}
+due_date:    {due_day_of_month: 10}
+
+# policies/escalation.yaml v1 (D2-B D8, D10; D4-day adds the rest)
+customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card], queue: atencion}
+bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
+action_queues:       {action_unverified: atencion}   # P7: the queue for an unverified write's handoff
 ```
 
-Other files: `tools.yaml` (intent → allowed tools, confirmation/step-up flags), `escalation.yaml` (rules and thresholds, queues), `min_payment.yaml` (synthetic formula per currency), `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
+Other files: `tools.yaml`, `escalation.yaml` and `min_payment.yaml` are shown above (D2-B). `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
 
 ## 6. Audit event
 

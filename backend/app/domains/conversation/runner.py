@@ -51,7 +51,15 @@ _LOCK_TTL_SECONDS = 120
 # convention `registry.RecordingBankTools` set for the sandbox's recorder):
 # this module's job is to drive a hosted graph, not to reach into another
 # module's private constant.
-_BRANCH_NODES = ("card_info", "unsupported", "fallback")
+_BRANCH_NODES = (
+    "card_info",
+    "card_block",
+    "card_unlock",
+    "replacement",
+    "unsupported",
+    "fallback",
+    "smalltalk",
+)
 
 _RELEASE_LOCK_SCRIPT = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -132,10 +140,16 @@ async def _run_turn(
         ui: list[UIEvent] = []
 
         async for update in host.graph.astream(
-            {"user_text": text, "confirmation": None}, config=config, stream_mode="updates"
+            {"user_text": text, "confirmation": None, "resume": None},
+            config=config,
+            stream_mode="updates",
         ):
             for node_name, values in update.items():
                 await events.publish(conversation_id, "status", {"step": node_name})
+                # A node whose returned update is empty (e.g. `next_intent`
+                # with nothing left to pop) streams as `None`, not `{}`.
+                if values is None:
+                    continue
                 if node_name == "understand":
                     nlu = values.get("nlu")
                     language = values.get("language", language)
@@ -160,6 +174,8 @@ async def _run_turn(
         )
 
         if get_settings().app_env != "prod":
+            final_state = await host.graph.aget_state(config)
+            pending = final_state.values.get("pending")
             debug = DebugInfo(
                 language=language,
                 status=nlu.status if nlu is not None else None,
@@ -167,6 +183,8 @@ async def _run_turn(
                 slots=nlu.slots if nlu is not None else NLUSlots(),
                 route=route_taken or "fallback",
                 tools_called=tools.calls,
+                pending=f"{pending['flow']}.{pending['awaiting_slot']}" if pending else None,
+                ui=[event.kind for event in ui],
             )
             await events.publish(conversation_id, "debug", debug.model_dump(mode="json"))
 

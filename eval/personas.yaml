@@ -65,6 +65,11 @@ personas:
     card_count: 2
     card_kinds: [credit, debit]
     blocked: false
+    notes: >-
+      Customer status is Inactive while both cards stay Active, so
+      `card_info` adds the `read_only_note` fact and unlock/replacement
+      refuse with the Atención handoff (D2-B D10). The Inactive-customer
+      persona for D2-B's T13.
   - customer_id: CLI-H7CHAE6NGLYQ
     country: MX
     card_count: 1
@@ -85,6 +90,10 @@ personas:
     card_count: 2
     card_kinds: [credit]
     blocked: true
+    notes: >-
+      One credit card's dataset status is Blocked while the customer stays
+      Active, so `get_block_origin` resolves bank-side `bank_status` (D2-B
+      D8) -- the Fraudes handoff persona for D2-B's T13.
   - customer_id: CLI-8U06DH6VYHA3
     country: CO
     card_count: 3
@@ -100,6 +109,20 @@ personas:
     card_count: 1
     card_kinds: [credit]
     blocked: false
+    notes: >-
+      Its one credit card is past due while the card and customer status
+      both stay Active, so `get_block_origin` resolves bank-side `past_due`
+      (D2-B D8) -- the Cobranza handoff persona for D2-B's T13.
+  - customer_id: CLI-UAJ81O52ZM1R
+    country: MX
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    notes: >-
+      Single USD credit card, Active status, no days past due. The MX
+      credit persona for D2-B's T13 sandbox script: lock -> `/confirm`,
+      unlock -> `/otp <code>` -> `/confirm`, and the `balance_due` walkthrough
+      (success criteria 3-4).
   # T9/D20: ~20 more, chosen by SQL against `latam_golden` to cover each
   # remaining `03` §8 category at least once (several cards and blocked are
   # already covered above; these add the rest, plus a bit more country and

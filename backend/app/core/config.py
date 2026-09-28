@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     otel_exporter_otlp_endpoint: str = ""  # empty = tracing off (D5 exporters land later)
     llm_provider: str = "anthropic"
     anthropic_api_key: str = ""
+    demo_otp_code: str = ""  # ADR-008; never committed, shared with judges by email
 
     app_env: Literal["dev", "eval", "prod"] = "dev"
     bank: Literal["fake", "postgres"] = "postgres"

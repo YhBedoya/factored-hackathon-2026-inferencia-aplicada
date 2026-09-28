@@ -1,7 +1,8 @@
 """`PostgresBank`: `BankReadTools` over Postgres, via the `service` modules.
 
-D11: it calls only `customers.service`, `cards.service` and
-`transactions.service`, never a `repository` directly (import-linter's
+D11: it calls only `customers.service`, `cards.service`,
+`transactions.service` and `localization.service` (D2-B's FX reference
+read), never a `repository` directly (import-linter's
 `conversation-no-repository` contract enforces this). Country labels, card
 kinds, `last4` and the transaction filter set already live in those
 `service` modules (D1-B D17), matched to `FakeBank`'s own SQL. This module
@@ -25,6 +26,8 @@ from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers import service as customers_service
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.localization import service as localization_service
+from app.domains.localization.schemas import FxRate
 from app.domains.transactions import service as transactions_service
 from app.domains.transactions.schemas import TxFilter, TxView
 
@@ -60,6 +63,10 @@ class PostgresBank:
                 self._log_access_denied(tool="transactions.search", requested_id=tx_filter.card_id)
                 raise
         return await transactions_service.search(self._ctx.customer_id, tx_filter)
+
+    async def get_fx_rate(self, source: str, target: str) -> FxRate:
+        # Reference data (D2-B D3): no `customer_id` to bind.
+        return await localization_service.get_fx_rate(source, target)
 
     def _log_access_denied(self, *, tool: str, requested_id: str) -> None:
         _logger.warning(

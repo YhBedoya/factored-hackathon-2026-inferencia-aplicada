@@ -141,7 +141,7 @@ def test_es_greeting_gets_cardy_template(fakebank_dir: Path) -> None:
     config = _config(ctx, bank_tools, llm, "t-greeting")
 
     reply, debug = asyncio.run(run_turn(graph, "hola", config=config))
-    assert debug.route == "unsupported"
+    assert debug.route == "smalltalk"
     assert reply == "Hola, Prueba. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?"
     assert all(call.step != "compose" for call in llm.calls)
 

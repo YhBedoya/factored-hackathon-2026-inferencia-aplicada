@@ -51,7 +51,10 @@ async def get_profile(customer_id: str) -> CustomerProfile:
     if row is None:
         raise ToolUnavailable(f"no profile for customer {customer_id!r}")
     return CustomerProfile(
-        country=_map_country(row["country"]), customer_status=row["customer_status"]
+        country=_map_country(row["country"]),
+        customer_status=row["customer_status"],
+        first_name=(row["first_name"] or "").strip() or None,
+        city=(row["city"] or "").strip() or None,
     )
 
 

@@ -13,7 +13,7 @@ import pytest
 
 from app.core.errors import AccessDenied, NotFound
 from app.domains.conversation.tools.context import ToolContext
-from app.domains.conversation.tools.fakebank import FakeBank
+from app.domains.conversation.tools.fakebank import FakeBank, FakeBankOverlay, FakeBankWrites
 from app.domains.transactions.schemas import TxFilter
 
 _FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "fakebank"
@@ -60,3 +60,35 @@ def test_foreign_ids_are_refused() -> None:
         asyncio.run(bank.search_transactions(TxFilter(card_id=foreign_card_id)))
     with pytest.raises(NotFound):
         asyncio.run(bank.get_card_details("PRD-DOESNOTEXIST01"))
+
+
+def test_writes_refuse_foreign_cards() -> None:
+    """Each `BankWriteTools` write and `get_block_origin`, called by
+    `CLI-TFMULTI00001` on `CLI-TFSINGLE0002`'s card, raises `AccessDenied`
+    without mutating the overlay (R1, B4).
+    """
+    ctx = ToolContext(
+        customer_id="CLI-TFMULTI00001",
+        conversation_id=uuid4(),
+        actor="customer",
+        trace_id="trace-test",
+        policy_version="unversioned",
+    )
+    overlay = FakeBankOverlay()
+    writes = FakeBankWrites(ctx, _FIXTURE_DIR, overlay)
+    foreign_card_id = "PRD-TFS2CRED0001"  # CLI-TFSINGLE0002's card
+
+    with pytest.raises(AccessDenied):
+        asyncio.run(writes.get_block_origin(foreign_card_id))
+    with pytest.raises(AccessDenied):
+        asyncio.run(writes.lock_card(foreign_card_id))
+    with pytest.raises(AccessDenied):
+        asyncio.run(writes.unlock_card(foreign_card_id))
+    with pytest.raises(AccessDenied):
+        asyncio.run(writes.block_card(foreign_card_id, "lost_or_stolen"))
+    with pytest.raises(AccessDenied):
+        asyncio.run(writes.order_replacement(foreign_card_id, "on_file"))
+
+    assert overlay.locked == set()
+    assert overlay.blocked == set()
+    assert overlay.replacements == {}

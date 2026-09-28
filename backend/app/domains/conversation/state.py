@@ -21,7 +21,7 @@ from pydantic import BaseModel, ConfigDict
 from app.core.actions import ActionResult
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
 
-__all__ = ["RESET_FACTS", "Fact", "Pending", "TurnState", "bind_once"]
+__all__ = ["RESET_FACTS", "RESET_SEGMENTS", "Fact", "Pending", "TurnState", "bind_once"]
 
 
 def bind_once(current: str | None, update: str) -> str:
@@ -86,6 +86,37 @@ node sees only facts a flow wrote *this* turn (the K3 open question on
 def _reduce_facts(current: list[Fact], update: list[Fact]) -> list[Fact]:
     """Reducer for `TurnState.facts`: reset on `RESET_FACTS`, else append (Q3)."""
     if isinstance(update, _FactsReset):
+        return []
+    return current + update
+
+
+class _SegmentsReset(list[str]):
+    """Marker subclass for `GraphState.segments` (B3), same pattern as
+    `_FactsReset` above: an instance means "start this turn's segments
+    over", not "append these segments". `_reduce_segments` tells the two
+    apart with `isinstance`, so any plain `list[str]` still appends.
+
+    `segments` itself is declared on `graph.py`'s `GraphState`, not on
+    `TurnState` below (it is graph-local, not checkpointed domain state), but
+    its reducer lives here rather than in `graph.py`: `graph.py` also runs as
+    `__main__` for `python -m ... --mermaid` (D19), and a reducer function
+    defined there would then exist as two distinct objects -- one per module
+    identity -- so `StateGraph.add_node` would see `segments` "already exist
+    with a different type" the moment a node module imports `GraphState` by
+    its normal package path. `state.py` is never run as `__main__`, so it
+    stays the one place a reducer used across both import paths is safe.
+    """
+
+
+RESET_SEGMENTS: list[str] = _SegmentsReset()
+"""The marker `load_session` writes every turn so `finish` only ever joins
+the segments a node wrote *this* turn (same reasoning as `RESET_FACTS`).
+"""
+
+
+def _reduce_segments(current: list[str], update: list[str]) -> list[str]:
+    """Reducer for `GraphState.segments`: reset on `RESET_SEGMENTS`, else append (B3)."""
+    if isinstance(update, _SegmentsReset):
         return []
     return current + update
 

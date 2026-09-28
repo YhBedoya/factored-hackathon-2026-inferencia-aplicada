@@ -7,21 +7,69 @@ graph TD;
 	__start__([<p>__start__</p>]):::first
 	load_session(load_session)
 	understand(understand)
+	smalltalk(smalltalk)
+	enqueue(enqueue)
 	card_info(card_info)
+	card_block(card_block)
+	card_unlock(card_unlock)
+	replacement(replacement)
 	unsupported(unsupported)
 	fallback(fallback)
 	compose(compose)
+	next_intent(next_intent)
+	finish(finish)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_session;
+	card_block -.-> compose;
+	card_block -.-> fallback;
+	card_block -.-> finish;
+	card_block -.-> next_intent;
 	card_info -.-> compose;
 	card_info -.-> fallback;
-	load_session --> understand;
+	card_info -.-> finish;
+	card_info -.-> next_intent;
+	card_unlock -.-> compose;
+	card_unlock -.-> fallback;
+	card_unlock -.-> finish;
+	card_unlock -.-> next_intent;
+	compose -.-> finish;
+	compose -.-> next_intent;
+	enqueue -.-> card_block;
+	enqueue -.-> card_info;
+	enqueue -.-> card_unlock;
+	enqueue -.-> finish;
+	enqueue -.-> replacement;
+	enqueue -.-> unsupported;
+	fallback -.-> finish;
+	fallback -.-> next_intent;
+	load_session -.-> card_block;
+	load_session -.-> card_info;
+	load_session -.-> card_unlock;
+	load_session -.-> replacement;
+	load_session -.-> smalltalk;
+	load_session -.-> understand;
+	next_intent -.-> card_block;
+	next_intent -.-> card_info;
+	next_intent -.-> card_unlock;
+	next_intent -.-> finish;
+	next_intent -.-> replacement;
+	next_intent -.-> unsupported;
+	replacement -.-> compose;
+	replacement -.-> fallback;
+	replacement -.-> finish;
+	replacement -.-> next_intent;
+	smalltalk --> finish;
+	understand -.-> card_block;
 	understand -.-> card_info;
+	understand -.-> card_unlock;
+	understand -.-> enqueue;
 	understand -.-> fallback;
+	understand -.-> replacement;
+	understand -.-> smalltalk;
 	understand -.-> unsupported;
-	compose --> __end__;
-	fallback --> __end__;
-	unsupported --> __end__;
+	unsupported -.-> finish;
+	unsupported -.-> next_intent;
+	finish --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc

@@ -36,10 +36,12 @@ async def _fetch_one(sql: str, params: dict[str, Any]) -> RowMapping | None:
 
 
 async def fetch_profile(customer_id: str) -> RowMapping | None:
-    """`country`, `customer_status` for one customer, or `None` if unknown."""
+    """`country`, `customer_status`, `first_name` and `city` for one
+    customer, or `None` if unknown.
+    """
     return await _fetch_one(
         """
-        SELECT country, customer_status
+        SELECT country, customer_status, first_name, city
         FROM bank.customers
         WHERE customer_id = :customer_id
         """,

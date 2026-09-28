@@ -9,7 +9,7 @@ takes it as an argument. `build_tool_context` binds `actor="customer"` and
 policy version.
 
 No `ToolSpec`, allowlist or write tools yet (D10) -- `bank_tools_for` only
-ever returns the four `BankReadTools` methods, wrapped for turn-debug
+ever returns the five `BankReadTools` methods, wrapped for turn-debug
 recording.
 """
 
@@ -24,6 +24,7 @@ from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.conversation.tools.postgres import PostgresBank
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.identity.models import Session
+from app.domains.localization.schemas import FxRate
 from app.domains.transactions.schemas import TxFilter, TxView
 
 __all__ = ["RecordingBankTools", "bank_tools_for", "build_tool_context"]
@@ -79,6 +80,10 @@ class RecordingBankTools:
     async def search_transactions(self, tx_filter: TxFilter) -> list[TxView]:
         self.calls.append("search_transactions")
         return await self._inner.search_transactions(tx_filter)
+
+    async def get_fx_rate(self, source: str, target: str) -> FxRate:
+        self.calls.append("get_fx_rate")
+        return await self._inner.get_fx_rate(source, target)
 
 
 def bank_tools_for(ctx: ToolContext) -> RecordingBankTools:
