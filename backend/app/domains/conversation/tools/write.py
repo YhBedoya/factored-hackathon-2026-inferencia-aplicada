@@ -29,22 +29,26 @@ class BankWriteTools(Protocol):
         # Registry name: cards.get_block_origin. May raise: NotFound, AccessDenied, ToolUnavailable.
         ...
 
-    async def lock_card(self, card_id: str) -> ActionResult:
+    async def lock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         # Registry name: cards.lock_card.
         # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
         ...
 
-    async def unlock_card(self, card_id: str) -> ActionResult:
+    async def unlock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         # Registry name: cards.unlock_card.
         # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
         ...
 
-    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+    async def block_card(
+        self, card_id: str, reason: BlockReason, *, idempotency_key: str
+    ) -> ActionResult:
         # Registry name: cards.block_card.
         # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
         ...
 
-    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+    async def order_replacement(
+        self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
+    ) -> ActionResult:
         # Registry name: cards.order_replacement.
         # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
         ...

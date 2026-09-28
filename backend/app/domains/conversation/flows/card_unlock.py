@@ -139,7 +139,7 @@ async def _check_status_and_origin(
         return handoff(not_active.queue, "customer_not_active", language)
 
     try:
-        origin = await bank_write_tools.get_block_origin(card_id)
+        origin = await bank_write_tools.get_block_origin(card_id, "card_unlock")
     except ToolUnavailable:
         return {"escalation_reason": "tool_unavailable"}
 
@@ -216,6 +216,7 @@ async def _start_unlock_plan(
         summary_key="unlock_card",
         view_facts=view_facts,
         confirm_values=confirm_values,
+        intent="card_unlock",
     )
 
 

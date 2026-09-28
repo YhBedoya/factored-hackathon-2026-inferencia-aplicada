@@ -12,13 +12,14 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "ToolPolicy",
     "ToolsPolicy",
     "load_tools_policy",
     "step_up_rule",
+    "tool_allowed",
 ]
 
 # `backend/app/domains/policy/tools_policy.py` -> repo root is four parents up
@@ -37,6 +38,7 @@ class ToolPolicy(BaseModel):
 
     requires_confirmation: bool
     step_up: StepUp
+    allowed_intents: list[str]
 
 
 class ToolsPolicy(BaseModel):
@@ -48,8 +50,9 @@ class ToolsPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    provenance: str
+    provenance: Literal["team-generated-synthetic"]
     version: int
+    step_up_window_minutes: int = Field(ge=1)
     tools: dict[str, ToolPolicy]
 
 
@@ -89,3 +92,22 @@ def step_up_rule(
         return args.get("address_ref") != "on_file"
 
     return rule
+
+
+def tool_allowed(policy: ToolsPolicy) -> Callable[[str, str], bool]:
+    """Build the executor's `IntentAllowlist` from a loaded `ToolsPolicy` (D3).
+
+    Called as `(intent, tool)`, matching `ConfirmedWriteTools.issue_plan` and
+    `get_block_origin`. An unknown tool or an intent not in that tool's
+    `allowed_intents` both return `False` rather than raising: unlike
+    `step_up_rule`, an allowlist gap is a normal "not allowed" outcome, not a
+    policy-authoring bug worth failing loudly over.
+    """
+
+    def allowed(intent: str, tool: str) -> bool:
+        entry = policy.tools.get(tool)
+        if entry is None:
+            return False
+        return intent in entry.allowed_intents
+
+    return allowed

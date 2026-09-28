@@ -165,6 +165,10 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 **Decision:** the product is **Swip**, a fictional card fintech built on the LATAM Bank dataset. Its assistant is **Cardy**, grammatically feminine in ES and PT. The full identity lives in [`../brand.md`](../brand.md). The voice enters in three places: the persona block of `compose@v2`, the fixed ES/PT templates in `conversation/templates.py` (greeting, tool error, clarification exhausted, and the not-yet-wired confirmation, verified result, handoff and session-expired texts), and later the UI dictionaries (B1). Personality never changes permissions: if the prompt and the policy clash, the policy wins. The alert color is `#FF6B6B` (7.1:1 on `#070B1A`). The promise and the tagline stay proposals. The PT texts are pending native review. Cardy addresses the customer by the registered `first_name` (the full name, including compound names): it is stored in the graph state as `customer_name`, used in the greeting template, and offered to `compose` only as the `{customer_name}` key, which code fills in (R5).
 **Alternatives:** keep the dataset name as the brand (no personality for the pitch); let the LLM write critical messages in the persona's voice (could report actions that didn't happen).
 
+### D3-A D4 — Step-up validity window · Resolved
+**Decision:** `policies/tools.yaml`'s `step_up_window_minutes: 5` sets `SessionStepUpGate`'s window (valid when `now - session.step_up_at <= window`). An open confirmation plan is not tied to the session: it dies at its own 5-minute Redis TTL (ADR-027) regardless of session state, and `POST /conversations/{id}/confirmations/{token_id}` returns `401` once the session itself has expired, before the plan is even looked at.
+**Why:** resolves the "Step-up validity window" item below, decided while building the D3-A step-up flow (ADR-025) as planned. See spec `docs/specs/d3-a-guardrails-write-path.md` D4.
+
 ---
 
 ## Deferred to implementation
@@ -179,7 +183,6 @@ These are known and owned, and they're decided while building the related featur
 | Exact Bedrock model IDs per step | Benchmark on the dev set |
 | Moment of the Anthropic API → Bedrock switch (ADR-028) | When K2 in `07` passes; before the D4 deploy at the latest |
 | Whether the public deployment runs Langfuse (ADR-006) | With the AWS setup (ADR-017) |
-| Step-up validity window (N minutes after a successful OTP) and what happens to an open confirmation token when the session expires during it | Building identity + the first step-up flow (ADR-025) |
 | Concrete AWS setup | Sprint midpoint (ADR-017) |
 | Demo and video script | After Core is built (ADR-019) |
 

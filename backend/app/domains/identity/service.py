@@ -20,7 +20,8 @@ attempts within the window.
 See `docs/specs/d2-a-login-read-tools-api.md` D2, D6, D7, D9.
 """
 
-from datetime import datetime
+import hmac
+from datetime import UTC, datetime
 from typing import Protocol
 
 import structlog
@@ -38,6 +39,7 @@ __all__ = [
     "AccountStore",
     "InvalidCredentials",
     "LoginLimiter",
+    "OtpInvalid",
     "SessionExpired",
     "TooManyAttempts",
     "login",
@@ -46,6 +48,7 @@ __all__ = [
     "mint_session_for_customer",
     "refresh",
     "session_from_token",
+    "verify_otp",
 ]
 
 _logger = structlog.get_logger()
@@ -74,6 +77,16 @@ class TooManyAttempts(Exception):
     """The `rl:login:<login_key>` counter is already at `login_max_failures`
     (D7). A route turns this into `429 too_many_attempts`, even when the
     password in this same request is correct.
+
+    `verify_otp` (D3-A4) raises this same exception once `rl:otp:<account_id>`
+    hits the limit, for the same reason: `429`, even for the right code.
+    """
+
+
+class OtpInvalid(Exception):
+    """`verify_otp`'s code didn't match `settings.demo_otp_code` (D3-A4 D5).
+    The code itself never reaches this message (ADR-008): only `OtpInvalid()`
+    with no argument is ever raised.
     """
 
 
@@ -198,6 +211,52 @@ async def login(
         customer_id=account.customer_id,
         step_up_at=None,
     )
+
+
+_OTP_RATE_LIMIT_KEY_PREFIX = "rl:otp:"
+
+
+async def verify_otp(
+    session: Session,
+    code: str,
+    *,
+    limiter: LoginLimiter | None = None,
+    settings: Settings | None = None,
+) -> Session:
+    """`POST /auth/otp/verify` (D3-A4 D4, D5): step `session` up once `code`
+    matches `settings.demo_otp_code`, in constant time. An empty configured
+    code never matches, so an unconfigured demo box fails closed.
+
+    Reuses the D7 rate-limit shape, keyed `rl:otp:<account_id>` instead of a
+    login key (there's no document number to hash post-login), and checked
+    *first*: once the counter is at `settings.login_max_failures`, every
+    further call raises `TooManyAttempts`, even with the right code, without
+    touching the limiter again. A miss records a failure and raises
+    `OtpInvalid`; a match returns `session` with a fresh `step_up_at`, and
+    nothing else about it changes. `auth.otp_failed` / `auth.otp_verified`
+    log only `account_id` -- the code itself never reaches a log line or an
+    exception message.
+    """
+
+    limiter = limiter or _default_limiter
+    settings = settings or get_settings()
+
+    rate_limit_key = f"{_OTP_RATE_LIMIT_KEY_PREFIX}{session.account_id}"
+    failures = await limiter.get_failures(rate_limit_key)
+    if failures >= settings.login_max_failures:
+        _logger.warning("auth.otp_throttled", account_id=str(session.account_id))
+        raise TooManyAttempts(f"too many OTP attempts for account {session.account_id}")
+
+    matched = bool(settings.demo_otp_code) and hmac.compare_digest(
+        code.encode(), settings.demo_otp_code.encode()
+    )
+    if not matched:
+        await limiter.record_failure(rate_limit_key, window_seconds=settings.login_window_seconds)
+        _logger.warning("auth.otp_failed", account_id=str(session.account_id))
+        raise OtpInvalid("otp code did not match")
+
+    _logger.info("auth.otp_verified", account_id=str(session.account_id))
+    return session.model_copy(update={"step_up_at": datetime.now(UTC)})
 
 
 async def me(session: Session) -> MeResponse:

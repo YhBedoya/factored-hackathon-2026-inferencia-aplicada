@@ -69,6 +69,10 @@ _REPLACEMENT_EFFECT_LABEL: dict[Language, str] = {
     "es": "La vas a recibir en los próximos días en la dirección que confirmamos.",
     "pt": "Você vai recebê-lo nos próximos dias no endereço que confirmamos.",
 }
+_REPLACEMENT_STATE_LABEL: dict[Language, str] = {
+    "es": "pedida",
+    "pt": "pedido",
+}
 
 
 async def replacement(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -164,7 +168,7 @@ async def _check_active_and_eligibility(
         return handoff(not_active.queue, "customer_not_active", language)
 
     try:
-        origin = await bank_write_tools.get_block_origin(card_id)
+        origin = await bank_write_tools.get_block_origin(card_id, "replacement_request")
         details = await bank_tools.get_card_details(card_id)
     except ToolUnavailable:
         return {"escalation_reason": "tool_unavailable"}
@@ -267,6 +271,7 @@ async def _start_replacement_plan(
         summary_key="order_replacement",
         view_facts=view_facts,
         confirm_values=confirm_values,
+        intent="replacement_request",
     )
     update["slots"] = NLUSlots(pending_answer=address_ref)
     return update
@@ -274,7 +279,9 @@ async def _start_replacement_plan(
 
 async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """The plan's confirm/cancel decision (D14): the write's `tracking_id`
-    fills `action_done`'s `{reference}` (D17)."""
+    fills `action_done`'s `{reference}`, and `_REPLACEMENT_STATE_LABEL` fills
+    its `{result}` the same way `card_block`/`card_unlock` fill
+    `action_done_noref`'s (D17; T13 repair -- `{result}` was left unfilled)."""
     language = state["language"]
     outcome = decision(state)
     if outcome == "cancel":
@@ -308,6 +315,9 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
         config,
         call,
         done_template="action_done",
-        done_values=lambda result: {"reference": result.tracking_id or ""},
+        done_values=lambda result: {
+            "result": _REPLACEMENT_STATE_LABEL[language],
+            "reference": result.tracking_id or "",
+        },
         card_last4=details.last4,
     )

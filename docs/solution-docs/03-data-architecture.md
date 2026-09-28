@@ -72,9 +72,9 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 ### `app`: complementary operational tables
 | Table | Purpose |
 |---|---|
-| `card_status_history` | `product_id, old_status, new_status, reason, actor (customer/agent/system), conversation_id, trace_id, at` |
-| `card_controls` | Temporary lock, channel toggles (Stretch), spending limits (Stretch); `locked_by`, `locked_at` |
-| `card_replacements` | Order, address snapshot (encrypted), simulated tracking ID, status |
+| `card_status_history` | (migration `0003`, D3-A3) `id, product_id, old_status, new_status, reason, actor (customer/agent/system), conversation_id, trace_id, at, idempotency_key` (unique nullable, D3-A D11); index `(product_id, at desc)` |
+| `card_controls` | (migration `0003`) Temporary lock: `product_id` (pk), `locked, locked_by, locked_at, updated_at, idempotency_key` (unique nullable). Channel toggles and spending limits are Stretch, not yet columns |
+| `card_replacements` | (migration `0003`) Order: `id, product_id, address_ref` (PII-vault token, never a raw address), `address_changed, tracking_id` (unique, `RPL-` + 8 hex upper), `status, conversation_id, created_at, idempotency_key` (unique nullable). No address snapshot until D5-A1 encrypts one |
 | `travel_notices` | Stretch |
 | `conversations` | `id, customer_id, channel, language, mode (bot/human), status, started_at, closed_at` |
 | `messages` | `conversation_id, role (customer/bot/agent/system), content (unmasked, encrypted), content_masked, ui_payload, created_at` |
@@ -86,7 +86,7 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 `accounts` (`customer_id`, `login_key` = HMAC of the login identifier (never the plain document number), password hash, role, status), `revoked_tokens`. There are no staff accounts for now: the staff panel is a separate page with no login yet, and its protection is decided on the staff-panel card (D4). There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
 
 ### `audit`
-`audit_events` (append-only; see `04-contracts.md` §6), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
+`audit_events` (migration `0004`, D3-A5, append-only, no update or delete path: `id, at, conversation_id, turn_id, actor, type, payload jsonb, sources jsonb, policy_version, model jsonb, trace_id, langfuse_trace_id`; index `(conversation_id, at)`; see `04-contracts.md` §6 for the full shape), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
 
 ### Redis
 Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor, ADR-027), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` and `handoff:<queue>`.

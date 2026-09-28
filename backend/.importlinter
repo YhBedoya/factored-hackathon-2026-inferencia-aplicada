@@ -58,6 +58,8 @@ ignore_imports=
     app.domains.conversation.tools.postgres -> app.domains.cards.service
     app.domains.conversation.tools.postgres -> app.domains.transactions.service
     app.domains.conversation.tools.postgres -> app.domains.localization.service
+    app.domains.conversation.tools.postgres_writes -> app.domains.cards.service
+    app.domains.conversation.tools.registry -> app.domains.audit.service
 
 [importlinter:contract:llm-no-repository]
 name=app.core.llm never imports a domain repository (LLM code can't touch the DB)

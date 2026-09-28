@@ -24,7 +24,7 @@ class _UnverifiedLockWrites:
     async def get_block_origin(self, card_id: str) -> BlockOrigin:
         raise NotImplementedError
 
-    async def lock_card(self, card_id: str) -> ActionResult:
+    async def lock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         return ActionResult(
             tool="cards.lock_card",
             status="applied",
@@ -32,13 +32,17 @@ class _UnverifiedLockWrites:
             readback={"locked": False, "at": datetime.now(UTC)},
         )
 
-    async def unlock_card(self, card_id: str) -> ActionResult:
+    async def unlock_card(self, card_id: str, *, idempotency_key: str) -> ActionResult:
         raise NotImplementedError
 
-    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+    async def block_card(
+        self, card_id: str, reason: BlockReason, *, idempotency_key: str
+    ) -> ActionResult:
         raise NotImplementedError
 
-    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+    async def order_replacement(
+        self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
+    ) -> ActionResult:
         raise NotImplementedError
 
 
