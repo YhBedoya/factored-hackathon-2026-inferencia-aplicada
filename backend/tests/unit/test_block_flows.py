@@ -47,11 +47,18 @@ def test_es_lock_clarify_confirm_readback(fakebank_dir: Path) -> None:
         )
         assert reply1 == get_template("clarify_lock_vs_block", "es")
         assert debug1.pending == "card_block.block_kind"
+        assert debug1.ui == ["quick_replies"]
 
-        reply2, debug2 = await run_turn(
-            session.graph, "quiero un bloqueo temporal", config=session.config
-        )
+        state1 = await session.graph.aget_state(session.config)
+        quick_replies = state1.values["ui"][0]
+        assert quick_replies.payload.slot == "block_kind"
+        labels = [option.label for option in quick_replies.payload.options]
+        assert len(labels) == 2
+        assert not any("cancel" in label.lower() for label in labels)
+
+        reply2, debug2 = await run_turn(session.graph, labels[0], config=session.config)
         assert debug2.pending == "card_block.confirmation"
+        assert debug2.ui == ["confirm"]
         assert "6475" in reply2
 
         reply3, debug3 = await run_turn(session.graph, "si", config=session.config)

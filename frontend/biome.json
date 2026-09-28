@@ -12,7 +12,9 @@
 			"!**/dist",
 			"!**/node_modules",
 			"!src/client",
-			"!src/routeTree.gen.ts"
+			"!src/routeTree.gen.ts",
+			"!test-results",
+			"!playwright-report"
 		]
 	},
 	"formatter": {
@@ -28,6 +30,11 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	},
 	"assist": {

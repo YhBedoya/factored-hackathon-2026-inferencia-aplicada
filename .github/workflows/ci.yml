@@ -72,6 +72,29 @@ jobs:
       - name: biome ci
         working-directory: frontend
         run: npx biome ci .
+      - name: build
+        working-directory: frontend
+        run: npm run build
+
+  # D3-B B5/D7: the two Playwright specs, against the built frontend
+  # (`preview`) with the API mocked — no real backend, no LLM. The image tag
+  # must track `@playwright/test` in package.json (plan §Risks 8).
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: build
+        working-directory: frontend
+        run: npm run build
+      - name: playwright test
+        working-directory: frontend
+        run: npx playwright test
 
   gitleaks:
     name: gitleaks

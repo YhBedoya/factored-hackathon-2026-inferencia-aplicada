@@ -1,0 +1,12 @@
+event: status
+data: {"step":"understand"}
+
+event: ui
+data: {"kind":"quick_replies","payload":{"slot":"block_kind","options":[{"label":"Bloqueio temporário"},{"label":"Reportar perda ou roubo"}]}}
+
+event: message
+data: {"role":"bot","text":"Você quer um bloqueio temporário ou quer reportar perda ou roubo?","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-101"}
+

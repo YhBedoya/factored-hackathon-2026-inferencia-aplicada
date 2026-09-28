@@ -27,6 +27,7 @@ from app.domains.conversation.flows.card_select import (
     Fallback,
     NoCards,
     ask_which_card_text,
+    card_picker_event,
     load_card_select_policy,
     select_card,
 )
@@ -36,6 +37,7 @@ from app.domains.conversation.state import Fact
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
+from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
 from app.domains.localization import mask_card, status_label
 
 __all__ = ["card_block"]
@@ -71,6 +73,17 @@ _LOCK_EFFECT: dict[Language, str] = {
 _BLOCK_EFFECT: dict[Language, str] = {
     "es": "Este bloqueo no se puede deshacer.",
     "pt": "Esse bloqueio não pode ser desfeito.",
+}
+# `ui.quick_replies` labels for `clarify_lock_vs_block` (D4, R4). Worded from
+# the lock/block lexicon above, never "cancelar": `card_cancel` (Stretch) and
+# `deny` are separate intents, and the word would collide with them.
+_TEMPORARY_LOCK_LABEL: dict[Language, str] = {
+    "es": "Bloqueo temporal",
+    "pt": "Bloqueio temporário",
+}
+_PERMANENT_BLOCK_LABEL: dict[Language, str] = {
+    "es": "Reportar pérdida o robo",
+    "pt": "Reportar perda ou roubo",
 }
 
 
@@ -108,6 +121,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
             "pending": {"flow": "card_block", "node": "card_select", "awaiting_slot": "card_hint"},
             "clarification_failures": outcome.failures,
             "segments": [ask_which_card_text("block", outcome, language)],
+            "ui": [card_picker_event(outcome)],
         }
     if isinstance(outcome, NoCards):
         return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
@@ -151,10 +165,20 @@ def _ask_block_kind(state: GraphState, *, failures: int) -> dict[str, Any]:
             "pending": None,
             "clarification_failures": 0,
         }
+    options = [
+        PickerOption(label=_TEMPORARY_LOCK_LABEL[language]),
+        PickerOption(label=_PERMANENT_BLOCK_LABEL[language]),
+    ]
     return {
         "pending": {"flow": "card_block", "node": "block_kind", "awaiting_slot": "block_kind"},
         "clarification_failures": new_failures,
         "segments": [get_template("clarify_lock_vs_block", language)],
+        "ui": [
+            QuickRepliesEvent(
+                kind="quick_replies",
+                payload=QuickRepliesPayload(slot="block_kind", options=options),
+            )
+        ],
     }
 
 

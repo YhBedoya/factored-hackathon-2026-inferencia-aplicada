@@ -1,3 +1,4 @@
+import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -12,6 +13,11 @@ export default defineConfig({
 		react(),
 		tailwindcss(),
 	],
+	resolve: {
+		alias: {
+			"@": path.resolve(import.meta.dirname, "./src"),
+		},
+	},
 	server: {
 		// Bind to 0.0.0.0 so the dev server is reachable from other containers
 		// (T14 puts this behind an Nginx proxy on the docker network).

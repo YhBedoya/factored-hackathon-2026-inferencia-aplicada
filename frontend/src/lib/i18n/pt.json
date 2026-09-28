@@ -1,0 +1,51 @@
+{
+	"landing.title": "Cardy, da Swip",
+	"landing.subtitle": "Resolvo em minutos o que posso verificar sobre seu cartão, e te conecto com uma pessoa quando a decisão não é minha.",
+	"landing.cta": "Entrar",
+
+	"lang.label": "Idioma",
+	"lang.es": "ES",
+	"lang.pt": "PT",
+
+	"login.title": "Faça login",
+	"login.document_type": "Tipo de documento",
+	"login.document_type_options.DNI": "DNI",
+	"login.document_type_options.CC": "Cédula de Cidadania",
+	"login.document_type_options.CE": "Cédula de Estrangeiro",
+	"login.document_type_options.Pasaporte": "Passaporte",
+	"login.number": "Número do documento",
+	"login.password": "Senha",
+	"login.submit": "Entrar",
+
+	"shell.logout": "Sair",
+	"shell.greeting": "Olá, {name}.",
+
+	"chat.placeholder": "Escreva sua mensagem…",
+	"chat.send": "Enviar",
+	"chat.typing": "Cardy está digitando…",
+	"chat.reconnecting": "Reconectando…",
+	"chat.closed_notice": "Esta conversa foi encerrada. Você pode começar uma nova.",
+	"chat.new_conversation": "Nova conversa",
+
+	"confirm.title": "Confirme a ação",
+	"confirm.confirm": "Confirmar",
+	"confirm.cancel": "Cancelar",
+	"confirm.steps.lock_card": "Bloquear temporariamente seu cartão",
+	"confirm.steps.block_card": "Reportar seu cartão como perdido ou roubado",
+	"confirm.steps.unlock_card": "Desbloquear seu cartão",
+	"confirm.steps.order_replacement": "Pedir a substituição do seu cartão",
+
+	"otp.title": "Verifique sua identidade",
+	"otp.description": "Enviamos um código de verificação. Digite-o para continuar.",
+	"otp.code": "Código de verificação",
+	"otp.submit": "Verificar",
+
+	"errors.invalid_credentials": "O documento ou a senha não estão corretos.",
+	"errors.too_many_attempts": "Muitas tentativas. Espere alguns minutos antes de tentar novamente.",
+	"errors.generic": "Algo não deu certo. Tente novamente em instantes.",
+	"errors.required": "Este campo é obrigatório.",
+	"errors.turn_failed": "Não consegui processar sua mensagem. Tente novamente.",
+	"errors.turn_in_progress": "Ainda estou com sua mensagem anterior. Espere um momento.",
+	"errors.conversation_closed": "Esta conversa foi encerrada.",
+	"errors.invalid_otp": "O código não está correto. Tente novamente."
+}

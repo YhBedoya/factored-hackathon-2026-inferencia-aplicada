@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict
 
 from app.domains.cards.schemas import CardSummary
 from app.domains.conversation.templates import TemplateKind, get_template
+from app.domains.conversation.ui import CardPickerEvent, CardPickerPayload, PickerOption
 from app.domains.localization import kind_label, mask_card, status_label
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "SelectOutcome",
     "Selected",
     "ask_which_card_text",
+    "card_picker_event",
     "load_card_select_policy",
     "select_card",
 ]
@@ -127,6 +129,14 @@ def ask_which_card_text(action: AskAction, outcome: "Ask", language: Language) -
     return get_template(_ASK_TEMPLATES[action], language).replace(
         "{card_options}", outcome.card_options
     )
+
+
+def card_picker_event(outcome: Ask) -> CardPickerEvent:
+    """`ui.card_picker` for an `Ask` outcome: one `PickerOption` per line of
+    `outcome.card_options`, the masked options already formatted in code (D3, R4).
+    """
+    options = [PickerOption(label=label) for label in outcome.card_options.split("\n")]
+    return CardPickerEvent(kind="card_picker", payload=CardPickerPayload(options=options))
 
 
 def load_card_select_policy(path: Path | None = None) -> CardSelectPolicy:
