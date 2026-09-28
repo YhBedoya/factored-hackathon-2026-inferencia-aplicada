@@ -28,6 +28,7 @@ every other router.
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -38,7 +39,11 @@ from app.core.config import get_settings
 from app.core.llm import get_llm_client
 from app.core.logging import RequestIDMiddleware, configure_logging
 from app.core.telemetry import instrument_app
+from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.hosting import close_host, open_host
+from app.domains.policy.registry import get_policies
+
+_logger = structlog.get_logger()
 
 __all__ = ["app", "create_app"]
 
@@ -81,6 +86,12 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     _require_secrets(jwt_secret=settings.jwt_secret, identity_hmac_key=settings.identity_hmac_key)
+    # Fails the whole startup on a header-less or malformed policy file (D1);
+    # the combined hash below is what every audit event's `policy_version`
+    # carries for the rest of the process's life (D2).
+    bundle = get_policies()
+    _logger.info("policy.loaded", hash=bundle.hash, files=bundle.files)
+    load_card_select_policy()
     app.state.turn_host = await open_host(settings.database_url, get_llm_client())
     try:
         yield

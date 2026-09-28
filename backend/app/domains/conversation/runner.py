@@ -2,18 +2,29 @@
 
 `start_turn` is the API's one entry point: it takes the turn lock first (a
 `SET turn:<conversation_id> <turn_id> NX EX 120`, so two concurrent posts to
-the same conversation can't both run), persists the customer's message, then
-schedules the turn itself as an `asyncio.Task` on `host.tasks` and returns
-right away with the `turn_id` -- `POST /messages` answers `202` without
-waiting for the graph to finish.
+the same conversation can't both run), persists the customer's message (only
+when this is a typed turn, D6), then schedules the turn itself as an
+`asyncio.Task` on `host.tasks` and returns right away with the `turn_id` --
+`POST /messages`/`POST /confirmations/{token_id}` both answer `202` without
+waiting for the graph to finish. Exactly one of `text`, `resume` or
+`confirmation` is set on any one call (D6, D7): a typed turn, a step-up
+resume, or a button confirm/cancel. `checkpointed_confirmation_token` is the
+route's second D7 gate -- the same `graph.aget_state(...).values.get(
+"confirmation_token_id")` read the sandbox's `/confirm` already does.
 
-The turn task builds its `ToolContext` and bank tools only through
-`registry` (R1): nothing here ever reads `customer_id` off anything but the
-route's `Session`. `bank_write_tools` is always `None` on the API path (D13)
--- there is no write path yet; a flow that finds it `None` must fall back
-rather than claim anything is done. It mirrors `graph.run_turn`'s astream
-loop and debug assembly (not import it: `run_turn` drives one call and
-returns, this drives one call and publishes each step as it happens), then
+The turn task builds its `ToolContext`, its one turn-bound `AuditRecorder`
+and its read/write tools only through `registry` (R1, D13, D17): nothing
+here ever reads `customer_id` off anything but the route's `Session`. The
+same recorder that `RecordingBankTools` and `ConfirmedWriteTools` audit
+their tool calls through also gets this module's own turn-level events:
+`nlu_result` (from `understand`'s update), `rule_hit` for any
+`escalation_reason` a flow sets this turn, and `reply_sent` just before the
+bot's reply is published (D14). A recording failure at this level is logged
+`audit.write_failed` and never fails the turn (D15) -- only a failed
+`tool_call` audit inside a read or write blocks that call itself. It
+mirrors `graph.run_turn`'s astream loop and debug assembly (not import it:
+`run_turn` drives one call and returns, this drives one call and publishes
+each step as it happens), then
 publishes the bot's `ui`/`message`/`debug`/`done` events in order and
 persists the bot reply. On any exception it logs `turn.failed` -- fields
 only, no user text and no PII -- and publishes `error`/`done` instead.
@@ -30,19 +41,22 @@ from uuid import UUID, uuid4
 
 import structlog
 from langchain_core.runnables import RunnableConfig
+from pydantic import JsonValue
 
 from app.core import events
 from app.core.config import get_settings
 from app.core.redis import get_redis
+from app.domains.audit.schemas import AuditType
 from app.domains.conversation import store
-from app.domains.conversation.graph import DebugInfo
+from app.domains.conversation.graph import ConfirmationDecision, DebugInfo
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.tools import registry
 from app.domains.conversation.ui import UIEvent
 from app.domains.identity.models import Session
+from app.domains.safety.vault import InMemoryAddressVault
 
-__all__ = ["TurnInProgress", "start_turn"]
+__all__ = ["TurnInProgress", "checkpointed_confirmation_token", "start_turn"]
 
 _logger = structlog.get_logger()
 
@@ -80,20 +94,27 @@ async def start_turn(
     *,
     session: Session,
     conversation_id: UUID,
-    text: str,
     trace_id: str,
+    text: str | None = None,
+    resume: Literal["step_up"] | None = None,
+    confirmation: ConfirmationDecision | None = None,
 ) -> UUID:
-    """Take the turn lock, persist the customer message, and schedule the
-    turn task. Raises `TurnInProgress` (nothing persisted) if the lock is
-    already held.
+    """Take the turn lock, persist the customer message (only when `text` is
+    set, D6), and schedule the turn task. Exactly one of `text`, `resume` or
+    `confirmation` must be set -- `ValueError` otherwise. Raises
+    `TurnInProgress` (nothing persisted) if the lock is already held.
     """
+    if sum(value is not None for value in (text, resume, confirmation)) != 1:
+        raise ValueError("start_turn takes exactly one of text, resume or confirmation")
+
     turn_id = uuid4()
     lock_key = f"turn:{conversation_id}"
     acquired = await get_redis().set(lock_key, str(turn_id), nx=True, ex=_LOCK_TTL_SECONDS)
     if not acquired:
         raise TurnInProgress(f"a turn is already running for conversation {conversation_id}")
 
-    await store.add_message(conversation_id, turn_id, role="customer", content=text)
+    if text is not None:
+        await store.add_message(conversation_id, turn_id, role="customer", content=text)
 
     task = asyncio.create_task(
         _run_turn(
@@ -102,6 +123,8 @@ async def start_turn(
             conversation_id=conversation_id,
             turn_id=turn_id,
             text=text,
+            resume=resume,
+            confirmation=confirmation,
             trace_id=trace_id,
         )
     )
@@ -110,26 +133,58 @@ async def start_turn(
     return turn_id
 
 
+async def checkpointed_confirmation_token(host: TurnHost, conversation_id: UUID) -> str | None:
+    """The `confirmation_token_id` this conversation's plan last checkpointed
+    (D7's second gate, on top of `RedisConfirmationStore.is_open`): the same
+    `graph.aget_state(...).values.get("confirmation_token_id")` read the
+    sandbox's `/confirm` command already does. `None` on a conversation with
+    no checkpoint yet or nothing pending.
+    """
+    state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
+    return state.values.get("confirmation_token_id")
+
+
 async def _run_turn(
     host: TurnHost,
     *,
     session: Session,
     conversation_id: UUID,
     turn_id: UUID,
-    text: str,
+    text: str | None,
+    resume: Literal["step_up"] | None,
+    confirmation: ConfirmationDecision | None,
     trace_id: str,
 ) -> None:
     lock_key = f"turn:{conversation_id}"
     try:
         ctx = registry.build_tool_context(session, conversation_id, trace_id)
-        tools = registry.bank_tools_for(ctx)
+        audit = registry.audit_recorder_for(ctx, turn_id)
+        tools, write_tools = registry.turn_tools(ctx, session, audit)
+
+        async def _record(event_type: AuditType, payload: dict[str, JsonValue]) -> None:
+            """Best effort (D15): a runner-level audit event's recording
+            failure is logged and never fails the turn -- only a failed
+            `tool_call` audit inside a read or write blocks that call itself
+            (`registry.RecordingBankTools`, `ConfirmedWriteTools`)."""
+            try:
+                await audit.record(event_type, payload)
+            except Exception:
+                _logger.warning(
+                    "audit.write_failed",
+                    conversation_id=str(conversation_id),
+                    turn_id=str(turn_id),
+                    trace_id=trace_id,
+                    type=event_type,
+                )
+
         config: RunnableConfig = {
             "configurable": {
                 "thread_id": str(conversation_id),
                 "session": ctx,
                 "bank_tools": tools,
                 "llm": host.llm,
-                "bank_write_tools": None,
+                "bank_write_tools": write_tools,
+                "vault": InMemoryAddressVault(),
             }
         }
 
@@ -140,7 +195,7 @@ async def _run_turn(
         ui: list[UIEvent] = []
 
         async for update in host.graph.astream(
-            {"user_text": text, "confirmation": None, "resume": None},
+            {"user_text": text or "", "confirmation": confirmation, "resume": resume},
             config=config,
             stream_mode="updates",
         ):
@@ -153,6 +208,15 @@ async def _run_turn(
                 if node_name == "understand":
                     nlu = values.get("nlu")
                     language = values.get("language", language)
+                    if nlu is not None:
+                        await _record(
+                            "nlu_result",
+                            {
+                                "language": language,
+                                "status": nlu.status,
+                                "intents": [intent for intent in nlu.intents],
+                            },
+                        )
                 elif route_taken is None and node_name in _BRANCH_NODES:
                     route_taken = node_name
                 reply_value = values.get("reply")
@@ -161,6 +225,9 @@ async def _run_turn(
                 ui_value = values.get("ui")
                 if ui_value is not None:
                     ui = ui_value
+                escalation_reason = values.get("escalation_reason")
+                if escalation_reason is not None:
+                    await _record("rule_hit", {"rule_id": escalation_reason})
 
         for event in ui:
             await events.publish(conversation_id, "ui", event.model_dump(mode="json"))
@@ -168,6 +235,14 @@ async def _run_turn(
         ui_payload = [event.model_dump(mode="json") for event in ui] if ui else None
         await store.add_message(
             conversation_id, turn_id, role="bot", content=reply, ui_payload=ui_payload
+        )
+        await _record(
+            "reply_sent",
+            {
+                "route": route_taken or "fallback",
+                "ui_kinds": [event.kind for event in ui],
+                "length": len(reply),
+            },
         )
         await events.publish(
             conversation_id, "message", {"role": "bot", "text": reply, "sources": []}

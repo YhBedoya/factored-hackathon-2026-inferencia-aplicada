@@ -12,6 +12,7 @@ load.
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict
@@ -59,7 +60,7 @@ class MinPaymentPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    provenance: str
+    provenance: Literal["team-generated-synthetic"]
     version: int
     min_payment: MinPaymentAmounts
     due_date: DueDatePolicy

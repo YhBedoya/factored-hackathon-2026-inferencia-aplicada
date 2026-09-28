@@ -23,6 +23,7 @@ from pathlib import Path
 
 import psycopg
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
@@ -32,15 +33,16 @@ from app.core.redis import get_redis, ping_redis
 from app.domains.identity.passwords import hash_password, login_key
 from app.main import create_app
 
-__all__ = ["ItAccount", "app_client", "it_accounts", "it_db", "it_env"]
+__all__ = ["ItAccount", "app_client", "it_accounts", "it_db", "it_env", "restore_cards"]
 
 _CONNECT_TIMEOUT_SECONDS = 2
 _BACKEND_DIR = Path(__file__).resolve().parents[2]
 _FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "fakebank"
 _DB_PREFIX = "latam_it_"
-# rl:login:<key>, turn:<id>, conv:<id> (D19, D14, D7): no product-code prefix,
-# so cleanup targets exactly the key shapes the app itself writes.
-_REDIS_KEY_PATTERNS = ("rl:login:*", "turn:*", "conv:*")
+# rl:login:<key>, turn:<id>, conv:<id>, conf:<token_id>, rl:otp:<account_id>
+# (D19, D14, D7, D8, D4): no product-code prefix, so cleanup targets exactly
+# the key shapes the app itself writes.
+_REDIS_KEY_PATTERNS = ("rl:login:*", "turn:*", "conv:*", "conf:*", "rl:otp:*")
 
 # The three fixture customers loaded by `_load_fixtures` (D19): `document_type`
 # and `document_number` as `customers.csv` has them, not yet normalized.
@@ -156,7 +158,25 @@ def it_env(it_db: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     the teardown below deleting the key shapes the app writes (D19). Skips,
     like `it_db` does for Postgres, when Redis isn't reachable from the host
     `REDIS_URL` (the dev compose overlay publishes it on `127.0.0.1:6379`).
+
+    Also undoes structlog's `cache_logger_on_first_use=True` (T7 repair
+    round 1): `configure_logging()` (`app.main.create_app`, called by
+    module import and again by every `app_client`/`it_accounts`/inline
+    `TestClient(create_app())` in these tests) sets that flag, and a
+    process-wide module-level logger (e.g. `cards/.../postgres.py`'s
+    `_logger`) that fires for the first time while it's on locks itself
+    onto whichever processors list happened to be live at that instant --
+    for the rest of the process, not just this test. `capture_logs()`
+    mutates the *current* list in place, so a logger cached onto an
+    *older* one (`configure_logging()` builds a brand-new list every call)
+    keeps writing straight to stdout, invisible to `capture_logs()`, no
+    matter which test's `capture_logs()` runs later. Since every relevant
+    integration test resolves `it_env` (directly or through `app_client`/
+    `it_accounts`/`restore_cards`) before it does anything else, resetting
+    the flag here before each test closes that window regardless of test
+    order or how many times `create_app()` runs afterwards.
     """
+    structlog.configure(cache_logger_on_first_use=False)
     monkeypatch.setenv("DATABASE_URL", it_db)
     monkeypatch.setenv("APP_ENV", "dev")
     monkeypatch.setenv("BANK", "postgres")
@@ -247,6 +267,60 @@ def it_accounts(it_env: None) -> Iterator[dict[str, ItAccount]]:
 
     get_engine.cache_clear()
     asyncio.run(_delete_accounts(accounts))
+    get_engine.cache_clear()
+
+
+_CARD_TABLES = ("app.card_controls", "app.card_status_history", "app.card_replacements")
+
+
+async def _snapshot_product_statuses() -> dict[str, str]:
+    """`bank.products.product_status` for every fixture card, taken before a
+    `test_postgres_writes.py` test runs (T7) so its teardown can put back
+    whichever ones the test wrote to.
+    """
+    async with get_engine().connect() as conn:
+        result = await conn.execute(text("SELECT product_id, product_status FROM bank.products"))
+        return {row.product_id: row.product_status for row in result}
+
+
+async def _restore_cards(card_ids: set[str], statuses: dict[str, str]) -> None:
+    async with get_engine().begin() as conn:
+        for card_id in card_ids:
+            for table in _CARD_TABLES:
+                await conn.execute(
+                    text(f"DELETE FROM {table} WHERE product_id = :card_id"),
+                    {"card_id": card_id},
+                )
+            original_status = statuses.get(card_id)
+            if original_status is not None:
+                await conn.execute(
+                    text(
+                        "UPDATE bank.products SET product_status = :status "
+                        "WHERE product_id = :card_id"
+                    ),
+                    {"status": original_status, "card_id": card_id},
+                )
+
+
+@pytest.fixture
+def restore_cards(it_env: None) -> Iterator[set[str]]:
+    """Card ids a `test_postgres_writes.py` test writes to (T7). The test
+    fills the yielded set with every card id it touches; on teardown this
+    deletes their `app.card_*` rows and restores `bank.products.product_status`
+    from the snapshot taken here, before the test ran -- `it_db` is
+    session-scoped, so a later test must see the fixture's original rows.
+    """
+    card_ids: set[str] = set()
+    statuses = asyncio.run(_snapshot_product_statuses())
+    # `get_engine()` is loop-bound (state file conventions): this fixture's
+    # own `asyncio.run()` leaves a cached engine tied to a loop that is now
+    # closed, so the test body's own loop must build its own.
+    get_engine.cache_clear()
+
+    yield card_ids
+
+    get_engine.cache_clear()
+    asyncio.run(_restore_cards(card_ids, statuses))
     get_engine.cache_clear()
 
 

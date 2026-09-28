@@ -27,6 +27,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
 from app.core.llm import LLMError, PromptRef, Step
+from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -34,7 +35,7 @@ from app.domains.conversation.tools.fakebank import FakeBank, FakeBankOverlay, F
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
-from app.domains.policy.tools_policy import load_tools_policy, step_up_rule
+from app.domains.policy.tools_policy import load_tools_policy, step_up_rule, tool_allowed
 from app.domains.safety.vault import InMemoryAddressVault
 
 __all__ = ["Call", "ScriptedLLM", "Session", "make_session"]
@@ -138,7 +139,10 @@ def make_session(
         customer_id, str(conversation_id), **({} if clock is None else {"clock": clock})
     )
     gate = FakeStepUpGate(otp_code)
-    write_tools = ConfirmedWriteTools(raw, store, gate, step_up_rule(load_tools_policy()))
+    policy = load_tools_policy()
+    write_tools = ConfirmedWriteTools(
+        raw, store, gate, step_up_rule(policy), tool_allowed(policy), NullAuditRecorder()
+    )
 
     config: RunnableConfig = {
         "configurable": {

@@ -21,6 +21,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ConfirmationRequired
 from app.domains.conversation.graph import GraphState
+from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
 from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -75,14 +76,16 @@ async def start_plan(
     summary_key: str,
     view_facts: list[Fact],
     confirm_values: Mapping[str, str],
+    intent: Intent,
 ) -> dict[str, Any]:
     """Issue a one-step plan and pause for the button/NLU confirmation (D11,
     D2-K D15). `confirm_values` fills `action_confirm`'s `{action}`/`{effect}`/
     `{card_last4}` placeholders; `view_facts` is what `ui.confirm` shows the
-    customer before they decide (already formatted, R4).
+    customer before they decide (already formatted, R4). `intent` is the
+    allowlist check `issue_plan` runs before the store is ever touched (D3).
     """
     bank_write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
-    plan = await bank_write_tools.issue_plan([PlanStep(tool=tool, args=dict(args))])
+    plan = await bank_write_tools.issue_plan([PlanStep(tool=tool, args=dict(args))], intent)
     language = state["language"]
     text = fill(get_template("action_confirm", language), **dict(confirm_values))
     return {

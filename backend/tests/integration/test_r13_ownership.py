@@ -4,14 +4,14 @@ customer (D18).
 
 Customer A (`CLI-TFMULTI00001`) creates a conversation. Customer B
 (`CLI-TFSINGLE0002`), logged in on a separate client with her own CSRF
-token, gets `404` posting a message or opening the stream on A's
-conversation id -- and so does a random UUID nobody owns. `get_owned_conversation`
-runs as a route dependency, before either route body does anything, so no
-turn is ever scheduled and no LLM is ever called.
+token, gets `404` posting a message, opening the stream or posting a
+confirmation on A's conversation id -- and so does a random UUID nobody
+owns. `get_owned_conversation` runs as a route dependency, before any route
+body does anything, so no turn is ever scheduled and no LLM is ever called.
 
 See `docs/specs/d2-a-login-read-tools-api.md` "Contracts" -> the three
-`/conversations` rows, D18; `docs/solution-docs/04-contracts.md` §3 "Auth
-(ADR-025)".
+`/conversations` rows, D18; `docs/specs/d3-a-guardrails-write-path.md` D7;
+`docs/solution-docs/04-contracts.md` §3 "Auth (ADR-025)".
 """
 
 from uuid import uuid4
@@ -90,3 +90,14 @@ def test_other_customer_conversation_is_404(
         random_stream_response = client_b.get(f"/api/v1/conversations/{random_id}/stream")
         assert random_stream_response.status_code == 404
         assert random_stream_response.json() == _NOT_FOUND_BODY
+
+        # D7: `get_owned_conversation` runs before the confirmation-token
+        # checks, so a foreign conversation id is still 404, not 409 -- the
+        # token itself is never even looked at.
+        confirmation_response = client_b.post(
+            f"/api/v1/conversations/{conversation_id}/confirmations/any-token",
+            json={"decision": "confirm"},
+            headers={CSRF_HEADER: csrf_b},
+        )
+        assert confirmation_response.status_code == 404
+        assert confirmation_response.json() == _NOT_FOUND_BODY

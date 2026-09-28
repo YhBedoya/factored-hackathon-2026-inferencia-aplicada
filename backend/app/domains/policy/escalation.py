@@ -10,6 +10,7 @@ header-less file fail to load.
 """
 
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict
@@ -71,7 +72,7 @@ class EscalationPolicy(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    provenance: str
+    provenance: Literal["team-generated-synthetic"]
     version: int
     customer_not_active: CustomerNotActivePolicy
     bank_side_queues: BankSideQueuesPolicy
