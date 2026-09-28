@@ -336,3 +336,33 @@ def test_es_unlock_own_lock_needs_otp(fakebank_dir: Path) -> None:
         assert sum(1 for call in llm.calls if call.step == "nlu") == 1
 
     asyncio.run(run())
+
+
+def test_which_card_question_names_the_action(fakebank_dir: Path) -> None:
+    """With several cards and no hint, the question names the action the
+    customer asked for (ES block, PT unlock), from a fixed template (D12)."""
+
+    async def run() -> None:
+        llm = ScriptedLLM(
+            {
+                "nlu": [
+                    NLUResult(language="es", intents=["card_block"], status="clear"),
+                    NLUResult(language="pt", intents=["card_unlock"], status="clear"),
+                ]
+            }
+        )
+        session = make_session("CLI-TFMULTI00001", fakebank_dir, llm)
+
+        reply1, debug1 = await run_turn(session.graph, "quiero bloquear", config=session.config)
+        assert reply1.startswith("¿Cuál tarjeta quieres bloquear?\n")
+        assert "6475" in reply1
+        assert debug1.pending == "card_block.card_hint"
+
+        reply2, debug2 = await run_turn(
+            session.graph, "quero desbloquear meu cartão", config=session.config
+        )
+        assert reply2.startswith("Qual cartão você quer desbloquear?\n")
+        assert debug2.pending == "card_unlock.card_hint"
+        assert all(call.step != "compose" for call in llm.calls)
+
+    asyncio.run(run())

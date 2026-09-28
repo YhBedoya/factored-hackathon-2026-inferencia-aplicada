@@ -247,6 +247,8 @@ async def _run_turn(
         await events.publish(
             conversation_id, "message", {"role": "bot", "text": reply, "sources": []}
         )
+        if any(event.kind == "conversation_closed" for event in ui):
+            await store.close_conversation(conversation_id)
 
         if get_settings().app_env != "prod":
             final_state = await host.graph.aget_state(config)

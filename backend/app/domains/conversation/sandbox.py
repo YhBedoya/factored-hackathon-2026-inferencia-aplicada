@@ -289,6 +289,17 @@ async def _run_session(customer_id: str, data_dir: Path) -> None:
             f"route={debug.route} tools={debug.tools_called} "
             f"pending={debug.pending} ui={debug.ui}"
         )
+        if "conversation_closed" in debug.ui:
+            # The customer said goodbye: the next line starts a new
+            # conversation (new `conversation_id`/thread), like the app does.
+            print("[conversation closed; the next message starts a new one]")
+            session = _build_session(customer_id, data_dir)
+            graph, config, bank_tools, gate = (
+                session.graph,
+                session.config,
+                session.bank_tools,
+                session.gate,
+            )
 
 
 def _force_utf8_streams() -> None:

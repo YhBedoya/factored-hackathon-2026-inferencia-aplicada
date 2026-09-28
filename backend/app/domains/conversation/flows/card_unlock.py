@@ -41,6 +41,7 @@ from app.domains.conversation.flows.card_select import (
     Ask,
     Fallback,
     NoCards,
+    ask_which_card_text,
     load_card_select_policy,
     select_card,
 )
@@ -54,7 +55,6 @@ from app.domains.policy.escalation import load_escalation_policy
 
 __all__ = ["card_unlock"]
 
-_CARD_OPTIONS_SOURCE = "conversation.card_select"
 
 _UNLOCK_ACTION_LABEL: dict[Language, str] = {
     "es": "desbloquear",
@@ -103,9 +103,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {
             "pending": {"flow": "card_unlock", "node": "card_select", "awaiting_slot": "card_hint"},
             "clarification_failures": outcome.failures,
-            "facts": [
-                Fact(key="card_options", value=outcome.card_options, source=_CARD_OPTIONS_SOURCE)
-            ],
+            "segments": [ask_which_card_text("unlock", outcome, language)],
         }
     if isinstance(outcome, NoCards):
         return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}

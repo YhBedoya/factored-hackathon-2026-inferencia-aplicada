@@ -44,6 +44,7 @@ from app.domains.conversation.flows.card_select import (
     Ask,
     Fallback,
     NoCards,
+    ask_which_card_text,
     load_card_select_policy,
     select_card,
 )
@@ -59,7 +60,6 @@ from app.domains.safety.vault import AddressVault
 
 __all__ = ["replacement"]
 
-_CARD_OPTIONS_SOURCE = "conversation.card_select"
 
 _REPLACEMENT_ACTION_LABEL: dict[Language, str] = {
     "es": "pedir tu tarjeta nueva",
@@ -114,9 +114,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {
             "pending": {"flow": "replacement", "node": "card_select", "awaiting_slot": "card_hint"},
             "clarification_failures": outcome.failures,
-            "facts": [
-                Fact(key="card_options", value=outcome.card_options, source=_CARD_OPTIONS_SOURCE)
-            ],
+            "segments": [ask_which_card_text("replacement", outcome, language)],
         }
     if isinstance(outcome, NoCards):
         return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}

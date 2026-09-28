@@ -19,6 +19,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict
 
 from app.domains.cards.schemas import CardSummary
+from app.domains.conversation.templates import TemplateKind, get_template
 from app.domains.localization import kind_label, mask_card, status_label
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "NoCards",
     "SelectOutcome",
     "Selected",
+    "ask_which_card_text",
     "load_card_select_policy",
     "select_card",
 ]
@@ -105,6 +107,26 @@ class NoCards(BaseModel):
 SelectOutcome = Selected | Ask | Fallback | NoCards
 
 _MAX_CLARIFICATION_FAILURES = 2
+
+AskAction = Literal["status", "balance", "block", "unlock", "replacement"]
+
+_ASK_TEMPLATES: dict[AskAction, TemplateKind] = {
+    "status": "ask_which_card_status",
+    "balance": "ask_which_card_balance",
+    "block": "ask_which_card_block",
+    "unlock": "ask_which_card_unlock",
+    "replacement": "ask_which_card_replacement",
+}
+
+
+def ask_which_card_text(action: AskAction, outcome: "Ask", language: Language) -> str:
+    """The fixed "which card do you want to <action>?" question plus the
+    masked options (D12, R4). A template, not a `compose` draft, so the
+    question always names the action the customer asked for.
+    """
+    return get_template(_ASK_TEMPLATES[action], language).replace(
+        "{card_options}", outcome.card_options
+    )
 
 
 def load_card_select_policy(path: Path | None = None) -> CardSelectPolicy:

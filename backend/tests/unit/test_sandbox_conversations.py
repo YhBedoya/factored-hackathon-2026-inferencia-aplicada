@@ -53,14 +53,13 @@ def test_es_multi_card_asks_then_answers(fakebank_dir: Path) -> None:
         status="clear",
         slots=NLUSlots(card_hint="credit"),
     )
-    ask_draft = ComposeDraft(text="Cual tarjeta queres consultar?\n{card_options}")
     answer_draft = ComposeDraft(
         text=(
             "Tu tarjeta {card_kind} {card_mask} esta {status}. Vence el {expiry}. "
             "Limite {credit_limit}, disponible {available_credit}."
         )
     )
-    llm = ScriptedLLM({"nlu": [ask_nlu, answer_nlu], "compose": [ask_draft, answer_draft]})
+    llm = ScriptedLLM({"nlu": [ask_nlu, answer_nlu], "compose": [answer_draft]})
     graph = build_graph(MemorySaver())
     config = _config(ctx, bank_tools, llm, "t-es-multi")
 
@@ -68,6 +67,7 @@ def test_es_multi_card_asks_then_answers(fakebank_dir: Path) -> None:
         run_turn(graph, "hola, cual es el estado de mi tarjeta?", config=config)
     )
     assert debug1.route == "card_info"
+    assert reply1.startswith("¿Sobre cuál tarjeta quieres saber?\n")
     assert "Crédito" in reply1
     assert "6475" in reply1
 

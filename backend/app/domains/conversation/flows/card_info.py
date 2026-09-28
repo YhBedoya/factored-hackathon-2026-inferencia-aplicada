@@ -50,6 +50,7 @@ from app.domains.conversation.flows.card_select import (
     Ask,
     NoCards,
     Selected,
+    ask_which_card_text,
     load_card_select_policy,
     select_card,
 )
@@ -64,7 +65,6 @@ from app.domains.policy.min_payment import load_min_payment_policy, min_payment,
 
 __all__ = ["card_info"]
 
-_CARD_OPTIONS_SOURCE = "conversation.card_select"
 _MIN_PAYMENT_SOURCE = "policy:min_payment@v1"
 _FX_SOURCE = "reference.get_fx_rate"
 _PROFILE_SOURCE = "customers.get_profile"
@@ -108,9 +108,11 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
                     "awaiting_slot": "card_hint",
                 },
                 "clarification_failures": outcome.failures,
-                "facts": [
-                    Fact(
-                        key="card_options", value=outcome.card_options, source=_CARD_OPTIONS_SOURCE
+                "segments": [
+                    ask_which_card_text(
+                        "balance" if intent == "balance_due" else "status",
+                        outcome,
+                        state["language"],
                     )
                 ],
             }

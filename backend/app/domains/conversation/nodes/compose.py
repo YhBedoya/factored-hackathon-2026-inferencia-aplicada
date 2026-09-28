@@ -10,7 +10,7 @@ repaired by calling the LLM again -- and replaced by the fixed `fallback`
 template, same as an `LLMError` from the call itself (D10, D15).
 
 `compose` below is the graph-level wrapper: it picks the turn's goal from
-`state["pending"]` and passes `state["facts"]` -- this turn's only, thanks
+this turn's intent and passes `state["facts"]` -- this turn's only, thanks
 to `load_session`'s per-turn reset (Q3) -- through to `compose_reply`.
 """
 
@@ -41,10 +41,10 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 3)
+_PROMPT = PromptRef("compose", 4)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
-Goal = Literal["card_status", "ask_which_card", "balance_due", "credit_only_offer"]
+Goal = Literal["card_status", "balance_due"]
 Country = Literal["MX", "CO", "AR"]
 
 # Facts a flow writes for code's own use (formatting, footnotes) but that
@@ -178,12 +178,12 @@ def _current_intent(state: GraphState) -> Intent:
 async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Graph wrapper around `compose_reply`: picks the goal, then fills the reply.
 
-    The goal is `ask_which_card` while a flow is waiting on the `card_hint`
-    slot (`state["pending"]`); otherwise it follows this turn's intent and
-    the selected card's kind (D19, this card's B1): `credit_only_offer` for
-    a debit card on `balance_due` (the card's own `credit_only` segment
-    already covered the money side, `flows/card_info.py`), `balance_due` for
-    a credit card on `balance_due`, else `card_status` (D8, D12). `facts`
+    The goal follows this turn's intent and the selected card's kind (D19,
+    this card's B1): `balance_due` for a credit card on `balance_due`, else
+    `card_status` -- a debit card on `balance_due` gets its status described
+    right after the fixed `credit_only` segment (`flows/card_info.py`). The
+    "which card?" question never reaches here: it is a fixed per-action
+    template the flow writes itself (`card_select.ask_which_card_text`). `facts`
     are read straight off `state` -- the per-turn reset in `load_session`
     (Q3) is what makes that safe to pass through unfiltered. When the
     profile has a first name, it is offered as one more fact,
@@ -200,20 +200,14 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     reads.
     """
     llm: LLMClient = config["configurable"]["llm"]
-    pending = state.get("pending")
-    awaits_card_hint = pending is not None and pending["awaiting_slot"] == "card_hint"
     facts = list(state.get("facts", []))
     facts_by_key = {fact.key: fact for fact in facts}
 
-    goal: Goal
-    if awaits_card_hint:
-        goal = "ask_which_card"
-    elif _current_intent(state) == "balance_due":
-        card_kind = facts_by_key.get("card_kind")
-        is_debit = card_kind is not None and card_kind.value == "debit"
-        goal = "credit_only_offer" if is_debit else "balance_due"
-    else:
-        goal = "card_status"
+    card_kind = facts_by_key.get("card_kind")
+    is_debit = card_kind is not None and card_kind.value == "debit"
+    goal: Goal = (
+        "balance_due" if _current_intent(state) == "balance_due" and not is_debit else "card_status"
+    )
 
     customer_name = state.get("customer_name")
     if customer_name:

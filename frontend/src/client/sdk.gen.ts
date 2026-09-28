@@ -101,7 +101,9 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
  *
  * Take the turn lock, persist the customer message (a typed turn only,
  * D6) and schedule the turn (D14). `409 turn_in_progress` when another turn
- * already holds the lock for this conversation.
+ * already holds the lock for this conversation; `409 conversation_closed`
+ * once the customer said goodbye (the client starts a new conversation
+ * instead).
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',
