@@ -17,14 +17,13 @@ def test_health_up_and_down() -> None:
     app.dependency_overrides[ping_db] = lambda: True
     app.dependency_overrides[ping_redis] = lambda: True
     try:
-        with TestClient(app) as client:
-            response = client.get("/api/v1/health")
+        client = TestClient(app)
+        response = client.get("/api/v1/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok", "db": "up", "redis": "up"}
 
         app.dependency_overrides[ping_db] = lambda: False
-        with TestClient(app) as client:
-            response = client.get("/api/v1/health")
+        response = client.get("/api/v1/health")
         assert response.status_code == 503
         assert response.json() == {"status": "degraded", "db": "down", "redis": "up"}
     finally:

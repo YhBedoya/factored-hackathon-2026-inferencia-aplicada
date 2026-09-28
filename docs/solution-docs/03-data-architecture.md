@@ -83,7 +83,7 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 | `system_metadata` | `load_date`, `date_offset_days`, dataset manifest hash, policy hash |
 
 ### `identity`
-`accounts` (`customer_id` or staff user, login email, password hash, role, status), `staff_users`, `revoked_tokens`. There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
+`accounts` (`customer_id`, `login_key` = HMAC of the login identifier (never the plain document number), password hash, role, status), `revoked_tokens`. There are no staff accounts for now: the staff panel is a separate page with no login yet, and its protection is decided on the staff-panel card (D4). There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
 
 ### `audit`
 `audit_events` (append-only; see `04-contracts.md` §6), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
@@ -99,6 +99,6 @@ Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor
 
 ## 8. Identity provisioning
 
-- For all 150k customers: login = the customer's (synthetic) email, password = a deterministic random string from a seeded generator, stored with a low-cost hash (~10 minutes total at load). Staff accounts are seeded separately.
+- For all 150k customers: login = **document type + document number** + password (amended 2026-09-28, D2-A: dataset emails are not unique, while `document_number` is non-null and unique for every customer). The document number is PII: accounts, logs, traces, rate-limit keys and audit only ever hold `login_key` = HMAC-SHA256(`IDENTITY_HMAC_KEY`, `doc:<TYPE>:<NUMBER>`). Password = a deterministic random string from a seeded generator (`CREDENTIALS_SEED`, never committed), stored with a low-cost hash (PBKDF2-SHA256, low iteration count). No staff accounts are seeded for now (the staff panel is a separate page with no login yet). See `docs/specs/d2-a-login-read-tools-api.md` D1–D5.
 - `data/secrets/credentials.csv` (git-ignored) and an admin-only persona lookup in the staff console.
 - **Persona catalog** (`eval/personas.yaml`, ~30 curated customers), selected by query to cover: several cards, a bank-blocked card, a suspended customer, missing income, a repeat complainer, a regulator case, recent declines per code, pending/reversed transactions, expiring cards, and MX/CO/AR plus USD-card customers.

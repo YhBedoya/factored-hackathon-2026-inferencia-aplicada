@@ -49,6 +49,15 @@ source_modules=
     app.domains.conversation
 forbidden_modules=
     app.domains.*.repository
+# D11: `postgres.py` is the one conversation module allowed to reach a
+# repository indirectly, through its domain's `service` module. Ignoring
+# only these four edges keeps every other conversation module's indirect
+# reach (a direct import, or through some other module) forbidden.
+ignore_imports=
+    app.domains.conversation.tools.postgres -> app.domains.customers.service
+    app.domains.conversation.tools.postgres -> app.domains.cards.service
+    app.domains.conversation.tools.postgres -> app.domains.transactions.service
+    app.domains.conversation.tools.postgres -> app.domains.localization.service
 
 [importlinter:contract:llm-no-repository]
 name=app.core.llm never imports a domain repository (LLM code can't touch the DB)

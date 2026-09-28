@@ -1,0 +1,82 @@
+"""Hosts the compiled turn graph across the app's lifetime (D16).
+
+`open_host` builds the checkpointer's connection pool once per process, runs
+`AsyncPostgresSaver.setup()` (idempotent -- creates the `langgraph` schema's
+tables on first boot, no-ops after that), and compiles the graph over it.
+`close_host` cancels any turn tasks still running -- D16's "a restart loses
+nothing" means a restart *between* turns; a turn in flight when the process
+dies is not resumed -- then closes the pool.
+
+`psycopg_conninfo` only strips the `+asyncpg` driver suffix `DATABASE_URL`
+carries for SQLAlchemy: same database, same host, a plain psycopg3 DSN.
+"""
+
+import asyncio
+import contextlib
+from dataclasses import dataclass, field
+from typing import Any
+
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.graph.state import CompiledStateGraph
+from psycopg import AsyncConnection
+from psycopg.rows import DictRow, dict_row
+from psycopg_pool import AsyncConnectionPool
+
+from app.core.llm import LLMClient
+from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
+
+__all__ = ["TurnHost", "close_host", "open_host", "psycopg_conninfo"]
+
+
+def psycopg_conninfo(database_url: str) -> str:
+    """`DATABASE_URL` (`postgresql+asyncpg://...`) -> a plain psycopg3 conninfo."""
+    return database_url.replace("postgresql+asyncpg://", "postgresql://")
+
+
+@dataclass
+class TurnHost:
+    """Everything one process needs to run turns (D16): the compiled graph,
+    the checkpointer's connection pool, the shared `LLMClient`, and the
+    in-flight turn tasks `close_host` cancels at shutdown.
+    """
+
+    graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
+    pool: AsyncConnectionPool[AsyncConnection[DictRow]]
+    llm: LLMClient
+    tasks: set[asyncio.Task[None]] = field(default_factory=set)
+
+
+async def open_host(database_url: str, llm: LLMClient) -> TurnHost:
+    """Open the checkpointer pool, run its one-time `setup()`, and compile
+    the graph over it (D16). `search_path=langgraph` keeps the checkpoint
+    tables out of `public` (migration `0002`'s `CREATE SCHEMA IF NOT EXISTS
+    langgraph`).
+    """
+    pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
+        psycopg_conninfo(database_url),
+        open=False,
+        kwargs={
+            "autocommit": True,
+            "prepare_threshold": 0,
+            "row_factory": dict_row,
+            "options": "-c search_path=langgraph",
+        },
+    )
+    await pool.open()
+    saver = AsyncPostgresSaver(pool)
+    await saver.setup()
+    graph = build_graph(saver)
+    return TurnHost(graph=graph, pool=pool, llm=llm)
+
+
+async def close_host(host: TurnHost) -> None:
+    """Cancel any turn tasks still running, await them, then close the pool
+    (D16). Cancellation is expected to raise `CancelledError` back into each
+    task; that is the shutdown path working, not a failure to report.
+    """
+    for task in list(host.tasks):
+        task.cancel()
+    for task in list(host.tasks):
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+    await host.pool.close()

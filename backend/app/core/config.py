@@ -9,6 +9,7 @@ boot before secrets exist.
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -34,6 +35,17 @@ class Settings(BaseSettings):
     llm_provider: str = "anthropic"
     anthropic_api_key: str = ""
     demo_otp_code: str = ""  # ADR-008; never committed, shared with judges by email
+
+    app_env: Literal["dev", "eval", "prod"] = "dev"
+    bank: Literal["fake", "postgres"] = "postgres"
+    # Empty here is not a real credential (see module docstring): the refusal
+    # on an empty secret happens at app start, not in this model (D21).
+    jwt_secret: str = ""
+    identity_hmac_key: str = ""
+    credentials_seed: str = ""
+    session_ttl_minutes: int = 60
+    login_max_failures: int = 5
+    login_window_seconds: int = 900
 
 
 @lru_cache
