@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { HealthApiV1HealthGetData, HealthApiV1HealthGetResponses } from './types.gen';
+import type { CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -24,3 +24,81 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  * `200` when DB and Redis are both up, `503` otherwise (D15).
  */
 export const healthApiV1HealthGet = <ThrowOnError extends boolean = false>(options?: Options<HealthApiV1HealthGetData, ThrowOnError>): RequestResult<HealthApiV1HealthGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<HealthApiV1HealthGetResponses, unknown, ThrowOnError>({ url: '/api/v1/health', ...options });
+
+/**
+ * Login
+ *
+ * Verify the document + password, issue a session and CSRF cookie pair,
+ * and return the same body `GET /auth/me` would (D6, D9).
+ */
+export const loginApiV1AuthLoginPost = <ThrowOnError extends boolean = false>(options: Options<LoginApiV1AuthLoginPostData, ThrowOnError>): RequestResult<LoginApiV1AuthLoginPostResponses, LoginApiV1AuthLoginPostErrors, ThrowOnError> => (options.client ?? client).post<LoginApiV1AuthLoginPostResponses, LoginApiV1AuthLoginPostErrors, ThrowOnError>({
+    url: '/api/v1/auth/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Refresh
+ *
+ * Re-issue the session and CSRF cookies for a still-valid, unrevoked
+ * session (D6). No role dependency: the cookie + CSRF pair is the proof,
+ * same as the spec's "public (needs a valid cookie + CSRF)".
+ */
+export const refreshApiV1AuthRefreshPost = <ThrowOnError extends boolean = false>(options?: Options<RefreshApiV1AuthRefreshPostData, ThrowOnError>): RequestResult<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/refresh', ...options });
+
+/**
+ * Logout
+ *
+ * Revoke the caller's `jti` and clear both cookies (D6).
+ */
+export const logoutApiV1AuthLogoutPost = <ThrowOnError extends boolean = false>(options?: Options<LogoutApiV1AuthLogoutPostData, ThrowOnError>): RequestResult<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/logout', ...options });
+
+/**
+ * Me
+ *
+ * The masked profile for the caller's own session (D9).
+ */
+export const meApiV1AuthMeGet = <ThrowOnError extends boolean = false>(options?: Options<MeApiV1AuthMeGetData, ThrowOnError>): RequestResult<MeApiV1AuthMeGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<MeApiV1AuthMeGetResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/me', ...options });
+
+/**
+ * Create Conversation
+ *
+ * Start a new conversation for the caller's own `customer_id` (R1).
+ */
+export const createConversationApiV1ConversationsPost = <ThrowOnError extends boolean = false>(options: Options<CreateConversationApiV1ConversationsPostData, ThrowOnError>): RequestResult<CreateConversationApiV1ConversationsPostResponses, CreateConversationApiV1ConversationsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateConversationApiV1ConversationsPostResponses, CreateConversationApiV1ConversationsPostErrors, ThrowOnError>({
+    url: '/api/v1/conversations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Post Message
+ *
+ * Take the turn lock, persist the customer message and schedule the
+ * turn (D14). `409 turn_in_progress` when another turn already holds the
+ * lock for this conversation.
+ */
+export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
+    url: '/api/v1/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stream Conversation
+ *
+ * Subscribe to the conversation's event channel *before* the response
+ * is returned (D14): a client that posts a message right after opening the
+ * stream never misses that turn's events. Unsubscribes on client
+ * disconnect, same as any other exit from the `async with` block.
+ */
+export const streamConversationApiV1ConversationsConversationIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamConversationApiV1ConversationsConversationIdStreamGetData, ThrowOnError>): RequestResult<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError> => (options.client ?? client).get<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError>({ url: '/api/v1/conversations/{conversation_id}/stream', ...options });
