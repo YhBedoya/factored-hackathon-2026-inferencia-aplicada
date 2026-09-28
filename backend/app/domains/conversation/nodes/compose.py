@@ -17,25 +17,42 @@ to `load_session`'s per-turn reset (Q3) -- through to `compose_reply`.
 import re
 from datetime import date
 from decimal import Decimal
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, ConfigDict
 
 from app.core.llm import LLMClient, LLMError, PromptRef
-from app.domains.conversation.graph import GraphState, TurnOutput
+from app.domains.conversation.graph import GraphState
 from app.domains.conversation.prompts import load_prompt
+from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
 from app.domains.conversation.templates import Language, get_template
-from app.domains.localization import format_date, format_money, kind_label, mask_card, status_label
+from app.domains.localization import (
+    format_date,
+    format_days,
+    format_money,
+    kind_label,
+    mask_card,
+    mxn_estimate,
+    status_label,
+)
+from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 2)
+_PROMPT = PromptRef("compose", 3)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
-Goal = Literal["card_status", "ask_which_card"]
+Goal = Literal["card_status", "ask_which_card", "balance_due", "credit_only_offer"]
 Country = Literal["MX", "CO", "AR"]
+
+# Facts a flow writes for code's own use (formatting, footnotes) but that
+# `compose`'s draft never offers as a `{placeholder}` (D19, this card's B1):
+# `currency` only picks a money format; `fx_rate`/`fx_as_of` only feed the
+# MXN-estimate suffix; `read_only_note` is always its own fixed template,
+# appended after the draft, never woven into it by the LLM.
+_HIDDEN_KEYS = frozenset({"currency", "fx_rate", "fx_as_of", "read_only_note"})
 
 
 class ComposeDraft(BaseModel):
@@ -51,12 +68,11 @@ async def compose_reply(
 ) -> str:
     """Write one short reply from `facts` for `goal`, in `language` (D10).
 
-    Only fact keys (never values) reach the LLM. `currency` is never offered
-    as a placeholder -- it is only used in code to format `credit_limit`/
-    `available_credit`.
+    Only fact keys (never values) reach the LLM. `_HIDDEN_KEYS` are never
+    offered as placeholders -- they only drive formatting in code.
     """
     facts_by_key = {fact.key: fact for fact in facts}
-    offered_keys = [key for key in facts_by_key if key != "currency"]
+    offered_keys = [key for key in facts_by_key if key not in _HIDDEN_KEYS]
 
     system = load_prompt(_PROMPT)
     user = _build_user_message(language=language, goal=goal, offered_keys=offered_keys)
@@ -114,33 +130,91 @@ def _format_fact(
     if key == "status":
         status = cast(Literal["Active", "Blocked", "Suspended", "Closed"], value)
         return status_label(status, language)
-    if key == "expiry":
+    if key in ("expiry", "due_date"):
         return format_date(cast(date, value))
-    if key in ("credit_limit", "available_credit"):
-        currency_fact = facts_by_key.get("currency")
-        currency = str(currency_fact.value) if currency_fact is not None else ""
-        return format_money(cast(Decimal, value), currency, country)
+    if key == "payment_overdue":
+        return format_days(cast(int, value), language)
+    if key in ("credit_limit", "available_credit", "current_balance", "min_payment"):
+        return _money_fact(cast(Decimal, value), facts_by_key, language=language, country=country)
     if key in ("card_options", "customer_name"):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")
 
 
-async def compose(state: GraphState, config: RunnableConfig) -> TurnOutput:
+def _money_fact(
+    value: Decimal, facts_by_key: dict[str, Fact], *, language: Language, country: Country
+) -> str:
+    """Format one money fact, then append the MXN estimate (D18) when this
+    turn's facts carry `fx_rate`/`fx_as_of` (an MX card billed in USD).
+    """
+    currency_fact = facts_by_key.get("currency")
+    currency = str(currency_fact.value) if currency_fact is not None else ""
+    text = format_money(value, currency, country)
+    fx_rate_fact = facts_by_key.get("fx_rate")
+    fx_as_of_fact = facts_by_key.get("fx_as_of")
+    if fx_rate_fact is not None and fx_as_of_fact is not None:
+        fx = FxRate(
+            source="USD",
+            target="MXN",
+            rate=cast(Decimal, fx_rate_fact.value),
+            as_of=cast(date, fx_as_of_fact.value),
+        )
+        text += " " + mxn_estimate(value, fx, language)
+    return text
+
+
+def _current_intent(state: GraphState) -> Intent:
+    """The intent this turn's flow node just answered (D20's queue head,
+    same convention `flows/card_info.py` reads it by): the head of
+    `intent_queue` is still this turn's intent, `next_intent` only pops it
+    once this segment is done. An empty queue (a lone `card_status` never
+    queued at all) falls back to `card_status`, same as the flow's own
+    default.
+    """
+    queue = state.get("intent_queue") or []
+    return queue[0] if queue else "card_status"
+
+
+async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Graph wrapper around `compose_reply`: picks the goal, then fills the reply.
 
     The goal is `ask_which_card` while a flow is waiting on the `card_hint`
-    slot (`state["pending"]`), else `card_status` (D8, D12). `facts` are read
-    straight off `state` -- the per-turn reset in `load_session` (Q3) is what
-    makes that safe to pass through unfiltered. When the profile has a first
-    name, it is offered as one more fact, `customer_name`: the LLM sees only
-    the key and decides whether addressing the customer by name sounds
-    natural (`docs/brand.md`); the value is filled in here, in code (R5).
+    slot (`state["pending"]`); otherwise it follows this turn's intent and
+    the selected card's kind (D19, this card's B1): `credit_only_offer` for
+    a debit card on `balance_due` (the card's own `credit_only` segment
+    already covered the money side, `flows/card_info.py`), `balance_due` for
+    a credit card on `balance_due`, else `card_status` (D8, D12). `facts`
+    are read straight off `state` -- the per-turn reset in `load_session`
+    (Q3) is what makes that safe to pass through unfiltered. When the
+    profile has a first name, it is offered as one more fact,
+    `customer_name`: the LLM sees only the key and decides whether
+    addressing the customer by name sounds natural (`docs/brand.md`); the
+    value is filled in here, in code (R5).
+
+    After the filled draft, `synthetic_footnote` is appended when this
+    turn's facts carry `min_payment` (D5), and `read_only_note` when they
+    carry that fact (D10/ADR-021) -- both fixed templates, never woven into
+    the LLM's own draft. The filled text and any footnote are appended to
+    `segments` (B3), never set as `reply` directly: `finish` is the only
+    node that joins this turn's segments into the one reply the caller
+    reads.
     """
     llm: LLMClient = config["configurable"]["llm"]
     pending = state.get("pending")
     awaits_card_hint = pending is not None and pending["awaiting_slot"] == "card_hint"
-    goal: Goal = "ask_which_card" if awaits_card_hint else "card_status"
     facts = list(state.get("facts", []))
+    facts_by_key = {fact.key: fact for fact in facts}
+
+    goal: Goal
+    if awaits_card_hint:
+        goal = "ask_which_card"
+    elif _current_intent(state) == "balance_due":
+        card_kind = facts_by_key.get("card_kind")
+        is_debit = card_kind is not None and card_kind.value == "debit"
+        goal = "credit_only_offer" if is_debit else "balance_due"
+    else:
+        goal = "card_status"
+
     customer_name = state.get("customer_name")
     if customer_name:
         facts.append(Fact(key="customer_name", value=customer_name, source="customers.get_profile"))
@@ -151,4 +225,10 @@ async def compose(state: GraphState, config: RunnableConfig) -> TurnOutput:
         goal=goal,
         facts=facts,
     )
-    return {"reply": text}
+    segments = [text]
+    language = state["language"]
+    if "min_payment" in facts_by_key:
+        segments.append(get_template("synthetic_footnote", language))
+    if "read_only_note" in facts_by_key:
+        segments.append(get_template("read_only_note", language))
+    return {"segments": segments}

@@ -27,8 +27,9 @@ code path (same `ToolContext`, `_RecordingBankTools`, `build_graph`/
 import argparse
 import asyncio
 import sys
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 import structlog
@@ -36,12 +37,29 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
+from app.core.actions import ActionResult
+from app.core.config import get_settings
 from app.core.llm import LLMClient, get_llm_client
-from app.domains.cards.schemas import CardDetails, CardSummary
-from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph, run_turn
+from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
+from app.domains.conversation.graph import (
+    ConfirmationDecision,
+    GraphState,
+    TurnInput,
+    TurnOutput,
+    build_graph,
+    run_turn,
+)
+from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import BankReadTools, ToolContext
-from app.domains.conversation.tools.fakebank import FakeBank
+from app.domains.conversation.tools.executor import ConfirmedWriteTools
+from app.domains.conversation.tools.fakebank import make_fakebank_factory
+from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.identity.step_up_fake import FakeStepUpGate
+from app.domains.localization.schemas import FxRate
+from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
+from app.domains.policy.tools_policy import load_tools_policy, step_up_rule
+from app.domains.safety.vault import InMemoryAddressVault
 from app.domains.transactions.schemas import TxFilter, TxView
 
 __all__ = ["build_sandbox_session", "main"]
@@ -76,6 +94,42 @@ class _RecordingBankTools:
         self.calls.append("search_transactions")
         return await self._inner.search_transactions(tx_filter)
 
+    async def get_fx_rate(self, source: str, target: str) -> FxRate:
+        self.calls.append("get_fx_rate")
+        return await self._inner.get_fx_rate(source, target)
+
+
+class _RecordingWriteTools:
+    """Records every raw `BankWriteTools` method name this turn (T13), onto
+    the *same* `.calls` list `_RecordingBankTools` fills: the debug line's
+    `tools=[...]` already reads that one list off `bank_tools` (`run_turn`),
+    so a write call shows up there too without `run_turn` itself changing.
+    """
+
+    def __init__(self, inner: BankWriteTools, calls: list[str]) -> None:
+        self._inner = inner
+        self._calls = calls
+
+    async def get_block_origin(self, card_id: str) -> BlockOrigin:
+        self._calls.append("get_block_origin")
+        return await self._inner.get_block_origin(card_id)
+
+    async def lock_card(self, card_id: str) -> ActionResult:
+        self._calls.append("lock_card")
+        return await self._inner.lock_card(card_id)
+
+    async def unlock_card(self, card_id: str) -> ActionResult:
+        self._calls.append("unlock_card")
+        return await self._inner.unlock_card(card_id)
+
+    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+        self._calls.append("block_card")
+        return await self._inner.block_card(card_id, reason)
+
+    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+        self._calls.append("order_replacement")
+        return await self._inner.order_replacement(card_id, address_ref)
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Terminal sandbox for the v0 turn graph.")
@@ -84,21 +138,37 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def build_sandbox_session(
-    customer_id: str, data_dir: Path
-) -> tuple[
-    CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput],
-    RunnableConfig,
-    _RecordingBankTools,
-]:
-    """Build one sandbox session: the compiled graph, its per-turn `config`
-    and the recording bank tools (T14). Shared by `_run_session` (the CLI
-    loop below) and `scripts/sandbox_ui.py`'s Streamlit page, so both drive
-    turns through the exact same session, not two copies of this wiring.
+@dataclass
+class _SandboxSession:
+    """One sandbox session's built pieces (T13): the compiled graph, its
+    per-turn `config`, the recording read tools (whose `.calls` list the
+    write side shares too, D9's debug line) and the fake step-up gate the
+    CLI's `/otp` command drives directly, outside the graph (D1)."""
+
+    graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
+    config: RunnableConfig
+    bank_tools: _RecordingBankTools
+    gate: FakeStepUpGate
+
+
+def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
+    """Build one sandbox session: the compiled graph, its per-turn `config`,
+    the recording bank tools and the fake step-up gate (T13, T14). Shared by
+    `_run_session` (the CLI loop below) and `scripts/sandbox_ui.py`'s
+    Streamlit page (through `build_sandbox_session`), so both drive turns
+    through the exact same session, not two copies of this wiring.
 
     A fresh call always starts a fresh conversation: new `trace_id`/
     `conversation_id`, a new `MemorySaver` (so no checkpoint from an earlier
     session leaks in), and a `thread_id` derived from that `conversation_id`.
+
+    `bank_write_tools` (D2-K's `ConfirmedWriteTools`) wraps a
+    `_RecordingWriteTools` sharing the read side's `bank_tools.calls` list
+    (T13), over one `FakeBankWrites`/`FakeBank` pair from `make_fakebank_factory`
+    so a write this session makes is visible to its own reads (D7), same as
+    `tests/conftest.py`'s `make_session`. `policies/tools.yaml`'s step-up
+    rule and `Settings.demo_otp_code` (never committed, R8/ADR-008) are the
+    same sources every write-flow test loads.
     """
     trace_id = str(uuid4())
     conversation_id = uuid4()
@@ -111,7 +181,16 @@ def build_sandbox_session(
         policy_version="unversioned",
         trace_id=trace_id,
     )
-    bank_tools = _RecordingBankTools(FakeBank(session, data_dir))
+    read_factory, write_factory = make_fakebank_factory(data_dir)
+    bank_tools = _RecordingBankTools(read_factory(session))
+    write_tools = _RecordingWriteTools(write_factory(session), bank_tools.calls)
+
+    gate = FakeStepUpGate(get_settings().demo_otp_code)
+    store = InMemoryConfirmationStore(customer_id, str(conversation_id))
+    bank_write_tools = ConfirmedWriteTools(
+        write_tools, store, gate, step_up_rule(load_tools_policy())
+    )
+
     llm: LLMClient = get_llm_client()
     graph = build_graph(MemorySaver())
     config: RunnableConfig = {
@@ -119,27 +198,82 @@ def build_sandbox_session(
             "thread_id": str(conversation_id),
             "session": session,
             "bank_tools": bank_tools,
+            "bank_write_tools": bank_write_tools,
+            "vault": InMemoryAddressVault(),
             "llm": llm,
         }
     }
-    return graph, config, bank_tools
+    return _SandboxSession(graph=graph, config=config, bank_tools=bank_tools, gate=gate)
+
+
+def build_sandbox_session(
+    customer_id: str, data_dir: Path
+) -> tuple[
+    CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput],
+    RunnableConfig,
+    _RecordingBankTools,
+]:
+    """The Streamlit page's entry point (T14): same session `_build_session`
+    builds, minus the `gate` handle only the CLI's `/otp` command needs.
+    Signature and 3-tuple return are unchanged (`scripts/sandbox_ui.py`
+    depends on both).
+    """
+    session = _build_session(customer_id, data_dir)
+    return session.graph, session.config, session.bank_tools
 
 
 async def _run_session(customer_id: str, data_dir: Path) -> None:
-    """Build the session, then drive one turn per stdin line (D9)."""
-    graph, config, bank_tools = build_sandbox_session(customer_id, data_dir)
+    """Build the session, then drive one turn per stdin line (D9, D14, T13).
+
+    `/confirm` and `/cancel` are the button-resume equivalents (D14): the
+    token is read off the checkpointed `pending`'s owner,
+    `confirmation_token_id`, never typed by the customer. `/otp <code>`
+    drives the fake gate directly (D1), the same way the app's
+    `POST /auth/otp/verify` would outside the graph: on a match it resumes
+    the turn with `resume="step_up"`; on a mismatch nothing runs, and the
+    `otp_required` template repeats so the customer knows to retry. Every
+    other line is a fresh typed turn, with `confirmation`/`resume` passed
+    explicitly as `None` (`04` §3, D2-K D17).
+    """
+    session = _build_session(customer_id, data_dir)
+    graph, config, bank_tools, gate = (
+        session.graph,
+        session.config,
+        session.bank_tools,
+        session.gate,
+    )
 
     for line in sys.stdin:
         text = line.rstrip("\n")
         if not text:
             continue
         bank_tools.calls.clear()
-        reply, debug = await run_turn(graph, text, config=config)
+
+        if text in ("/confirm", "/cancel"):
+            state = await graph.aget_state(config)
+            token_id = state.values.get("confirmation_token_id") or ""
+            decision: Literal["confirm", "cancel"] = "confirm" if text == "/confirm" else "cancel"
+            confirmation = ConfirmationDecision(token_id=token_id, decision=decision)
+            reply, debug = await run_turn(graph, "", config=config, confirmation=confirmation)
+        elif text.startswith("/otp "):
+            code = text.removeprefix("/otp ").strip()
+            if not gate.verify(code):
+                state = await graph.aget_state(config)
+                language = state.values.get("language", "es")
+                print(get_template("otp_required", language))
+                continue
+            reply, debug = await run_turn(graph, "", config=config, resume="step_up")
+        else:
+            reply, debug = await run_turn(
+                graph, text, config=config, confirmation=None, resume=None
+            )
+
         print(reply)
         print(
             f"debug language={debug.language} status={debug.status} "
             f"intents={debug.intents} slots={debug.slots.model_dump(exclude_none=True)} "
-            f"route={debug.route} tools={debug.tools_called}"
+            f"route={debug.route} tools={debug.tools_called} "
+            f"pending={debug.pending} ui={debug.ui}"
         )
 
 

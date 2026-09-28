@@ -1,12 +1,12 @@
-"""The `card_status` intent's flow node: select a card, then read its facts (D8, D13).
+"""The `card_status`/`balance_due` intents' flow node (D8, D10, D13, this card's B1).
 
-`card_info` is the graph node `route` sends `card_status` turns (fresh or a
-pending `card_hint` clarification) to. It reads `config["configurable"]
-["bank_tools"]` -- the session's own bound `BankReadTools`, never a
-`customer_id` argument (R1) -- and drives `select_card` (`flows/card_select`)
-over `list_cards()`'s result:
+`card_info` is the graph node `route`/`_dispatch` sends both `card_status` and
+`balance_due` turns to (`graph.py`'s `_INTENT_NODES`). It reads
+`config["configurable"]["bank_tools"]` -- the session's own bound
+`BankReadTools`, never a `customer_id` argument (R1) -- and drives
+`select_card` (`flows/card_select`) over `list_cards()`'s result:
 
-* `Selected` -- `get_card_details` for that one card, then D13's facts
+* `Selected` -- `get_card_details` for that one card, then this turn's facts
   (values only; `compose`/`app.domains.localization` do all the formatting,
   R4). Clears `pending` and resets `clarification_failures` (a finished
   clarification shouldn't count against the next one; D12 says nothing to
@@ -25,13 +25,26 @@ over `list_cards()`'s result:
   shouldn't discard a clarification in progress. `route`/`compose` never run
   for any of these three; `fallback` (the node) picks the reply template
   (D15).
+
+`balance_due`'s current-card resolution has one extra wrinkle (B3's queue,
+`02` §3): a turn that reaches `card_info` through `next_intent` (a queued
+`balance_due` riding behind, say, a just-answered `card_block`) carries no
+fresh `nlu` at all -- `understand` never ran that turn (a button confirm or
+an OTP resume skips it, D1/D14). There is then no `card_hint` to resolve
+from, so this node reuses `state["selected_card_id"]` (set by whichever
+flow -- `card_info` itself or `card_block` -- already resolved a card
+earlier in the same conversation) instead of re-running `select_card` with
+no hint, which would otherwise re-ask "which card?" on every multi-card
+customer's queued `balance_due`. A turn with a fresh `nlu` always goes
+through the normal `select_card` resolution, unaffected.
 """
 
-from typing import Any
+from decimal import Decimal
+from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
 
-from app.core.errors import ToolUnavailable
+from app.core.errors import NotFound, ToolUnavailable
 from app.domains.cards.schemas import CardDetails
 from app.domains.conversation.flows.card_select import (
     Ask,
@@ -41,66 +54,125 @@ from app.domains.conversation.flows.card_select import (
     select_card,
 )
 from app.domains.conversation.graph import GraphState
+from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
+from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import BankReadTools
+from app.domains.localization import local_today
+from app.domains.policy.escalation import load_escalation_policy
+from app.domains.policy.min_payment import load_min_payment_policy, min_payment, next_due_date
 
 __all__ = ["card_info"]
 
 _CARD_OPTIONS_SOURCE = "conversation.card_select"
+_MIN_PAYMENT_SOURCE = "policy:min_payment@v1"
+_FX_SOURCE = "reference.get_fx_rate"
+_PROFILE_SOURCE = "customers.get_profile"
+
+
+def _current_intent(state: GraphState) -> Intent:
+    """The intent this turn's `card_info` run answers (D20's queue head)."""
+    queue = state.get("intent_queue") or []
+    return queue[0] if queue else "card_status"
 
 
 async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-    """Resolve which card, then read its status facts (D8, D12, D13)."""
+    """Resolve which card, then read its status/balance facts (D8, D12, D13, B1)."""
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]
     nlu = state.get("nlu")
     hint = nlu.slots.card_hint if nlu is not None else None
     failures = state.get("clarification_failures", 0)
+    intent = _current_intent(state)
+
+    # A queued `balance_due` reached with no fresh `nlu` this turn (see the
+    # module docstring): reuse the card an earlier flow node already
+    # resolved this conversation instead of re-asking with no hint.
+    reused_card_id = state.get("selected_card_id") if nlu is None else None
+
+    if reused_card_id is not None:
+        card_id = reused_card_id
+    else:
+        try:
+            cards = await bank_tools.list_cards()
+        except ToolUnavailable:
+            return {"escalation_reason": "tool_unavailable"}
+
+        policy = load_card_select_policy()
+        outcome = select_card(cards, hint, failures, policy, state["language"])
+
+        if isinstance(outcome, Ask):
+            return {
+                "pending": {
+                    "flow": "card_info",
+                    "node": "card_select",
+                    "awaiting_slot": "card_hint",
+                },
+                "clarification_failures": outcome.failures,
+                "facts": [
+                    Fact(
+                        key="card_options", value=outcome.card_options, source=_CARD_OPTIONS_SOURCE
+                    )
+                ],
+            }
+        if isinstance(outcome, NoCards):
+            return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
+        if not isinstance(outcome, Selected):
+            # The remaining outcome is `Fallback`: clarification exhausted
+            # (D12, D15). Clear `pending`/`clarification_failures` too, or the
+            # next turn starts already at the limit and falls back forever
+            # regardless of its hint (orchestrator repair round 1).
+            # `tool_unavailable` above is left alone: a transient tool error
+            # shouldn't discard a clarification in progress.
+            return {
+                "escalation_reason": "clarification_exhausted",
+                "pending": None,
+                "clarification_failures": 0,
+            }
+        card_id = outcome.card_id
 
     try:
-        cards = await bank_tools.list_cards()
+        details = await bank_tools.get_card_details(card_id)
     except ToolUnavailable:
         return {"escalation_reason": "tool_unavailable"}
 
-    policy = load_card_select_policy()
-    outcome = select_card(cards, hint, failures, policy, state["language"])
-
-    if isinstance(outcome, Selected):
-        try:
-            details = await bank_tools.get_card_details(outcome.card_id)
-        except ToolUnavailable:
-            return {"escalation_reason": "tool_unavailable"}
-        return {
-            "selected_card_id": outcome.card_id,
-            "pending": None,
-            "clarification_failures": 0,
-            "facts": _card_facts(details),
-        }
-
-    if isinstance(outcome, Ask):
-        return {
-            "pending": {"flow": "card_info", "node": "card_select", "awaiting_slot": "card_hint"},
-            "clarification_failures": outcome.failures,
-            "facts": [
-                Fact(key="card_options", value=outcome.card_options, source=_CARD_OPTIONS_SOURCE)
-            ],
-        }
-
-    if isinstance(outcome, NoCards):
-        return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
-
-    # The remaining outcome is `Fallback`: clarification exhausted (D12, D15).
-    # Clear `pending`/`clarification_failures` too, or the next turn starts
-    # already at the limit and falls back forever regardless of its hint
-    # (orchestrator repair round 1). `tool_unavailable` above is left alone:
-    # a transient tool error shouldn't discard a clarification in progress.
-    return {
-        "escalation_reason": "clarification_exhausted",
+    facts, segments = await _facts_and_segments(intent, details, bank_tools, state)
+    update: dict[str, Any] = {
+        "selected_card_id": card_id,
         "pending": None,
         "clarification_failures": 0,
+        "facts": facts,
     }
+    if segments:
+        update["segments"] = segments
+    return update
 
 
-def _card_facts(details: CardDetails) -> list[Fact]:
+async def _facts_and_segments(
+    intent: Intent, details: CardDetails, bank_tools: BankReadTools, state: GraphState
+) -> tuple[list[Fact], list[str]]:
+    """This turn's facts, plus any fixed-template segment `card_info` itself
+    writes (only `credit_only`, ADR-020) -- everything else the reply needs
+    goes through `compose` instead (R4, R6).
+    """
+    segments: list[str] = []
+    if intent == "balance_due" and details.kind == "credit":
+        facts = await _credit_balance_facts(details, bank_tools, country=state["country"])
+    else:
+        facts = _card_status_facts(details)
+        if intent == "balance_due":
+            # Debit on `balance_due` (ADR-020): the fixed `credit_only`
+            # template, then whatever `card_status`-style facts we can still
+            # show (mask, kind, status, expiry -- no money fact for a debit
+            # card in the first place).
+            segments = [get_template("credit_only", state["language"])]
+
+    read_only = await _read_only_note_fact(bank_tools)
+    if read_only is not None:
+        facts = [*facts, read_only]
+    return facts, segments
+
+
+def _card_status_facts(details: CardDetails) -> list[Fact]:
     """D13's facts for one card: mask, kind, status, expiry, plus credit-only
     money facts (limit, available credit, currency) when `details.kind ==
     "credit"`. Every fact's `source` is `CardDetails.source` (`04` §1). Raw
@@ -128,3 +200,61 @@ def _card_facts(details: CardDetails) -> list[Fact]:
         for key, value in candidates
         if value is not None
     ]
+
+
+async def _credit_balance_facts(
+    details: CardDetails, bank_tools: BankReadTools, *, country: Literal["MX", "CO", "AR"]
+) -> list[Fact]:
+    """`balance_due` on a credit card (D5, D18, this card's B1).
+
+    The minimum payment and due date are synthetic policy, not a bank
+    figure (D5, `synthetic_footnote`), so they carry `_MIN_PAYMENT_SOURCE`
+    rather than `details.source`. `payment_overdue` is a separate fact --
+    there is no overdue term in the formula itself. The MXN estimate (D18)
+    only applies to an MX card billed in USD; `NotFound` on the FX pair
+    means no estimate this turn, not an error (D3).
+    """
+    policy = load_min_payment_policy()
+    balance = details.current_balance if details.current_balance is not None else Decimal("0")
+    due_date = next_due_date(local_today(country), policy)
+    min_pay = min_payment(balance, details.currency, policy)
+
+    candidates: list[tuple[str, Any, str]] = [
+        ("current_balance", details.current_balance, details.source),
+        ("due_date", due_date, _MIN_PAYMENT_SOURCE),
+        ("min_payment", min_pay, _MIN_PAYMENT_SOURCE),
+        ("available_credit", details.available_credit, details.source),
+        ("currency", details.currency, details.source),
+    ]
+    facts = [
+        Fact(key=key, value=value, source=source)
+        for key, value, source in candidates
+        if value is not None
+    ]
+
+    if details.days_past_due is not None and details.days_past_due > 0:
+        facts.append(
+            Fact(key="payment_overdue", value=details.days_past_due, source=details.source)
+        )
+
+    if country == "MX" and details.currency == "USD":
+        try:
+            fx = await bank_tools.get_fx_rate("USD", "MXN")
+        except NotFound:
+            fx = None
+        if fx is not None:
+            facts.append(Fact(key="fx_rate", value=fx.rate, source=_FX_SOURCE))
+            facts.append(Fact(key="fx_as_of", value=fx.as_of, source=_FX_SOURCE))
+
+    return facts
+
+
+async def _read_only_note_fact(bank_tools: BankReadTools) -> Fact | None:
+    """D10/ADR-021: a customer who isn't Active gets a `read_only_note` fact
+    naming their status, on either `card_status` or `balance_due`.
+    """
+    profile = await bank_tools.get_profile()
+    policy = load_escalation_policy()
+    if profile.customer_status in policy.customer_not_active.statuses:
+        return Fact(key="read_only_note", value=profile.customer_status, source=_PROFILE_SOURCE)
+    return None

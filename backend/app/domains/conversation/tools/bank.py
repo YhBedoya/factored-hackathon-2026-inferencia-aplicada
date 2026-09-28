@@ -12,6 +12,7 @@ from typing import Protocol
 from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.localization.schemas import FxRate
 from app.domains.transactions.schemas import TxFilter, TxView
 
 __all__ = ["BankReadTools", "BankToolsFactory"]
@@ -37,6 +38,10 @@ class BankReadTools(Protocol):
     async def search_transactions(self, tx_filter: TxFilter) -> list[TxView]:
         # Registry name: transactions.search. May raise: AccessDenied (tx_filter.card_id
         # not the customer's), ToolUnavailable.
+        ...
+
+    async def get_fx_rate(self, source: str, target: str) -> FxRate:
+        # Registry name: reference.get_fx_rate. May raise: NotFound, ToolUnavailable.
         ...
 
 

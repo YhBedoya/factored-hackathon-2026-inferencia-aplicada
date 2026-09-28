@@ -5,19 +5,39 @@ of canned outputs (or exceptions) that tests script ahead of time, and a
 `calls` list recording exactly what each `structured()` call was asked --
 `step`, `prompt`, `system`, `user` and `schema` -- so a test can assert what
 did (and did not) reach the "model".
+
+`make_session` (T10) is the write-flow test harness: it wires the same six
+objects `card_block.py` (and every later confirmed-write flow) needs --
+`FakeBank`/`FakeBankWrites` over a fresh `FakeBankOverlay`, `ConfirmedWriteTools`
+over an `InMemoryConfirmationStore` and a `FakeStepUpGate`, `InMemoryAddressVault`
+-- once, so a flow test doesn't hand-roll that wiring itself.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 import pytest
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel
 
 from app.core.llm import LLMError, PromptRef, Step
+from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
+from app.domains.conversation.tools.context import ToolContext
+from app.domains.conversation.tools.executor import ConfirmedWriteTools
+from app.domains.conversation.tools.fakebank import FakeBank, FakeBankOverlay, FakeBankWrites
+from app.domains.conversation.tools.write import BankWriteTools
+from app.domains.identity.step_up_fake import FakeStepUpGate
+from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
+from app.domains.policy.tools_policy import load_tools_policy, step_up_rule
+from app.domains.safety.vault import InMemoryAddressVault
 
-__all__ = ["Call", "ScriptedLLM"]
+__all__ = ["Call", "ScriptedLLM", "Session", "make_session"]
 
 
 @dataclass(frozen=True)
@@ -72,3 +92,63 @@ def scripted_llm() -> type[ScriptedLLM]:
 def fakebank_dir() -> Path:
     """The fabricated TEST FIXTURE data directory (T5), never `data/`."""
     return Path(__file__).resolve().parent / "fixtures" / "fakebank"
+
+
+@dataclass
+class Session:
+    """One write-flow test session (T10): the compiled graph, its `config`,
+    and the pieces a test pokes at directly (`gate.verify`, `store`'s raw
+    plans, `overlay`'s locked/blocked sets)."""
+
+    graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
+    config: RunnableConfig
+    gate: FakeStepUpGate
+    store: InMemoryConfirmationStore
+    overlay: FakeBankOverlay
+
+
+def make_session(
+    customer_id: str,
+    fakebank_dir: Path,
+    llm: ScriptedLLM,
+    *,
+    otp_code: str = "0000",
+    raw_writes: BankWriteTools | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> Session:
+    """Build one write-flow session over the test fixture (T10).
+
+    `raw_writes` lets a test swap in a stub (R3's unverified write) instead
+    of the real `FakeBankWrites`; either way the read side (`bank_tools`)
+    shares one `FakeBankOverlay` with it, so a write this session made is
+    visible to its own reads (D7), same as `make_fakebank_factory`.
+    """
+    conversation_id = uuid4()
+    ctx = ToolContext(
+        customer_id=customer_id,
+        conversation_id=conversation_id,
+        actor="customer",
+        policy_version="unversioned",
+        trace_id="test-trace",
+    )
+    overlay = FakeBankOverlay()
+    bank_tools = FakeBank(ctx, fakebank_dir, overlay)
+    raw = raw_writes if raw_writes is not None else FakeBankWrites(ctx, fakebank_dir, overlay)
+    store = InMemoryConfirmationStore(
+        customer_id, str(conversation_id), **({} if clock is None else {"clock": clock})
+    )
+    gate = FakeStepUpGate(otp_code)
+    write_tools = ConfirmedWriteTools(raw, store, gate, step_up_rule(load_tools_policy()))
+
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": str(conversation_id),
+            "session": ctx,
+            "bank_tools": bank_tools,
+            "bank_write_tools": write_tools,
+            "vault": InMemoryAddressVault(),
+            "llm": llm,
+        }
+    }
+    graph = build_graph(MemorySaver())
+    return Session(graph=graph, config=config, gate=gate, store=store, overlay=overlay)

@@ -3,29 +3,63 @@
 `TurnInput`/`TurnOutput` are this graph's own channels, not part of the K3
 `TurnState` contract (`docs/plans/d1-b-agent-sandbox.md` Q2): `user_text` is
 what the sandbox writes in before a turn runs, `reply` is what it reads out
-once `compose`/`unsupported`/`fallback` runs. `GraphState` is `TurnState` plus
-both, with `user_text`/`reply` re-declared `NotRequired` here (they are
-required in their own `TypedDict`s) so a node's partial-update return dict
-never has to restate keys it did not touch.
+once `finish` runs. `GraphState` is `TurnState` plus both, with
+`user_text`/`reply` re-declared `NotRequired` here (they are required in
+their own `TypedDict`s) so a node's partial-update return dict never has to
+restate keys it did not touch.
 
-`build_graph` wires `load_session -> understand -> route` (conditional to
-`card_info`/`unsupported`/`fallback`), then `card_info -> compose` or
-`-> fallback` when it set `escalation_reason`, with `compose`/`unsupported`/
-`fallback` all terminal (D8). The node modules import `GraphState`/
-`TurnInput`/`TurnOutput` from here, so `build_graph` imports them itself,
-inside its own body, rather than at module level -- importing them at the top
-would be a cycle.
+B3 (this card) turns the old three-terminal-node shape into a real turn
+loop, so one turn can answer several queued intents in one reply:
+
+* `segments` is a graph-local channel (not checkpointed `TurnState`, same as
+  `ui`): every reply-writing node appends its filled template to it instead
+  of setting `reply` directly. `RESET_SEGMENTS` (`state.py`'s `_SegmentsReset`
+  marker, same pattern as `RESET_FACTS`) is what `load_session` writes every
+  turn so a later `finish` never sees a stale segment from an earlier one.
+  Its reducer lives in `state.py`, not here, even though `segments` itself is
+  declared below: `graph.py` also runs as `__main__` for the mermaid CLI
+  (D19), and a reducer defined in a module that gets loaded twice under two
+  identities would make `GraphState`'s "segments" channel compare unequal to
+  itself the moment a node module imports `GraphState` by its normal package
+  path (`StateGraph.add_node` then raises "already exists with a different
+  type"). `state.py` is never run as `__main__`, so it stays the one safe
+  place for a reducer any node module and this file's own `__main__` run
+  both need to agree on.
+* `resume` is the button/step-up counterpart to `TurnInput.confirmation`:
+  `"step_up"` means the customer just completed OTP outside the graph and
+  this turn should try to resume whatever was waiting on it.
+* `_entry` (after `load_session`), `route` (after `understand`), `enqueue`,
+  `_dispatch`, `_after_flow` and `_after_segment` are this turn's routing
+  decisions (`docs/plans/d2-b-card-info-block.md` §"Graph shape"). `route`
+  itself lives in `nodes/route.py`; the rest stay here, next to the mapping
+  tables they read (`_INTENT_NODES`, `_FLOW_NODES`), because those tables
+  are this graph's shape, not one node's private detail. Flow tasks add
+  their own node to both tables (and to `_BRANCH_NODES`) without touching
+  this routing logic again.
+* `enqueue` and `next_intent` (`nodes/next_intent.py`) turn this turn's
+  intents into a queue and walk it one flow at a time, resetting `facts`
+  between two different intents' turns at the wheel (Q3) so `compose`
+  never blends one intent's facts into another's segment.
+* `finish` joins `segments` into the single `reply` output channel and ends
+  the turn (`nodes/next_intent.py`).
+
+`build_graph` imports the node modules inside its own body, rather than at
+module level -- importing them at the top would be a cycle, since every node
+module imports `GraphState`/`TurnInput`/`TurnOutput` from here.
 
 `run_turn` drives one turn end to end and assembles the sandbox's debug line
-(`07` §1): the reply from the `reply` output channel, the route from the node
-names actually seen in the `astream` update sequence (not by calling
-`nodes.route.route` a second time), and `tools_called` from whatever the
-caller's `bank_tools` records on itself (read with `getattr`, so a plain
-`FakeBank` with no such attribute just reports none called).
+(`07` §1): the reply from the `reply` output channel (written only by
+`finish`), the route from the first of `_BRANCH_NODES` seen in the
+`astream` update sequence (never `enqueue`/`next_intent`/`finish`, which are
+plumbing, not a routing decision), `tools_called` from whatever the
+caller's `bank_tools` records on itself, `pending` from the final
+checkpointed state (`graph.aget_state`, since a paused turn's last node may
+not be the one that set `pending`) and `ui` from the last `ui` value any
+node wrote this turn.
 """
 
 import sys
-from typing import Any, Literal, NotRequired, TypedDict
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -35,7 +69,7 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict
 
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
-from app.domains.conversation.state import TurnState
+from app.domains.conversation.state import TurnState, _reduce_segments
 from app.domains.conversation.ui import UIEvent
 
 __all__ = [
@@ -68,11 +102,15 @@ class TurnInput(TypedDict):
     `confirmation` is the button-resume path (D17): every caller passes it
     explicitly (`None` on a typed turn) so a checkpointed value never leaks
     into the next turn, and when it is set the turn skips `understand` (no
-    LLM call; the routing that does the skipping is B5).
+    LLM call; `_entry` is the routing that does the skipping). `resume`
+    (D8, D20) is the same idea for the OTP path: `"step_up"` means step-up
+    just completed outside the graph, and this turn should try to resume
+    whatever paused on it.
     """
 
     user_text: str
     confirmation: NotRequired[ConfirmationDecision | None]
+    resume: NotRequired[Literal["step_up"] | None]
 
 
 class TurnOutput(TypedDict):
@@ -99,12 +137,19 @@ class GraphState(TurnState):
     `StateGraph`); only this internal, per-node state loosens them, so a
     node's partial-update return dict never has to restate a key it did not
     touch.
+
+    `segments` and `resume` are graph-local, not part of the checkpointed
+    `TurnState` contract (B3): a flow's filled reply text and this turn's
+    step-up resume flag are this graph's own bookkeeping, not something a
+    tool, a policy or another domain ever reads.
     """
 
     user_text: NotRequired[str]
     reply: NotRequired[str]
     confirmation: NotRequired[ConfirmationDecision | None]
+    resume: NotRequired[Literal["step_up"] | None]
     ui: NotRequired[list[UIEvent]]
+    segments: NotRequired[Annotated[list[str], _reduce_segments]]
 
 
 class DebugInfo(BaseModel):
@@ -118,30 +163,130 @@ class DebugInfo(BaseModel):
     slots: NLUSlots
     route: str
     tools_called: list[str]
+    pending: str | None
+    ui: list[str]
 
 
-_BRANCH_NODES = ("card_info", "unsupported", "fallback")
+_BRANCH_NODES = (
+    "card_info",
+    "card_block",
+    "card_unlock",
+    "replacement",
+    "unsupported",
+    "fallback",
+    "smalltalk",
+)
+
+_MANAGEMENT_INTENTS: frozenset[Intent] = frozenset({"greeting", "thanks_close", "affirm", "deny"})
+"""Conversation-management intents (`02` §1): they never start or continue a
+flow on their own, so `route` sends a turn made only of these to `smalltalk`,
+and `enqueue` (P1, D20) strips them out of the intent queue.
+"""
+
+_INTENT_NODES: dict[Intent, str] = {
+    "card_status": "card_info",
+    "balance_due": "card_info",
+    "card_block": "card_block",
+    "card_unlock": "card_unlock",
+    "replacement_request": "replacement",
+}
+"""Intent -> flow node, read by `_dispatch` (D20, P3). An intent with no
+entry here (every Stretch intent, and every card-action intent this card
+doesn't ship a flow for yet) falls through to `unsupported`'s fixed
+`unsupported_intent` template. Flow tasks add their own entry here.
+"""
+
+_FLOW_NODES: dict[str, str] = {
+    "card_info": "card_info",
+    "card_block": "card_block",
+    "card_unlock": "card_unlock",
+    "replacement": "replacement",
+}
+"""`Pending.flow` -> flow node, read by `_entry` and `route` (D15, D17,
+D20). An unregistered flow name falls through to `unsupported`/`smalltalk`
+rather than crashing (P3). Flow tasks add their own entry here.
+"""
 
 
-def _after_card_info(state: GraphState) -> Literal["compose", "fallback"]:
-    """Conditional edge after `card_info` (D8): a set `escalation_reason`
-    (tool_unavailable/no_cards/clarification_exhausted) means there is no
-    card to talk about, so go straight to the fixed-template `fallback`
-    node; otherwise `compose` writes the reply from this turn's facts.
+def _entry(state: GraphState) -> str:
+    """Conditional edge right after `load_session` (D8, D15, D17, `02` §3).
+
+    Three of this turn's shapes skip `understand` entirely (no LLM call): a
+    button confirmation, a step-up resume, and (once a flow ships one) a raw
+    address reply. Each continues straight into its flow's own node only
+    when it actually matches the open pause; anything else is `smalltalk`'s
+    job (a stale button, a resume with no OTP pause open). Everything else
+    is a fresh turn's text, so it goes to `understand`.
     """
-    return "fallback" if state.get("escalation_reason") else "compose"
+    pending = state.get("pending")
+    confirmation = state.get("confirmation")
+    if confirmation is not None:
+        if pending is not None and pending["awaiting_slot"] == "confirmation":
+            return _FLOW_NODES[pending["flow"]]
+        return "smalltalk"
+    if state.get("resume") == "step_up":
+        if pending is not None and pending["awaiting_slot"] == "otp":
+            return _FLOW_NODES[pending["flow"]]
+        return "smalltalk"
+    if pending is not None and pending["awaiting_slot"] == "address":
+        return _FLOW_NODES[pending["flow"]]
+    return "understand"
+
+
+def _dispatch(state: GraphState) -> str:
+    """Conditional edge shared by `enqueue` and `next_intent` (D8, D20): the
+    queue's head decides the flow node through `_INTENT_NODES`; an empty
+    queue (nothing left to answer) ends the turn at `finish`.
+    """
+    queue = state.get("intent_queue") or []
+    if not queue:
+        return "finish"
+    return _INTENT_NODES.get(queue[0], "unsupported")
+
+
+def _after_flow(state: GraphState) -> str:
+    """Conditional edge after a flow node (D8, D15): an escalation reason
+    with no card left to talk about goes to the fixed-template `fallback`;
+    non-empty `facts` goes to `compose`. A flow that already answered with
+    its own fixed template (no facts, e.g. a future `already_in_state`)
+    falls straight into `_after_segment`'s own decision instead of a third,
+    redundant node.
+    """
+    escalation_reasons = {"tool_unavailable", "no_cards", "clarification_exhausted"}
+    if state.get("escalation_reason") in escalation_reasons:
+        return "fallback"
+    if state.get("facts"):
+        return "compose"
+    return _after_segment(state)
+
+
+def _after_segment(state: GraphState) -> str:
+    """Conditional edge after `compose`, `fallback`, `unsupported` and any
+    flow that answered with a fixed template only (D8, D20): a pause ends
+    the turn right where it is -- `next_intent` would wrongly move on to the
+    next queued intent before this one is resolved -- and the queue stays
+    put for the resume that answers it.
+    """
+    return "finish" if state.get("pending") is not None else "next_intent"
 
 
 def build_graph(
     checkpointer: BaseCheckpointSaver[Any],
 ) -> CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]:
-    """Compile the v0 turn graph (D8, D9)."""
+    """Compile the v0 turn graph (D8, D9, D20)."""
+    from app.domains.conversation.flows.card_block import card_block
     from app.domains.conversation.flows.card_info import card_info
+    from app.domains.conversation.flows.card_unlock import card_unlock
+    from app.domains.conversation.flows.replacement import replacement
     from app.domains.conversation.nodes import (
         compose,
+        enqueue,
         fallback,
+        finish,
         load_session,
+        next_intent,
         route,
+        smalltalk,
         understand,
         unsupported,
     )
@@ -149,24 +294,120 @@ def build_graph(
     graph = StateGraph(GraphState, input_schema=TurnInput, output_schema=TurnOutput)
     graph.add_node("load_session", load_session)
     graph.add_node("understand", understand)
+    graph.add_node("smalltalk", smalltalk)
+    graph.add_node("enqueue", enqueue)
     graph.add_node("card_info", card_info)
+    graph.add_node("card_block", card_block)
+    graph.add_node("card_unlock", card_unlock)
+    graph.add_node("replacement", replacement)
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
     graph.add_node("compose", compose)
+    graph.add_node("next_intent", next_intent)
+    graph.add_node("finish", finish)
 
     graph.set_entry_point("load_session")
-    graph.add_edge("load_session", "understand")
+    graph.add_conditional_edges(
+        "load_session",
+        _entry,
+        {
+            "understand": "understand",
+            "smalltalk": "smalltalk",
+            "card_info": "card_info",
+            "card_block": "card_block",
+            "card_unlock": "card_unlock",
+            "replacement": "replacement",
+        },
+    )
     graph.add_conditional_edges(
         "understand",
         route,
-        {"card_info": "card_info", "unsupported": "unsupported", "fallback": "fallback"},
+        {
+            "fallback": "fallback",
+            "unsupported": "unsupported",
+            "smalltalk": "smalltalk",
+            "enqueue": "enqueue",
+            "card_info": "card_info",
+            "card_block": "card_block",
+            "card_unlock": "card_unlock",
+            "replacement": "replacement",
+        },
     )
     graph.add_conditional_edges(
-        "card_info", _after_card_info, {"compose": "compose", "fallback": "fallback"}
+        "enqueue",
+        _dispatch,
+        {
+            "card_info": "card_info",
+            "card_block": "card_block",
+            "card_unlock": "card_unlock",
+            "replacement": "replacement",
+            "unsupported": "unsupported",
+            "finish": "finish",
+        },
     )
-    graph.add_edge("compose", END)
-    graph.add_edge("unsupported", END)
-    graph.add_edge("fallback", END)
+    graph.add_conditional_edges(
+        "card_info",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
+        "card_block",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
+        "card_unlock",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
+        "replacement",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
+        "compose", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+    )
+    graph.add_conditional_edges(
+        "unsupported", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+    )
+    graph.add_conditional_edges(
+        "fallback", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+    )
+    graph.add_edge("smalltalk", "finish")
+    graph.add_conditional_edges(
+        "next_intent",
+        _dispatch,
+        {
+            "card_info": "card_info",
+            "card_block": "card_block",
+            "card_unlock": "card_unlock",
+            "replacement": "replacement",
+            "unsupported": "unsupported",
+            "finish": "finish",
+        },
+    )
+    graph.add_edge("finish", END)
 
     return graph.compile(checkpointer=checkpointer)
 
@@ -176,24 +417,36 @@ async def run_turn(
     text: str,
     *,
     config: RunnableConfig,
+    confirmation: ConfirmationDecision | None = None,
+    resume: Literal["step_up"] | None = None,
 ) -> tuple[str, DebugInfo]:
-    """Run one turn and build its debug line (D9, `07` §1).
+    """Run one turn and build its debug line (D9, D20, `07` §1).
 
-    `route` is read off the actual node sequence (the first of
-    `card_info`/`unsupported`/`fallback` seen right after `understand`
-    completes), not by re-calling `nodes.route.route`: a second call would
-    see the same state and agree, but reading the run itself is the one
-    source of truth a bug in that agreement couldn't fake.
+    `route` (in the debug line's sense) is read off the actual node
+    sequence -- the first of `_BRANCH_NODES` seen once `understand`/`_entry`
+    resolves -- not by re-calling a routing function a second time: a second
+    call would see the same state and agree, but reading the run itself is
+    the one source of truth a bug in that agreement couldn't fake. `pending`
+    is read from the checkpointed state after the run, since a paused turn's
+    last node may not be the one that set it (e.g. `card_info`'s `Ask`
+    outcome, then `compose`, then `finish`).
     """
     route_taken: str | None = None
     nlu: NLUResult | None = None
     language: Literal["es", "pt"] = "es"
     reply = ""
+    ui_kinds: list[str] = []
 
     async for update in graph.astream(
-        {"user_text": text, "confirmation": None}, config=config, stream_mode="updates"
+        {"user_text": text, "confirmation": confirmation, "resume": resume},
+        config=config,
+        stream_mode="updates",
     ):
         for node_name, values in update.items():
+            # A node whose returned update is empty (e.g. `next_intent` with
+            # nothing left to pop) streams as `None`, not `{}` (D20).
+            if values is None:
+                continue
             if node_name == "understand":
                 nlu = values.get("nlu")
                 language = values.get("language", language)
@@ -202,9 +455,15 @@ async def run_turn(
             reply_value = values.get("reply")
             if reply_value is not None:
                 reply = reply_value
+            if "ui" in values and values["ui"] is not None:
+                ui_kinds = [event.kind for event in values["ui"]]
 
     bank_tools = config["configurable"]["bank_tools"]
     tools_called = list(getattr(bank_tools, "calls", []))
+
+    final_state = await graph.aget_state(config)
+    pending = final_state.values.get("pending")
+    pending_str = f"{pending['flow']}.{pending['awaiting_slot']}" if pending else None
 
     debug = DebugInfo(
         language=language,
@@ -213,6 +472,8 @@ async def run_turn(
         slots=nlu.slots if nlu is not None else NLUSlots(),
         route=route_taken or "fallback",
         tools_called=tools_called,
+        pending=pending_str,
+        ui=ui_kinds,
     )
     return reply, debug
 

@@ -1,0 +1,8 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 1
+tools:
+  cards.lock_card:         {requires_confirmation: true, step_up: never}
+  cards.unlock_card:       {requires_confirmation: true, step_up: always}
+  cards.block_card:        {requires_confirmation: true, step_up: never}
+  cards.order_replacement: {requires_confirmation: true, step_up: when_address_changed}
+  cards.get_block_origin:  {requires_confirmation: false, step_up: never}

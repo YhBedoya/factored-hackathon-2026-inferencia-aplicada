@@ -17,22 +17,54 @@ run to tell an unknown id (`NotFound`) apart from one that belongs to another
 customer (`AccessDenied`) -- that probe selects a single column
 (`product_type`, to confirm it is a card and not some other product) and
 never a balance, limit, card number or other customer's data.
+
+D7: `FakeBankOverlay` is the per-session, in-memory record of what this
+sandbox conversation has done -- locked, blocked and replaced cards -- since
+neither Postgres nor `app.card_controls` exist yet. `FakeBank` reads apply it
+(`list_cards`/`get_card_details` show `locked` and an overlay-blocked card as
+`Blocked`); `FakeBankWrites` (`BankWriteTools`, D2-K) mutates it and then
+re-reads it before returning `verified=True` (R3). `make_fakebank_factory`
+returns one read factory and one write factory sharing a single overlay, so
+a session's writes are visible to its own reads.
 """
 
 import asyncio
+import secrets
+from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
 
 import duckdb
 
+from app.core.actions import ActionResult
 from app.core.errors import AccessDenied, NotFound, ToolUnavailable
-from app.domains.cards.schemas import CardDetails, CardSummary
+from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
+from app.domains.conversation.tools.write import BankWriteTools, BankWriteToolsFactory
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.localization.schemas import FxRate
 from app.domains.transactions.schemas import TxFilter, TxView
 
-__all__ = ["FakeBank", "make_fakebank_factory"]
+__all__ = ["FakeBank", "FakeBankOverlay", "FakeBankWrites", "make_fakebank_factory"]
+
+
+@dataclass
+class FakeBankOverlay:
+    """What this sandbox session has done to its own cards (D7).
+
+    Plain per-session state, not persisted: a fresh session (a fresh
+    `make_fakebank_factory` call) starts with all three empty. `locked` and
+    `blocked` hold card ids; `replacements` maps a card id to the
+    `tracking_id` its last `order_replacement` returned.
+    """
+
+    locked: set[str] = field(default_factory=set)
+    blocked: set[str] = field(default_factory=set)
+    replacements: dict[str, str] = field(default_factory=dict)
+
 
 _COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
     "México": "MX",
@@ -73,11 +105,18 @@ def _run_query(sql: str, params: list[Any]) -> list[dict[str, Any]]:
 class FakeBank:
     """`BankReadTools` bound to one `ToolContext` over CSVs under `data_dir`."""
 
-    def __init__(self, ctx: ToolContext, data_dir: Path) -> None:
+    def __init__(
+        self, ctx: ToolContext, data_dir: Path, overlay: FakeBankOverlay | None = None
+    ) -> None:
         self._ctx = ctx
         self._customers_csv = data_dir / "customers.csv"
         self._products_csv = data_dir / "products.csv"
         self._transactions_glob = data_dir / "transactions" / "**" / "*.csv"
+        self._fx_rates_csv = data_dir / "daily_exchange_rates.csv"
+        # A caller with no session-wide overlay (a one-off read) gets its own,
+        # empty one rather than a required argument every read-only call site
+        # would otherwise have to pass (D7).
+        self._overlay = overlay if overlay is not None else FakeBankOverlay()
 
     async def _query(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
         try:
@@ -88,7 +127,7 @@ class FakeBank:
     async def get_profile(self) -> CustomerProfile:
         rows = await self._query(
             f"""
-            SELECT country, customer_status, first_name
+            SELECT country, customer_status, first_name, city
             FROM read_csv({_sql_literal(self._customers_csv)}, all_varchar=true)
             WHERE customer_id = ?
             """,
@@ -104,6 +143,7 @@ class FakeBank:
             country=country,
             customer_status=row["customer_status"],
             first_name=(row["first_name"] or "").strip() or None,
+            city=(row["city"] or "").strip() or None,
         )
 
     async def list_cards(self) -> list[CardSummary]:
@@ -234,14 +274,41 @@ class FakeBank:
         """
         return sql, params
 
-    @staticmethod
-    def _to_summary(row: dict[str, Any]) -> CardSummary:
+    def _to_summary(self, row: dict[str, Any]) -> CardSummary:
+        card_id = row["product_id"]
+        status = row["product_status"]
+        if card_id in self._overlay.blocked:
+            # A session block overrides the dataset status regardless of
+            # what it was (D7, D8 `customer_block`).
+            status = "Blocked"
         return CardSummary(
-            card_id=row["product_id"],
+            card_id=card_id,
             kind=_CARD_KINDS[row["product_type"]],
             last4=row["last4"],
-            status=row["product_status"],
-            locked=False,
+            status=status,
+            locked=card_id in self._overlay.locked,
+        )
+
+    async def get_fx_rate(self, source: str, target: str) -> FxRate:
+        # Reference data (D3): no `customer_id` filter, unlike every query above.
+        rows = await self._query(
+            f"""
+            SELECT date, exchange_rate
+            FROM read_csv({_sql_literal(self._fx_rates_csv)}, all_varchar=true)
+            WHERE source_currency = ? AND target_currency = ?
+            ORDER BY CAST(date AS DATE) DESC
+            LIMIT 1
+            """,
+            [source, target],
+        )
+        if not rows:
+            raise NotFound(f"no fx rate for {source!r} -> {target!r}")
+        row = rows[0]
+        return FxRate(
+            source=source,
+            target=target,
+            rate=Decimal(row["exchange_rate"]),
+            as_of=date.fromisoformat(row["date"]),
         )
 
     @staticmethod
@@ -266,10 +333,101 @@ class FakeBank:
         )
 
 
-def make_fakebank_factory(data_dir: Path) -> BankToolsFactory:
-    """Close over `data_dir` so the registry can bind just a `ToolContext` (D1, D2)."""
+class FakeBankWrites:
+    """`BankWriteTools` bound to one `ToolContext`, backed by a `FakeBankOverlay`
+    shared with the session's `FakeBank` reads (D7, D2-K's write contracts).
 
-    def factory(ctx: ToolContext) -> BankReadTools:
-        return FakeBank(ctx, data_dir)
+    Every write first runs `self._reads.get_card_details(card_id)`: the same
+    two-query ownership probe reads use (`WHERE product_id = ? AND
+    customer_id = ?` on a card type, then the narrower probe on a `NotFound`),
+    so `AccessDenied`/`NotFound` come from the exact same rule reads use, and
+    nothing is mutated until it passes (R1). Each write then mutates the
+    overlay and re-reads it to build `ActionResult.readback`, only reporting
+    `verified=True` when the re-read shows what was written (R3).
+    """
 
-    return factory
+    def __init__(self, ctx: ToolContext, data_dir: Path, overlay: FakeBankOverlay) -> None:
+        self._ctx = ctx
+        self._overlay = overlay
+        self._reads = FakeBank(ctx, data_dir, overlay)
+
+    async def get_block_origin(self, card_id: str) -> BlockOrigin:
+        # Ownership probe first (R1); its result also feeds the bank-side
+        # checks below, so it is not discarded.
+        details = await self._reads.get_card_details(card_id)
+        if card_id in self._overlay.blocked:
+            return BlockOrigin(kind="customer_block", reason=None)
+        if card_id in self._overlay.locked:
+            return BlockOrigin(kind="customer_lock", reason=None)
+        profile = await self._reads.get_profile()
+        if profile.customer_status != "Active":
+            return BlockOrigin(kind="bank_side", reason="customer_status")
+        if details.days_past_due is not None and details.days_past_due > 0:
+            return BlockOrigin(kind="bank_side", reason="past_due")
+        if details.status in ("Blocked", "Suspended"):
+            return BlockOrigin(kind="bank_side", reason="bank_status")
+        return BlockOrigin(kind="none", reason=None)
+
+    async def lock_card(self, card_id: str) -> ActionResult:
+        await self._reads.get_card_details(card_id)  # ownership probe (R1)
+        self._overlay.locked.add(card_id)
+        return self._lock_readback("cards.lock_card", card_id, expected_locked=True)
+
+    async def unlock_card(self, card_id: str) -> ActionResult:
+        await self._reads.get_card_details(card_id)  # ownership probe (R1)
+        self._overlay.locked.discard(card_id)
+        return self._lock_readback("cards.unlock_card", card_id, expected_locked=False)
+
+    def _lock_readback(self, tool: str, card_id: str, *, expected_locked: bool) -> ActionResult:
+        locked = card_id in self._overlay.locked  # re-read (R3)
+        return ActionResult(
+            tool=tool,
+            status="applied",
+            verified=locked == expected_locked,
+            readback={"locked": locked, "at": datetime.now(UTC)},
+        )
+
+    async def block_card(self, card_id: str, reason: BlockReason) -> ActionResult:
+        # `reason` picks the reply template upstream (D11); the fake dataset
+        # has no column to record it in, so the read-back doesn't carry it.
+        await self._reads.get_card_details(card_id)  # ownership probe (R1)
+        self._overlay.blocked.add(card_id)
+        blocked = card_id in self._overlay.blocked  # re-read (R3)
+        return ActionResult(
+            tool="cards.block_card",
+            status="applied",
+            verified=blocked,
+            readback={"status": "Blocked" if blocked else "unknown", "at": datetime.now(UTC)},
+        )
+
+    async def order_replacement(self, card_id: str, address_ref: AddressRef) -> ActionResult:
+        # `address_ref` is `"on_file"` or a vault token (`⟨ADDR_n⟩`, R5): the
+        # fake has nowhere to ship to, so it only records the tracking id.
+        await self._reads.get_card_details(card_id)  # ownership probe (R1)
+        tracking_id = "RPL-" + secrets.token_hex(4).upper()
+        self._overlay.replacements[card_id] = tracking_id
+        ordered = self._overlay.replacements.get(card_id) == tracking_id  # re-read (R3)
+        return ActionResult(
+            tool="cards.order_replacement",
+            status="applied",
+            verified=ordered,
+            readback={"status": "ordered" if ordered else "unknown", "at": datetime.now(UTC)},
+            tracking_id=tracking_id,
+        )
+
+
+def make_fakebank_factory(data_dir: Path) -> tuple[BankToolsFactory, BankWriteToolsFactory]:
+    """Close over `data_dir` and one shared `FakeBankOverlay` (D7), so the
+    registry can bind just a `ToolContext` to each factory (D1, D2, D2-K).
+    Callers make one `(read, write)` pair per session: two pairs would each
+    get their own overlay and stop seeing each other's writes.
+    """
+    overlay = FakeBankOverlay()
+
+    def read_factory(ctx: ToolContext) -> BankReadTools:
+        return FakeBank(ctx, data_dir, overlay)
+
+    def write_factory(ctx: ToolContext) -> BankWriteTools:
+        return FakeBankWrites(ctx, data_dir, overlay)
+
+    return read_factory, write_factory
