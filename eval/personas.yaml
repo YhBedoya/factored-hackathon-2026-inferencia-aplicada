@@ -3,6 +3,48 @@
 # documents, emails, phones, addresses, card numbers or balances (R10) --
 # those columns are never queried past the aggregate counts used to choose
 # these IDs, and never appear below.
+#
+# T9/D20: `customer_id` and `notes` aren't traits. Every other key below is
+# part of a **closed** vocabulary -- `test_personas_match_golden` fails on
+# any key it doesn't recognize -- and each one's SQL meaning, checked against
+# `latam_golden`, is:
+#   country                  bank.customers.country, mapped
+#                             'México'->MX, 'Colombia'->CO, 'Argentina'->AR.
+#   card_count                count(*) of bank.products rows for this
+#                             customer_id where product_type in
+#                             ('Tarjeta Crédito', 'Tarjeta Débito').
+#   card_kinds                the distinct kinds among those same rows
+#                             ('credit' for Tarjeta Crédito, 'debit' for
+#                             Tarjeta Débito), as an unordered set.
+#   blocked                   true iff any of those rows has
+#                             product_status = 'Blocked'.
+#   customer_status           bank.customers.customer_status, literal
+#                             value (e.g. 'Suspended').
+#   missing_income            true iff bank.customers.estimated_monthly_income
+#                             is null.
+#   repeat_complainer         true iff any bank.complaints row for this
+#                             customer_id has is_repeat_complainer = true.
+#   regulator_case            true iff any bank.complaints row for this
+#                             customer_id has reception_channel = 'Regulator'.
+#   recent_declines           a list of bank.transactions.response_code
+#                             values; each must have a matching row for this
+#                             customer_id with transaction_status =
+#                             'Declined' and transaction_date within 30 days
+#                             of app.system_metadata.load_date.
+#   has_pending_transaction   true iff any bank.transactions row for this
+#                             customer_id has transaction_status = 'Pending'.
+#   has_reversed_transaction  true iff any bank.transactions row for this
+#                             customer_id has transaction_status = 'Reversed'.
+#   expiring_card             true iff any card product (Tarjeta
+#                             Crédito/Débito) for this customer_id has
+#                             expiration_date between
+#                             app.system_metadata.load_date and load_date
+#                             + 90 days.
+#   usd_card                  true iff any card product for this
+#                             customer_id has currency = 'USD'.
+#
+# Every `03` §8 category has at least one matching customer in `latam_golden`
+# today; none is missing, so none is a "no match" placeholder.
 personas:
   - customer_id: CLI-U6NAXZG11P97
     country: MX
@@ -57,4 +99,132 @@ personas:
     country: MX
     card_count: 1
     card_kinds: [credit]
+    blocked: false
+  # T9/D20: ~20 more, chosen by SQL against `latam_golden` to cover each
+  # remaining `03` §8 category at least once (several cards and blocked are
+  # already covered above; these add the rest, plus a bit more country and
+  # card-shape spread).
+  - customer_id: CLI-1SW7TPRC63U2
+    country: MX
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    customer_status: Suspended
+    notes: Suspended customer.
+  - customer_id: CLI-1B7XH7IDPE2N
+    country: AR
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    missing_income: true
+    has_reversed_transaction: true
+    notes: Missing income and a reversed transaction.
+  - customer_id: CLI-22WQT9NBWYGS
+    country: MX
+    card_count: 1
+    card_kinds: [debit]
+    blocked: true
+    repeat_complainer: true
+    notes: Repeat complainer, also a bank-blocked debit card.
+  - customer_id: CLI-1JHOGI2P2UE2
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    regulator_case: true
+    usd_card: true
+    notes: Regulator-channel complaint, also holds a USD card.
+  - customer_id: CLI-325VRPVVYG7T
+    country: MX
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    recent_declines: ["05"]
+    notes: Recent decline, response code 05.
+  - customer_id: CLI-55D0R3VIIFPT
+    country: MX
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+    recent_declines: ["14"]
+    notes: Recent decline, response code 14.
+  - customer_id: CLI-5RJITZ5VLJGY
+    country: CO
+    card_count: 2
+    card_kinds: [debit]
+    blocked: false
+    recent_declines: ["51"]
+    notes: Recent decline, response code 51.
+  - customer_id: CLI-46VRQAOC91Y6
+    country: AR
+    card_count: 1
+    card_kinds: [credit]
+    blocked: true
+    recent_declines: ["54"]
+    notes: Recent decline, response code 54; also a bank-blocked card.
+  - customer_id: CLI-001AVI5RHIYA
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    has_pending_transaction: true
+    notes: Has a pending transaction.
+  - customer_id: CLI-1GS3I085CUFD
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    expiring_card: true
+    notes: Card expiring within 90 days of load_date.
+  - customer_id: CLI-1IKY4D1AV8A7
+    country: AR
+    card_count: 0
+    card_kinds: []
+    blocked: false
+    notes: No card products.
+  - customer_id: CLI-1CHLXB8H0W48
+    country: CO
+    card_count: 0
+    card_kinds: []
+    blocked: false
+    notes: No card products.
+  - customer_id: CLI-1BQ0JRB6CMK7
+    country: MX
+    card_count: 4
+    card_kinds: [credit]
+    blocked: false
+  - customer_id: CLI-1GKXCA8LLVNI
+    country: AR
+    card_count: 3
+    card_kinds: [credit]
+    blocked: false
+  - customer_id: CLI-KX9TL8GMCQUT
+    country: AR
+    card_count: 1
+    card_kinds: [debit]
+    blocked: true
+  - customer_id: CLI-1EOUF8Y7UJ5M
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+  - customer_id: CLI-1QR2NP1ABVMW
+    country: AR
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+  - customer_id: CLI-1EGDG5IVX22Y
+    country: MX
+    card_count: 2
+    card_kinds: [credit]
+    blocked: false
+  - customer_id: CLI-1GLBAP6G8DXQ
+    country: AR
+    card_count: 2
+    card_kinds: [credit, debit]
+    blocked: false
+  - customer_id: CLI-00AAKZ5VX42P
+    country: CO
+    card_count: 3
+    card_kinds: [credit, debit]
     blocked: false

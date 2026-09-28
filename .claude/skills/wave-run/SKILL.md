@@ -30,8 +30,8 @@ costs a minute. A wrong assumption baked into a spec costs a card.
 We need to pivot fast, so the workflow is tuned for speed over ceremony:
 
 - **Few tests, but the important ones.** The test budget below binds every
-  agent. Nobody runs the full suite per task. It runs **once per card**, at the
-  verifier.
+  agent. Nobody runs the full suite per task. It runs **once per card**, in the
+  verifier's V1 slice.
 - **The design docs already decided most things.** Specs point at `01`–`06`
   and the decision log instead of restating them. A question whose answer is
   in those docs is a question that should not reach the human.
@@ -64,7 +64,7 @@ Beyond that:
   Playwright flows the plan names explicitly).
 - A test that would still pass if the behavior broke is waste. Don't write it.
 - **Per task:** `Verify` runs only that task's test file(s) and a lint of the
-  files it touched. **Per card:** the verifier runs `make check` (or, before
+  files it touched. **Per card:** the V1 verifier slice runs `make check` (or, before
   it exists, `uv run ruff check . && uv run pytest -q`) exactly once.
 
 Where this is stricter than `06` §6 (for example, flow tests covering happy
@@ -301,20 +301,53 @@ runtime-harness MCP servers — `playwright`, `victorialogs`, `victoriatraces`
 run, the human needs to restart or resume Claude Code and approve the project
 servers before the verifier can use them; ask and wait.
 
-Spawn `card-verifier`, a **fresh** agent and deliberately not the implementer,
-so nothing is self-graded. Give it the card id, the day's line range in `07`,
-the spec path, the plan path, the state file path and the branch. It re-reads
-the card's "Done when" lines and the spec's success criteria, inspects the
-diff, runs `make check` once plus each "Done when" proof, runs the three MCP
-harnesses (Playwright, VictoriaLogs, VictoriaTraces) against the stack, and
-returns a table of `PASS / FAIL / UNVERIFIABLE` with one line of evidence per
-row. The test budget doesn't grow for this: the harnesses are runtime proof,
-not new test files.
+Verification is split into **slices** that run as parallel `card-verifier`
+agents, to cut the wall-clock time. Each one is a **fresh** agent and
+deliberately not an implementer, so nothing is self-graded. Every verifier gets
+the card id, the day's line range in `07`, the spec path, the plan path, the
+state file path, the branch, **and its slice**: the exact criteria, rules or
+harnesses it owns, which it verifies and nothing else. Each returns a table of
+`PASS / FAIL / UNVERIFIABLE` with one line of evidence per row. The test budget
+doesn't grow for this: the harnesses are runtime proof, not new test files.
+
+**Default slices for a day-track card.** Launch all four in one message, so
+they run in parallel:
+
+| Slice | Owns |
+|---|---|
+| V1 Suite and diff | `make check` (the card's one full-suite run), the integration suite, the test-budget check both ways, and the touch map against the diff (scope nobody approved) |
+| V2 Safety rules | The standing rules R1–R13 the diff can reach, read from the diff and proven with targeted commands. Also secrets and `data/` not staged, and `eval/scenarios/heldout/` untouched |
+| V3 Criteria proofs | Each "Done when" line and spec success criterion that needs a runnable proof (`curl`, CLI, `make` target, live LLM call), plus doc and contract consistency (`04`, the decision log, the generated client) |
+| V4 Runtime harness | Playwright, VictoriaLogs and VictoriaTraces against the stack |
+
+Size the split to the card. A small task-row card with two or three criteria
+gets one verifier, or two (V1+V2 and V3+V4). Never more than four. Give each
+criterion to exactly one slice. When you're unsure where one belongs, list it
+under V3.
+
+**The slices share one checkout and one dev stack, so:**
+- Only V1 runs `make check` or the full suite. The other slices run only
+  targeted commands.
+- **Stack-disruptive proofs** (`docker compose restart`, `make up`/`down`,
+  `make data`, `make demo-reset`, `make seed-identity`, anything that drops a
+  table the stack uses) don't run in the parallel batch. List them as a
+  separate **V5 Disruptive** slice and spawn it only after V1–V4 have all
+  returned. Skip V5 when the card has none.
+- Live LLM calls belong to one slice only (V3 or V5). Keep them to one run per
+  criterion.
+- Verifiers are read-only on source and never write a file in the checkout.
+  Temp files go under `mktemp`.
+
+**Merge** the returned tables into one, most severe first, without reading any
+code yourself. When two slices disagree on the same fact, don't pick one:
+re-run the narrower check through a fresh single verifier, or put the
+disagreement to the human.
 
 - Any `FAIL` → send the failing rows to the **implementer of the task that owns
-  them** (same agent, `SendMessage`), then re-run the verifier. Allow at most
-  **two** such rounds. After that, stop and hand the human the remaining
-  failures. Repeated failure means the spec was wrong, not that the
+  them** (same agent, `SendMessage`). Then re-run **only the slices that
+  failed**, each as a fresh verifier, plus V1 when the fix touched code. Allow
+  at most **two** such rounds per card. After that, stop and hand the human the
+  remaining failures. Repeated failure means the spec was wrong, not that the
   implementer needs another try.
 - `UNVERIFIABLE` rows are never quietly passed. They go to the human as they are.
 

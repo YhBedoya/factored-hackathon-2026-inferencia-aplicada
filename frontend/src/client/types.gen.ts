@@ -4,6 +4,138 @@ export type ClientOptions = {
     baseUrl: 'http://localhost' | (string & {});
 };
 
+/**
+ * CreateConversationRequest
+ */
+export type CreateConversationRequest = {
+    /**
+     * Language
+     */
+    language?: 'es' | 'pt' | null;
+};
+
+/**
+ * CreateConversationResponse
+ */
+export type CreateConversationResponse = {
+    /**
+     * Conversation Id
+     */
+    conversation_id: string;
+};
+
+/**
+ * HTTPValidationError
+ */
+export type HttpValidationError = {
+    /**
+     * Detail
+     */
+    detail?: Array<ValidationError>;
+};
+
+/**
+ * LoginRequest
+ *
+ * `POST /auth/login` body (D1). `document_number` has deliberately no
+ * length or pattern constraint: a validation error must never be able to
+ * echo it back, normalized or not (D2).
+ */
+export type LoginRequest = {
+    /**
+     * Document Type
+     */
+    document_type: 'DNI' | 'CC' | 'CE' | 'Pasaporte';
+    /**
+     * Document Number
+     */
+    document_number: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
+ * MeResponse
+ *
+ * `GET /auth/me` and the login response body (D9). Flat, because the
+ * staff variant (`customer: null`) doesn't exist on this card (D3).
+ * `login_hint` is masked and formatted in code before this model is built
+ * (R4): no document number, email, phone, address or last name ever
+ * reaches it.
+ */
+export type MeResponse = {
+    /**
+     * Role
+     */
+    role: 'customer';
+    /**
+     * Login Hint
+     */
+    login_hint: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Country
+     */
+    country: 'MX' | 'CO' | 'AR';
+    /**
+     * Customer Status
+     */
+    customer_status: 'Active' | 'Inactive' | 'Suspended' | 'Closed';
+};
+
+/**
+ * PostMessageRequest
+ */
+export type PostMessageRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * PostMessageResponse
+ */
+export type PostMessageResponse = {
+    /**
+     * Turn Id
+     */
+    turn_id: string;
+};
+
+/**
+ * ValidationError
+ */
+export type ValidationError = {
+    /**
+     * Location
+     */
+    loc: Array<string | number>;
+    /**
+     * Message
+     */
+    msg: string;
+    /**
+     * Error Type
+     */
+    type: string;
+    /**
+     * Input
+     */
+    input?: unknown;
+    /**
+     * Context
+     */
+    ctx?: {
+        [key: string]: unknown;
+    };
+};
+
 export type HealthApiV1HealthGetData = {
     body?: never;
     path?: never;
@@ -12,6 +144,162 @@ export type HealthApiV1HealthGetData = {
 };
 
 export type HealthApiV1HealthGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type LoginApiV1AuthLoginPostData = {
+    body: LoginRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/login';
+};
+
+export type LoginApiV1AuthLoginPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type LoginApiV1AuthLoginPostError = LoginApiV1AuthLoginPostErrors[keyof LoginApiV1AuthLoginPostErrors];
+
+export type LoginApiV1AuthLoginPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeResponse;
+};
+
+export type LoginApiV1AuthLoginPostResponse = LoginApiV1AuthLoginPostResponses[keyof LoginApiV1AuthLoginPostResponses];
+
+export type RefreshApiV1AuthRefreshPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/refresh';
+};
+
+export type RefreshApiV1AuthRefreshPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeResponse;
+};
+
+export type RefreshApiV1AuthRefreshPostResponse = RefreshApiV1AuthRefreshPostResponses[keyof RefreshApiV1AuthRefreshPostResponses];
+
+export type LogoutApiV1AuthLogoutPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout';
+};
+
+export type LogoutApiV1AuthLogoutPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type LogoutApiV1AuthLogoutPostResponse = LogoutApiV1AuthLogoutPostResponses[keyof LogoutApiV1AuthLogoutPostResponses];
+
+export type MeApiV1AuthMeGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me';
+};
+
+export type MeApiV1AuthMeGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: MeResponse;
+};
+
+export type MeApiV1AuthMeGetResponse = MeApiV1AuthMeGetResponses[keyof MeApiV1AuthMeGetResponses];
+
+export type CreateConversationApiV1ConversationsPostData = {
+    body: CreateConversationRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/conversations';
+};
+
+export type CreateConversationApiV1ConversationsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateConversationApiV1ConversationsPostError = CreateConversationApiV1ConversationsPostErrors[keyof CreateConversationApiV1ConversationsPostErrors];
+
+export type CreateConversationApiV1ConversationsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: CreateConversationResponse;
+};
+
+export type CreateConversationApiV1ConversationsPostResponse = CreateConversationApiV1ConversationsPostResponses[keyof CreateConversationApiV1ConversationsPostResponses];
+
+export type PostMessageApiV1ConversationsConversationIdMessagesPostData = {
+    body: PostMessageRequest;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversation_id}/messages';
+};
+
+export type PostMessageApiV1ConversationsConversationIdMessagesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostMessageApiV1ConversationsConversationIdMessagesPostError = PostMessageApiV1ConversationsConversationIdMessagesPostErrors[keyof PostMessageApiV1ConversationsConversationIdMessagesPostErrors];
+
+export type PostMessageApiV1ConversationsConversationIdMessagesPostResponses = {
+    /**
+     * Successful Response
+     */
+    202: PostMessageResponse;
+};
+
+export type PostMessageApiV1ConversationsConversationIdMessagesPostResponse = PostMessageApiV1ConversationsConversationIdMessagesPostResponses[keyof PostMessageApiV1ConversationsConversationIdMessagesPostResponses];
+
+export type StreamConversationApiV1ConversationsConversationIdStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/conversations/{conversation_id}/stream';
+};
+
+export type StreamConversationApiV1ConversationsConversationIdStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StreamConversationApiV1ConversationsConversationIdStreamGetError = StreamConversationApiV1ConversationsConversationIdStreamGetErrors[keyof StreamConversationApiV1ConversationsConversationIdStreamGetErrors];
+
+export type StreamConversationApiV1ConversationsConversationIdStreamGetResponses = {
     /**
      * Successful Response
      */
