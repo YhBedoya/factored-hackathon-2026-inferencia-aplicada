@@ -35,7 +35,16 @@ TemplateKind = Literal[
     "escalation_handoff",
     "session_expired",
     "thanks_close",
+    "anything_else",
+    "ask_what_else",
+    "farewell",
+    "pending_reminder",
     "nothing_pending",
+    "ask_which_card_status",
+    "ask_which_card_balance",
+    "ask_which_card_block",
+    "ask_which_card_unlock",
+    "ask_which_card_replacement",
     "clarify_lock_vs_block",
     "already_in_state",
     "action_cancelled",
@@ -185,15 +194,65 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "código que enviamos e continuamos de onde paramos."
         ),
     },
-    # D16: thanks with nothing pending closes the turn, no compose call.
+    # D16: thanks with nothing pending. Kept for callers that only need the
+    # acknowledgement; `smalltalk` itself now answers with `anything_else`.
     "thanks_close": {
         "es": "¡De nada! Aquí estoy si necesitas algo más con tu tarjeta.",
         "pt": "De nada! Estou por aqui se precisar de mais alguma coisa com seu cartão.",
     },
-    # D16: a bare "sí"/"no" with nothing awaiting confirmation.
+    # Thanks (or a bare "no") with nothing pending: ask before closing, and
+    # `smalltalk` opens the `anything_else` pause so the answer can close it.
+    "anything_else": {
+        "es": "¡Con gusto! ¿Te puedo ayudar en algo más?",
+        "pt": "Por nada! Posso te ajudar em mais alguma coisa?",
+    },
+    # A bare "sí" with nothing pending, or "sí" to `anything_else`.
+    "ask_what_else": {
+        "es": "Claro, cuéntame. ¿En qué más te ayudo con tu tarjeta?",
+        "pt": "Claro, me conta. Em que mais posso ajudar com seu cartão?",
+    },
+    # "No"/thanks/goodbye to `anything_else`: the conversation ends here.
+    "farewell": {
+        "es": "Gracias por escribirnos. Que tengas un buen día.",
+        "pt": "Obrigada por falar com a gente. Tenha um ótimo dia.",
+    },
+    # Small talk while a flow is still waiting on an answer (not OTP).
+    "pending_reminder": {
+        "es": (
+            "Todavía necesito tu respuesta a mi pregunta anterior para seguir. "
+            "Si prefieres dejarlo así, dime cancelar."
+        ),
+        "pt": (
+            "Ainda preciso da sua resposta à minha pergunta anterior para continuar. "
+            "Se preferir deixar assim, é só dizer cancelar."
+        ),
+    },
+    # D16: a button confirmation that matches no open plan (stale token).
     "nothing_pending": {
         "es": "No tengo ninguna acción pendiente por confirmar. ¿En qué más te ayudo?",
         "pt": "Não tenho nenhuma ação pendente para confirmar. Em que mais posso ajudar?",
+    },
+    # D12: which card, per action. `{card_options}` is `select_card`'s
+    # newline-joined masked list, formatted in code (R4).
+    "ask_which_card_status": {
+        "es": "¿Sobre cuál tarjeta quieres saber?\n{card_options}",
+        "pt": "Sobre qual cartão você quer saber?\n{card_options}",
+    },
+    "ask_which_card_balance": {
+        "es": "¿De cuál tarjeta quieres ver el saldo?\n{card_options}",
+        "pt": "De qual cartão você quer ver o saldo?\n{card_options}",
+    },
+    "ask_which_card_block": {
+        "es": "¿Cuál tarjeta quieres bloquear?\n{card_options}",
+        "pt": "Qual cartão você quer bloquear?\n{card_options}",
+    },
+    "ask_which_card_unlock": {
+        "es": "¿Cuál tarjeta quieres desbloquear?\n{card_options}",
+        "pt": "Qual cartão você quer desbloquear?\n{card_options}",
+    },
+    "ask_which_card_replacement": {
+        "es": "¿Cuál tarjeta quieres reponer?\n{card_options}",
+        "pt": "Qual cartão você quer substituir?\n{card_options}",
     },
     # D11: card_block needs to know which kind before it can plan anything.
     "clarify_lock_vs_block": {
@@ -299,15 +358,16 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
         ),
     },
     # ADR-020: balance_due on a debit card has no balance or minimum payment.
+    # No offer here: the card's status follows right away in the same reply,
+    # so there is never an offer the customer has to answer.
     "credit_only": {
         "es": (
             "Esa es una tarjeta de débito, así que no tiene saldo por pagar ni "
-            "fecha de vencimiento. Puedo mostrarte su estado y sus límites si "
-            "te sirve."
+            "fecha de vencimiento. Te dejo su información:"
         ),
         "pt": (
             "Esse é um cartão de débito, então não tem saldo a pagar nem data "
-            "de vencimento. Posso mostrar o status e os limites, se ajudar."
+            "de vencimento. Aqui estão as informações dele:"
         ),
     },
     # D5: the minimum payment and due date are a synthetic Swip policy, not

@@ -27,6 +27,7 @@ __all__ = [
     "ConversationRow",
     "MessageRow",
     "add_message",
+    "close_conversation",
     "create_conversation",
     "get_conversation",
     "list_messages",
@@ -77,6 +78,17 @@ async def create_conversation(customer_id: str, language: str) -> UUID:
             {"id": conversation_id, "customer_id": customer_id, "language": language},
         )
     return conversation_id
+
+
+async def close_conversation(conversation_id: UUID) -> None:
+    """Mark a conversation `closed` once the customer said goodbye
+    (`ui.conversation_closed`); `post_message` then refuses new turns on it.
+    """
+    async with get_engine().begin() as conn:
+        await conn.execute(
+            text("UPDATE app.conversations SET status = 'closed' WHERE id = :conversation_id"),
+            {"conversation_id": conversation_id},
+        )
 
 
 async def get_conversation(conversation_id: UUID) -> ConversationRow | None:

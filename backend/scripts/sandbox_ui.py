@@ -101,9 +101,16 @@ def _start_conversation(customer_id: str) -> None:
     st.session_state.config = config
     st.session_state.bank_tools = bank_tools
     st.session_state.messages = []
+    st.session_state.closed = False
 
 
 def _send(text: str) -> None:
+    if st.session_state.get("closed"):
+        # The last turn said goodbye: this message opens a new conversation
+        # (new thread), keeping the old history on screen above a divider.
+        history = st.session_state.messages
+        _start_conversation(st.session_state.customer_id)
+        st.session_state.messages = [*history, ("divider", "", None)]
     st.session_state.messages.append(("user", text, None))
     loop = _event_loop()
     st.session_state.bank_tools.calls.clear()
@@ -111,6 +118,7 @@ def _send(text: str) -> None:
         run_turn(st.session_state.graph, text, config=st.session_state.config)
     )
     st.session_state.messages.append(("assistant", reply, debug))
+    st.session_state.closed = "conversation_closed" in debug.ui
 
 
 def _render_sidebar(personas: list[dict[str, Any]]) -> str:
@@ -133,6 +141,9 @@ def _render_sidebar(personas: list[dict[str, Any]]) -> str:
 
 def _render_history() -> None:
     for role, text, debug in st.session_state.get("messages", []):
+        if role == "divider":
+            st.divider()
+            continue
         with st.chat_message(role):
             st.write(text)
             if debug is not None:
@@ -164,6 +175,8 @@ def main() -> None:
         return
 
     _render_history()
+    if st.session_state.get("closed"):
+        st.info("Conversation closed. Your next message starts a new one.")
     eod_text = _render_eod_buttons()
     typed_text = st.chat_input("Message")
     text = eod_text or typed_text

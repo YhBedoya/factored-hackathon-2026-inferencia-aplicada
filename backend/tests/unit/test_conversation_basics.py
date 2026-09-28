@@ -37,8 +37,9 @@ def _config(ctx: ToolContext, bank_tools: FakeBank, llm: ScriptedLLM, thread_id:
 
 
 def test_greeting_thanks_bare_yes_no(fakebank_dir: Path) -> None:
-    """A lone greeting, a thanks, a bare "sí" and a bare "no" each close the
-    turn with their own template, all through `smalltalk`, no `compose` call.
+    """A lone greeting, a bare "sí", a thanks and then "no" each get their own
+    template through `smalltalk`, no `compose` call. Thanks asks "anything
+    else?" and the "no" to it closes the conversation.
     """
     ctx = ToolContext(
         customer_id="CLI-TFMULTI00001",
@@ -53,7 +54,7 @@ def test_greeting_thanks_bare_yes_no(fakebank_dir: Path) -> None:
         return NLUResult(language="es", intents=[intent], status="clear", slots=NLUSlots())
 
     llm = ScriptedLLM(
-        {"nlu": [_nlu("greeting"), _nlu("thanks_close"), _nlu("affirm"), _nlu("deny")]}
+        {"nlu": [_nlu("greeting"), _nlu("affirm"), _nlu("thanks_close"), _nlu("deny")]}
     )
     graph = build_graph(MemorySaver())
     config = _config(ctx, bank_tools, llm, "t-basics")
@@ -62,19 +63,52 @@ def test_greeting_thanks_bare_yes_no(fakebank_dir: Path) -> None:
     assert debug1.route == "smalltalk"
     assert reply1 == "Hola, Prueba. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?"
 
-    reply2, debug2 = asyncio.run(run_turn(graph, "gracias", config=config))
+    reply2, debug2 = asyncio.run(run_turn(graph, "si", config=config))
     assert debug2.route == "smalltalk"
-    assert reply2 == get_template("thanks_close", "es")
+    assert reply2 == get_template("ask_what_else", "es")
 
-    reply3, debug3 = asyncio.run(run_turn(graph, "si", config=config))
+    reply3, debug3 = asyncio.run(run_turn(graph, "perfecto muchas gracias", config=config))
     assert debug3.route == "smalltalk"
-    assert reply3 == get_template("nothing_pending", "es")
+    assert reply3 == get_template("anything_else", "es")
+    assert debug3.pending == "smalltalk.anything_else"
 
-    reply4, debug4 = asyncio.run(run_turn(graph, "no", config=config))
+    reply4, debug4 = asyncio.run(run_turn(graph, "no, eso es todo", config=config))
     assert debug4.route == "smalltalk"
-    assert reply4 == get_template("nothing_pending", "es")
+    assert reply4 == get_template("farewell", "es")
+    assert debug4.ui == ["conversation_closed"]
+    assert debug4.pending is None
 
     assert all(call.step != "compose" for call in llm.calls)
+
+
+def test_pt_thanks_then_yes_keeps_conversation_open(fakebank_dir: Path) -> None:
+    """PT: "obrigado" asks "anything else?"; "sim" to it asks what, and the
+    conversation stays open (no `conversation_closed`).
+    """
+    ctx = ToolContext(
+        customer_id="CLI-TFMULTI00001",
+        conversation_id=uuid4(),
+        actor="customer",
+        policy_version="unversioned",
+        trace_id="test-trace",
+    )
+    bank_tools = FakeBank(ctx, fakebank_dir)
+
+    def _nlu(intent: str) -> NLUResult:
+        return NLUResult(language="pt", intents=[intent], status="clear", slots=NLUSlots())
+
+    llm = ScriptedLLM({"nlu": [_nlu("thanks_close"), _nlu("affirm")]})
+    graph = build_graph(MemorySaver())
+    config = _config(ctx, bank_tools, llm, "t-basics-pt")
+
+    reply1, debug1 = asyncio.run(run_turn(graph, "obrigado", config=config))
+    assert reply1 == get_template("anything_else", "pt")
+    assert debug1.pending == "smalltalk.anything_else"
+
+    reply2, debug2 = asyncio.run(run_turn(graph, "sim", config=config))
+    assert reply2 == get_template("ask_what_else", "pt")
+    assert debug2.pending is None
+    assert debug2.ui == []
 
 
 def test_block_then_balance_in_order(fakebank_dir: Path) -> None:

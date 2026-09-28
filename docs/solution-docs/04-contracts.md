@@ -89,7 +89,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `POST /auth/login` · `POST /auth/logout` · `POST /auth/refresh` · `GET /auth/me` | any | Session (httpOnly cookie + CSRF) |
 | `POST /auth/otp/verify` | customer | Step-up (checks the fixed demo code; no challenge or delivery). On success, the frontend runs the next turn with `TurnInput.resume="step_up"` |
 | `POST /conversations` | customer | Start a conversation |
-| `POST /conversations/{id}/messages` | customer | Send a turn (`202`; output arrives on the stream) |
+| `POST /conversations/{id}/messages` | customer | Send a turn (`202`; output arrives on the stream). `409 turn_in_progress` while another turn runs; `409 conversation_closed` once the customer said goodbye (start a new conversation) |
 | `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no"); maps to `TurnInput.confirmation{token_id, decision: confirm \| cancel}`. A `token_id` that doesn't match the state's `confirmation_token_id` is stale and executes nothing |
 | `GET /conversations/{id}/stream` | customer, agent | SSE |
 | `GET /staff/handoffs?queue=` · `POST /staff/handoffs/{id}/claim` · `POST /staff/handoffs/{id}/return` | agent | Inbox and live takeover |
@@ -106,7 +106,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 
 **Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff:** there is no staff login for now. The staff panel is a separate page, and how it and the `/staff/*` routes below are protected is decided on the staff-panel card (D4).
 
-**SSE events:** `status {step}` · `message {role, text, sources[]}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
+**SSE events:** `status {step}` · `message {role, text, sources[]}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
 
 The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up.
 
