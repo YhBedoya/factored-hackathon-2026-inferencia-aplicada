@@ -45,6 +45,7 @@ from app.domains.conversation.flows.card_select import (
     Fallback,
     NoCards,
     ask_which_card_text,
+    card_picker_event,
     load_card_select_policy,
     select_card,
 )
@@ -115,6 +116,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
             "pending": {"flow": "replacement", "node": "card_select", "awaiting_slot": "card_hint"},
             "clarification_failures": outcome.failures,
             "segments": [ask_which_card_text("replacement", outcome, language)],
+            "ui": [card_picker_event(outcome)],
         }
     if isinstance(outcome, NoCards):
         return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}

@@ -1,0 +1,52 @@
+{
+	"landing.title": "Cardy, de Swip",
+	"landing.subtitle": "Resuelvo en minutos lo que puedo verificar sobre tu tarjeta, y te conecto con una persona cuando la decisión no es mía.",
+	"landing.cta": "Iniciar sesión",
+
+	"lang.label": "Idioma",
+	"lang.es": "ES",
+	"lang.pt": "PT",
+
+	"login.title": "Inicia sesión",
+	"login.document_type": "Tipo de documento",
+	"login.document_type_options.DNI": "DNI",
+	"login.document_type_options.CC": "Cédula de ciudadanía",
+	"login.document_type_options.CE": "Cédula de extranjería",
+	"login.document_type_options.Pasaporte": "Pasaporte",
+	"login.number": "Número de documento",
+	"login.password": "Contraseña",
+	"login.submit": "Entrar",
+
+	"shell.logout": "Cerrar sesión",
+	"shell.greeting": "Hola, {name}.",
+
+	"chat.placeholder": "Escribe tu mensaje…",
+	"chat.send": "Enviar",
+	"chat.typing": "Cardy está escribiendo…",
+	"chat.reconnecting": "Reconectando…",
+	"chat.closed_notice": "Esta conversación se cerró. Puedes empezar una nueva.",
+	"chat.new_conversation": "Nueva conversación",
+
+	"confirm.title": "Confirma la acción",
+	"confirm.confirm": "Confirmar",
+	"confirm.cancel": "Cancelar",
+	"confirm.steps.lock_card": "Bloquear temporalmente tu tarjeta",
+	"confirm.steps.block_card": "Reportar tu tarjeta como perdida o robada",
+	"confirm.steps.unlock_card": "Desbloquear tu tarjeta",
+	"confirm.steps.order_replacement": "Pedir el reemplazo de tu tarjeta",
+
+	"otp.title": "Verifica tu identidad",
+	"otp.description": "Te enviamos un código de verificación. Ingrésalo para continuar.",
+	"otp.code": "Código de verificación",
+	"otp.submit": "Verificar",
+
+	"errors.invalid_credentials": "El documento o la contraseña no son correctos.",
+	"errors.too_many_attempts": "Demasiados intentos. Espera unos minutos antes de volver a intentarlo.",
+	"errors.generic": "Algo no salió bien. Intenta de nuevo en un momento.",
+	"errors.required": "Este campo es obligatorio.",
+	"errors.turn_failed": "No pude procesar tu mensaje. Intenta de nuevo.",
+	"errors.turn_in_progress": "Todavía estoy con tu mensaje anterior. Espera un momento.",
+	"errors.conversation_closed": "Esta conversación se cerró.",
+	"errors.otp_invalid": "El código no es correcto. Intenta de nuevo.",
+	"errors.confirmation_invalid": "Esa confirmación ya no es válida. Pídeme la acción de nuevo."
+}

@@ -43,6 +43,17 @@ def copy_all(warehouse_path: str, dsn: str) -> dict[str, int]:
     committed on the `with` block's clean exit): a failure partway through
     leaves the previous `bank.*` state untouched, since nothing commits
     until every table has copied.
+
+    `identity.accounts` is truncated in the same statement: migration
+    `0002` gives it an FK to `bank.customers`, and Postgres refuses to
+    truncate a referenced table on its own (`cannot truncate a table
+    referenced in a foreign key constraint`). A full FK scan of
+    `latam_golden` (`pg_constraint`, `contype = 'f'`) found this as the
+    only FK pointing into `bank.*`, so an explicit table list -- rather
+    than `CASCADE`, which would silently follow any future FK too -- is
+    enough and stays scoped to what's actually there. `make data` runs
+    `make seed-identity` right after the load, which re-provisions
+    `identity.accounts`, so emptying it here is expected, not a data loss.
     """
     con = duckdb.connect(warehouse_path, read_only=True)
     con.execute("SET memory_limit='3GB'")
@@ -51,7 +62,8 @@ def copy_all(warehouse_path: str, dsn: str) -> dict[str, int]:
     counts: dict[str, int] = {}
     try:
         with psycopg.connect(dsn) as pg, pg.cursor() as cur:
-            cur.execute("TRUNCATE TABLE " + ", ".join(f"bank.{t}" for t in TABLES))
+            truncate_targets = [f"bank.{t}" for t in TABLES] + ["identity.accounts"]
+            cur.execute("TRUNCATE TABLE " + ", ".join(truncate_targets))
             for table in TABLES:
                 columns = _srv_columns(con, table)
                 col_list = ", ".join(columns)

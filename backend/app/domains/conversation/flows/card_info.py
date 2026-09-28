@@ -51,6 +51,7 @@ from app.domains.conversation.flows.card_select import (
     NoCards,
     Selected,
     ask_which_card_text,
+    card_picker_event,
     load_card_select_policy,
     select_card,
 )
@@ -115,6 +116,7 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
                         state["language"],
                     )
                 ],
+                "ui": [card_picker_event(outcome)],
             }
         if isinstance(outcome, NoCards):
             return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}

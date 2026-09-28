@@ -1,0 +1,12 @@
+event: status
+data: {"step":"understand"}
+
+event: ui
+data: {"kind":"card_picker","payload":{"options":[{"label":"Crédito •••• 6475 · Activa"},{"label":"Débito •••• 1203 · Activa"}]}}
+
+event: message
+data: {"role":"bot","text":"Tienes más de una tarjeta activa. ¿Cuál quieres consultar?","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-001"}
+

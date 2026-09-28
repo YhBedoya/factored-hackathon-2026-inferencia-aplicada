@@ -1,7 +1,13 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 
-// No product UI lives here yet — this just wires the route tree so the
-// router and the empty shell render. Layout/chrome is added by a later card.
+import { AppShell } from "@/components/layout/AppShell";
+
+// The shell (stars, wordmark, language toggle, greeting/logout) wraps every
+// route. Route-specific UI is the `Outlet`.
 export const Route = createRootRoute({
-	component: () => <Outlet />,
+	component: () => (
+		<AppShell>
+			<Outlet />
+		</AppShell>
+	),
 });
