@@ -22,6 +22,7 @@ __all__ = [
     "login_key",
     "login_key_prefix",
     "normalize_document_number",
+    "staff_login_key",
     "verify_password",
 ]
 
@@ -47,6 +48,14 @@ def login_key(document_type: DocumentType, document_number: str, *, hmac_key: st
 
     message = f"doc:{document_type}:{normalize_document_number(document_number)}"
     return hmac.new(hmac_key.encode(), message.encode(), hashlib.sha256).hexdigest()
+
+
+def staff_login_key(username: str, *, hmac_key: str) -> str:
+    """Hex HMAC-SHA256 of `staff:<username>` (D15): the lookup key and the
+    limiter key for staff accounts, so a raw username never keys Redis.
+    """
+
+    return hmac.new(hmac_key.encode(), f"staff:{username}".encode(), hashlib.sha256).hexdigest()
 
 
 def login_key_prefix(key: str) -> str:

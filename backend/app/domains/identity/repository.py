@@ -24,6 +24,7 @@ from app.core.errors import ToolUnavailable
 __all__ = [
     "AccountRow",
     "get_account_by_customer_id",
+    "get_account_by_id",
     "get_account_by_login_key",
     "is_revoked",
     "revoke_token",
@@ -37,9 +38,12 @@ class AccountRow(BaseModel):
 
     account_id: UUID
     role: str
-    customer_id: str
+    customer_id: str | None
     password_hash: str
     status: str
+    username: str | None = None
+    display_name: str | None = None
+    staff_queue: str | None = None
 
 
 async def _fetch_account(sql: str, params: dict[str, str]) -> AccountRow | None:
@@ -57,6 +61,9 @@ async def _fetch_account(sql: str, params: dict[str, str]) -> AccountRow | None:
         customer_id=row["customer_id"],
         password_hash=row["password_hash"],
         status=row["status"],
+        username=row["username"],
+        display_name=row["display_name"],
+        staff_queue=row["staff_queue"],
     )
 
 
@@ -64,7 +71,8 @@ async def get_account_by_login_key(login_key: str) -> AccountRow | None:
     """The account for one `login_key` (D2), or `None` if unknown."""
     return await _fetch_account(
         """
-        SELECT account_id, role, customer_id, password_hash, status
+        SELECT account_id, role, customer_id, password_hash, status,
+               username, display_name, staff_queue
         FROM identity.accounts
         WHERE login_key = :login_key
         """,
@@ -78,11 +86,25 @@ async def get_account_by_customer_id(customer_id: str) -> AccountRow | None:
     """
     return await _fetch_account(
         """
-        SELECT account_id, role, customer_id, password_hash, status
+        SELECT account_id, role, customer_id, password_hash, status,
+               username, display_name, staff_queue
         FROM identity.accounts
         WHERE customer_id = :customer_id
         """,
         {"customer_id": customer_id},
+    )
+
+
+async def get_account_by_id(account_id: UUID) -> AccountRow | None:
+    """The account for one `account_id` (staff `/me`), or `None`."""
+    return await _fetch_account(
+        """
+        SELECT account_id, role, customer_id, password_hash, status,
+               username, display_name, staff_queue
+        FROM identity.accounts
+        WHERE account_id = :account_id
+        """,
+        {"account_id": str(account_id)},
     )
 
 

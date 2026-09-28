@@ -39,6 +39,7 @@ from psycopg.rows import dict_row
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.redis import get_redis
+from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
 from app.domains.identity.tokens import CSRF_HEADER
@@ -388,7 +389,12 @@ def test_bank_blocked_unlock_handoff(
     restore_cards.add(_BLOCKED_CARD_ID)
 
     app_client.app.state.turn_host.llm = ScriptedLLM(
-        {"nlu": [NLUResult(language="es", intents=["card_unlock"], status="clear")]}
+        {
+            "nlu": [NLUResult(language="es", intents=["card_unlock"], status="clear")],
+            "handoff_summary": [
+                HandoffSummaryDraft(request="La tarjeta tiene un bloqueo del banco.")
+            ],
+        }
     )
 
     account = it_accounts[_BLOCKED_CUSTOMER_ID]
@@ -405,7 +411,15 @@ def test_bank_blocked_unlock_handoff(
     )
     handoff = _wait_for_bot_message(dsn, unlock_response.json()["turn_id"])
     assert "Fraudes" in handoff["content"]
-    assert handoff["ui_payload"] is None  # no ui.confirm: no plan was ever issued
+    # No ui.confirm (no plan was ever issued); the only UI is the handoff banner.
+    assert [event["kind"] for event in handoff["ui_payload"]] == ["handoff_banner"]
+
+    with psycopg.connect(dsn, row_factory=dict_row) as conn:
+        rows = conn.execute(
+            "SELECT queue, reason, status FROM app.handoffs WHERE conversation_id = %s",
+            (uuid.UUID(conversation_id),),
+        ).fetchall()
+    assert rows == [{"queue": "fraudes", "reason": "bank_side_block", "status": "queued"}]
 
     with psycopg.connect(dsn, row_factory=dict_row) as conn:
         for table in ("app.card_controls", "app.card_status_history", "app.card_replacements"):

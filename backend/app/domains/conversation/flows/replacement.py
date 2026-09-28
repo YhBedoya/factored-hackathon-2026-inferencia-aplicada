@@ -56,7 +56,7 @@ from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.localization import local_today, mask_card
-from app.domains.policy.escalation import load_escalation_policy
+from app.domains.policy.escalation import load_escalation_policy, rule_queue
 from app.domains.safety.vault import AddressVault
 
 __all__ = ["replacement"]
@@ -167,7 +167,9 @@ async def _check_active_and_eligibility(
         profile.customer_status in not_active.statuses
         and "order_replacement" not in not_active.allowed
     ):
-        return handoff(not_active.queue, "customer_not_active", language)
+        return handoff(
+            rule_queue(escalation, "customer_not_active"), "customer_not_active", language
+        )
 
     try:
         origin = await bank_write_tools.get_block_origin(card_id, "replacement_request")

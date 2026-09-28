@@ -95,7 +95,7 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 
 ## 6. Security and privacy (P1, B3–B6, D6.5)
 
-- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Document type + document number + password (ADR-008, amended; customers only, since the staff panel is a separate page with no login for now) gives a JWT in an httpOnly cookie with CSRF double-submit. The document number is never logged or used as a key in plain text (HMAC `login_key`). A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
+- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Document type + document number + password (ADR-008, amended; staff log in separately with a seeded username + password, roles `agent`/`admin`, D4-A) gives a JWT in an httpOnly cookie with CSRF double-submit. The document number is never logged or used as a key in plain text (HMAC `login_key`). A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
 - **Login enforcement (ADR-025):** the whole chat requires login; there is no anonymous mode. Three layers: (1) router-level FastAPI dependencies (`get_session`, `require_role`, `get_owned_conversation`) reject a missing or expired session (`401`), the wrong role (`403`) and another customer's conversation (`404`) before the graph runs; (2) the session travels into the graph through the run config, `load_session` binds `customer_id` read-only, and the tool registry builds `ToolContext` from it; (3) step-up is checked per tool by the registry against `session.step_up_at`. Rule R13 and its route-introspection test keep new routes from skipping layer 1.
 - **Customer status precedence:** a Closed, Suspended or Inactive customer's cards are read-only (block still allowed), with no unlock or replacement, and the case goes to a handoff (ADR-021).
 - **Record isolation (B6):** tools never accept `customer_id`. The registry binds it from the session. Every repository query filters by it. A request for another customer's card returns a refusal and writes an `access_denied` audit event.
@@ -127,7 +127,7 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 - **Reproducible setup:** `make setup` → `make data` (S3 sync with credentials from env/profile → pipeline → golden DB) → `make up`. Versions pinned (uv.lock, package-lock), seeds fixed.
 - **Environments:** Docker Compose layers `base / dev / test / prod / observability`.
-- **Deployment target: AWS** (decision-log ADR-017). The concrete setup is decided at the sprint midpoint (~2026-09-30 / 10-01), after an AWS smoke test on day 1–2. Must provide a public URL (K2) and Bedrock access through an IAM role.
+- **Deployment target: AWS** (decision-log ADR-017): one EC2 t3.xlarge in us-east-1 running the prod Compose layer, an IAM instance role for S3 and Bedrock, data read from our own S3 copy, and TLS on the public URL (K2). See [`08-deployment.md`](08-deployment.md).
 - **Capacity:** to be measured with the eval harness (turns/s per worker, DB size ≈ all 13 tables + indexes). `digital_events` (10M rows) dominates storage.
 - **Remaining work before real deployment** (kept honest for S6): a real IdP and fraud-grade authentication, security review / pentest, regulatory review of dispute handling, load testing, multi-region, human-agent workforce integration, real PT-BR market data.
 
@@ -147,7 +147,6 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 | ID | Item | Blocks |
 |---|---|---|
-| ADR-017 | Concrete AWS setup, decided at the sprint midpoint | K2 |
 | — | Exact Bedrock model IDs per step (benchmark on the dev set) | Latency/cost numbers |
 | — | Suspected-compromise rule and threshold for `unrecognized_charge` | Fraud triage path |
 | — | Numeric targets for the D1.5 outcome metrics, set after the first dev eval run | D1.5 |

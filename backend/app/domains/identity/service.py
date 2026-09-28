@@ -22,7 +22,7 @@ See `docs/specs/d2-a-login-read-tools-api.md` D2, D6, D7, D9.
 
 import hmac
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Literal, Protocol
 
 import structlog
 
@@ -30,8 +30,19 @@ from app.core.config import Settings, get_settings
 from app.core.redis import get_redis
 from app.domains.customers import service as customers_service
 from app.domains.identity import repository
-from app.domains.identity.models import LoginRequest, MeResponse, Session
-from app.domains.identity.passwords import login_key, login_key_prefix, verify_password
+from app.domains.identity.models import (
+    LoginRequest,
+    MeResponse,
+    Session,
+    StaffLoginRequest,
+    StaffMeResponse,
+)
+from app.domains.identity.passwords import (
+    login_key,
+    login_key_prefix,
+    staff_login_key,
+    verify_password,
+)
 from app.domains.identity.repository import AccountRow
 from app.domains.identity.tokens import InvalidToken, TokenClaims, decode_token, issue_token
 
@@ -48,6 +59,8 @@ __all__ = [
     "mint_session_for_customer",
     "refresh",
     "session_from_token",
+    "staff_login",
+    "staff_me",
     "verify_otp",
 ]
 
@@ -216,6 +229,73 @@ async def login(
 _OTP_RATE_LIMIT_KEY_PREFIX = "rl:otp:"
 
 
+async def staff_login(
+    req: StaffLoginRequest,
+    *,
+    store: AccountStore | None = None,
+    limiter: LoginLimiter | None = None,
+    settings: Settings | None = None,
+) -> Session:
+    """`login()` for seeded staff accounts (D15): same limiter shape, keyed
+    `rl:login:<staff_login_key>` and checked first, same errors. Requires
+    role `agent|admin` and `status == "active"`; a customer account can't
+    come in through this door. The session has no `customer_id`.
+    """
+
+    store = store or _default_store
+    limiter = limiter or _default_limiter
+    settings = settings or get_settings()
+
+    key = staff_login_key(req.username, hmac_key=settings.identity_hmac_key)
+    prefix = login_key_prefix(key)
+    rate_limit_key = f"{_RATE_LIMIT_KEY_PREFIX}{key}"
+
+    failures = await limiter.get_failures(rate_limit_key)
+    if failures >= settings.login_max_failures:
+        _logger.warning("auth.staff_login_throttled", login_key_prefix=prefix)
+        raise TooManyAttempts(f"too many failed attempts for {prefix}")
+
+    account = await store.get_account_by_login_key(key)
+    if (
+        account is None
+        or account.role not in ("agent", "admin")
+        or account.status != "active"
+        or not verify_password(req.password, account.password_hash)
+    ):
+        await limiter.record_failure(rate_limit_key, window_seconds=settings.login_window_seconds)
+        _logger.warning("auth.staff_login_failed", login_key_prefix=prefix)
+        raise InvalidCredentials(_INVALID_CREDENTIALS_MESSAGE)
+
+    _logger.info(
+        "auth.staff_login_succeeded", login_key_prefix=prefix, account_id=str(account.account_id)
+    )
+    role: Literal["agent", "admin"] = "admin" if account.role == "admin" else "agent"
+    return Session(account_id=account.account_id, role=role, customer_id=None, step_up_at=None)
+
+
+async def staff_me(session: Session) -> StaffMeResponse:
+    """The staff profile for `session` (D15). A customer session, or an
+    account that lost its staff fields, is a `SessionExpired`.
+    """
+
+    if session.role == "customer":
+        raise SessionExpired("not a staff session")
+    account = await repository.get_account_by_id(session.account_id)
+    if (
+        account is None
+        or account.status != "active"
+        or account.username is None
+        or account.display_name is None
+    ):
+        raise SessionExpired("staff account unavailable")
+    return StaffMeResponse(
+        role=session.role,
+        username=account.username,
+        display_name=account.display_name,
+        queue=account.staff_queue,  # type: ignore[arg-type]  # CHECKed by seeding from Queue
+    )
+
+
 async def verify_otp(
     session: Session,
     code: str,
@@ -265,6 +345,8 @@ async def me(session: Session) -> MeResponse:
     in code, never by the LLM (R4).
     """
 
+    if session.customer_id is None:
+        raise ValueError("me() requires a customer session")
     profile = await customers_service.get_login_profile(session.customer_id)
     hint = f"{profile.document_type} {_FOUR_BULLETS}{profile.document_last3}"
     return MeResponse(

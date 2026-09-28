@@ -2,7 +2,7 @@
 each one and combines them into a single hash that reaches every downstream
 decision (spec D1, D2, R8).
 
-`tools`, `escalation` and `min_payment` are validated against their own
+`tools`, `escalation`, `min_payment` and `scope` are validated against their own
 domain models -- the same ones their existing per-file loaders
 (`tools_policy.py`, `escalation.py`, `min_payment.py`) use. This module
 doesn't replace those loaders; it adds the combined view the lifespan logs
@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.domains.policy.escalation import EscalationPolicy
 from app.domains.policy.min_payment import MinPaymentPolicy
+from app.domains.policy.scope import ScopePolicy
 from app.domains.policy.tools_policy import ToolsPolicy
 
 __all__ = [
@@ -41,6 +42,7 @@ _MODELS_BY_STEM: dict[str, type[BaseModel]] = {
     "tools": ToolsPolicy,
     "escalation": EscalationPolicy,
     "min_payment": MinPaymentPolicy,
+    "scope": ScopePolicy,
 }
 
 
@@ -70,6 +72,7 @@ class PolicyBundle(BaseModel):
     tools: ToolsPolicy
     escalation: EscalationPolicy
     min_payment: MinPaymentPolicy
+    scope: ScopePolicy
     files: list[str]
 
 
@@ -104,10 +107,12 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
     tools = validated.get("tools")
     escalation = validated.get("escalation")
     min_payment = validated.get("min_payment")
+    scope = validated.get("scope")
     if (
         not isinstance(tools, ToolsPolicy)
         or not isinstance(escalation, EscalationPolicy)
         or not isinstance(min_payment, MinPaymentPolicy)
+        or not isinstance(scope, ScopePolicy)
     ):
         missing = [
             stem
@@ -115,6 +120,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
                 ("tools", tools),
                 ("escalation", escalation),
                 ("min_payment", min_payment),
+                ("scope", scope),
             )
             if value is None
         ]
@@ -125,6 +131,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
         tools=tools,
         escalation=escalation,
         min_payment=min_payment,
+        scope=scope,
         files=[path.stem for path in paths],
     )
 

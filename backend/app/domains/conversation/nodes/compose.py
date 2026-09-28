@@ -41,10 +41,10 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 4)
+_PROMPT = PromptRef("compose", 5)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
-Goal = Literal["card_status", "balance_due"]
+Goal = Literal["card_status", "balance_due", "abstain"]
 Country = Literal["MX", "CO", "AR"]
 
 # Facts a flow writes for code's own use (formatting, footnotes) but that
@@ -136,7 +136,15 @@ def _format_fact(
         return format_days(cast(int, value), language)
     if key in ("credit_limit", "available_credit", "current_balance", "min_payment"):
         return _money_fact(cast(Decimal, value), facts_by_key, language=language, country=country)
-    if key in ("card_options", "customer_name"):
+    # `abstain` facts (ADR-026) arrive already localized from `nodes/abstain.py`.
+    if key in (
+        "card_options",
+        "customer_name",
+        "topic_label",
+        "abstain_reason",
+        "closest_action",
+        "human_offer",
+    ):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")
 

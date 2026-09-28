@@ -14,6 +14,7 @@ Decisions were taken collaboratively in design rounds on 2026-09-26. Anything ma
 | [`05-evaluation-plan.md`](05-evaluation-plan.md) | Held-out suite, labels, baseline, simulator, judges, metric definitions |
 | [`06-engineering-rules.md`](06-engineering-rules.md) | Non-negotiable rules, enforcement, repo layout, git workflow, definition of done |
 | [`07-execution-plan.md`](07-execution-plan.md) | *When* and *who*: day-by-day build plan (D1–D9), two parallel tracks, feature cards with acceptance criteria, MVP gate, feature-list coverage |
+| [`08-deployment.md`](08-deployment.md) | AWS deployment v0: single EC2 + Compose, our S3 copy of the data, IAM, TLS, secrets, runbook, cost, path to production |
 | [`decision-log.md`](decision-log.md) | Every design decision (ADR-style) with alternatives considered |
 
 Official sources: `docs/official-docs/` (the data-dictionary PDF is git-ignored because it contains the organizers' S3 keys) and the `hackathon-judge` skill's references under `.claude/skills/hackathon-judge/references/`. Requirement IDs such as `D3.4` or `B5` refer to `requirements-checklist.md` there.

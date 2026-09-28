@@ -16,10 +16,12 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from app.domains.conversation.graph import build_graph, run_turn
 from app.domains.conversation.nodes.compose import ComposeDraft
+from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
-from tests.conftest import ScriptedLLM
+from app.domains.conversation.tools.handoff import InMemoryHandoffTools
+from tests.conftest import RecordingAudit, ScriptedLLM
 
 _MMD_PATH = Path(__file__).resolve().parents[3] / "docs" / "diagrams" / "turn-graph-v0.mmd"
 _D13_CREDIT_KEYS = {
@@ -85,3 +87,44 @@ def test_graph_compiles_and_diagram_is_current(fakebank_dir: Path) -> None:
     # instead of clearing them, and every D13 key would show up twice.
     assert len(keys) == len(set(keys)), f"facts accumulated across turns: {keys}"
     assert set(keys) == _D13_CREDIT_KEYS
+
+
+def test_human_mode_relays_without_llm(fakebank_dir: Path) -> None:
+    """A3: once a handoff put the conversation in human mode, the bot stops."""
+    graph = build_graph(MemorySaver())
+    ctx = ToolContext(
+        customer_id="CLI-TFSINGLE0002",
+        conversation_id=uuid4(),
+        actor="customer",
+        policy_version="unversioned",
+        trace_id="test-trace",
+    )
+    tools = InMemoryHandoffTools()
+    nlu_turn = NLUResult(language="es", intents=["human_request"], status="clear", slots=NLUSlots())
+    llm = ScriptedLLM(
+        {
+            "nlu": [nlu_turn],
+            "handoff_summary": [HandoffSummaryDraft(request="Pidió hablar con {queue_label}.")],
+        }
+    )
+    config = {
+        "configurable": {
+            "thread_id": "t-human-mode",
+            "session": ctx,
+            "bank_tools": FakeBank(ctx, fakebank_dir),
+            "llm": llm,
+            "handoff_tools": tools,
+            "audit": RecordingAudit(),
+        }
+    }
+
+    asyncio.run(run_turn(graph, "quiero hablar con una persona", config=config))
+    assert len(tools.created) == 1
+    calls_after_handoff = len(llm.calls)
+
+    reply, debug = asyncio.run(run_turn(graph, "hola? sigue alguien?", config=config))
+
+    assert len(llm.calls) == calls_after_handoff
+    assert reply == ""
+    assert debug.route == "relay_to_agent"
+    assert len(tools.created) == 1

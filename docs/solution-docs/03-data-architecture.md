@@ -12,6 +12,8 @@
 
 S3 credentials come from env vars / an AWS profile (page 2 of the data dictionary). They are never written to the repo.
 
+The deployment reads a one-time copy of the organizers' `data/` prefix in the team's own S3 bucket (us-east-1), accessed through the EC2 instance role. The copy is checked by file count and per-key size against the source listing (see `08-deployment.md` §5).
+
 ## 2. Pipeline
 
 ```
@@ -78,18 +80,18 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 | `travel_notices` | Stretch |
 | `conversations` | `id, customer_id, channel, language, mode (bot/human), status, started_at, closed_at` |
 | `messages` | `conversation_id, role (customer/bot/agent/system), content (unmasked, encrypted), content_masked, ui_payload, created_at` |
-| `handoffs` | `conversation_id, queue, reason, priority, packet jsonb, status (queued/claimed/returned/closed), agent_id, timestamps` |
+| `handoffs` | (`app.handoffs`, migration `0005`) `id, conversation_id` (fk), `queue, reason, priority, packet jsonb, status` (`queued`/`claimed`/`returned`, default `queued`), `agent_id` (fk `identity.accounts`, null), `created_at, claimed_at, returned_at`; index `(status, queue, created_at desc)` and a partial unique index on `conversation_id WHERE status IN ('queued','claimed')`: one open handoff per conversation |
 | `pii_vault` | Per-conversation token map (Fernet-encrypted), `expires_at` |
 | `system_metadata` | `load_date`, `date_offset_days`, dataset manifest hash, policy hash |
 
 ### `identity`
-`accounts` (`customer_id`, `login_key` = HMAC of the login identifier (never the plain document number), password hash, role, status), `revoked_tokens`. There are no staff accounts for now: the staff panel is a separate page with no login yet, and its protection is decided on the staff-panel card (D4). There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
+`accounts` (`customer_id`, `login_key` = HMAC of the login identifier (never the plain document number), password hash, role, status), `revoked_tokens`. Staff accounts (D4-A, ADR-008 amended): role `agent` or `admin`, a unique `username`, `display_name`, `staff_queue`, and `customer_id` null (migration `0005` makes it nullable and adds `CHECK (role IN ('customer','agent','admin'))` and `CHECK ((role = 'customer') = (customer_id IS NOT NULL))`; staff `login_key` = HMAC of `staff:<username>`); names are Laura (atencion), Diego (cobranza), Sofía (fraudes), Mateo (reclamos) and "Swip Admin"; one agent per handoff queue plus one admin, seeded by `make seed-identity`. There is no OTP storage: the step-up OTP is a fixed demo code (ADR-008), and the time of the last successful step-up is kept in the session.
 
 ### `audit`
 `audit_events` (migration `0004`, D3-A5, append-only, no update or delete path: `id, at, conversation_id, turn_id, actor, type, payload jsonb, sources jsonb, policy_version, model jsonb, trace_id, langfuse_trace_id`; index `(conversation_id, at)`; see `04-contracts.md` §6 for the full shape), `llm_calls` (`step, model_id, prompt_version, input/output tokens, cost_usd, latency_ms, langfuse_trace_id, status`).
 
 ### Redis
-Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor, ADR-027), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` and `handoff:<queue>`.
+Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor, ADR-027), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` (customer and claimed-agent streams) and `handoff:<queue>` (`handoff_created`/`handoff_updated` for the staff inbox).
 
 ## 7. Golden DB and isolation
 
@@ -99,6 +101,6 @@ Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor
 
 ## 8. Identity provisioning
 
-- For all 150k customers: login = **document type + document number** + password (amended 2026-09-28, D2-A: dataset emails are not unique, while `document_number` is non-null and unique for every customer). The document number is PII: accounts, logs, traces, rate-limit keys and audit only ever hold `login_key` = HMAC-SHA256(`IDENTITY_HMAC_KEY`, `doc:<TYPE>:<NUMBER>`). Password = a deterministic random string from a seeded generator (`CREDENTIALS_SEED`, never committed), stored with a low-cost hash (PBKDF2-SHA256, low iteration count). No staff accounts are seeded for now (the staff panel is a separate page with no login yet). See `docs/specs/d2-a-login-read-tools-api.md` D1–D5.
+- For all 150k customers: login = **document type + document number** + password (amended 2026-09-28, D2-A: dataset emails are not unique, while `document_number` is non-null and unique for every customer). The document number is PII: accounts, logs, traces, rate-limit keys and audit only ever hold `login_key` = HMAC-SHA256(`IDENTITY_HMAC_KEY`, `doc:<TYPE>:<NUMBER>`). Password = a deterministic random string from a seeded generator (`CREDENTIALS_SEED`, never committed), stored with a low-cost hash (PBKDF2-SHA256, low iteration count). Staff accounts (one agent per handoff queue plus one admin) are seeded by the same step with passwords from the same seed, written to a separate git-ignored export (D4-A). See `docs/specs/d2-a-login-read-tools-api.md` D1–D5.
 - `data/secrets/credentials.csv` (git-ignored) and an admin-only persona lookup in the staff console.
 - **Persona catalog** (`eval/personas.yaml`, ~30 curated customers), selected by query to cover: several cards, a bank-blocked card, a suspended customer, missing income, a repeat complainer, a regulator case, recent declines per code, pending/reversed transactions, expiring cards, and MX/CO/AR plus USD-card customers.

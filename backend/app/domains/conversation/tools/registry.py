@@ -63,7 +63,11 @@ def build_tool_context(session: Session, conversation_id: UUID, trace_id: str) -
     always comes from `session.customer_id`, never from a route argument, a
     tool call or anything the LLM produced. `policy_version` is the combined
     policy hash (D2), so it reaches every audit event this turn writes.
+    Only a customer session with a `customer_id` gets a context (D15): a
+    staff session raises `PermissionError`.
     """
+    if session.role != "customer" or session.customer_id is None:
+        raise PermissionError("R1: a tool context needs a customer session with a customer_id")
     return ToolContext(
         customer_id=session.customer_id,
         conversation_id=conversation_id,

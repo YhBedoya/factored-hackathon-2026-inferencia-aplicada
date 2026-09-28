@@ -42,7 +42,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `transactions.get(tx_id)` | — | — | — | `TxView` |
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, source}` |
 | `disputes.create_claim(tx_ids, answers, token)` | ✓ | ✓ | — | `ActionResult{case_id, priority_flags}` |
-| `handoff.create(queue, reason)` | ✓ (internal) | — | — | `HandoffRef` |
+| `handoff.create(packet)` | ✓ (internal) | — | — | the **persisted** handoff id (`UUID`): the packet's own on insert, or the id of the handoff already open for the conversation, which the customer is attached to (D4-A D32). Implemented by `HandoffTools.create(packet) -> UUID` (`conversation/tools/handoff.py`), injected as `config["configurable"]["handoff_tools"]` |
 | `reference.get_fx_rate(source, target)` | — | — | — | `FxRate{source, target, rate, as_of}`: the latest `daily_exchange_rates` row for the pair (`exchange_rate` column); `NotFound` if the pair has none. Reference data, so there is no customer filter (D2-B D3) |
 
 `BlockOrigin.kind` is `customer_lock | customer_block | bank_side | none`; `reason` is `past_due | fraud | customer_status | bank_status | None` (non-`None` only when `kind = bank_side`). `BlockReason` (the `reason` argument of `cards.block_card`) is `Literal["lost_or_stolen", "suspected_fraud"]`. `address_ref` (the argument of `cards.order_replacement`) is either `"on_file"` (the address in `bank.customers`) or a PII-vault token for an address the customer typed (`⟨ADDR_n⟩`, `01` §5 token style, D12); the raw address never reaches the LLM, state or checkpoint.
@@ -91,24 +91,34 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `POST /conversations` | customer | Start a conversation |
 | `POST /conversations/{id}/messages` | customer | Send a turn: `{text}` (1–2000 chars) or `{resume: "step_up"}`, exactly one set → `202 {turn_id}`; `422` when neither or both are set. `resume` is not persisted as a customer message; output arrives on the stream. `409 turn_in_progress` while another turn runs; `409 conversation_closed` once the customer said goodbye (start a new conversation) |
 | `POST /conversations/{id}/confirmations/{token_id}` | customer | Button confirm/cancel (equivalent to typing "sí"/"no"); `{decision: confirm \| cancel}` → `202 {turn_id}`. Before any turn is scheduled, checks that `token_id` is an open plan owned by this customer and conversation (`RedisConfirmationStore.is_open`) *and* is the token the graph's last checkpoint is actually waiting on; either failing is `409 confirmation_invalid`, no turn scheduled. `409 turn_in_progress` works as on `/messages` |
-| `GET /conversations/{id}/stream` | customer, agent | SSE |
-| `GET /staff/handoffs?queue=` · `POST /staff/handoffs/{id}/claim` · `POST /staff/handoffs/{id}/return` | agent | Inbox and live takeover |
-| `POST /staff/conversations/{id}/messages` | agent | Agent reply |
-| `POST /staff/actions/{tool}` | agent | One-click action through the policy engine |
-| `GET /staff/conversations?filters` · `GET /staff/conversations/{id}/timeline` | agent, admin | Traceability console |
+| `GET /conversations/{id}/stream` | customer | SSE (customer-only per R13; the agent stream is `GET /staff/conversations/{id}/stream`, below) |
+| `POST /auth/staff/login` | public | Staff login `{username, password}` → `StaffMeResponse{role: agent \| admin, username, display_name, queue: Queue \| null}` plus the `session` and `csrf_token` cookies. `401 invalid_credentials`, `429 too_many_attempts`. CSRF-exempt like `/auth/login` |
+| `GET /staff/me` · `POST /staff/logout` | agent, admin | `StaffMeResponse`; logout is `204` and revokes the `jti` |
+| `GET /staff/handoffs?queue=&status=` | agent, admin | `[HandoffSummary]`, newest first; `status` defaults to `queued,claimed`, an unknown value is `422` |
+| `GET /staff/handoffs/stream?queue=` | agent, admin | SSE: `handoff_created {HandoffSummary}`, `handoff_updated {HandoffSummary}`, `: ping` every 15 s |
+| `GET /staff/handoffs/{id}` | agent, admin | `HandoffDetail{summary, packet}`; `404 not_found` |
+| `POST /staff/handoffs/{id}/claim` | agent, admin | `HandoffDetail`, idempotent for the same agent. `409 already_claimed` (another agent), `409 handoff_closed` (returned) |
+| `POST /staff/handoffs/{id}/return` | agent, admin | `HandoffSummary` (`status = returned`). Only the claimant: `409 not_claimant`. Flips the conversation to bot mode first, then closes the handoff; `409 turn_in_progress` while a turn holds the lock, with nothing changed |
+| `GET /staff/conversations/{id}/messages` | agent, admin | `[TranscriptMessage{role, text, created_at}]`, oldest first |
+| `POST /staff/conversations/{id}/messages` | agent, admin | `{text: 1..2000}` → `201 {message_id}`, relayed on `conv:<id>` |
+| `GET /staff/conversations/{id}/stream` | agent, admin | SSE on `conv:<id>`, same framing as the customer stream |
+| `POST /staff/actions/{tool}` | agent | One-click action through the policy engine (Stretch) |
+| `GET /staff/conversations?filters` · `GET /staff/conversations/{id}/timeline` | agent, admin | Traceability console (Stretch) |
 | `GET /staff/personas` · `GET /staff/personas/{customer_id}/credentials` | admin | Persona catalog and credential lookup |
-| `POST /admin/demo/reset` | admin | Restore from the golden DB |
+| `POST /admin/demo/reset` | admin | Restore from the golden DB → `{status: "reset", duration_ms}` |
 | `POST /test-idp/sessions` | eval only (router included under `/api/v1` only when `APP_ENV=eval`) | Mint a session for any customer |
 
 `TurnInput` gains `resume: Literal["step_up"] | None` (D2-B D1, amends D2-K D17): `None` on every typed or button turn, and `"step_up"` for the one that follows a successful `/auth/otp/verify`. The graph checks it right after `load_session`, before `confirmation` or a fresh `understand` call would otherwise run, and resumes the flow paused at `pending.awaiting_slot == "otp"` only when that pause is actually open; with no matching pause, or the step-up gate still invalid, nothing executes and the turn replies with the `otp_required` template again (no LLM call either way). In the sandbox, `/otp <code>` calls the fake step-up gate's `verify(code)` directly and, on success, runs the resume turn the same way.
 
 **Auth (ADR-025):** the Role column is enforced by router-level dependencies (`Depends(require_role(...))`), not per route. Every `/conversations/{id}/…` route also depends on `get_owned_conversation`. Errors: `401 session_expired` (no or expired session), `403 forbidden_role`, `404 not_found` (the conversation doesn't exist *or* belongs to another customer). Only `/auth/login`, `/auth/refresh` and the health check are public.
 
-**Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff:** there is no staff login for now. The staff panel is a separate page, and how it and the `/staff/*` routes below are protected is decided on the staff-panel card (D4).
+**Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff (D4-A, ADR-008 amended):** seeded staff accounts log in with `POST /auth/staff/login {username, password}` and get the same cookie + CSRF session with role `agent` or `admin` and no `customer_id`. The `/staff/*` routers require `agent` or `admin`, `/admin/*` requires `admin`. `/staff/*` routers require `agent` or `admin` plus CSRF; a customer session on `/staff/*` or `/admin/*`, or a staff session on `/conversations/*` or `/auth/me`, gets `403 forbidden_role`. Every `/staff/conversations/{id}/…` route depends on `get_claimed_conversation`: the conversation must have an open handoff claimed by the caller, otherwise `404 not_found`. Shapes (`app/domains/handoff/schemas.py`, frozen): `HandoffSummary{handoff_id, reference, conversation_id, queue, priority: high | normal, reason: HandoffReason, status: queued | claimed | returned, language: es | pt, created_at, claimed_by: str | null}` (`claimed_by` is the agent's `display_name`); `HandoffDetail{summary: HandoffSummary, packet: HandoffPacket}`. `reference` is `"HO-"` + the first 8 hex digits of `handoff_id`, uppercased.
 
-**SSE events:** `status {step}` · `message {role, text, sources[]}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
+**SSE events:** `status {step}` · `message {role: bot | customer | agent | system, text, sources[], agent_display_name?}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
 
 The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up.
+
+**Handoff deltas (D4-A):** `mode` is emitted at handoff (`human`, `null`), at claim (`human`, the agent's `display_name`) and at return (`bot`, `null`). `message.role = customer` is published only in human mode, as the relay for the agent, and the customer UI ignores its own echo; `agent` carries `agent_display_name`; `system` is the fixed `back_with_cardy` text at return. In human mode a customer turn emits `status`, the `customer` echo and `done`, with no bot `message` and no LLM call. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label}`, with `queue_label` localized to the conversation language, both built in code. `ui.quick_replies.slot` is `block_kind | abstain`; for `abstain` the options are the closest action's label and the human offer, and clicking one sends its label as text.
 
 ## 4. Handoff packet (D3.5)
 
@@ -120,7 +130,7 @@ The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`
   "priority": "high",
   "reason": "suspected_fraud",
   "language": "es",
-  "sentiment": "negative",
+  "sentiment": null,
   "request": "Cliente no reconoce 3 compras con su tarjeta de crédito •••• 6475 y pide bloquearla.",
   "verified_facts": [
     {"fact": "card_status", "value": "Blocked", "source": "bank.products:PRD-123 (read-back 2026-…)"},
@@ -138,7 +148,7 @@ The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`
 }
 ```
 
-`request` is the only LLM-written field. It is generated from masked facts and length-capped. Every other field is assembled in code. Raw transcripts are never included; the agent opens the conversation separately (role-gated).
+`sentiment` is always `null` (no sentiment model). `reason` is `human_request | clarification_exhausted | legal_regulator | customer_not_active | bank_side_block | action_unverified | unauthorized_access | suspected_fraud`. `verified_facts[].fact` is `card_locked | card_unlocked | card_status | replacement_ordered | claim_filed`, one per verified `ActionResult`, with `source` `"audit:<audit_event_id>"` (or `"<tool> read-back"`). `open_questions` are rendered in code from `rules.<reason>.open_questions` keys. The customer-facing case `reference` (`HO-XXXXXXXX`) is derived from `handoff_id` and is not a packet field; it appears in `HandoffSummary` and the banner. `request` is the only LLM-written field. It is generated from masked facts and length-capped. Every other field is assembled in code. Raw transcripts are never included; the agent opens the conversation separately (role-gated).
 
 ## 5. Policy YAML (`policies/`)
 
@@ -168,13 +178,28 @@ tools:
 min_payment: {percent_of_balance: "0.05", floors: {USD: "10", COP: "40000", ARS: "5000"}}
 due_date:    {due_day_of_month: 10}
 
-# policies/escalation.yaml v1 (D2-B D8, D10; D4-day adds the rest)
-customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card], queue: atencion}
+# policies/escalation.yaml v2 (D4-A D3-D6)
+customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card]}
 bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
-action_queues:       {action_unverified: atencion}   # P7: the queue for an unverified write's handoff
+rules:               # queue null = resolved from context (bank_side_queues, human_request_queues)
+  human_request:           {queue: null,     priority: normal}
+  clarification_exhausted: {queue: atencion, priority: normal}
+  legal_regulator:         {queue: reclamos, priority: high}
+  customer_not_active:     {queue: atencion, priority: normal}
+  bank_side_block:         {queue: null,     priority: high}
+  action_unverified:       {queue: atencion, priority: high}
+  unauthorized_access:     {queue: atencion, priority: high}
+  suspected_fraud:         {queue: fraudes,  priority: high, open_questions: [card_in_possession]}
+human_request_queues: {default: atencion, by_flow: {unrecognized_charge: fraudes}}
+unauthorized_access:  {attempts_before_handoff: 2}
+legal_keywords:      {es: [demanda, abogado, condusef, superfinanciera, bcra, ...], pt: [processo, advogado, procon, "banco central", ...]}
+
+# policies/scope.yaml (D4-A D8): one entry per Topic literal
+topics:
+  <Topic>: {kind: out_of_market | out_of_scope, reason_key, closest_intents: [Intent], human_queue: Queue}
 ```
 
-Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml` and `min_payment.yaml` are shown above. `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
+Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml` and `min_payment.yaml` are shown above. `disputes.yaml` (required questions, amount thresholds per currency), `transaction_states.yaml`, `scope.yaml` (shown above; out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
 
 ## 6. Audit event
 
