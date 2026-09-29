@@ -1,0 +1,46 @@
+seed_id: d-card_status-multilingual-mixed-01
+intent: card_status
+category: multilingual
+persona: CLI-BCWKVTMY5S99
+goal: Saber el estado de la tarjeta, mezclando portugués y español
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_status-multilingual-mixed-01.s
+  language_variant: mixed
+  expected_language: es
+  source: seed
+  turns:
+  - say: Oi, quero saber o status de mi tarjeta, por favor.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_status-multilingual-mixed-01.p1
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oi, ¿me puedes decir cómo va minha tarjeta, por favor?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_status-multilingual-mixed-01.p2
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Hola, queria saber qual é el status de mi tarjeta, por favor.
+  reviewer: null
+  reviewed_at: null

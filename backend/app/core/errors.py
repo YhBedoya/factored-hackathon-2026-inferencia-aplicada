@@ -9,6 +9,7 @@ __all__ = [
     "AccessDenied",
     "ConfirmationRequired",
     "Conflict",
+    "DeclineCodeUnknown",
     "NotFound",
     "PolicyDenied",
     "StepUpRequired",
@@ -77,3 +78,12 @@ class Conflict(ToolError):
     """The state already matches (already locked, blocked or closed). See `04` §1, D14."""
 
     code: ClassVar[str] = "conflict"
+
+
+class DeclineCodeUnknown(ToolError):
+    """A transaction's `response_code` is missing, empty or has no entry in
+    `policies/decline_codes.yaml`. See `04` §1, §5, D5 (spec D5-B): the flow
+    answers with the fixed `decline_unknown` template, never an invented
+    meaning (R11)."""
+
+    code: ClassVar[str] = "decline_code_unknown"

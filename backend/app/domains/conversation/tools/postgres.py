@@ -28,8 +28,9 @@ from app.domains.customers import service as customers_service
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.localization import service as localization_service
 from app.domains.localization.schemas import FxRate
+from app.domains.policy.decline_codes import lookup_decline_code
 from app.domains.transactions import service as transactions_service
-from app.domains.transactions.schemas import TxFilter, TxView
+from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["PostgresBank", "make_postgres_factory"]
 
@@ -63,6 +64,19 @@ class PostgresBank:
                 self._log_access_denied(tool="transactions.search", requested_id=tx_filter.card_id)
                 raise
         return await transactions_service.search(self._ctx.customer_id, tx_filter)
+
+    async def explain_decline(self, tx_id: str) -> DeclineExplanation:
+        # `get_declined` is already own-row-only with no AccessDenied path
+        # (D4, R1), so there is nothing to catch and log here.
+        tx = await transactions_service.get_declined(self._ctx.customer_id, tx_id)
+        code = lookup_decline_code(tx.response_code)
+        return DeclineExplanation(
+            code=tx.response_code or "",
+            cause_key=code.cause_key,
+            next_step_key=code.next_step_key,
+            self_service=code.self_service,
+            source=f"policy:decline_codes@{self._ctx.policy_version}",
+        )
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         # Reference data (D2-B D3): no `customer_id` to bind.

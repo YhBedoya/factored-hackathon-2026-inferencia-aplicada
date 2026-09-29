@@ -13,7 +13,7 @@ from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.localization.schemas import FxRate
-from app.domains.transactions.schemas import TxFilter, TxView
+from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["BankReadTools", "BankToolsFactory"]
 
@@ -38,6 +38,13 @@ class BankReadTools(Protocol):
     async def search_transactions(self, tx_filter: TxFilter) -> list[TxView]:
         # Registry name: transactions.search. May raise: AccessDenied (tx_filter.card_id
         # not the customer's), ToolUnavailable.
+        ...
+
+    async def explain_decline(self, tx_id: str) -> DeclineExplanation:
+        # Registry name: transactions.explain_decline. tx_id must be this
+        # customer's own Declined transaction (R1): a missing, foreign or
+        # non-Declined id is NotFound, never AccessDenied.
+        # May raise: NotFound, DeclineCodeUnknown, ToolUnavailable.
         ...
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:

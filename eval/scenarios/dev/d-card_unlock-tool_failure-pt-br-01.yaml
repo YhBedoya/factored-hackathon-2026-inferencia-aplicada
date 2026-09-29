@@ -1,0 +1,50 @@
+seed_id: d-card_unlock-tool_failure-pt-br-01
+intent: card_unlock
+category: tool_failure
+persona: CLI-HYFIB9VMDJRR
+goal: Desbloquear o cartão quando a escrita no banco falha
+fact_sheet: {}
+setup:
+  faults:
+  - cards_write_error
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_unlock
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools:
+  - cards.unlock_card
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: d-card_unlock-tool_failure-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero desbloquear meu cartão de crédito.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_unlock-tool_failure-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quero liberar meu cartão de crédito.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_unlock-tool_failure-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Preciso desbloquear meu cartão de crédito.
+  reviewer: null
+  reviewed_at: null

@@ -13,16 +13,25 @@ from collections.abc import Callable
 from typing import Any, Literal, Protocol, TypeVar, cast
 
 import anthropic
+import openai
 import structlog
 from botocore.config import Config  # type: ignore[import-untyped]
 from botocore.exceptions import BotoCoreError, ClientError  # type: ignore[import-untyped]
 from langchain_anthropic import ChatAnthropic
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
 from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable
-from app.core.llm.registry import MODEL_REGISTRY, TEMPERATURE, PromptRef, Provider, Step
+from app.core.llm.registry import (
+    MODEL_REGISTRY,
+    STEP_PROVIDER,
+    TEMPERATURE,
+    PromptRef,
+    Provider,
+    Step,
+)
 from app.core.llm.settings import LLMSettings
 from app.core.llm.tracing import trace_llm_call
 
@@ -51,19 +60,31 @@ ChatModelFactory = Callable[[LLMSettings, Step], _ChatModel]
 def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
     """Build the provider chat model for one step, pinned per D4/D5(b)/D6.
 
-    Anthropic: `max_retries`/`timeout` come straight from `settings` (R11,
-    `01` §7). Bedrock: the same bound is expressed as a botocore `Config`
-    since `ChatBedrockConverse` has no `max_retries`/`timeout` kwargs.
+    The provider is `STEP_PROVIDER.get(step, settings.llm_provider)`: most
+    steps follow `LLM_PROVIDER`, but `paraphrase` is pinned to `openai`
+    regardless (ADR-030). Anthropic and OpenAI: `max_retries`/`timeout` come
+    straight from `settings` (R11, `01` §7). Bedrock: the same bound is
+    expressed as a botocore `Config` since `ChatBedrockConverse` has no
+    `max_retries`/`timeout` kwargs.
     """
-    model_id = MODEL_REGISTRY[step][settings.llm_provider]
+    provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
+    model_id = MODEL_REGISTRY[step][provider]
     temperature = TEMPERATURE[step]
-    if settings.llm_provider == "anthropic":
+    if provider == "anthropic":
         return ChatAnthropic(
             model=model_id,
             temperature=temperature,
             max_retries=settings.max_retries,
             timeout=settings.timeout_s,
             api_key=settings.anthropic_api_key,
+        )
+    if provider == "openai":
+        return ChatOpenAI(
+            model=model_id,
+            temperature=temperature,
+            max_retries=settings.max_retries,
+            timeout=settings.timeout_s,
+            api_key=settings.openai_api_key,
         )
     config = Config(
         retries={"max_attempts": settings.max_retries},
@@ -101,7 +122,7 @@ class StructuredLLMClient:
         self, *, step: Step, prompt: PromptRef, system: str, user: str, schema: type[T]
     ) -> T:
         settings = self._settings
-        provider: Provider = settings.llm_provider
+        provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
         model_id = MODEL_REGISTRY[step][provider]
         temperature = TEMPERATURE[step]
         chat_model = self._chat_model_factory(settings, step)
@@ -133,7 +154,7 @@ class StructuredLLMClient:
                     prompt_version=prompt.label,
                 ):
                     raw_result = cast(dict[str, Any], await structured_model.ainvoke(request))
-            except (anthropic.APIError, BotoCoreError, ClientError) as exc:
+            except (anthropic.APIError, openai.APIError, BotoCoreError, ClientError) as exc:
                 self._log(
                     provider, model_id, step, prompt, temperature, attempt, "unavailable", started
                 )

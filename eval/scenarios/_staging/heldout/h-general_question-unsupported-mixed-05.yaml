@@ -1,0 +1,45 @@
+seed_id: h-general_question-unsupported-mixed-05
+intent: general_question
+category: unsupported
+persona: CLI-063FKU0GAEE4
+goal: Preguntar por una hipoteca (fuera del alcance de tarjetas).
+fact_sheet:
+  topic: loans
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-general_question-unsupported-mixed-05.s
+  language_variant: mixed
+  expected_language: es
+  source: seed
+  turns:
+  - say: Cardy, minha hipoteca foi rechazada, ¿por qué será?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-general_question-unsupported-mixed-05.p1
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, rejeitaron mi hipoteca, ¿por qué habrá sido?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-general_question-unsupported-mixed-05.p2
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, minha hipoteca fue rechazada, ¿por qué será?
+  reviewer: null
+  reviewed_at: null

@@ -1,0 +1,51 @@
+seed_id: h-human_request-human_required-pt-br-05
+intent: human_request
+category: human_required
+persona: CLI-00GYZZUVEG4J
+goal: Pedir explicitamente falar com uma pessoa, não com o bot.
+fact_sheet:
+  trigger: human_request
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - human_request
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: h-human_request-human_required-pt-br-05.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero falar com uma pessoa, não com um robô, sobre essa compra recusada.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-human_request-human_required-pt-br-05.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quero conversar com uma pessoa, e não com um robô, a respeito dessa compra
+      recusada.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-human_request-human_required-pt-br-05.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Gostaria de falar com alguém de verdade, não com um robô, sobre essa compra
+      que foi recusada.
+  reviewer: null
+  reviewed_at: null

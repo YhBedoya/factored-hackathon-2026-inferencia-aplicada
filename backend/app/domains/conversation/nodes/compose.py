@@ -27,7 +27,7 @@ from app.domains.conversation.graph import GraphState
 from app.domains.conversation.prompts import load_prompt
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
-from app.domains.conversation.templates import Language, get_template
+from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.localization import (
     format_date,
     format_days,
@@ -41,10 +41,10 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 5)
+_PROMPT = PromptRef("compose", 6)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
-Goal = Literal["card_status", "balance_due", "abstain"]
+Goal = Literal["card_status", "balance_due", "abstain", "decline_explain"]
 Country = Literal["MX", "CO", "AR"]
 
 # Facts a flow writes for code's own use (formatting, footnotes) but that
@@ -53,6 +53,24 @@ Country = Literal["MX", "CO", "AR"]
 # MXN-estimate suffix; `read_only_note` is always its own fixed template,
 # appended after the draft, never woven into it by the LLM.
 _HIDDEN_KEYS = frozenset({"currency", "fx_rate", "fx_as_of", "read_only_note"})
+
+# D5-B D4, D6: `policies/decline_codes.yaml`'s `cause_key`/`next_step_key`
+# values, mapped to their own fixed ES/PT template (`templates.py`) -- the
+# same "code picks the fixed label, the LLM only places it" shape
+# `flows/unrecognized_charge.py`'s `_QUESTION_TEMPLATES` sets for
+# `disputes.yaml`'s question ids.
+_DECLINE_CAUSE_TEMPLATES: dict[str, TemplateKind] = {
+    "insufficient_funds": "decline_cause_insufficient_funds",
+    "invalid_card_number": "decline_cause_invalid_card_number",
+    "do_not_honor": "decline_cause_do_not_honor",
+    "expired_card": "decline_cause_expired_card",
+}
+_DECLINE_NEXT_TEMPLATES: dict[str, TemplateKind] = {
+    "pay_or_use_other_card": "decline_next_pay_or_use_other_card",
+    "check_card_number": "decline_next_check_card_number",
+    "contact_or_retry": "decline_next_contact_or_retry",
+    "offer_replacement": "decline_next_offer_replacement",
+}
 
 
 class ComposeDraft(BaseModel):
@@ -130,13 +148,20 @@ def _format_fact(
     if key == "status":
         status = cast(Literal["Active", "Blocked", "Suspended", "Closed"], value)
         return status_label(status, language)
-    if key in ("expiry", "due_date"):
+    if key in ("expiry", "due_date", "tx_date"):
         return format_date(cast(date, value))
     if key == "payment_overdue":
         return format_days(cast(int, value), language)
-    if key in ("credit_limit", "available_credit", "current_balance", "min_payment"):
+    if key in ("credit_limit", "available_credit", "current_balance", "min_payment", "amount"):
         return _money_fact(cast(Decimal, value), facts_by_key, language=language, country=country)
-    # `abstain` facts (ADR-026) arrive already localized from `nodes/abstain.py`.
+    # D5-B D4, D6: the policy's own key, rendered through its fixed template
+    # -- the LLM never sees or picks what a decline code means.
+    if key == "decline_cause":
+        return get_template(_DECLINE_CAUSE_TEMPLATES[cast(str, value)], language)
+    if key == "decline_next_step":
+        return get_template(_DECLINE_NEXT_TEMPLATES[cast(str, value)], language)
+    # `abstain` facts (ADR-026) and `merchant` (D5-B) arrive already
+    # localized from the flow that wrote them.
     if key in (
         "card_options",
         "customer_name",
@@ -144,6 +169,7 @@ def _format_fact(
         "abstain_reason",
         "closest_action",
         "human_offer",
+        "merchant",
     ):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")
@@ -187,11 +213,13 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Graph wrapper around `compose_reply`: picks the goal, then fills the reply.
 
     The goal follows this turn's intent and the selected card's kind (D19,
-    this card's B1): `balance_due` for a credit card on `balance_due`, else
-    `card_status` -- a debit card on `balance_due` gets its status described
-    right after the fixed `credit_only` segment (`flows/card_info.py`). The
-    "which card?" question never reaches here: it is a fixed per-action
-    template the flow writes itself (`card_select.ask_which_card_text`). `facts`
+    D2-B B1): `decline_explain` for that intent (D5-B, always -- there is no
+    debit/credit split for it); otherwise `balance_due` for a credit card on
+    `balance_due`, else `card_status` -- a debit card on `balance_due` gets
+    its status described right after the fixed `credit_only` segment
+    (`flows/card_info.py`). The "which card?" question never reaches here: it
+    is a fixed per-action template the flow writes itself
+    (`card_select.ask_which_card_text`, or the flow's own equivalent). `facts`
     are read straight off `state` -- the per-turn reset in `load_session`
     (Q3) is what makes that safe to pass through unfiltered. When the
     profile has a first name, it is offered as one more fact,
@@ -211,11 +239,14 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     facts = list(state.get("facts", []))
     facts_by_key = {fact.key: fact for fact in facts}
 
+    intent = _current_intent(state)
     card_kind = facts_by_key.get("card_kind")
     is_debit = card_kind is not None and card_kind.value == "debit"
-    goal: Goal = (
-        "balance_due" if _current_intent(state) == "balance_due" and not is_debit else "card_status"
-    )
+    goal: Goal
+    if intent == "decline_explain":
+        goal = "decline_explain"
+    else:
+        goal = "balance_due" if intent == "balance_due" and not is_debit else "card_status"
 
     customer_name = state.get("customer_name")
     if customer_name:

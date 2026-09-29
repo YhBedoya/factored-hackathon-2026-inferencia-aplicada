@@ -1,0 +1,50 @@
+seed_id: d-decline_explain-normal_resolution-es-mx-02
+intent: decline_explain
+category: normal_resolution
+persona: CLI-H7CHAE6NGLYQ
+goal: Saber si tuvo compras rechazadas recientemente
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  - transactions.search
+  forbidden_tools:
+  - transactions.explain_decline
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-decline_explain-normal_resolution-es-mx-02.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Por qué se rechazó una compra que hice ayer con mi tarjeta?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-es-mx-02.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Por qué rechazaron una compra que hice ayer con mi tarjeta?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-es-mx-02.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Cuál fue el motivo de que se rechazara una compra que hice ayer con mi tarjeta?
+  reviewer: null
+  reviewed_at: null

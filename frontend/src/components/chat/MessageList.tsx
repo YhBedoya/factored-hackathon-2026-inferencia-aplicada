@@ -88,6 +88,7 @@ export function MessageList({
 										// biome-ignore lint/suspicious/noArrayIndexKey: one turn emits at most one of each kind
 										key={index}
 										options={event.payload.options}
+										multi={event.payload.multi}
 										onSelect={onTransactionSelect}
 									/>
 								);

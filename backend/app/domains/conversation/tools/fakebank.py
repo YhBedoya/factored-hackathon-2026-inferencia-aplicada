@@ -51,7 +51,8 @@ from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.write import BankWriteTools, BankWriteToolsFactory
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.localization.schemas import FxRate
-from app.domains.transactions.schemas import TxFilter, TxView
+from app.domains.policy.decline_codes import lookup_decline_code
+from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["FakeBank", "FakeBankOverlay", "FakeBankWrites", "make_fakebank_factory"]
 
@@ -229,6 +230,44 @@ class FakeBank:
         sql, params = self._build_tx_query(tx_filter)
         rows = await self._query(sql, params)
         return [self._to_tx_view(row) for row in rows]
+
+    async def explain_decline(self, tx_id: str) -> DeclineExplanation:
+        """`transactions.explain_decline` (D4, R1): this customer's own
+        Declined transaction only. Unlike `get_transactions_by_ids`, there is
+        no `AccessDenied` path and no existence probe -- a foreign or
+        missing id is `NotFound` either way, so explaining a decline never
+        confirms that some other customer's transaction exists.
+        """
+        rows = await self._query(
+            f"""
+            SELECT transaction_id, product_id,
+                   CAST(transaction_date AS TIMESTAMP) AS occurred_at,
+                   CAST(amount AS DECIMAL(18,2)) AS amount, currency,
+                   CAST(NULLIF(amount_usd, '') AS DECIMAL(18,2)) AS amount_usd,
+                   transaction_type, NULLIF(transaction_category, '') AS transaction_category,
+                   NULLIF(merchant_name, '') AS merchant_name,
+                   NULLIF(merchant_category, '') AS merchant_category,
+                   channel, NULLIF(transaction_city, '') AS transaction_city,
+                   NULLIF(transaction_country, '') AS transaction_country,
+                   transaction_status, NULLIF(response_code, '') AS response_code,
+                   CAST(NULLIF(fraud_score, '') AS DECIMAL(9,4)) AS fraud_score
+            FROM read_csv({_sql_literal(self._transactions_glob)},
+                          hive_partitioning=true, union_by_name=true, all_varchar=true)
+            WHERE customer_id = ? AND transaction_id = ?
+            """,
+            [self._ctx.customer_id, tx_id],
+        )
+        if not rows or rows[0]["transaction_status"] != "Declined":
+            raise NotFound(f"no declined transaction {tx_id!r}")
+        tx = self._to_tx_view(rows[0])
+        code = lookup_decline_code(tx.response_code)
+        return DeclineExplanation(
+            code=tx.response_code or "",
+            cause_key=code.cause_key,
+            next_step_key=code.next_step_key,
+            self_service=code.self_service,
+            source=f"policy:decline_codes@{self._ctx.policy_version}",
+        )
 
     async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
         """`tx_ids`' own rows, in the same order (D4-B, `disputes.create_claim`'s

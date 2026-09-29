@@ -29,6 +29,8 @@ forbidden_modules=
     boto3
     aioboto3
     langchain_aws
+    openai
+    langchain_openai
 ignore_imports=
     app.core.llm -> anthropic
     app.core.llm.** -> anthropic
@@ -40,6 +42,10 @@ ignore_imports=
     app.core.llm.** -> aioboto3
     app.core.llm -> langchain_aws
     app.core.llm.** -> langchain_aws
+    app.core.llm -> openai
+    app.core.llm.** -> openai
+    app.core.llm -> langchain_openai
+    app.core.llm.** -> langchain_openai
 unmatched_ignore_imports_alerting=none
 
 [importlinter:contract:conversation-no-repository]

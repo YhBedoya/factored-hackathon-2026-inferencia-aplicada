@@ -43,10 +43,22 @@
 #   usd_card                  true iff any card product for this
 #                             customer_id has currency = 'USD'.
 #
+# T4/D17: `split: dev | heldout` is also a non-trait key, like
+# `customer_id` and `notes` -- dev and held-out share no personas and no
+# seeds. Every persona id referenced outside `eval/` (docs, backend tests,
+# e2e, Makefile, README) is `dev`; the `heldout` personas below are new,
+# found by the same predicates against `latam_golden`, so each side has
+# >=1 persona for every `03` §8 category: each decline code (`05`/`14`/
+# `51`/`54`), each country, multi-card, single-card, `blocked: true`,
+# non-Active `customer_status`, `missing_income`, `regulator_case`,
+# `has_pending_transaction`, `has_reversed_transaction` and
+# `expiring_card`.
+#
 # Every `03` §8 category has at least one matching customer in `latam_golden`
 # today; none is missing, so none is a "no match" placeholder.
 personas:
   - customer_id: CLI-U6NAXZG11P97
+    split: dev
     country: MX
     card_count: 2
     card_kinds: [credit, debit]
@@ -56,11 +68,13 @@ personas:
       unambiguously (D12). Demo persona for the `07` D1 end-of-day step-4
       sandbox script.
   - customer_id: CLI-15CX29YY6SS9
+    split: dev
     country: CO
     card_count: 2
     card_kinds: [credit, debit]
     blocked: false
   - customer_id: CLI-AO5PZVMZCL1V
+    split: dev
     country: AR
     card_count: 2
     card_kinds: [credit, debit]
@@ -71,21 +85,25 @@ personas:
       refuse with the Atención handoff (D2-B D10). The Inactive-customer
       persona for D2-B's T13.
   - customer_id: CLI-H7CHAE6NGLYQ
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [debit]
     blocked: false
   - customer_id: CLI-H24P25YVOAJY
+    split: dev
     country: CO
     card_count: 1
     card_kinds: [debit]
     blocked: false
   - customer_id: CLI-BCWKVTMY5S99
+    split: dev
     country: AR
     card_count: 1
     card_kinds: [debit]
     blocked: false
   - customer_id: CLI-UZ7Z6C3JFXGX
+    split: dev
     country: MX
     card_count: 2
     card_kinds: [credit]
@@ -95,16 +113,19 @@ personas:
       Active, so `get_block_origin` resolves bank-side `bank_status` (D2-B
       D8) -- the Fraudes handoff persona for D2-B's T13.
   - customer_id: CLI-8U06DH6VYHA3
+    split: dev
     country: CO
     card_count: 3
     card_kinds: [credit, debit]
     blocked: true
   - customer_id: CLI-HYFIB9VMDJRR
+    split: dev
     country: AR
     card_count: 2
     card_kinds: [credit]
     blocked: true
   - customer_id: CLI-2FKTNVMZ3HVH
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [credit]
@@ -114,6 +135,7 @@ personas:
       both stay Active, so `get_block_origin` resolves bank-side `past_due`
       (D2-B D8) -- the Cobranza handoff persona for D2-B's T13.
   - customer_id: CLI-UAJ81O52ZM1R
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [credit]
@@ -128,6 +150,7 @@ personas:
   # already covered above; these add the rest, plus a bit more country and
   # card-shape spread).
   - customer_id: CLI-1SW7TPRC63U2
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [credit]
@@ -135,6 +158,7 @@ personas:
     customer_status: Suspended
     notes: Suspended customer.
   - customer_id: CLI-1B7XH7IDPE2N
+    split: dev
     country: AR
     card_count: 1
     card_kinds: [credit]
@@ -143,6 +167,7 @@ personas:
     has_reversed_transaction: true
     notes: Missing income and a reversed transaction.
   - customer_id: CLI-22WQT9NBWYGS
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [debit]
@@ -150,6 +175,7 @@ personas:
     repeat_complainer: true
     notes: Repeat complainer, also a bank-blocked debit card.
   - customer_id: CLI-1JHOGI2P2UE2
+    split: dev
     country: CO
     card_count: 1
     card_kinds: [credit]
@@ -158,6 +184,7 @@ personas:
     usd_card: true
     notes: Regulator-channel complaint, also holds a USD card.
   - customer_id: CLI-F7PQP3J4AS6X
+    split: dev
     country: MX
     card_count: 3
     card_kinds: [credit]
@@ -169,6 +196,7 @@ personas:
       calendar time passed since it was chosen (`load_date` is fixed at the
       last `make data` ingest).
   - customer_id: CLI-55D0R3VIIFPT
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [debit]
@@ -176,6 +204,7 @@ personas:
     recent_declines: ["14"]
     notes: Recent decline, response code 14.
   - customer_id: CLI-5RJITZ5VLJGY
+    split: dev
     country: CO
     card_count: 2
     card_kinds: [debit]
@@ -183,6 +212,7 @@ personas:
     recent_declines: ["51"]
     notes: Recent decline, response code 51.
   - customer_id: CLI-46VRQAOC91Y6
+    split: dev
     country: AR
     card_count: 1
     card_kinds: [credit]
@@ -190,6 +220,7 @@ personas:
     recent_declines: ["54"]
     notes: Recent decline, response code 54; also a bank-blocked card.
   - customer_id: CLI-001AVI5RHIYA
+    split: dev
     country: CO
     card_count: 1
     card_kinds: [credit]
@@ -197,6 +228,7 @@ personas:
     has_pending_transaction: true
     notes: Has a pending transaction.
   - customer_id: CLI-1GS3I085CUFD
+    split: dev
     country: CO
     card_count: 1
     card_kinds: [credit]
@@ -204,58 +236,69 @@ personas:
     expiring_card: true
     notes: Card expiring within 90 days of load_date.
   - customer_id: CLI-1IKY4D1AV8A7
+    split: dev
     country: AR
     card_count: 0
     card_kinds: []
     blocked: false
     notes: No card products.
   - customer_id: CLI-1CHLXB8H0W48
+    split: dev
     country: CO
     card_count: 0
     card_kinds: []
     blocked: false
     notes: No card products.
   - customer_id: CLI-1BQ0JRB6CMK7
+    split: dev
     country: MX
     card_count: 4
     card_kinds: [credit]
     blocked: false
   - customer_id: CLI-1GKXCA8LLVNI
+    split: dev
     country: AR
     card_count: 3
     card_kinds: [credit]
     blocked: false
   - customer_id: CLI-KX9TL8GMCQUT
+    split: dev
     country: AR
     card_count: 1
     card_kinds: [debit]
     blocked: true
   - customer_id: CLI-1EOUF8Y7UJ5M
+    split: dev
     country: CO
     card_count: 1
     card_kinds: [credit]
     blocked: false
   - customer_id: CLI-1QR2NP1ABVMW
+    split: dev
     country: AR
     card_count: 1
     card_kinds: [debit]
     blocked: false
   - customer_id: CLI-1EGDG5IVX22Y
+    split: dev
     country: MX
     card_count: 2
     card_kinds: [credit]
     blocked: false
   - customer_id: CLI-1GLBAP6G8DXQ
+    split: dev
     country: AR
     card_count: 2
     card_kinds: [credit, debit]
     blocked: false
   - customer_id: CLI-00AAKZ5VX42P
+    split: dev
     country: CO
     card_count: 3
     card_kinds: [credit, debit]
     blocked: false
   - customer_id: CLI-0D54NQDU9AWV
+    split: dev
     country: MX
     card_count: 1
     card_kinds: [debit]
@@ -265,3 +308,94 @@ personas:
       transactions include one with fraud_score 53.94 (> 30). Demo persona
       for D4-B's compromise-path `make chat-api` walkthrough (end-of-day
       step 5).
+  # T4/D20: one dev persona for D5-B's success criterion 2, plus 9 new
+  # heldout personas (chosen by SQL against `latam_golden`, same predicates)
+  # so every `03` §8 category above has >=1 persona on each side of `split`.
+  - customer_id: CLI-00N1NADOZIUH
+    split: dev
+    country: AR
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    notes: >-
+      Criterion-2 demo: its newest Declined transaction across all its
+      cards (checked against `latam_app`, not just the 30-day
+      `recent_declines` window) has response_code 54 and sits on this
+      Active credit card. `make chat-api PERSONA=CLI-00N1NADOZIUH` then
+      "¿por qué rechazaron mi compra?" demonstrates D5-B's success
+      criterion 2 end to end.
+  - customer_id: CLI-040S627SFJSV
+    split: heldout
+    country: CO
+    card_count: 3
+    card_kinds: [credit]
+    blocked: false
+    customer_status: Suspended
+    recent_declines: ["05"]
+    notes: Held-out. Recent decline, response code 05; also a Suspended customer.
+  - customer_id: CLI-00P4VN7YGMT5
+    split: heldout
+    country: AR
+    card_count: 3
+    card_kinds: [credit, debit]
+    blocked: false
+    customer_status: Inactive
+    recent_declines: ["14"]
+    notes: Held-out. Recent decline, response code 14; also an Inactive customer.
+  - customer_id: CLI-02RX8WUOJTJ6
+    split: heldout
+    country: MX
+    card_count: 3
+    card_kinds: [credit]
+    blocked: false
+    recent_declines: ["51"]
+    notes: Held-out. Recent decline, response code 51.
+  - customer_id: CLI-00K5DRIG1GZT
+    split: heldout
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    recent_declines: ["54"]
+    notes: Held-out. Recent decline, response code 54.
+  - customer_id: CLI-00WAXO79YRHL
+    split: heldout
+    country: AR
+    card_count: 1
+    card_kinds: [debit]
+    blocked: true
+    notes: Held-out. Bank-blocked debit card.
+  - customer_id: CLI-001KTTVQ14AC
+    split: heldout
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    customer_status: Inactive
+    has_pending_transaction: true
+    notes: Held-out. Inactive customer with a pending transaction.
+  - customer_id: CLI-00R1HD1YN0Z6
+    split: heldout
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    missing_income: true
+    has_reversed_transaction: true
+    notes: Held-out. Missing income and a reversed transaction.
+  - customer_id: CLI-063FKU0GAEE4
+    split: heldout
+    country: MX
+    card_count: 2
+    card_kinds: [credit]
+    blocked: false
+    regulator_case: true
+    notes: Held-out. Regulator-channel complaint.
+  - customer_id: CLI-00GYZZUVEG4J
+    split: heldout
+    country: CO
+    card_count: 2
+    card_kinds: [credit]
+    blocked: false
+    expiring_card: true
+    notes: Held-out. Card expiring within 90 days of load_date.

@@ -1,0 +1,47 @@
+seed_id: d-card_block-ambiguous-es-co-01
+intent: card_block
+category: ambiguous
+persona: CLI-H24P25YVOAJY
+goal: Bloquear la tarjeta sin decir si es temporal o permanente
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  expected_outcome: clarified
+  required_tools:
+  - cards.list_cards
+  forbidden_tools:
+  - cards.lock_card
+  - cards.block_card
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_block-ambiguous-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: Necesito bloquear mi tarjeta.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-ambiguous-es-co-01.p1
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quiero bloquear mi tarjeta.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-ambiguous-es-co-01.p2
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Necesito que bloqueen mi tarjeta.
+  reviewer: null
+  reviewed_at: null

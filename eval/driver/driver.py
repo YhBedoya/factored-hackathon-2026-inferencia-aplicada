@@ -1,0 +1,387 @@
+"""The B2 scripted HTTP driver (spec "Contracts" -> "B2: driver", D8-D10):
+plays one `Case`'s turns against a running conversation API and returns a
+raw `Transcript`, with no interpretation -- A3 derives every pass/fail check
+from the transcript plus the DB clone (D9). It never reads the DB itself.
+
+Per-turn shape mirrors `backend/scripts/chat_api.py`'s `_run_turn`/
+`_run_otp`/`_run_confirmation`/`_run_pick` (mirror, not import: this module
+runs outside `backend/app`, under the repo-root `eval` package, and the two
+tools have different jobs -- that one is an interactive human REPL, this one
+is a scripted batch runner with no stdin): open `GET .../stream`, wait for
+`: connected`, then POST the turn, then collect `event:` frames until
+`done`. The CSRF header comes from the `csrf_token` cookie `POST
+/test-idp/sessions` sets (same shape `auth.py`'s login sets, `04` §3 "Auth
+(ADR-025)"); that route itself is the one exception to R1's "no `customer_id`
+argument" rule (eval-only, `test_idp.py`).
+
+`confirm`/`cancel` resolve against the token of the last `ui.confirm` event
+this run has seen; `select` needs a `ui.transaction_list` to have been
+offered at some point. Neither replays server-side validation (R1/R2 are the
+API's job, not this script's) -- an unmet precondition just ends the
+transcript with `error`, the same way a real client with stale UI state
+would get a `409` and give up.
+"""
+
+import asyncio
+import json
+import time
+from typing import Any, Literal
+
+import httpx
+from pydantic import BaseModel, ConfigDict
+
+from eval.scenarios.schema import Case, Turn
+
+__all__ = ["EventRecord", "Transcript", "TurnInput", "TurnRecord", "run_case"]
+
+_API_PREFIX = "/api/v1"
+_CONNECTED_LINE = ": connected"
+_TURN_TIMEOUT_SECONDS = 60.0
+
+TurnKind = Literal["say", "confirm", "cancel", "otp", "select"]
+EndedBy = Literal["done", "handoff", "closed", "error", "max_turns", "not_runnable"]
+
+
+class _TurnTimeout(Exception):
+    """A turn's stream produced no `done` within `_TURN_TIMEOUT_SECONDS`,
+    whether the 60 s watchdog (`asyncio.wait_for`) fired first or httpx's own
+    per-request timeout did (`httpx.TimeoutException`, e.g. `ReadTimeout`
+    while waiting on the SSE stream between events)."""
+
+
+class EventRecord(BaseModel):
+    """One SSE frame (`04` §3 "SSE events"): the event name and its decoded
+    `data` payload, verbatim -- this driver reads `kind`/`token_id`/`mode`
+    off `data` but never reshapes it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    event: str
+    data: dict[str, Any]
+
+
+class TurnInput(BaseModel):
+    """What this turn sent: the case's own turn kind and the value that
+    kind carries (the text, the confirm/cancel/otp flag, or the selected
+    tx ids)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: TurnKind
+    value: Any
+
+
+class TurnRecord(BaseModel):
+    """One played turn: what was sent, the posting call's status, every SSE
+    frame collected before `done` (or before the turn gave up), and how
+    long it took."""
+
+    model_config = ConfigDict(frozen=True)
+
+    index: int
+    input: TurnInput
+    http_status: int
+    events: list[EventRecord]
+    latency_ms: int
+
+
+class Transcript(BaseModel):
+    """The whole run of one `Case`: every `TurnRecord` played, and why it
+    stopped. `conversation_id` is `None` only for `not_runnable` (D10),
+    since that case never reaches `POST /conversations`."""
+
+    model_config = ConfigDict(frozen=True)
+
+    case_id: str
+    conversation_id: str | None
+    turns: list[TurnRecord]
+    ended_by: EndedBy
+    error: str | None = None
+
+
+class _RunnerState:
+    """Cross-turn bookkeeping this run needs to resolve `confirm`/`cancel`/
+    `select` against the last matching `ui.*` event seen (mirrors
+    `chat_api.py`'s `_ChatState`). Never cleared on use: the server, not
+    this driver, is the single-use/offer-membership enforcement point
+    (R2/R1)."""
+
+    def __init__(self) -> None:
+        self.last_confirm_token: str | None = None
+        self.tx_list_open = False
+
+
+def _csrf_headers(client: httpx.AsyncClient) -> dict[str, str]:
+    """`X-CSRF-Token` read from the `csrf_token` cookie each call, the same
+    convention `chat_api.py`'s `_csrf_headers` uses."""
+
+    token = client.cookies.get("csrf_token")
+    return {"X-CSRF-Token": token} if token else {}
+
+
+def _turn_input(turn: Turn) -> tuple[TurnKind, Any]:
+    """The one populated action field on `turn` (`Turn`'s own validator
+    guarantees exactly one)."""
+
+    if turn.say is not None:
+        return "say", turn.say
+    if turn.confirm is not None:
+        return "confirm", turn.confirm
+    if turn.cancel is not None:
+        return "cancel", turn.cancel
+    if turn.otp is not None:
+        return "otp", turn.otp
+    if turn.select is not None:
+        return "select", turn.select
+    raise AssertionError("Turn has no populated action field; schema validation prevents this")
+
+
+def _update_state(state: _RunnerState, event: str, data: dict[str, Any]) -> None:
+    if event == "ui" and data.get("kind") == "confirm":
+        state.last_confirm_token = data["payload"]["token_id"]
+    elif event == "ui" and data.get("kind") == "transaction_list":
+        state.tx_list_open = True
+
+
+def _ended_by_from_events(events: list[EventRecord]) -> Literal["handoff", "closed"] | None:
+    """A `mode{human}` or `ui.conversation_closed` frame anywhere in a
+    turn's events ends the whole transcript, not just that turn."""
+
+    for record in events:
+        if record.event == "mode" and record.data.get("mode") == "human":
+            return "handoff"
+        if record.event == "ui" and record.data.get("kind") == "conversation_closed":
+            return "closed"
+    return None
+
+
+async def _post_and_collect_inner(
+    client: httpx.AsyncClient,
+    conversation_id: str,
+    state: _RunnerState,
+    *,
+    post_url: str,
+    post_json: dict[str, Any],
+) -> tuple[int, list[EventRecord]]:
+    stream_url = f"{_API_PREFIX}/conversations/{conversation_id}/stream"
+    events: list[EventRecord] = []
+
+    async with client.stream("GET", stream_url) as response:
+        lines = response.aiter_lines()
+        async for line in lines:
+            if line == _CONNECTED_LINE:
+                break
+
+        post_response = await client.post(post_url, json=post_json, headers=_csrf_headers(client))
+
+        current_event: str | None = None
+        async for line in lines:
+            if line.startswith("event: "):
+                current_event = line[len("event: ") :]
+            elif line.startswith("data: "):
+                data = json.loads(line[len("data: ") :])
+                if current_event is not None:
+                    events.append(EventRecord(event=current_event, data=data))
+                    _update_state(state, current_event, data)
+                    if current_event == "done":
+                        current_event = None
+                        break
+                current_event = None
+            # A blank frame separator or an `: ping` comment carries no
+            # data; only `event:`/`data:` lines matter here.
+
+    return post_response.status_code, events
+
+
+async def _post_and_collect(
+    client: httpx.AsyncClient,
+    conversation_id: str,
+    state: _RunnerState,
+    *,
+    post_url: str,
+    post_json: dict[str, Any],
+) -> tuple[int, list[EventRecord]]:
+    try:
+        return await asyncio.wait_for(
+            _post_and_collect_inner(
+                client, conversation_id, state, post_url=post_url, post_json=post_json
+            ),
+            timeout=_TURN_TIMEOUT_SECONDS,
+        )
+    except (TimeoutError, httpx.TimeoutException) as exc:
+        raise _TurnTimeout from exc
+
+
+async def _play_turn(
+    client: httpx.AsyncClient,
+    conversation_id: str,
+    kind: TurnKind,
+    value: Any,
+    state: _RunnerState,
+    *,
+    otp_code: str,
+) -> tuple[int, list[EventRecord]]:
+    messages_url = f"{_API_PREFIX}/conversations/{conversation_id}/messages"
+
+    if kind == "say":
+        return await _post_and_collect(
+            client, conversation_id, state, post_url=messages_url, post_json={"text": value}
+        )
+    if kind == "select":
+        return await _post_and_collect(
+            client,
+            conversation_id,
+            state,
+            post_url=messages_url,
+            post_json={"selection": {"tx_ids": value}},
+        )
+    if kind == "otp":
+        verify_response = await client.post(
+            f"{_API_PREFIX}/auth/otp/verify",
+            json={"code": otp_code},
+            headers=_csrf_headers(client),
+        )
+        if verify_response.status_code != 200:
+            return verify_response.status_code, []
+        return await _post_and_collect(
+            client,
+            conversation_id,
+            state,
+            post_url=messages_url,
+            post_json={"resume": "step_up"},
+        )
+
+    # confirm / cancel: the last `ui.confirm` token seen (checked by the
+    # caller before this is reached).
+    decision = "confirm" if kind == "confirm" else "cancel"
+    confirm_url = (
+        f"{_API_PREFIX}/conversations/{conversation_id}/confirmations/{state.last_confirm_token}"
+    )
+    return await _post_and_collect(
+        client, conversation_id, state, post_url=confirm_url, post_json={"decision": decision}
+    )
+
+
+async def _run_case(
+    case: Case, client: httpx.AsyncClient, *, otp_code: str, max_turns: int
+) -> Transcript:
+    state = _RunnerState()
+
+    login_response = await client.post(
+        f"{_API_PREFIX}/test-idp/sessions", json={"customer_id": case.persona}
+    )
+    login_response.raise_for_status()
+
+    create_response = await client.post(
+        f"{_API_PREFIX}/conversations", json={}, headers=_csrf_headers(client)
+    )
+    create_response.raise_for_status()
+    conversation_id = str(create_response.json()["conversation_id"])
+
+    records: list[TurnRecord] = []
+    for index, turn in enumerate(case.turns):
+        if index >= max_turns:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="max_turns",
+            )
+
+        kind, value = _turn_input(turn)
+
+        if kind in ("confirm", "cancel") and state.last_confirm_token is None:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="error",
+                error="no_open_confirmation",
+            )
+        if kind == "select" and not state.tx_list_open:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="error",
+                error="no_open_selection",
+            )
+
+        started = time.monotonic()
+        try:
+            http_status, events = await _play_turn(
+                client, conversation_id, kind, value, state, otp_code=otp_code
+            )
+        except _TurnTimeout:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="error",
+                error="timeout",
+            )
+        latency_ms = int((time.monotonic() - started) * 1000)
+
+        records.append(
+            TurnRecord(
+                index=index,
+                input=TurnInput(kind=kind, value=value),
+                http_status=http_status,
+                events=events,
+                latency_ms=latency_ms,
+            )
+        )
+
+        ended_by = _ended_by_from_events(events)
+        if ended_by is not None:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by=ended_by,
+            )
+
+    return Transcript(
+        case_id=case.case_id, conversation_id=conversation_id, turns=records, ended_by="done"
+    )
+
+
+async def run_case(
+    case: Case,
+    *,
+    base_url: str,
+    otp_code: str,
+    client: httpx.AsyncClient | None = None,
+    max_turns: int = 12,
+) -> Transcript:
+    """Play `case` against `base_url` and return its `Transcript`.
+
+    A non-empty `case.setup.faults` or a set
+    `case.setup.expire_session_before_turn` returns `not_runnable` before
+    any HTTP call is made (D10) -- both are D6-B3 fault-injection hooks this
+    driver doesn't implement yet.
+
+    `client` lets a caller (a test, or a future runner amortizing
+    connections across cases) supply its own `httpx.AsyncClient`; this
+    function only opens and closes one of its own when `client` is `None`,
+    with its timeout set to the per-turn budget (`_TURN_TIMEOUT_SECONDS`),
+    not httpx's 5 s default -- the SSE stream can go tens of seconds
+    between frames without that being a failure.
+    """
+
+    if case.setup.faults or case.setup.expire_session_before_turn is not None:
+        return Transcript(
+            case_id=case.case_id, conversation_id=None, turns=[], ended_by="not_runnable"
+        )
+
+    owns_client = client is None
+    http_client = (
+        client
+        if client is not None
+        else httpx.AsyncClient(base_url=base_url, timeout=httpx.Timeout(_TURN_TIMEOUT_SECONDS))
+    )
+    try:
+        return await _run_case(case, http_client, otp_code=otp_code, max_turns=max_turns)
+    finally:
+        if owns_client:
+            await http_client.aclose()

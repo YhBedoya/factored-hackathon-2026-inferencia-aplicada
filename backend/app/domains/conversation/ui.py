@@ -12,7 +12,9 @@ carries the fixed lock-vs-block labels `card_block` emits while clarifying
 (D4). Both `PickerOption.label`s are formatted in code, never by the LLM (R4).
 `transaction_list` carries the picker for `unrecognized_charge`'s candidate
 transactions (`TxOption.label` is the code-formatted merchant/money/date/mask
-string, D4-B D13). `handoff_banner` (D4-A) announces the transfer to a
+string, D4-B D13) and for `decline_explain`'s single-pick offer (D5-B D2-D3):
+`multi` tells the frontend which selection mode to render, so it never has to
+infer it from `len(options)`. `handoff_banner` (D4-A) announces the transfer to a
 person; on the fraud path it also carries the case ids
 `disputes.create_claim` returned (D4-B D16). `mode` and `message` payloads
 are the non-`ui` SSE events the runner publishes.
@@ -138,12 +140,15 @@ class QuickRepliesPayload(BaseModel):
     """`ui.quick_replies` payload: a fixed slot's options (D4).
 
     `slot` is a closed literal, not a free string, because the frontend keys
-    its rendering off it (today only the lock-vs-block clarification).
+    its rendering off it: `"block_kind"` is the lock-vs-block clarification,
+    `"abstain"` ADR-026's closest action, and `"next_step"` (D5-B D7) is
+    `decline_explain`'s self-service replacement offer -- tapping its one
+    option sends the label as text, so NLU routes it as `replacement_request`.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    slot: Literal["block_kind", "abstain"]
+    slot: Literal["block_kind", "abstain", "next_step"]
     options: list[PickerOption]
 
 
@@ -166,15 +171,17 @@ class TxOption(BaseModel):
 
 
 class TransactionListPayload(BaseModel):
-    """`ui.transaction_list` payload: the candidates `unrecognized_charge`
-    offered (D12, D13). `multi` is always `True` -- the customer can pick
-    more than one -- so the frontend never has to infer it from `len(options)`.
+    """`ui.transaction_list` payload: the candidates a flow offered (D4-B
+    D12-D13; D5-B D2-D3). `multi` has no default -- each flow states its own
+    selection mode rather than relying on one: `unrecognized_charge` always
+    passes `True` (the customer can pick more than one), `decline_explain`
+    always passes `False` (exactly one decline gets explained per turn).
     """
 
     model_config = ConfigDict(frozen=True)
 
     options: list[TxOption]
-    multi: Literal[True] = True
+    multi: bool
 
 
 class TransactionListEvent(BaseModel):

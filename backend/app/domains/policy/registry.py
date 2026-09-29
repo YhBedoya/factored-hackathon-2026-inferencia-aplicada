@@ -2,14 +2,15 @@
 each one and combines them into a single hash that reaches every downstream
 decision (spec D1, D2, R8).
 
-`tools`, `escalation`, `min_payment`, `scope` and `disputes` are validated
-against their own domain models -- the same ones their existing per-file
-loaders (`tools_policy.py`, `escalation.py`, `min_payment.py`, `scope.py`,
-`disputes.py`) use. This module doesn't replace those loaders; it adds the
-combined view the lifespan logs and every `ToolContext.policy_version`
-carries. `disputes` has no required field on `PolicyBundle` (unlike the other
-four), so the file stays optional for the bundle even though it is validated
-when present. Any other stem (`card_select` today) is
+`tools`, `escalation`, `min_payment`, `scope`, `disputes` and `decline_codes`
+are validated against their own domain models -- the same ones their
+existing per-file loaders (`tools_policy.py`, `escalation.py`,
+`min_payment.py`, `scope.py`, `disputes.py`, `decline_codes.py`) use. This
+module doesn't replace those loaders; it adds the combined view the
+lifespan logs and every `ToolContext.policy_version` carries. `disputes`
+and `decline_codes` have no required field on `PolicyBundle` (unlike the
+other four), so those files stay optional for the bundle even though each
+is validated when present. Any other stem (`card_select` today) is
 validated here against a header-only model only:
 `policy` must not import `app.domains.conversation` (`06` §2), so
 `card_select.yaml`'s own shape stays checked by its own loader, called
@@ -24,6 +25,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from app.domains.policy.decline_codes import DeclineCodesPolicy
 from app.domains.policy.disputes import DisputesPolicy
 from app.domains.policy.escalation import EscalationPolicy
 from app.domains.policy.min_payment import MinPaymentPolicy
@@ -48,6 +50,7 @@ _MODELS_BY_STEM: dict[str, type[BaseModel]] = {
     "min_payment": MinPaymentPolicy,
     "scope": ScopePolicy,
     "disputes": DisputesPolicy,
+    "decline_codes": DeclineCodesPolicy,
 }
 
 

@@ -13,7 +13,7 @@ export type CardPickerUiEvent = {
 };
 
 export type QuickRepliesPayload = {
-	slot: "block_kind";
+	slot: "block_kind" | "abstain" | "next_step";
 	options: PickerOption[];
 };
 export type QuickRepliesUiEvent = {
@@ -44,7 +44,9 @@ export type ConversationClosedUiEvent = {
 /** One offered transaction: its id and its code-formatted label (R4, D13). */
 export type TxOption = { tx_id: string; label: string };
 
-export type TransactionListPayload = { options: TxOption[]; multi: true };
+/** `multi=false` for `decline_explain`'s single-pick offer (D3); `true` for
+ * `unrecognized_charge`'s multi-select. */
+export type TransactionListPayload = { options: TxOption[]; multi: boolean };
 export type TransactionListUiEvent = {
 	kind: "transaction_list";
 	payload: TransactionListPayload;

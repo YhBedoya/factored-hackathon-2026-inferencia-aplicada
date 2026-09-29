@@ -1,0 +1,50 @@
+seed_id: d-decline_explain-normal_resolution-pt-br-01
+intent: decline_explain
+category: normal_resolution
+persona: CLI-1JHOGI2P2UE2
+goal: Entender por que uma compra foi recusada no cartão de crédito
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  - transactions.search
+  - transactions.explain_decline
+  forbidden_tools:
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-decline_explain-normal_resolution-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Por que minha compra foi recusada no cartão de crédito?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Qual foi o motivo de recusarem minha compra no cartão de crédito?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Por que não aceitaram minha compra no cartão de crédito?
+  reviewer: null
+  reviewed_at: null

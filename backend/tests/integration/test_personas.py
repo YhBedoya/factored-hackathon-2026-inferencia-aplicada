@@ -44,8 +44,10 @@ _ORIGINAL_IDS = {
     "CLI-2FKTNVMZ3HVH",
 }
 
-# Keys that describe a persona but aren't traits with a predicate.
-_NON_TRAIT_KEYS = {"customer_id", "notes"}
+# Keys that describe a persona but aren't traits with a predicate. T4/D17
+# adds `split` (`dev | heldout`): it partitions personas, it doesn't assert
+# anything about `latam_golden`.
+_NON_TRAIT_KEYS = {"customer_id", "notes", "split"}
 
 
 def _psycopg_dsn(database_url: str) -> str:

@@ -9,7 +9,7 @@ COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f d
 COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
 STACK_NAME ?= swip-card-support
 
-.PHONY: setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod
+.PHONY: setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -98,6 +98,23 @@ chat-api: ## CLI chat against the running API: make chat-api PERSONA=<customer_i
 
 graph-diagram: ## Regenerate the turn-graph Mermaid diagram.
 	cd backend && uv run python -m app.domains.conversation.graph --mermaid > ../docs/diagrams/turn-graph-v0.mmd
+
+# --- D5-B eval test-set tooling (B3) -----------------------------------------
+
+eval-paraphrase: ## Append up to N paraphrases per seed case: make eval-paraphrase DIR=<dir> N=<n>.
+	@test -n "$(DIR)" -a -n "$(N)" || (echo "Usage: make eval-paraphrase DIR=<dir> N=<n>" && exit 1)
+	cd backend && uv run python scripts/paraphrase_seeds.py --dir ../$(DIR) --n $(N)
+
+eval-mix: ## Mix report + target check for one suite dir: make eval-mix DIR=<dir>.
+	@test -n "$(DIR)" || (echo "Usage: make eval-mix DIR=<dir>" && exit 1)
+	uv run --project backend python -m eval.scenarios.mix_report $(DIR)
+
+eval-freeze: ## Human-run only (D11): moves _staging/heldout/ into heldout/ and writes heldout.lock.
+	@echo "eval-freeze must be run by a human, after both reviewers have set reviewer/reviewed_at on every eval/scenarios/_staging/heldout/*.yaml case."
+	uv run --project backend python -m eval.scenarios.freeze freeze
+
+eval-freeze-check: ## CI check: eval/scenarios/heldout/ matches heldout.lock byte-for-byte.
+	uv run --project backend python -m eval.scenarios.freeze check
 
 test-integration: ## Integration tests against `make up`'s Postgres/Redis (D19). Local only, needs `make up`.
 	cd backend && uv run pytest tests/integration -q

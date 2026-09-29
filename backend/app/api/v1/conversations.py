@@ -59,7 +59,7 @@ from app.domains.conversation.graph import ConfirmationDecision, TxSelection
 from app.domains.conversation.runner import (
     TurnInProgress,
     checkpointed_confirmation_token,
-    checkpointed_dispute,
+    checkpointed_offer,
     start_turn,
 )
 from app.domains.conversation.store import ConversationRow
@@ -182,24 +182,28 @@ async def post_message(
     instead).
 
     D7's pick gate: a `selection` body is checked against this
-    conversation's own last-checkpointed `pending`/`dispute`
-    (`runner.checkpointed_dispute`) *before* anything is scheduled --
-    paused at `awaiting_slot == "transactions"` and every picked id present
-    in `dispute.offered_tx_ids` -- else `409 selection_invalid` and no turn
-    runs (R1: a customer can't claim a transaction that was never offered).
-    The flow re-checks the same rule once a turn does run, as a second gate.
+    conversation's own last-checkpointed `pending` and offer
+    (`runner.checkpointed_offer`, T7 -- generalized from D4-B's
+    `checkpointed_dispute` to also cover `decline_explain`'s single-pick,
+    D3) *before* anything is scheduled -- paused at
+    `awaiting_slot == "transactions"`, every picked id actually offered,
+    and exactly one id when the offer was single-pick (`multi = False`) --
+    else `409 selection_invalid` and no turn runs (R1: a customer can't
+    claim a transaction that was never offered). The flow re-checks the
+    same rule once a turn does run, as a second gate.
     """
     if conversation.status == "closed":
         raise HTTPException(status_code=409, detail="conversation_closed")
 
     host = request.app.state.turn_host
     if body.selection is not None:
-        pending, dispute = await checkpointed_dispute(host, conversation.id)
-        offered = set(dispute["offered_tx_ids"]) if dispute is not None else set()
+        pending, offered, multi = await checkpointed_offer(host, conversation.id)
+        tx_ids = body.selection.tx_ids
         selection_open = (
             pending is not None
             and pending["awaiting_slot"] == "transactions"
-            and set(body.selection.tx_ids) <= offered
+            and set(tx_ids) <= offered
+            and (multi or len(tx_ids) == 1)
         )
         if not selection_open:
             raise HTTPException(status_code=409, detail="selection_invalid")

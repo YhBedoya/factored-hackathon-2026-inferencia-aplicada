@@ -1,0 +1,49 @@
+seed_id: h-card_status-expired_session-es-mx-01
+intent: card_status
+category: expired_session
+persona: CLI-02RX8WUOJTJ6
+goal: Ver el estado de una tarjeta y seguir tras expirar la sesión.
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: 1
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-card_status-expired_session-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Cuál es el estado de una de mis tarjetas?
+  - say: ¿Sigues ahí? Es la de crédito.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-expired_session-es-mx-01.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Cómo está una de mis tarjetas?
+  - say: ¿Todavía estás por ahí? Es la tarjeta de crédito.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-expired_session-es-mx-01.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿En qué situación se encuentra una de mis tarjetas?
+  - say: ¿Aún sigues ahí? Me refiero a la de crédito.
+  reviewer: null
+  reviewed_at: null
