@@ -1,6 +1,6 @@
 ---
 name: card-planner
-description: Turns an approved spec at docs/specs/<slug>.md into a technical implementation plan at docs/plans/<slug>.md — components, build order, touch map, risks, a minimal test list and an ordered task list. Second phase of the /wave-run orchestrator. Writes no source code.
+description: Turns an approved spec at docs/specs/<slug>.md into a technical implementation plan at docs/plans/<slug>.md — components, build order, touch map, risks, a minimal test list and an ordered task list and its parallel waves. Second phase of the /wave-run orchestrator. Writes no source code.
 tools: ["Read", "Grep", "Glob", "Bash", "Write", "Skill"]
 model: opus
 reasoning_effort: high
@@ -79,6 +79,12 @@ list below.>
   - Verify: <the exact, narrow command, e.g.
     `uv run pytest backend/tests/unit/test_tool_registry.py -q && uv run ruff check backend/app/domains/conversation/tools`>
   - Files: <paths, about five at most>
+
+## Parallel waves
+| Wave | Tasks | Runs alone? | Why these can build together |
+|---|---|---|---|
+| W1 | T1 | alone (adds deps, lockfile) | <reason> |
+| W2 | T2, T5, T9 | | <independent chains, disjoint files> |
 ```
 
 Keep the `- [ ] T<n>: ` headings exactly in that shape, at the top level of the
@@ -128,6 +134,41 @@ really two tasks, so split it. Don't over-split in the other direction. A task
 with no runnable proof of its own is below the floor, and the dispatch overhead
 costs more than the split saves. Nothing in a task block may say "as in the
 previous task" or "continue from T2". The agent reading it won't have seen T2.
+
+## Parallel waves (required)
+
+Independent tasks are built **at the same time**, each by its own implementer,
+in one shared checkout. Plan for that from the start. The `## Parallel waves`
+section groups every task into waves:
+
+- **A wave's tasks depend only on tasks in earlier waves.**
+- **No two tasks in the same wave share a path in `Files`.** That includes
+  `Makefile`, `.env.example`, `pyproject.toml`, lockfiles, `graph.py`-style
+  hubs and the test files they edit.
+- **A task that changes the shared environment gets a wave to itself** and is
+  marked "alone": adding a dependency or touching a lockfile, rebuilding the
+  stack, applying a migration to the dev databases, `make data`, or a live
+  proof that restarts services.
+- **Put each task in the earliest wave it can go in.** A task with
+  `Depends on: nothing` belongs in W1 (or W2, if W1 is an "alone" task).
+
+Shape the task list so that the waves are wide:
+
+- **Prefer independent chains over one long line.** For example, the eval
+  harness, a new domain and the docs usually don't depend on each other. Keep
+  them in separate tasks, so they can run beside the main chain.
+- **Keep hub files out of many tasks.** When several tasks would each add a
+  line to `Makefile`, `.env.example` or a registry, give those lines to one
+  task, or accept that those tasks run one after another. Don't hide the
+  conflict.
+- **`Files` must be complete**, because the orchestrator decides what runs in
+  parallel from these lists alone. List every file the task will edit,
+  including existing tests its change will break. For example, a new guard
+  that refuses an input an old test uses breaks that test, so name the test
+  file.
+- **`Verify` commands lint and format-check only the task's own paths**, not a
+  whole directory that sibling tasks are writing into at the same moment.
+  Tests may import sibling modules; lint may not sweep them.
 
 Everything a later task needs to know about what an earlier one actually built
 (real symbol names, the migration revision, a deviation) reaches it through the

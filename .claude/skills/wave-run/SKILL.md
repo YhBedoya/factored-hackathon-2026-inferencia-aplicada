@@ -191,25 +191,44 @@ advance until they approve.
 
 Spawn `card-planner` with the spec path, the card id and the branch. It writes
 an implementation plan at `docs/plans/<slug>.md`: components, build order,
-touch map, risks, the **test list** (held to the test budget), and an ordered
+touch map, risks, the **test list** (held to the test budget), an ordered
 task list where each task names its acceptance, its verify command and the
-files it touches.
+files it touches, and the **parallel waves**: the tasks grouped so that each
+wave's tasks can be built at the same time by independent implementers
+(every dependency is in an earlier wave, and no two tasks in a wave share a
+file).
 
 If the planner returns questions, relay them exactly as in Step 1 and resume it
-with `SendMessage`. If it returns none, report the plan's task headings and
-its test list in one short list, and **proceed without a gate**. The human
-approved the spec, and the plan is bound by it.
+with `SendMessage`. If it returns none, report the plan's waves (task headings
+grouped by wave) and its test list in one short list, and **proceed without a
+gate**. The human approved the spec, and the plan is bound by it.
+
+If the plan has no `## Parallel waves` section, or a wave holds two tasks that
+share a file, send it back to the planner before dispatching anything.
 
 If the planner reports that the spec contradicts itself or can't be built as
 written, stop. That is a spec revision, so go back to Step 1's agent.
 
-## Step 3 — IMPLEMENT, one task at a time
+## Step 3 — IMPLEMENT, in parallel waves
 
-The plan's tasks are dispatched **one per fresh `card-implementer`**, in order,
-sequentially. No agent sees more than its own task. This keeps a card cheap:
-your context grows by one line per task instead of one whole implementation,
-and a wrong decision surfaces at the task that made it rather than at the
-verifier.
+Each plan task goes to **its own fresh `card-implementer`**, and independent
+tasks run **at the same time** in this checkout. No agent sees more than its
+own task. This keeps a card cheap and fast: your context grows by one line per
+task instead of one whole implementation, a wrong decision surfaces at the
+task that made it rather than at the verifier, and independent chains (say,
+the eval harness and a new domain) never wait on each other.
+
+**The dispatch rule.** A task is *ready* when every task in its `Depends on`
+is `done`. Dispatch every ready task whose `Files` list shares no path with a
+task that is still running, all in one message. The plan's waves are the
+starting schedule, not a barrier: when a task finishes, dispatch whatever it
+made ready right away, without waiting for the rest of its wave. Two tasks that
+share a file always run one after the other, even when both are ready.
+
+Tasks that change the shared environment run **alone**: adding a dependency
+(`uv add`, `npm install`, a lockfile change), `make up`/rebuilds, a migration
+applied to the dev databases, `make data`, or a live runtime proof that
+restarts services. The planner marks them in the waves table.
 
 ### 3a — Seed the state file
 
@@ -245,9 +264,15 @@ Seed the board from the plan's task headings
 about 40 lines. If the Conventions block outgrows that, it is turning into a
 second plan, so trim it back to the facts tasks actually need.
 
-### 3b — Dispatch each task
+### 3b — Dispatch the ready tasks
 
-For each task in order:
+Find the ready tasks and check their `Files` lists against the running tasks
+without reading the plan body:
+```bash
+grep -nE '^- \[ \] T[0-9]+[a-z]?:|^  - Depends on:|^  - Files:' docs/plans/<slug>.md
+```
+
+For each task you dispatch (several per message when the rule allows):
 
 1. **Slice the task block out of the plan.** Never `cat` the plan:
    ```bash
@@ -267,9 +292,26 @@ For each task in order:
      §"Contracts" → `ToolContext`. Never "read the spec";
    - "Do not start any later task, even if it looks trivial from here. Run only
      your task's `Verify`, never the whole suite."
-4. On a clean `Verify`, mark the task `done` with the agent's one-line result
-   and move to the next. That verify output is your gate. You never run the
-   commands yourself, and you never read the task's diff.
+   - when other tasks are running, the **parallel-run rules**, and which tasks
+     are running on which files:
+     - touch only the files in your `Files` list;
+     - never run `uv add`, `uv sync`, `uv lock` or `npm install` unless your
+       task owns the lockfile;
+     - run `ruff format` (or any formatter) only on your own files, never on a
+       directory;
+     - append to the state file's Task log only with one shell
+       `cat >> <state file> <<'EOF'` heredoc, and never Edit or Write the
+       state file;
+     - report, don't fix, a lint, type or test failure in a file you don't
+       own. Your task passes when every failure is outside your files.
+4. On a clean `Verify`, mark the task `done` with the agent's one-line result,
+   then dispatch whatever it made ready. That verify output is your gate. You
+   never run the commands yourself, and you never read the task's diff.
+5. When an implementer reports that it needs a file outside its `Files` list
+   (an existing test its change breaks, say), you may extend that task's
+   files if no running task holds the file. Record the extension in the
+   ledger `notes`. When a running task holds it, wait, or send the change to
+   the agent that owns the file.
 
 An implementer may use the `playwright`, `victorialogs` and `victoriatraces`
 MCPs (`.mcp.json`) for its own `Verify` on a UI or observability task, and
@@ -297,7 +339,7 @@ arrange.
 
 Before spawning it, make sure the dev stack is up (`make up`) and the three
 runtime-harness MCP servers — `playwright`, `victorialogs`, `victoriatraces`
-(`.mcp.json`) — are loaded in this session. If you changed `.mcp.json` this
+(`.mcp.json`) — are loaded in this session. They are dev compose services (`docker/docker-compose.devtools.yml`), so they exist only while `make up` is running, and the browser opens the app at `http://nginx/`. If you changed `.mcp.json` this
 run, the human needs to restart or resume Claude Code and approve the project
 servers before the verifier can use them; ask and wait.
 
