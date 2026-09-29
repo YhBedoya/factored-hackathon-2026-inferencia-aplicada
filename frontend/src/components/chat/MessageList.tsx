@@ -55,9 +55,10 @@ export function MessageList({
 						className={cn(
 							"max-w-[80%] rounded-xl px-3 py-2 text-sm",
 							message.role === "bot" && "self-start border border-cyan bg-card",
-							// A person is answering: solid gold, distinct from the
-							// gold-bordered confirm card (brand.md).
-							message.role === "agent" && "self-start bg-gold text-bg",
+							// A person is answering: gold border, the way Cardy's
+							// bubble is cyan-bordered (brand.md).
+							message.role === "agent" &&
+								"self-start border border-gold bg-card",
 							message.role === "customer" &&
 								"self-end bg-primary text-primary-foreground",
 							message.role === "system" &&

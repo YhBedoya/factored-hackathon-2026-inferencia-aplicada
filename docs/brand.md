@@ -87,7 +87,7 @@ The dark space palette stays, and each color has one fixed meaning in the conver
 |---|---|---|---|
 | `bg` | `#070B1A` | App and landing background | n/a |
 | `cyan` | `#3DD6E0` | Cardy, and completed or verified actions | 11.1:1 |
-| `gold` | `#F5C66B` | Anything that needs the customer's confirmation (gold border), and a human agent's messages in the customer chat (solid gold bubble, `bg` text) | 12.3:1 |
+| `gold` | `#F5C66B` | Anything that needs the customer's confirmation (gold border), and a human agent's messages in the customer chat (gold-bordered bubble, as Cardy's is cyan-bordered) | 12.3:1 |
 | `alert` | `#FF6B6B` | Escalation, fraud and errors | 7.1:1 |
 
 - **Fonts:** Plus Jakarta Sans for headings, Inter for body text.
