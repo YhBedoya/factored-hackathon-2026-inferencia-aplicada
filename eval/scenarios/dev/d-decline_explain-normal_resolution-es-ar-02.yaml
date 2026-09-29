@@ -1,0 +1,54 @@
+seed_id: d-decline_explain-normal_resolution-es-ar-02
+intent: decline_explain
+category: normal_resolution
+persona: CLI-00N1NADOZIUH
+goal: Entender por qué rechazaron su compra y pedir reposición
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  - replacement_request
+  expected_outcome: clarified
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  - transactions.search
+  - transactions.explain_decline
+  forbidden_tools:
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-decline_explain-normal_resolution-es-ar-02.s
+  language_variant: es-AR
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿por qué rechazaron mi compra?
+  - say: Quiero una tarjeta nueva
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-es-ar-02.p1
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Por qué me rechazaron la compra?
+  - say: Quisiera una tarjeta nueva
+  reviewer: null
+  reviewed_at: null
+- case_id: d-decline_explain-normal_resolution-es-ar-02.p2
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Por qué no aceptaron mi compra?
+  - say: Me gustaría tener una tarjeta nueva
+  reviewer: null
+  reviewed_at: null

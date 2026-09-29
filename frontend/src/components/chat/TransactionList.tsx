@@ -6,25 +6,40 @@ import type { TxOption } from "@/lib/sse";
 
 type TransactionListProps = {
 	options: TxOption[];
+	/** `false` for `decline_explain`'s single-pick offer (D3): renders radio
+	 * inputs and "Continuar" sends exactly one id. `true` (checkboxes) for
+	 * `unrecognized_charge`'s multi-select. */
+	multi: boolean;
 	/** Posts the picked `tx_id`s as a `TxSelection` (D4-B D7), never as text. */
 	onSelect: (txIds: string[]) => void;
 };
 
 /**
- * `ui.transaction_list`: one native checkbox per offered transaction, each
- * label already merchant/money/date/mask-formatted server-side (R4, D13).
- * "Continuar" stays disabled until at least one is picked, and the whole
- * widget disables itself after use, like `CardPicker`.
+ * `ui.transaction_list`: one native checkbox or radio per offered
+ * transaction (per `multi`), each label already merchant/money/date/mask-
+ * formatted server-side (R4, D13). "Continuar" stays disabled until at
+ * least one is picked, and the whole widget disables itself after use,
+ * like `CardPicker`.
  */
-export function TransactionList({ options, onSelect }: TransactionListProps) {
+export function TransactionList({
+	options,
+	multi,
+	onSelect,
+}: TransactionListProps) {
 	const { t } = useI18n();
 	const [picked, setPicked] = useState<string[]>([]);
 	const [used, setUsed] = useState(false);
 
 	function toggle(txId: string) {
-		setPicked((prev) =>
-			prev.includes(txId) ? prev.filter((id) => id !== txId) : [...prev, txId],
-		);
+		if (multi) {
+			setPicked((prev) =>
+				prev.includes(txId)
+					? prev.filter((id) => id !== txId)
+					: [...prev, txId],
+			);
+		} else {
+			setPicked([txId]);
+		}
 	}
 
 	function handleContinue() {
@@ -37,7 +52,8 @@ export function TransactionList({ options, onSelect }: TransactionListProps) {
 			{options.map((option) => (
 				<label key={option.tx_id} className="flex items-center gap-2 text-sm">
 					<input
-						type="checkbox"
+						type={multi ? "checkbox" : "radio"}
+						name={multi ? undefined : "transaction-pick"}
 						data-testid="transaction-option"
 						disabled={used}
 						checked={picked.includes(option.tx_id)}

@@ -1,0 +1,47 @@
+seed_id: h-pending_reversal_explain-bad_data-es-co-02
+intent: pending_reversal_explain
+category: bad_data
+persona: CLI-001KTTVQ14AC
+goal: Entender por qué una compra sigue pendiente.
+fact_sheet:
+  note: tiene una transacción pendiente real
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - pending_reversal_explain
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-pending_reversal_explain-bad_data-es-co-02.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Por qué esta compra pendiente todavía no se refleja en mi saldo?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-pending_reversal_explain-bad_data-es-co-02.p1
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Por qué esta compra pendiente aún no aparece en mi saldo?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-pending_reversal_explain-bad_data-es-co-02.p2
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿A qué se debe que esta compra pendiente todavía no se vea reflejada en mi
+      saldo?
+  reviewer: null
+  reviewed_at: null

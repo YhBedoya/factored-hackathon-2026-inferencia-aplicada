@@ -21,6 +21,8 @@ jobs:
       - name: uv sync
         working-directory: backend
         run: uv sync
+      - name: eval freeze-check (D5-B B3, D11/D12)
+        run: make eval-freeze-check
       - name: ruff check
         working-directory: backend
         run: uv run ruff check app tests

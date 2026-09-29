@@ -1,0 +1,51 @@
+seed_id: d-card_block-tool_failure-es-co-01
+intent: card_block
+category: tool_failure
+persona: CLI-15CX29YY6SS9
+goal: Bloquear la tarjeta cuando el modelo no responde a tiempo
+fact_sheet: {}
+setup:
+  faults:
+  - bedrock_timeout
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools:
+  - cards.block_card
+  - cards.lock_card
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: d-card_block-tool_failure-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: Necesito bloquear mi tarjeta de crédito ahora mismo.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-tool_failure-es-co-01.p1
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Necesito que bloqueen mi tarjeta de crédito de inmediato.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-tool_failure-es-co-01.p2
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Necesito bloquear ya mi tarjeta de crédito.
+  reviewer: null
+  reviewed_at: null

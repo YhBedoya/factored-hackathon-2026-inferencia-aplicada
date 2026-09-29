@@ -14,6 +14,7 @@ graph TD;
 	card_unlock(card_unlock)
 	replacement(replacement)
 	unrecognized_charge(unrecognized_charge)
+	decline_explain(decline_explain)
 	unsupported(unsupported)
 	fallback(fallback)
 	compose(compose)
@@ -44,9 +45,15 @@ graph TD;
 	card_unlock -.-> next_intent;
 	compose -.-> finish;
 	compose -.-> next_intent;
+	decline_explain -.-> compose;
+	decline_explain -.-> fallback;
+	decline_explain -.-> finish;
+	decline_explain -.-> handoff_summary;
+	decline_explain -.-> next_intent;
 	enqueue -.-> card_block;
 	enqueue -.-> card_info;
 	enqueue -.-> card_unlock;
+	enqueue -.-> decline_explain;
 	enqueue -.-> finish;
 	enqueue -.-> replacement;
 	enqueue -.-> unrecognized_charge;
@@ -58,6 +65,7 @@ graph TD;
 	load_session -.-> card_block;
 	load_session -.-> card_info;
 	load_session -.-> card_unlock;
+	load_session -.-> decline_explain;
 	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
@@ -66,6 +74,7 @@ graph TD;
 	next_intent -.-> card_block;
 	next_intent -.-> card_info;
 	next_intent -.-> card_unlock;
+	next_intent -.-> decline_explain;
 	next_intent -.-> finish;
 	next_intent -.-> replacement;
 	next_intent -.-> unrecognized_charge;
@@ -81,6 +90,7 @@ graph TD;
 	understand -.-> card_block;
 	understand -.-> card_info;
 	understand -.-> card_unlock;
+	understand -.-> decline_explain;
 	understand -.-> enqueue;
 	understand -.-> fallback;
 	understand -.-> handoff_summary;

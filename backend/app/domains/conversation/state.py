@@ -26,6 +26,7 @@ from app.domains.localization.format import Queue
 __all__ = [
     "RESET_FACTS",
     "RESET_SEGMENTS",
+    "DeclineState",
     "DisputeState",
     "Fact",
     "Pending",
@@ -156,6 +157,20 @@ class DisputeState(TypedDict):
     block_refused: bool
 
 
+class DeclineState(TypedDict):
+    """`decline_explain`'s own sub-state (this card's B1, `02` §4.3 D2-D3).
+
+    `card_id` is the card the offered declines were pulled from;
+    `offered_tx_ids` is what the single-pick `ui.transaction_list` showed.
+    Unlike `DisputeState`, there is no accumulation across turns -- the pick
+    is the flow's only pause, so nothing here survives past the resume that
+    explains one of the offered declines.
+    """
+
+    card_id: str
+    offered_tx_ids: list[str]
+
+
 class TurnState(TypedDict):
     """Checkpointed graph state, keyed by `conversation_id` (`02` §3, D3)."""
 
@@ -178,6 +193,7 @@ class TurnState(TypedDict):
     actions: NotRequired[Annotated[list[ActionResult], add]]
     escalation_reason: NotRequired[str | None]
     dispute: NotRequired[DisputeState | None]
+    decline: NotRequired[DeclineState | None]
     # Handoff (D4-A): the queue a flow or rule chose, the created row's id, the
     # count of attempts on another person's data (D6), and the evidence and
     # code-filled open questions the fraud flow attaches to the packet (D4-B

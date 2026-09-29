@@ -1,0 +1,47 @@
+seed_id: d-transaction_search-bad_data-es-mx-01
+intent: transaction_search
+category: bad_data
+persona: CLI-1EGDG5IVX22Y
+goal: Buscar una compra que no aparece en el extracto
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - transaction_search
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-transaction_search-bad_data-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: Busca una compra de $50,000 pesos en el supermercado Rappi de la semana pasada.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-transaction_search-bad_data-es-mx-01.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Encuentra una compra de $50,000 pesos en el supermercado Rappi de la semana
+      pasada.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-transaction_search-bad_data-es-mx-01.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Localiza una compra de $50,000 pesos en el supermercado Rappi de la semana
+      pasada.
+  reviewer: null
+  reviewed_at: null

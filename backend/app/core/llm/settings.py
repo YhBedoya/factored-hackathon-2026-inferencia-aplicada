@@ -23,6 +23,8 @@ class LLMSettings(BaseSettings):
 
     llm_provider: Literal["anthropic", "bedrock"] = "anthropic"
     anthropic_api_key: SecretStr | None = None
+    # Eval-only: the `paraphrase` step (ADR-030). Never used by a served step.
+    openai_api_key: SecretStr | None = None
     aws_region: str | None = None
     aws_profile: str | None = None
     langfuse_host: str | None = None

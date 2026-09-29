@@ -1,0 +1,44 @@
+seed_id: d-general_question-unsupported-es-ar-01
+intent: general_question
+category: unsupported
+persona: CLI-1QR2NP1ABVMW
+goal: Preguntar por un préstamo para comprar un auto
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-general_question-unsupported-es-ar-01.s
+  language_variant: es-AR
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Me podés dar un préstamo para comprar un auto?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-unsupported-es-ar-01.p1
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Me podrías prestar plata para comprar un auto?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-unsupported-es-ar-01.p2
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Puedo pedir un préstamo para comprar un auto?
+  reviewer: null
+  reviewed_at: null

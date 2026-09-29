@@ -1,0 +1,49 @@
+seed_id: d-balance_due-multilingual-mixed-01
+intent: balance_due
+category: multilingual
+persona: CLI-AO5PZVMZCL1V
+goal: Saber o pagamento mínimo do cartão de crédito, misturando idiomas
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - balance_due
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools:
+  - cards.lock_card
+  - cards.unlock_card
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-balance_due-multilingual-mixed-01.s
+  language_variant: mixed
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Ei, quanto é o saldo mínimo da minha tarjeta de crédito, pfa?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-balance_due-multilingual-mixed-01.p1
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oi, ¿cuánto es el saldo mínimo de mi cartão de crédito, porfa?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-balance_due-multilingual-mixed-01.p2
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Ei, qual é o saldo mínimo da minha tarjeta de crédito, por favor?
+  reviewer: null
+  reviewed_at: null

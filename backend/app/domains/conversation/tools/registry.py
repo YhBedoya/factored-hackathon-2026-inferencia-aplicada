@@ -46,7 +46,7 @@ from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
 from app.domains.policy.registry import get_policies
 from app.domains.policy.tools_policy import step_up_rule, tool_allowed
-from app.domains.transactions.schemas import TxFilter, TxView
+from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["RecordingBankTools", "audit_recorder_for", "build_tool_context", "turn_tools"]
 
@@ -156,6 +156,24 @@ class RecordingBankTools:
             await self._record_error(tool, tx_filter.card_id, exc)
             raise
         await self._record("tool_result", {"tool": tool, "count": len(result)})
+        return result
+
+    async def explain_decline(self, tx_id: str) -> DeclineExplanation:
+        self.calls.append("explain_decline")
+        tool = "transactions.explain_decline"
+        payload: dict[str, JsonValue] = {"tool": tool, "tx_id": tx_id}
+        try:
+            await self._audit.record("tool_call", payload)
+        except Exception as exc:
+            raise ToolUnavailable("audit_unavailable") from exc
+        try:
+            result = await self._inner.explain_decline(tx_id)
+        except Exception as exc:
+            await self._record(
+                "tool_result", {"tool": tool, "tx_id": tx_id, "error": type(exc).__name__}
+            )
+            raise
+        await self._record("tool_result", {"tool": tool, "tx_id": tx_id})
         return result
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:

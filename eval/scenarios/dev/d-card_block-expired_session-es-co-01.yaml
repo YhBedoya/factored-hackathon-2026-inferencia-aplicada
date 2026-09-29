@@ -1,0 +1,49 @@
+seed_id: d-card_block-expired_session-es-co-01
+intent: card_block
+category: expired_session
+persona: CLI-1GS3I085CUFD
+goal: Bloquear la tarjeta por pérdida, confirmando después de una pausa larga
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: 1
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.block_card
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_block-expired_session-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: Necesito bloquear mi tarjeta, la perdí.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-expired_session-es-co-01.p1
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Necesito bloquear mi tarjeta porque se me perdió.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_block-expired_session-es-co-01.p2
+  language_variant: es-CO
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Perdí mi tarjeta y necesito que la bloqueen.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null

@@ -12,8 +12,8 @@ a step-up resume, a button confirm/cancel, or a transaction pick.
 `checkpointed_confirmation_token` is the route's second D7 gate for a
 confirmation -- the same `graph.aget_state(...).values.get(
 "confirmation_token_id")` read the sandbox's `/confirm` already does --
-and `checkpointed_dispute` is the analogous read for a pick (`pending` +
-`dispute`).
+and `checkpointed_offer` is the analogous read for a pick (`pending` + the
+offering flow's own sub-state, `dispute` or `decline`, T7).
 
 The turn task builds its `ToolContext`, its one turn-bound `AuditRecorder`
 and its read/write tools only through `registry` (R1, D13, D17): nothing
@@ -54,7 +54,7 @@ from app.domains.conversation import store
 from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TxSelection
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
-from app.domains.conversation.state import DisputeState, Pending
+from app.domains.conversation.state import DeclineState, DisputeState, Pending
 from app.domains.conversation.tools import registry
 from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
@@ -64,7 +64,7 @@ from app.domains.safety.vault import InMemoryAddressVault
 __all__ = [
     "TurnInProgress",
     "checkpointed_confirmation_token",
-    "checkpointed_dispute",
+    "checkpointed_offer",
     "start_turn",
 ]
 
@@ -81,6 +81,7 @@ _BRANCH_NODES = (
     "card_unlock",
     "replacement",
     "unrecognized_charge",
+    "decline_explain",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -162,17 +163,30 @@ async def checkpointed_confirmation_token(host: TurnHost, conversation_id: UUID)
     return state.values.get("confirmation_token_id")
 
 
-async def checkpointed_dispute(
+async def checkpointed_offer(
     host: TurnHost, conversation_id: UUID
-) -> tuple[Pending | None, DisputeState | None]:
-    """This conversation's last-checkpointed `pending` and `dispute` (D4-B
-    D7's route gate): the same read `checkpointed_confirmation_token` does,
-    for the pick's own two fields -- "is a transaction list actually open"
-    and "what ids did it offer". `(None, None)` on a conversation with no
-    checkpoint yet.
+) -> tuple[Pending | None, set[str], bool]:
+    """This conversation's last-checkpointed `pending`, the ids its own pick
+    actually offered, and whether that pick was multi-select (T7, D7's route
+    gate, generalizing D4-B's `checkpointed_dispute` to also cover
+    `decline_explain`'s single-pick offer, D3): the same read
+    `checkpointed_confirmation_token` does, for the pick's own three facts --
+    "is a transaction list actually open", "what ids did it offer" and "how
+    many can be picked". Reads `decline` (multi `False`) when
+    `pending["flow"] == "decline_explain"`, else `dispute` (multi `True`,
+    D4-B's shape) -- the two flows never share a checkpoint slot
+    (`state.py`'s `DeclineState`/`DisputeState`). `(None, set(), True)` on a
+    conversation with no checkpoint yet, or with nothing pending.
     """
     state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
-    return state.values.get("pending"), state.values.get("dispute")
+    pending: Pending | None = state.values.get("pending")
+    if pending is not None and pending["flow"] == "decline_explain":
+        decline: DeclineState | None = state.values.get("decline")
+        offered = set(decline["offered_tx_ids"]) if decline is not None else set()
+        return pending, offered, False
+    dispute: DisputeState | None = state.values.get("dispute")
+    offered = set(dispute["offered_tx_ids"]) if dispute is not None else set()
+    return pending, offered, True
 
 
 async def _run_turn(

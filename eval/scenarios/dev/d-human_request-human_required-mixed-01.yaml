@@ -1,0 +1,50 @@
+seed_id: d-human_request-human_required-mixed-01
+intent: human_request
+category: human_required
+persona: CLI-1GKXCA8LLVNI
+goal: Falar direto com uma pessoa, não com o bot
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - human_request
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: d-human_request-human_required-mixed-01.s
+  language_variant: mixed
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero falar com uma persona de verdad, no more bot por favor.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-human_request-human_required-mixed-01.p1
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Me pueden pasar con uma pessoa de verdade? Já não quero falar com bot, por
+      favor.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-human_request-human_required-mixed-01.p2
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quiero falar com uma pessoa real, não quero mais atendimento de bot, por
+      favor.
+  reviewer: null
+  reviewed_at: null

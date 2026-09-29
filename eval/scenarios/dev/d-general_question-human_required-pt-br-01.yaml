@@ -1,0 +1,53 @@
+seed_id: d-general_question-human_required-pt-br-01
+intent: general_question
+category: human_required
+persona: CLI-1JHOGI2P2UE2
+goal: Avisar que já abriu reclamação no órgão regulador
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: handoff:reclamos
+  required_tools: []
+  forbidden_tools:
+  - cards.block_card
+  - disputes.create_claim
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  - escalation_rules_hit
+  eligible_for_automation: false
+cases:
+- case_id: d-general_question-human_required-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Já registrei uma reclamação na SIC sobre minha conta e quero saber o status.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-human_required-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Já fiz uma reclamação na SIC sobre minha conta e gostaria de saber o status.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-human_required-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Registrei uma reclamação na SIC a respeito da minha conta e quero saber em
+      que pé está.
+  reviewer: null
+  reviewed_at: null

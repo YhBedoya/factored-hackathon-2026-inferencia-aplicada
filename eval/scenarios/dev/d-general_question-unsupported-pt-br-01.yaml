@@ -1,0 +1,44 @@
+seed_id: d-general_question-unsupported-pt-br-01
+intent: general_question
+category: unsupported
+persona: CLI-1GLBAP6G8DXQ
+goal: Perguntar se dá para pagar um boleto com Pix pelo chat
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-general_question-unsupported-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Consigo pagar um boleto com Pix pelo chat de vocês?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-unsupported-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Dá para pagar um boleto com Pix pelo chat de vocês?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-general_question-unsupported-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Posso quitar um boleto usando Pix pelo chat de vocês?
+  reviewer: null
+  reviewed_at: null

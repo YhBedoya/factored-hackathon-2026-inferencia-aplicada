@@ -190,7 +190,8 @@ async def _offer_candidates(
         "segments": [prompt],
         "ui": [
             TransactionListEvent(
-                kind="transaction_list", payload=TransactionListPayload(options=options)
+                kind="transaction_list",
+                payload=TransactionListPayload(options=options, multi=True),
             )
         ],
     }

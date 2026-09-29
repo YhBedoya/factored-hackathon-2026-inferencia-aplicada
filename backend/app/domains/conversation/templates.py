@@ -74,6 +74,19 @@ TemplateKind = Literal[
     "dispute_handoff_no_claim",
     "dispute_open_question_card_active",
     "dispute_open_question_claim_refused",
+    "ask_which_card_decline",
+    "decline_none",
+    "decline_unknown",
+    "decline_pick_ask",
+    "decline_replacement_option",
+    "decline_cause_insufficient_funds",
+    "decline_cause_invalid_card_number",
+    "decline_cause_do_not_honor",
+    "decline_cause_expired_card",
+    "decline_next_pay_or_use_other_card",
+    "decline_next_check_card_number",
+    "decline_next_contact_or_retry",
+    "decline_next_offer_replacement",
 ]
 
 _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
@@ -472,6 +485,81 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "dispute_open_question_claim_refused": {
         "es": "El cliente también rechazó abrir el reclamo.",
         "pt": "O cliente também recusou abrir o caso.",
+    },
+    # D5-B D1: `decline_explain`'s own "which card" question -- a separate
+    # kind from `ask_which_card_*` above, same reasoning as
+    # `ask_which_card_dispute`.
+    "ask_which_card_decline": {
+        "es": "¿De cuál tarjeta es la compra rechazada que quieres revisar?\n{card_options}",
+        "pt": "De qual cartão é a compra recusada que você quer revisar?\n{card_options}",
+    },
+    # D5: no Declined rows at all on the selected card.
+    "decline_none": {
+        "es": "No encontré compras rechazadas recientes en esta tarjeta.",
+        "pt": "Não encontrei compras recusadas recentes nesse cartão.",
+    },
+    # D5: `DeclineCodeUnknown` -- a response code with no policy entry.
+    "decline_unknown": {
+        "es": "No tengo el detalle del motivo de ese rechazo en este momento.",
+        "pt": "Não tenho o detalhe do motivo dessa recusa neste momento.",
+    },
+    # D2, D3: accompanies the single-pick `ui.transaction_list`.
+    "decline_pick_ask": {
+        "es": (
+            "Estos son los rechazos recientes de tu tarjeta terminada en "
+            "{card_last4}. ¿Cuál quieres que te explique?"
+        ),
+        "pt": (
+            "Estas são as recusas recentes do seu cartão final {card_last4}. "
+            "Qual você quer que eu explique?"
+        ),
+    },
+    # D7, ADR-026: the one-tap `quick_replies` option for a self-service
+    # (code 54) decline; its own label is also the text sent when tapped, so
+    # NLU routes it as `replacement_request`.
+    "decline_replacement_option": {
+        "es": "Quiero una tarjeta nueva",
+        "pt": "Quero um cartão novo",
+    },
+    # D4, D6: `policies/decline_codes.yaml`'s `cause_key` values, one fixed
+    # ES/PT label each -- `compose` places these as a `{decline_cause}`
+    # placeholder, never the LLM's own wording of what the code means.
+    "decline_cause_insufficient_funds": {
+        "es": "No había fondos suficientes en la tarjeta al momento de la compra.",
+        "pt": "Não havia saldo suficiente no cartão no momento da compra.",
+    },
+    "decline_cause_invalid_card_number": {
+        "es": "El comercio recibió un número de tarjeta inválido en esa compra.",
+        "pt": "O estabelecimento recebeu um número de cartão inválido nessa compra.",
+    },
+    "decline_cause_do_not_honor": {
+        "es": "El banco emisor rechazó la compra sin dar un motivo específico.",
+        "pt": "O banco emissor recusou a compra sem informar um motivo específico.",
+    },
+    "decline_cause_expired_card": {
+        "es": "La tarjeta ya había vencido al momento de la compra.",
+        "pt": "O cartão já estava vencido no momento da compra.",
+    },
+    # D4, D6: `policies/decline_codes.yaml`'s `next_step_key` values, same
+    # pattern as the cause labels above -- placed as `{decline_next_step}`.
+    "decline_next_pay_or_use_other_card": {
+        "es": "Puedes intentar de nuevo con fondos disponibles o usando otra tarjeta.",
+        "pt": "Você pode tentar de novo com saldo disponível ou usando outro cartão.",
+    },
+    "decline_next_check_card_number": {
+        "es": "Verifica que el número de tarjeta ingresado en el comercio sea el correcto.",
+        "pt": "Verifique se o número do cartão informado no estabelecimento está correto.",
+    },
+    "decline_next_contact_or_retry": {
+        "es": "Puedes intentar de nuevo o contactar al comercio para más detalles.",
+        "pt": (
+            "Você pode tentar de novo ou entrar em contato com o "
+            "estabelecimento para mais detalhes."
+        ),
+    },
+    "decline_next_offer_replacement": {
+        "es": "Puedo pedirte una tarjeta nueva para reemplazar la que venció.",
+        "pt": "Posso pedir um cartão novo para substituir o que venceu.",
     },
     # D12: the handoff happened (row, mode=human, event). `reference` is the
     # already-formatted case reference.

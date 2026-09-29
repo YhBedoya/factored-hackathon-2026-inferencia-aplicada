@@ -74,7 +74,7 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 3. **Debit cards** (ADR-020) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot says plainly that balance, due date and minimum payment apply to credit cards, and offers what it can show.
 
 ### 4.3 `decline_explain`
-1. `card_select` → T `transactions.search(status=Declined, …)` to find the decline (by default the most recent; otherwise ask which one).
+1. `card_select` → T `transactions.search(status=Declined, …)` to find the decline (by default the most recent; otherwise ask which one). With a `merchant_text`/`amount` slot, code narrows the ≤10 declines (case-insensitive merchant match, or amount ±10%); one match explains it directly, two or more offer those in a single-pick `ui.transaction_list` (`multi: false`), and zero offer every decline the same way (D5-B D2).
 2. Rules map `response_code` → cause + next step from `policies/decline_codes.yaml` (51 insufficient funds, 14 invalid card number, 05 do not honor, 54 expired card). The LLM only phrases it.
 3. If the next step is actionable (e.g., 54 → replacement), offer the matching flow.
 

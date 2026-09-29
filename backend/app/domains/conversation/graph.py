@@ -209,6 +209,7 @@ _BRANCH_NODES = (
     "card_unlock",
     "replacement",
     "unrecognized_charge",
+    "decline_explain",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -230,6 +231,7 @@ _INTENT_NODES: dict[Intent, str] = {
     "card_unlock": "card_unlock",
     "replacement_request": "replacement",
     "unrecognized_charge": "unrecognized_charge",
+    "decline_explain": "decline_explain",
 }
 """Intent -> flow node, read by `_dispatch` (D20, P3). An intent with no
 entry here (every Stretch intent, and every card-action intent this card
@@ -243,6 +245,7 @@ _FLOW_NODES: dict[str, str] = {
     "card_unlock": "card_unlock",
     "replacement": "replacement",
     "unrecognized_charge": "unrecognized_charge",
+    "decline_explain": "decline_explain",
 }
 """`Pending.flow` -> flow node, read by `_entry` and `route` (D15, D17,
 D20). An unregistered flow name falls through to `unsupported`/`smalltalk`
@@ -264,7 +267,9 @@ def _entry(state: GraphState) -> str:
     open, a pick with no list open). Everything else is a fresh turn's text,
     so it goes to `understand`. The pick is checked first (step 0): it is
     its own turn shape, never combined with a confirmation or a step-up
-    resume.
+    resume. `_FLOW_NODES[pending["flow"]]` (D5-B, generalized from a
+    hard-coded `unrecognized_charge`) is what lets `decline_explain`'s own
+    single-pick share this same routing.
     """
     if state.get("mode") == "human":
         return "relay_to_agent"
@@ -272,7 +277,7 @@ def _entry(state: GraphState) -> str:
     selection = state.get("selection")
     if selection is not None:
         if pending is not None and pending["awaiting_slot"] == "transactions":
-            return _FLOW_NODES["unrecognized_charge"]
+            return _FLOW_NODES[pending["flow"]]
         return "smalltalk"
     confirmation = state.get("confirmation")
     if confirmation is not None:
@@ -371,6 +376,7 @@ def build_graph(
     from app.domains.conversation.flows.card_block import card_block
     from app.domains.conversation.flows.card_info import card_info
     from app.domains.conversation.flows.card_unlock import card_unlock
+    from app.domains.conversation.flows.decline_explain import decline_explain
     from app.domains.conversation.flows.replacement import replacement
     from app.domains.conversation.flows.unrecognized_charge import unrecognized_charge
     from app.domains.conversation.nodes import (
@@ -400,6 +406,7 @@ def build_graph(
     graph.add_node("card_unlock", _guard_access(card_unlock))
     graph.add_node("replacement", _guard_access(replacement))
     graph.add_node("unrecognized_charge", _guard_access(unrecognized_charge))
+    graph.add_node("decline_explain", _guard_access(decline_explain))
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
     graph.add_node("compose", compose)
@@ -423,6 +430,7 @@ def build_graph(
             "card_unlock": "card_unlock",
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
+            "decline_explain": "decline_explain",
         },
     )
     graph.add_conditional_edges(
@@ -440,6 +448,7 @@ def build_graph(
             "card_unlock": "card_unlock",
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
+            "decline_explain": "decline_explain",
         },
     )
     graph.add_conditional_edges(
@@ -451,6 +460,7 @@ def build_graph(
             "card_unlock": "card_unlock",
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
+            "decline_explain": "decline_explain",
             "unsupported": "unsupported",
             "finish": "finish",
         },
@@ -511,6 +521,17 @@ def build_graph(
         },
     )
     graph.add_conditional_edges(
+        "decline_explain",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
         "compose", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
     )
     graph.add_conditional_edges(
@@ -537,6 +558,7 @@ def build_graph(
             "card_unlock": "card_unlock",
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
+            "decline_explain": "decline_explain",
             "unsupported": "unsupported",
             "finish": "finish",
         },

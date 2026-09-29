@@ -1,0 +1,49 @@
+seed_id: h-card_status-tool_failure-es-ar-01
+intent: card_status
+category: tool_failure
+persona: CLI-00WAXO79YRHL
+goal: Ver el estado de la tarjeta mientras el modelo de lenguaje falla.
+fact_sheet: {}
+setup:
+  faults:
+  - bedrock_timeout
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: h-card_status-tool_failure-es-ar-01.s
+  language_variant: es-AR
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Cuál es el estado de mi tarjeta de débito?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-tool_failure-es-ar-01.p1
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿En qué estado está mi tarjeta de débito?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-tool_failure-es-ar-01.p2
+  language_variant: es-AR
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: ¿Me podés decir cuál es el estado de mi tarjeta de débito?
+  reviewer: null
+  reviewed_at: null

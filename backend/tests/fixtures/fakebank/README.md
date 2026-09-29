@@ -30,6 +30,9 @@ read this fixture and the real `data/` directory the same way.
 - `CLI-TFPASTD00005` (Argentina, Cordoba, past-due card):
   - `PRD-TFP5CRED0001` - Tarjeta Credito, ARS, Active, last4 `5555`,
     limit 900000.00, balance 123456.50, dpd 30, expiry 2027-05-31
+- `CLI-TFDECLN00006` (Colombia, decline explainer, D5-B):
+  - `PRD-TFD6CRED0001` - Tarjeta Credito, COP, Active, last4 `6666`,
+    limit 3000000, balance 100000, expiry 2027-09-30
 
 ## Transactions
 
@@ -43,6 +46,11 @@ more rows for `unrecognized_charge`'s tests:
   plus 1 declined (excluded from candidates).
 - `PRD-TFP5CRED0001` (`CLI-TFPASTD00005`) gains one Declined row, so its only
   transaction is declined -- the "no candidates" case.
+- `PRD-TFD6CRED0001` (`CLI-TFDECLN00006`, D5-B) has 4 Declined rows,
+  `TRX-TFD6CRED0001TXN01..04`, one per `policies/decline_codes.yaml` code
+  (`51`/`14`/`05`/`54`), merchants `Super Uno`/`Libreria Dos`/`Cine Tres`/
+  `Viajes Cuatro`, dated 2026-03-30 09:00/10:00/11:00/12:00 (`54` is the
+  newest, and its `self_service` is `true`).
 
 ## FX rates
 

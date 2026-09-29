@@ -1,0 +1,47 @@
+seed_id: d-pending_reversal_explain-bad_data-pt-br-01
+intent: pending_reversal_explain
+category: bad_data
+persona: CLI-1B7XH7IDPE2N
+goal: Entender por que uma compra aparece duas vezes, uma revertida
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - pending_reversal_explain
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-pending_reversal_explain-bad_data-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Por que essa compra aparece duas vezes no meu extrato, uma revertida?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-pending_reversal_explain-bad_data-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Por que essa compra está aparecendo duas vezes no meu extrato, sendo uma
+      delas revertida?
+  reviewer: null
+  reviewed_at: null
+- case_id: d-pending_reversal_explain-bad_data-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Como essa compra pode constar duas vezes no meu extrato, com uma das cobranças
+      revertida?
+  reviewer: null
+  reviewed_at: null

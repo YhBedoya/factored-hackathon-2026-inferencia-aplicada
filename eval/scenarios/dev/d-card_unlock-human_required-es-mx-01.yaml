@@ -1,0 +1,53 @@
+seed_id: d-card_unlock-human_required-es-mx-01
+intent: card_unlock
+category: human_required
+persona: CLI-2FKTNVMZ3HVH
+goal: Desbloquear la tarjeta de crédito sin saber que está en mora
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_unlock
+  expected_outcome: handoff:cobranza
+  required_tools:
+  - cards.list_cards
+  - cards.get_block_origin
+  forbidden_tools:
+  - cards.unlock_card
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  - verified_facts
+  eligible_for_automation: false
+cases:
+- case_id: d-card_unlock-human_required-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: Quiero desbloquear mi tarjeta de crédito, no sé por qué está bloqueada.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_unlock-human_required-es-mx-01.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quiero que desbloqueen mi tarjeta de crédito, no sé por qué está bloqueada.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_unlock-human_required-es-mx-01.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Necesito quitar el bloqueo de mi tarjeta de crédito, pero no sé por qué la
+      bloquearon.
+  reviewer: null
+  reviewed_at: null

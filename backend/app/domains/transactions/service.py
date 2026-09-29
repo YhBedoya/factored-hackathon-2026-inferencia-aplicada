@@ -10,6 +10,13 @@ filters by `customer_id` (R1).
 claim is written: an id owned by another customer raises `AccessDenied`, an
 unknown one raises `NotFound`, both before the probe reveals anything beyond
 "exists somewhere" (`repository.probe_transactions_exist`, D17 R1).
+
+`get_declined` is `transactions.explain_decline`'s own-row lookup (spec
+`d5-b-decline-explainer-test-sets.md` D4): unlike `get_by_ids`, a foreign
+id is `NotFound`, not `AccessDenied` -- explaining a decline never confirms
+that some other customer's transaction exists, so there is no second,
+narrower probe. A non-`Declined` own row is `NotFound` too, since there is
+nothing to explain.
 """
 
 from sqlalchemy import RowMapping
@@ -18,7 +25,7 @@ from app.core.errors import AccessDenied, NotFound
 from app.domains.transactions import repository
 from app.domains.transactions.schemas import TxFilter, TxView
 
-__all__ = ["get_by_ids", "search"]
+__all__ = ["get_by_ids", "get_declined", "search"]
 
 
 def _to_view(row: RowMapping) -> TxView:
@@ -63,3 +70,15 @@ async def get_by_ids(customer_id: str, tx_ids: list[str]) -> list[TxView]:
             raise AccessDenied(f"transaction {foreign_id!r} does not belong to this customer")
         raise NotFound(f"no transaction {missing[0]!r}")
     return [_to_view(by_id[tx_id]) for tx_id in tx_ids]
+
+
+async def get_declined(customer_id: str, tx_id: str) -> TxView:
+    """`tx_id`'s own row, but only when it belongs to `customer_id` and its
+    `status` is `"Declined"` (R1, D4). A missing id, another customer's id
+    or a non-`Declined` row are all `NotFound` alike -- no `AccessDenied`
+    and no existence probe, unlike `get_by_ids`.
+    """
+    rows = await repository.fetch_transactions_by_ids(customer_id, [tx_id])
+    if not rows or rows[0]["transaction_status"] != "Declined":
+        raise NotFound(f"no declined transaction {tx_id!r}")
+    return _to_view(rows[0])

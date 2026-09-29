@@ -9,7 +9,7 @@ from typing import Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-__all__ = ["TxFilter", "TxStatus", "TxView"]
+__all__ = ["DeclineExplanation", "TxFilter", "TxStatus", "TxView"]
 
 TxStatus = Literal["Approved", "Declined", "Pending", "Reversed"]
 
@@ -69,3 +69,20 @@ class TxView(BaseModel):
     response_code: str | None
     """05/14/51/54 on declines."""
     fraud_score: Decimal | None
+
+
+class DeclineExplanation(BaseModel):
+    """`transactions.explain_decline`'s result (`04` §1, §5; spec D4).
+
+    `source` is `"policy:decline_codes@" + ToolContext.policy_version`, so a
+    change to `policies/decline_codes.yaml` shows up in every explanation's
+    provenance the same way it does for every other policy-backed decision.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    code: str
+    cause_key: str
+    next_step_key: str
+    self_service: bool
+    source: str
