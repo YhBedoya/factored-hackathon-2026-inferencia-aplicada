@@ -81,7 +81,23 @@ function ChatPage() {
 			onStatus: () => setTyping(true),
 			onMessage: (payload) => {
 				setTyping(false);
+				// In human mode the server relays the customer's own text back
+				// for the agent (`04` §3); it is already in the list.
+				if (payload.role === "customer") {
+					return;
+				}
 				if (payload.role !== "bot") {
+					// An agent reply, or the fixed system line on return to bot.
+					setMessages((prev) => [
+						...prev,
+						{
+							id: crypto.randomUUID(),
+							role: payload.role,
+							text: payload.text,
+							author: payload.agent_display_name ?? null,
+							ui: [],
+						},
+					]);
 					return;
 				}
 				const ui = pendingUiRef.current;
