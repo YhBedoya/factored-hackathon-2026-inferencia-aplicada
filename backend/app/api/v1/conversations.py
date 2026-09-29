@@ -55,10 +55,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.core import events
 from app.core.telemetry import get_trace_id
 from app.domains.conversation import store
-from app.domains.conversation.graph import ConfirmationDecision
+from app.domains.conversation.graph import ConfirmationDecision, TxSelection
 from app.domains.conversation.runner import (
     TurnInProgress,
     checkpointed_confirmation_token,
+    checkpointed_dispute,
     start_turn,
 )
 from app.domains.conversation.store import ConversationRow
@@ -120,20 +121,23 @@ class CreateConversationResponse(BaseModel):
 
 
 class PostMessageRequest(BaseModel):
-    """`{text}` for a typed turn, or `{resume: "step_up"}` for the OTP-resume
-    turn (D6) -- exactly one, or `422`. `resume` is not persisted as a
-    customer message; only `text` is.
+    """`{text}` for a typed turn, `{resume: "step_up"}` for the OTP-resume
+    turn (D6), or `{selection: {tx_ids}}` for the D4-B pick turn (D7) --
+    exactly one of the three, or `422`. Neither `resume` nor `selection` is
+    persisted as a customer message; only `text` is.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     text: str | None = Field(default=None, min_length=1, max_length=2000)
     resume: Literal["step_up"] | None = None
+    selection: TxSelection | None = None
 
     @model_validator(mode="after")
     def _exactly_one(self) -> Self:
-        if (self.text is None) == (self.resume is None):
-            raise ValueError("exactly one of text or resume must be set")
+        set_count = sum(value is not None for value in (self.text, self.resume, self.selection))
+        if set_count != 1:
+            raise ValueError("exactly one of text, resume or selection must be set")
         return self
 
 
@@ -176,18 +180,39 @@ async def post_message(
     already holds the lock for this conversation; `409 conversation_closed`
     once the customer said goodbye (the client starts a new conversation
     instead).
+
+    D7's pick gate: a `selection` body is checked against this
+    conversation's own last-checkpointed `pending`/`dispute`
+    (`runner.checkpointed_dispute`) *before* anything is scheduled --
+    paused at `awaiting_slot == "transactions"` and every picked id present
+    in `dispute.offered_tx_ids` -- else `409 selection_invalid` and no turn
+    runs (R1: a customer can't claim a transaction that was never offered).
+    The flow re-checks the same rule once a turn does run, as a second gate.
     """
     if conversation.status == "closed":
         raise HTTPException(status_code=409, detail="conversation_closed")
 
+    host = request.app.state.turn_host
+    if body.selection is not None:
+        pending, dispute = await checkpointed_dispute(host, conversation.id)
+        offered = set(dispute["offered_tx_ids"]) if dispute is not None else set()
+        selection_open = (
+            pending is not None
+            and pending["awaiting_slot"] == "transactions"
+            and set(body.selection.tx_ids) <= offered
+        )
+        if not selection_open:
+            raise HTTPException(status_code=409, detail="selection_invalid")
+
     try:
         turn_id = await start_turn(
-            request.app.state.turn_host,
+            host,
             session=session,
             conversation_id=conversation.id,
             trace_id=get_trace_id(),
             text=body.text,
             resume=body.resume,
+            selection=body.selection,
         )
     except TurnInProgress as exc:
         raise HTTPException(status_code=409, detail="turn_in_progress") from exc

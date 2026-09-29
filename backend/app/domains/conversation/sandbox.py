@@ -139,6 +139,12 @@ class _RecordingWriteTools:
             card_id, address_ref, idempotency_key=idempotency_key
         )
 
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        self._calls.append("create_claim")
+        return await self._inner.create_claim(tx_ids, answers, idempotency_key=idempotency_key)
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Terminal sandbox for the v0 turn graph.")

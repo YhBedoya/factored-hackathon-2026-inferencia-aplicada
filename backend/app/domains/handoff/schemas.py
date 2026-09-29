@@ -7,6 +7,7 @@ the repository. Every model is frozen and rejects unknown fields.
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -51,7 +52,7 @@ class HandoffEvidence(_Frozen):
 
     type: Literal["transaction"]
     ref: str
-    fraud_score: int | None
+    fraud_score: Decimal | None
 
 
 class VerifiedFact(_Frozen):
@@ -71,7 +72,7 @@ class ActionTaken(_Frozen):
     audit_event_id: str | None
     at: datetime
     tracking_id: str | None = None
-    case_id: str | None = None
+    case_ids: list[str] | None = None
 
 
 class HandoffPacket(_Frozen):

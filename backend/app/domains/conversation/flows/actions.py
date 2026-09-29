@@ -12,7 +12,8 @@ through `config["configurable"]["bank_write_tools"]` (a `ConfirmedWriteTools`,
 D2-K D5), the one key the R6 scan guards, and never a raw `BankWriteTools`.
 """
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -39,9 +40,11 @@ from app.domains.policy.escalation import load_escalation_policy, rule_queue
 
 __all__ = [
     "DoneValues",
+    "StepSpec",
     "cancel",
     "decision",
     "execute",
+    "execute_plan",
     "fill",
     "handoff",
     "otp_pause",
@@ -67,28 +70,44 @@ def fill(template: str, **values: str) -> str:
     return text
 
 
+@dataclass(frozen=True)
+class StepSpec:
+    """One plan step: its raw call and how `ui.confirm` shows it (D4-B D9).
+
+    `tool`/`args` become the step's `PlanStep`; `summary_key`/`view_facts`
+    become its `ConfirmStepView` -- the same two things a one-step
+    `start_plan` call used to build from its own flat arguments, now one per
+    step so a plan can list more than one (ADR-027).
+    """
+
+    tool: str
+    args: Mapping[str, ToolArg]
+    summary_key: str
+    view_facts: list[Fact]
+
+
 async def start_plan(
     state: GraphState,
     config: RunnableConfig,
     *,
     flow: str,
-    tool: str,
-    args: Mapping[str, ToolArg],
-    summary_key: str,
-    view_facts: list[Fact],
-    confirm_values: Mapping[str, str],
+    steps: Sequence[StepSpec],
+    text: str,
     intent: Intent,
 ) -> dict[str, Any]:
-    """Issue a one-step plan and pause for the button/NLU confirmation (D11,
-    D2-K D15). `confirm_values` fills `action_confirm`'s `{action}`/`{effect}`/
-    `{card_last4}` placeholders; `view_facts` is what `ui.confirm` shows the
-    customer before they decide (already formatted, R4). `intent` is the
-    allowlist check `issue_plan` runs before the store is ever touched (D3).
+    """Issue a plan of one or more steps and pause for the button/NLU
+    confirmation (D11, D2-K D15, D4-B D9). `text` is the already-filled
+    confirm reply (R4) -- callers with one fixed shape of question
+    (lock/unlock/block/replace) fill `action_confirm` themselves before
+    calling this; `unrecognized_charge` fills its own compromise/claim
+    templates instead, since a two-step plan and a one-step plan don't share
+    one sentence. `intent` is the allowlist check `issue_plan` runs before
+    the store is ever touched (D3).
     """
     bank_write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
-    plan = await bank_write_tools.issue_plan([PlanStep(tool=tool, args=dict(args))], intent)
-    language = state["language"]
-    text = fill(get_template("action_confirm", language), **dict(confirm_values))
+    plan = await bank_write_tools.issue_plan(
+        [PlanStep(tool=step.tool, args=dict(step.args)) for step in steps], intent
+    )
     return {
         "confirmation_token_id": plan.token_id,
         "pending": {"flow": flow, "node": "confirm", "awaiting_slot": "confirmation"},
@@ -97,7 +116,12 @@ async def start_plan(
                 kind="confirm",
                 payload=ConfirmPayload(
                     token_id=plan.token_id,
-                    steps=[ConfirmStepView(tool=tool, summary_key=summary_key, facts=view_facts)],
+                    steps=[
+                        ConfirmStepView(
+                            tool=step.tool, summary_key=step.summary_key, facts=step.view_facts
+                        )
+                        for step in steps
+                    ],
                 ),
             )
         ],
@@ -188,6 +212,36 @@ async def execute(
         "confirmation_token_id": None,
         "segments": [text],
     }
+
+
+async def execute_plan(
+    state: GraphState,
+    config: RunnableConfig,
+    calls: Sequence[Callable[[], Awaitable[ActionResult]]],
+) -> list[ActionResult] | dict[str, Any]:
+    """Run a multi-step plan's already-confirmed calls in order (R3, D4-B D9).
+
+    Unlike `execute`, a raised `ConfirmationRequired` here is not treated as
+    a plain "nothing happened yet" cancel: an earlier step in the same plan
+    may already have written something, so any exception -- or a returned
+    but unverified result -- stops the plan exactly where it is and goes
+    through the same `action_unverified` handoff a one-step failure does,
+    never a later step over one that didn't verify. On full success, returns
+    every step's verified `ActionResult` in order for the caller to build its
+    own reply -- the compromise, refused-block and single-charge replies
+    differ per path (D9-D11), so this helper doesn't compose one itself.
+    """
+    language = state["language"]
+    results: list[ActionResult] = []
+    for call in calls:
+        try:
+            result = await call()
+        except Exception:
+            return _action_unverified_handoff(language)
+        if not result.verified:
+            return _action_unverified_handoff(language)
+        results.append(result)
+    return results
 
 
 def _action_unverified_handoff(language: Language) -> dict[str, Any]:

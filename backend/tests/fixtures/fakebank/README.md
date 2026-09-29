@@ -34,7 +34,15 @@ read this fixture and the real `data/` directory the same way.
 ## Transactions
 
 `transactions/year=2026/month=03/day=30/transactions_20260330.csv` has 2 rows
-per customer, referencing each customer's card product(s).
+per customer, referencing each customer's card product(s), plus (D4-B) three
+more rows for `unrecognized_charge`'s tests:
+
+- `PRD-TFS2CRED0001` (`CLI-TFSINGLE0002`) gains `TXN03` (Pending, empty
+  `merchant_name`, `fraud_score` 45.00) and `TXN04` (Declined): 3 non-declined
+  candidates (one with `fraud_score` over `disputes.yaml`'s `fraud_score_gt`)
+  plus 1 declined (excluded from candidates).
+- `PRD-TFP5CRED0001` (`CLI-TFPASTD00005`) gains one Declined row, so its only
+  transaction is declined -- the "no candidates" case.
 
 ## FX rates
 

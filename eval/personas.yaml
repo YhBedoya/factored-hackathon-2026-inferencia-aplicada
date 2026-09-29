@@ -157,13 +157,17 @@ personas:
     regulator_case: true
     usd_card: true
     notes: Regulator-channel complaint, also holds a USD card.
-  - customer_id: CLI-325VRPVVYG7T
+  - customer_id: CLI-F7PQP3J4AS6X
     country: MX
-    card_count: 1
+    card_count: 3
     card_kinds: [credit]
     blocked: false
     recent_declines: ["05"]
-    notes: Recent decline, response code 05.
+    notes: >-
+      Recent decline, response code 05. T10: replaces CLI-325VRPVVYG7T, whose
+      only matching decline drifted outside the 30-day window as real
+      calendar time passed since it was chosen (`load_date` is fixed at the
+      last `make data` ingest).
   - customer_id: CLI-55D0R3VIIFPT
     country: MX
     card_count: 1
@@ -251,3 +255,13 @@ personas:
     card_count: 3
     card_kinds: [credit, debit]
     blocked: false
+  - customer_id: CLI-0D54NQDU9AWV
+    country: MX
+    card_count: 1
+    card_kinds: [debit]
+    blocked: false
+    notes: >-
+      Active customer, one debit card; its 10 newest non-declined
+      transactions include one with fraud_score 53.94 (> 30). Demo persona
+      for D4-B's compromise-path `make chat-api` walkthrough (end-of-day
+      step 5).

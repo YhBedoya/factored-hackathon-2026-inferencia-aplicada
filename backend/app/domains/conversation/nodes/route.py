@@ -33,7 +33,16 @@ from app.domains.policy.registry import get_policies
 __all__ = ["route"]
 
 _ABSTAIN_STATUSES = {"out_of_market", "out_of_scope"}
-_CONFIRMATION_SLOTS = {"confirmation", "address_confirm", "offer_replacement"}
+# D4-B: `card_possession` (the compromise-rule question) and `dispute_question`
+# (the single-charge path's remaining `disputes.yaml` questions) are answered
+# the same way every other yes/no pause is -- affirm/deny, no dedicated slot.
+_CONFIRMATION_SLOTS = {
+    "confirmation",
+    "address_confirm",
+    "offer_replacement",
+    "card_possession",
+    "dispute_question",
+}
 
 
 def route(state: GraphState) -> str:

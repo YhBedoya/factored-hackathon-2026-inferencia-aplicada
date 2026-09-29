@@ -21,7 +21,14 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ToolUnavailable
 from app.domains.cards.schemas import CardDetails
-from app.domains.conversation.flows.actions import cancel, decision, execute, fill, start_plan
+from app.domains.conversation.flows.actions import (
+    StepSpec,
+    cancel,
+    decision,
+    execute,
+    fill,
+    start_plan,
+)
 from app.domains.conversation.flows.card_select import (
     Ask,
     Fallback,
@@ -243,15 +250,13 @@ async def _start_block_plan(
         summary_key = "block_card"
 
     view_facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]
+    text = fill(get_template("action_confirm", language), **dict(confirm_values))
     return await start_plan(
         state,
         config,
         flow="card_block",
-        tool=tool,
-        args=args,
-        summary_key=summary_key,
-        view_facts=view_facts,
-        confirm_values=confirm_values,
+        steps=[StepSpec(tool=tool, args=args, summary_key=summary_key, view_facts=view_facts)],
+        text=text,
         intent="card_block",
     )
 

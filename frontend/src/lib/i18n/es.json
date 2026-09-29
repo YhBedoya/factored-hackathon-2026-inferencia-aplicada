@@ -26,6 +26,7 @@
 	"chat.reconnecting": "Reconectando…",
 	"chat.closed_notice": "Esta conversación se cerró. Puedes empezar una nueva.",
 	"chat.new_conversation": "Nueva conversación",
+	"chat.bot_name": "Cardy",
 
 	"confirm.title": "Confirma la acción",
 	"confirm.confirm": "Confirmar",
@@ -34,6 +35,11 @@
 	"confirm.steps.block_card": "Reportar tu tarjeta como perdida o robada",
 	"confirm.steps.unlock_card": "Desbloquear tu tarjeta",
 	"confirm.steps.order_replacement": "Pedir el reemplazo de tu tarjeta",
+	"confirm.steps.create_claim": "Abrir un reclamo por los cargos elegidos",
+
+	"transactions.continue": "Continuar",
+
+	"handoff.sent_to": "Enviamos tu caso a {queue}.",
 
 	"otp.title": "Verifica tu identidad",
 	"otp.description": "Te enviamos un código de verificación. Ingrésalo para continuar.",
@@ -48,5 +54,33 @@
 	"errors.turn_in_progress": "Todavía estoy con tu mensaje anterior. Espera un momento.",
 	"errors.conversation_closed": "Esta conversación se cerró.",
 	"errors.otp_invalid": "El código no es correcto. Intenta de nuevo.",
-	"errors.confirmation_invalid": "Esa confirmación ya no es válida. Pídeme la acción de nuevo."
+	"errors.confirmation_invalid": "Esa confirmación ya no es válida. Pídeme la acción de nuevo.",
+
+	"staff.login.title": "Acceso de personal",
+	"staff.login.username": "Usuario",
+	"staff.login.password": "Contraseña",
+	"staff.login.submit": "Entrar",
+
+	"staff.inbox.title": "Bandeja de casos",
+	"staff.inbox.empty": "No hay casos en cola.",
+
+	"staff.queue.atencion": "Atención",
+	"staff.queue.cobranza": "Cobranza",
+	"staff.queue.fraudes": "Fraudes",
+
+	"staff.status.queued": "En cola",
+	"staff.status.claimed": "Reclamado",
+	"staff.status.returned": "Devuelto",
+	"staff.status.closed": "Cerrado",
+
+	"staff.detail.claim": "Reclamar caso",
+	"staff.detail.return": "Devolver al bot",
+
+	"staff.packet.title": "Resumen del caso",
+	"staff.packet.verified_facts": "Datos verificados",
+	"staff.packet.actions_taken": "Acciones realizadas",
+	"staff.packet.evidence": "Evidencia",
+	"staff.packet.open_questions": "Preguntas abiertas",
+
+	"staff.chat.send": "Enviar"
 }

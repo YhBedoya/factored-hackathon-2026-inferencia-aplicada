@@ -114,7 +114,7 @@ class RecordingAudit:
 class Session:
     """One write-flow test session (T10): the compiled graph, its `config`,
     and the pieces a test pokes at directly (`gate.verify`, `store`'s raw
-    plans, `overlay`'s locked/blocked sets)."""
+    plans, `overlay`'s locked/blocked sets, `handoff`'s recorded packets, D4-B)."""
 
     graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
     config: RunnableConfig

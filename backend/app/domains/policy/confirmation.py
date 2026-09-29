@@ -26,8 +26,11 @@ __all__ = [
     "args_hash",
 ]
 
-ToolArg = str | int | bool | None
-"""One value of a `PlanStep.args` entry. Never a PII-vault token's raw value (R5)."""
+ToolArg = str | int | bool | None | list[str]
+"""One value of a `PlanStep.args` entry. Never a PII-vault token's raw value
+(R5). The `list[str]` form (D17) carries ordered ids/flags such as `tx_ids`
+and `answers`: `args_hash`'s canonical JSON preserves list order, so two
+selections of the same ids in a different order hash differently."""
 
 ToolArgs = Mapping[str, ToolArg]
 """The keyword args of a raw write call, exactly as `args_hash` and `consume_step` see them."""

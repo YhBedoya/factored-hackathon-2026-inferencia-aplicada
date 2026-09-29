@@ -6,11 +6,14 @@ the same conversation can't both run), persists the customer's message (only
 when this is a typed turn, D6), then schedules the turn itself as an
 `asyncio.Task` on `host.tasks` and returns right away with the `turn_id` --
 `POST /messages`/`POST /confirmations/{token_id}` both answer `202` without
-waiting for the graph to finish. Exactly one of `text`, `resume` or
-`confirmation` is set on any one call (D6, D7): a typed turn, a step-up
-resume, or a button confirm/cancel. `checkpointed_confirmation_token` is the
-route's second D7 gate -- the same `graph.aget_state(...).values.get(
-"confirmation_token_id")` read the sandbox's `/confirm` already does.
+waiting for the graph to finish. Exactly one of `text`, `resume`,
+`confirmation` or `selection` is set on any one call (D6, D7): a typed turn,
+a step-up resume, a button confirm/cancel, or a transaction pick.
+`checkpointed_confirmation_token` is the route's second D7 gate for a
+confirmation -- the same `graph.aget_state(...).values.get(
+"confirmation_token_id")` read the sandbox's `/confirm` already does --
+and `checkpointed_dispute` is the analogous read for a pick (`pending` +
+`dispute`).
 
 The turn task builds its `ToolContext`, its one turn-bound `AuditRecorder`
 and its read/write tools only through `registry` (R1, D13, D17): nothing
@@ -48,16 +51,22 @@ from app.core.config import get_settings
 from app.core.redis import get_redis
 from app.domains.audit.schemas import AuditType
 from app.domains.conversation import store
-from app.domains.conversation.graph import ConfirmationDecision, DebugInfo
+from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TxSelection
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
+from app.domains.conversation.state import DisputeState, Pending
 from app.domains.conversation.tools import registry
 from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
 from app.domains.identity.models import Session
 from app.domains.safety.vault import InMemoryAddressVault
 
-__all__ = ["TurnInProgress", "checkpointed_confirmation_token", "start_turn"]
+__all__ = [
+    "TurnInProgress",
+    "checkpointed_confirmation_token",
+    "checkpointed_dispute",
+    "start_turn",
+]
 
 _logger = structlog.get_logger()
 
@@ -71,6 +80,7 @@ _BRANCH_NODES = (
     "card_block",
     "card_unlock",
     "replacement",
+    "unrecognized_charge",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -101,14 +111,18 @@ async def start_turn(
     text: str | None = None,
     resume: Literal["step_up"] | None = None,
     confirmation: ConfirmationDecision | None = None,
+    selection: TxSelection | None = None,
 ) -> UUID:
     """Take the turn lock, persist the customer message (only when `text` is
-    set, D6), and schedule the turn task. Exactly one of `text`, `resume` or
-    `confirmation` must be set -- `ValueError` otherwise. Raises
-    `TurnInProgress` (nothing persisted) if the lock is already held.
+    set, D6), and schedule the turn task. Exactly one of `text`, `resume`,
+    `confirmation` or `selection` must be set -- `ValueError` otherwise.
+    `selection` (D4-B D7) is never persisted as a message, same as `resume`
+    and `confirmation`: the route's own D7 gate is the injection guard, not
+    this function. Raises `TurnInProgress` (nothing persisted) if the lock
+    is already held.
     """
-    if sum(value is not None for value in (text, resume, confirmation)) != 1:
-        raise ValueError("start_turn takes exactly one of text, resume or confirmation")
+    if sum(value is not None for value in (text, resume, confirmation, selection)) != 1:
+        raise ValueError("start_turn takes exactly one of text, resume, confirmation or selection")
 
     turn_id = uuid4()
     lock_key = f"turn:{conversation_id}"
@@ -128,6 +142,7 @@ async def start_turn(
             text=text,
             resume=resume,
             confirmation=confirmation,
+            selection=selection,
             trace_id=trace_id,
         )
     )
@@ -147,6 +162,19 @@ async def checkpointed_confirmation_token(host: TurnHost, conversation_id: UUID)
     return state.values.get("confirmation_token_id")
 
 
+async def checkpointed_dispute(
+    host: TurnHost, conversation_id: UUID
+) -> tuple[Pending | None, DisputeState | None]:
+    """This conversation's last-checkpointed `pending` and `dispute` (D4-B
+    D7's route gate): the same read `checkpointed_confirmation_token` does,
+    for the pick's own two fields -- "is a transaction list actually open"
+    and "what ids did it offer". `(None, None)` on a conversation with no
+    checkpoint yet.
+    """
+    state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
+    return state.values.get("pending"), state.values.get("dispute")
+
+
 async def _run_turn(
     host: TurnHost,
     *,
@@ -156,6 +184,7 @@ async def _run_turn(
     text: str | None,
     resume: Literal["step_up"] | None,
     confirmation: ConfirmationDecision | None,
+    selection: TxSelection | None,
     trace_id: str,
 ) -> None:
     lock_key = f"turn:{conversation_id}"
@@ -201,7 +230,12 @@ async def _run_turn(
         handed_off = False
 
         async for update in host.graph.astream(
-            {"user_text": text or "", "confirmation": confirmation, "resume": resume},
+            {
+                "user_text": text or "",
+                "confirmation": confirmation,
+                "resume": resume,
+                "selection": selection,
+            },
             config=config,
             stream_mode="updates",
         ):

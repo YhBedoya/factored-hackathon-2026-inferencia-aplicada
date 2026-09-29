@@ -32,6 +32,7 @@ from app.domains.conversation.graph import (
     GraphState,
     TurnInput,
     TurnOutput,
+    TxSelection,
     build_graph,
 )
 from app.domains.conversation.schemas import NLUResult
@@ -63,7 +64,7 @@ def _checkpoint_types() -> tuple[type, ...]:
         ActionResult,
         ConfirmationDecision,
         Fact,
-        *(HandoffEvidence, NLUResult),
+        *(HandoffEvidence, NLUResult, TxSelection),
     ):
         _models_in(root, seen)
     return tuple(sorted(seen, key=lambda t: (t.__module__, t.__qualname__)))
@@ -71,7 +72,7 @@ def _checkpoint_types() -> tuple[type, ...]:
 
 # Every Pydantic model (and enum) the graph writes into checkpointed state:
 # the `UIEvent` union, `NLUResult`, `Fact`, `ActionResult`, `HandoffEvidence`,
-# `ConfirmationDecision`, plus whatever they nest. The msgpack serde is strict
+# `ConfirmationDecision`, `TxSelection`, plus whatever they nest. The msgpack serde is strict
 # (`allowed_msgpack_modules` is a set, not `True`), so an unlisted type would
 # come back as a raw dict and break a flow silently. Derived from the models
 # themselves so a new UI event or nested field is covered without editing this.

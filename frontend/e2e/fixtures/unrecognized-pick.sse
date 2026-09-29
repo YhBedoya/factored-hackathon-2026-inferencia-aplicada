@@ -1,0 +1,12 @@
+event: status
+data: {"step":"understand"}
+
+event: ui
+data: {"kind":"transaction_list","payload":{"options":[{"tx_id":"TRX-001","label":"Amazon · $50.00 · 01/03/2026 · •••• 4242"},{"tx_id":"TRX-002","label":"Uber · $85,000.00 COP · 02/03/2026 · •••• 4242"},{"tx_id":"TRX-003","label":"Netflix · $39.90 · 03/03/2026 · •••• 4242"}],"multi":true}}
+
+event: message
+data: {"role":"bot","text":"¿Cuáles de estos cargos no reconoces? Puedes elegir más de uno.","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-201"}
+

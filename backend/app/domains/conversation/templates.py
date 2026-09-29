@@ -61,6 +61,19 @@ TemplateKind = Literal[
     "handoff_transfer",
     "back_with_cardy",
     "abstain_fallback",
+    "ask_which_card_dispute",
+    "dispute_no_transactions",
+    "dispute_transactions_prompt",
+    "dispute_q_card_in_possession",
+    "dispute_q_contacted_merchant",
+    "dispute_confirm_compromise",
+    "dispute_confirm_claim",
+    "dispute_block_refused_offer_claim",
+    "dispute_claim_opened",
+    "dispute_claim_opened_single",
+    "dispute_handoff_no_claim",
+    "dispute_open_question_card_active",
+    "dispute_open_question_claim_refused",
 ]
 
 _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
@@ -357,6 +370,108 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "información es solo de consulta."
         ),
         "pt": "Sua conta não está ativa no momento, então esta informação é só para consulta.",
+    },
+    # D4-B D7: `unrecognized_charge`'s own "which card" question -- a
+    # separate kind from `ask_which_card_*` above because none of those
+    # actions fits "which card had the charge you don't recognize".
+    "ask_which_card_dispute": {
+        "es": "¿De cuál tarjeta son los movimientos que no reconoces?\n{card_options}",
+        "pt": "De qual cartão são os movimentos que você não reconhece?\n{card_options}",
+    },
+    # D12: no candidate transactions at all (every one Declined, or none).
+    "dispute_no_transactions": {
+        "es": "No encontré movimientos recientes para revisar en esta tarjeta.",
+        "pt": "Não encontrei movimentos recentes para revisar nesse cartão.",
+    },
+    # D12, D13: accompanies `ui.transaction_list`.
+    "dispute_transactions_prompt": {
+        "es": (
+            "Estos son los movimientos recientes de tu tarjeta terminada en "
+            "{card_last4}. Marca los que no reconoces."
+        ),
+        "pt": (
+            "Estes são os movimentos recentes do seu cartão final {card_last4}. "
+            "Marque os que você não reconhece."
+        ),
+    },
+    # D8: the compromise-rule question, asked only when count/score haven't
+    # already triggered it. "no" -> compromise.
+    "dispute_q_card_in_possession": {
+        "es": "¿Tienes la tarjeta contigo en este momento?",
+        "pt": "Você está com o cartão em mãos neste momento?",
+    },
+    # D8: the single-charge path's second question.
+    "dispute_q_contacted_merchant": {
+        "es": "¿Ya intentaste contactar al comercio por este cobro?",
+        "pt": "Você já tentou contatar o estabelecimento sobre essa cobrança?",
+    },
+    # D9: the two-step [block, claim] plan's confirmation.
+    "dispute_confirm_compromise": {
+        "es": (
+            "Voy a bloquear tu tarjeta terminada en {card_last4} y a abrir un "
+            "reclamo por {tx_count} movimiento(s) que no reconoces. Este "
+            "bloqueo no se puede deshacer. ¿Confirmas?"
+        ),
+        "pt": (
+            "Vou bloquear seu cartão final {card_last4} e abrir um caso para "
+            "{tx_count} movimento(s) que você não reconhece. Esse bloqueio não "
+            "pode ser desfeito. Confirma?"
+        ),
+    },
+    # D11: the single-charge path's one-step claim confirmation.
+    "dispute_confirm_claim": {
+        "es": "Voy a abrir un reclamo por {tx_count} movimiento(s) que no reconoces. ¿Confirmas?",
+        "pt": "Vou abrir um caso para {tx_count} movimento(s) que você não reconhece. Confirma?",
+    },
+    # D10: the block was refused (nothing written); offers the claim alone.
+    "dispute_block_refused_offer_claim": {
+        "es": (
+            "No bloqueé tu tarjeta. Aun así, puedo abrir un reclamo por "
+            "{tx_count} movimiento(s) que no reconoces. ¿Confirmas?"
+        ),
+        "pt": (
+            "Não bloqueei seu cartão. Mesmo assim, posso abrir um caso para "
+            "{tx_count} movimento(s) que você não reconhece. Confirma?"
+        ),
+    },
+    # D9: the two-step plan, both steps verified.
+    "dispute_claim_opened": {
+        "es": (
+            "Listo: bloqueé tu tarjeta terminada en {card_last4} a las {time} "
+            "y abrí estos reclamos: {case_ids}."
+        ),
+        "pt": (
+            "Pronto: bloqueei seu cartão final {card_last4} às {time} e abri "
+            "estes casos: {case_ids}."
+        ),
+    },
+    # D10 (claim-only, after a refused block) and D11 (single charge): the
+    # claim alone, verified. No handoff mention here -- the caller decides
+    # whether one follows.
+    "dispute_claim_opened_single": {
+        "es": (
+            "Listo: abrí un reclamo por el movimiento que no reconoces a las "
+            "{time}. Número de caso: {case_ids}."
+        ),
+        "pt": (
+            "Pronto: abri um caso para o movimento que você não reconhece às "
+            "{time}. Número do caso: {case_ids}."
+        ),
+    },
+    # D10: both the block and the claim were refused. No case, still a
+    # handoff: `handoff_transfer` follows and names the queue.
+    "dispute_handoff_no_claim": {
+        "es": "No hice ningún cambio en tu tarjeta ni abrí un reclamo.",
+        "pt": "Não fiz nenhuma alteração no seu cartão nem abri um caso.",
+    },
+    # D10: packet `open_questions` entries (`handoff_open_questions`), code-filled, never LLM text.
+    "dispute_open_question_card_active": {
+        "es": "La tarjeta del cliente sigue activa porque rechazó el bloqueo.",
+        "pt": "O cartão do cliente continua ativo porque ele recusou o bloqueio.",
+    },
+    "dispute_open_question_claim_refused": {
+        "es": "El cliente también rechazó abrir el reclamo.",
+        "pt": "O cliente também recusou abrir o caso.",
     },
     # D12: the handoff happened (row, mode=human, event). `reference` is the
     # already-formatted case reference.

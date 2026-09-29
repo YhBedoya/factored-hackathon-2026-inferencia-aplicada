@@ -68,6 +68,7 @@ DDL for **all** schemas is owned by Alembic, including the provided tables. The 
 Additions to provided tables:
 - `origin text not null default 'dataset'` (`dataset` or `app`), `created_at`, and `conversation_id` (nullable) on tables the app appends to (`complaints`; `digital_events` for logins **(proposed)**).
 - Columns updated in place by the app (e.g., `products.product_status`) always get a history row in the same transaction.
+- `complaints` also gets `transaction_id` (nullable, the disputed transaction) and `idempotency_key` (unique nullable, `<token_id>:<step_index>:<tx_id>`) in migration `0006` (D4-B D14–D15). An app claim is one row per transaction: `complaint_id = CLM-` + 8 upper hex, `case_type='Claim'`, `category='Transactions'`, `subcategory='Cargo no reconocido'`, `reception_channel='App'`, `status='Open'`, with amount, currency and product copied from the transaction.
 
 Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(customer_id, product_id, transaction_date desc)`, `transactions(product_id, transaction_status, transaction_date desc)`, `complaints(customer_id, creation_date desc)`.
 

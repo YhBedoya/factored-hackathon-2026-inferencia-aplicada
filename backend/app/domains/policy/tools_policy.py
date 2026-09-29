@@ -69,18 +69,22 @@ def load_tools_policy(path: Path | None = None) -> ToolsPolicy:
 
 def step_up_rule(
     policy: ToolsPolicy,
-) -> Callable[[str, Mapping[str, str | int | bool | None]], bool]:
+) -> Callable[[str, Mapping[str, str | int | bool | list[str] | None]], bool]:
     """Build the executor's `StepUpRule` from a loaded `ToolsPolicy` (D2).
 
     The return type matches `conversation/tools/executor.py`'s `StepUpRule`
     structurally: mypy checks a `Callable`'s shape by signature, not by
     import, so this module never imports `app.domains.conversation` (`06`
-    §2). An unknown `tool` raises `KeyError`, the same way a missing
-    `floors[currency]` does in `policy/min_payment.py`: a policy gap fails
-    loudly instead of defaulting to "no step-up".
+    §2). The `list[str]` arm (D4-B D17, matching `policy.confirmation.ToolArg`)
+    is inlined rather than imported for the same reason: it widens the
+    signature `create_claim`'s `tx_ids`/`answers` args need without pulling
+    in anything beyond this module's existing `Mapping` import. An unknown
+    `tool` raises `KeyError`, the same way a missing `floors[currency]` does
+    in `policy/min_payment.py`: a policy gap fails loudly instead of
+    defaulting to "no step-up".
     """
 
-    def rule(tool: str, args: Mapping[str, str | int | bool | None]) -> bool:
+    def rule(tool: str, args: Mapping[str, str | int | bool | list[str] | None]) -> bool:
         step_up = policy.tools[tool].step_up
         if step_up == "always":
             return True

@@ -35,9 +35,9 @@ export type ActionTaken = {
      */
     tracking_id?: string | null;
     /**
-     * Case Id
+     * Case Ids
      */
-    case_id?: string | null;
+    case_ids?: Array<string> | null;
 };
 
 /**
@@ -123,7 +123,7 @@ export type HandoffEvidence = {
     /**
      * Fraud Score
      */
-    fraud_score: number | null;
+    fraud_score: string | null;
 };
 
 /**
@@ -314,9 +314,10 @@ export type OtpVerifyRequest = {
 /**
  * PostMessageRequest
  *
- * `{text}` for a typed turn, or `{resume: "step_up"}` for the OTP-resume
- * turn (D6) -- exactly one, or `422`. `resume` is not persisted as a
- * customer message; only `text` is.
+ * `{text}` for a typed turn, `{resume: "step_up"}` for the OTP-resume
+ * turn (D6), or `{selection: {tx_ids}}` for the D4-B pick turn (D7) --
+ * exactly one of the three, or `422`. Neither `resume` nor `selection` is
+ * persisted as a customer message; only `text` is.
  */
 export type PostMessageRequest = {
     /**
@@ -327,6 +328,7 @@ export type PostMessageRequest = {
      * Resume
      */
     resume?: 'step_up' | null;
+    selection?: TxSelection | null;
 };
 
 /**
@@ -418,6 +420,23 @@ export type TranscriptMessage = {
      * Created At
      */
     created_at: string;
+};
+
+/**
+ * TxSelection
+ *
+ * The pick step's input: which offered transactions the customer chose
+ * (D4-B D7, `04` §3 selection body). It sits next to `ConfirmationDecision`
+ * because the API imports both from here (D7). `tx_ids` are checked against
+ * `dispute.offered_tx_ids` by the route (`409 selection_invalid`) and again
+ * by the flow -- this model only enforces the input's own shape: 1-10 ids,
+ * no duplicate.
+ */
+export type TxSelection = {
+    /**
+     * Tx Ids
+     */
+    tx_ids: Array<string>;
 };
 
 /**

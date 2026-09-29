@@ -6,7 +6,15 @@ to one bound condition, newest first, at most 10 rows. It always filters by
 `customer_id` (R1) but does not check card ownership -- `PostgresBank` does
 that first (D11).
 
-See `docs/specs/d2-a-login-read-tools-api.md` D11.
+`fetch_transactions_by_ids`/`probe_transactions_exist` are D4-B's own-row
+lookup for `disputes.create_claim`: the cards `fetch_card_details`/
+`fetch_card_probe` shape (own-row-first, existence-probe-second, D1-B D17),
+minus the card/non-card distinction `bank.products` needs -- every
+`bank.transactions` row already is a transaction, so the probe selects only
+the id itself, no data column.
+
+See `docs/specs/d2-a-login-read-tools-api.md` D11 and
+`docs/specs/d4-b-disputes-handoff-screens.md` D14.
 """
 
 from typing import Any
@@ -18,7 +26,7 @@ from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
 from app.domains.transactions.schemas import TxFilter
 
-__all__ = ["fetch_transactions"]
+__all__ = ["fetch_transactions", "fetch_transactions_by_ids", "probe_transactions_exist"]
 
 _SELECT = """
     SELECT transaction_id, product_id, transaction_date AS occurred_at,
@@ -74,5 +82,42 @@ async def fetch_transactions(customer_id: str, tx_filter: TxFilter) -> list[RowM
         async with get_engine().connect() as conn:
             result = await conn.execute(sql, params)
             return list(result.mappings().all())
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"transactions query failed: {exc}") from exc
+
+
+_FETCH_BY_IDS_SQL = text(
+    f"{_SELECT} WHERE customer_id = :customer_id AND transaction_id IN :tx_ids"
+).bindparams(bindparam("tx_ids", expanding=True))
+
+
+async def fetch_transactions_by_ids(customer_id: str, tx_ids: list[str]) -> list[RowMapping]:
+    """The full rows for `tx_ids`, but only the ones belonging to
+    `customer_id` (own-row-first, D17 R1).
+    """
+    try:
+        async with get_engine().connect() as conn:
+            result = await conn.execute(
+                _FETCH_BY_IDS_SQL, {"customer_id": customer_id, "tx_ids": tx_ids}
+            )
+            return list(result.mappings().all())
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"transactions query failed: {exc}") from exc
+
+
+_PROBE_SQL = text(
+    "SELECT transaction_id FROM bank.transactions WHERE transaction_id IN :tx_ids"
+).bindparams(bindparam("tx_ids", expanding=True))
+
+
+async def probe_transactions_exist(tx_ids: list[str]) -> set[str]:
+    """Which of `tx_ids` exist *at all*, regardless of owner (D17 R1
+    hardening). Selects only `transaction_id` -- no data column, never an
+    amount, merchant or another customer's id.
+    """
+    try:
+        async with get_engine().connect() as conn:
+            result = await conn.execute(_PROBE_SQL, {"tx_ids": tx_ids})
+            return {row.transaction_id for row in result}
     except (SQLAlchemyError, OSError) as exc:
         raise ToolUnavailable(f"transactions query failed: {exc}") from exc

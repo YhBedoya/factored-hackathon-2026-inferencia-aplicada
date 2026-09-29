@@ -1,7 +1,7 @@
 """`PostgresBankWrites`: `BankWriteTools` over Postgres, via `cards.service`
-(D9-D11).
+(D9-D11) and `disputes.service` (D4-B D14-D16).
 
-Each of the four writes -- and `get_block_origin` -- first runs
+Each of the four card writes -- and `get_block_origin` -- first runs
 `self._reads.get_card_details(card_id)`: the same ownership probe
 `PostgresBank` uses for reads (R1), so a foreign `card_id` raises
 `AccessDenied` and logs `tool.access_denied` before anything is written.
@@ -17,16 +17,27 @@ overlay's `blocked` set and `details.locked` (from the `app.card_controls`
 join `PostgresBank.get_card_details` already did, D3-A3) for the overlay's
 `locked` set. It never raises `Conflict` (D2-B D7).
 
-Imports `cards.service` only, never `cards.repository` (import-linter's
-`conversation-no-repository` contract -- see the ignore edge this card adds
-for this module, mirroring `postgres.py`'s existing four).
+`create_claim` calls `disputes.service.create_claims` (which does its own
+own-row check on every `tx_id` through `transactions.service`, R1), then a
+**separate** `disputes.service.get_claims` re-read: `verified` is `True`
+only when every re-read row matches the value `create_claims` just wrote
+(amount, currency, product, `transaction_id`, `origin`) for every case id
+(D16, R3).
+
+Imports `cards.service` and `disputes.service` only, never a `repository`
+directly (import-linter's `conversation-no-repository` contract -- see the
+ignore edges this module keeps, mirroring `postgres.py`'s existing four).
 """
+
+from datetime import UTC, datetime
 
 from app.core.actions import ActionResult
 from app.domains.cards import service as cards_service
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.postgres import PostgresBank
+from app.domains.disputes import service as disputes_service
+from app.domains.disputes.schemas import ClaimRow
 
 __all__ = ["PostgresBankWrites"]
 
@@ -131,3 +142,48 @@ class PostgresBankWrites:
             readback={"status": state.status, "at": state.at},
             tracking_id=state.tracking_id,
         )
+
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        written = await disputes_service.create_claims(
+            self._ctx.customer_id,
+            self._ctx.conversation_id,
+            tx_ids,
+            answers,
+            idempotency_key,
+        )
+        case_ids = [row.complaint_id for row in written]
+        reread = await disputes_service.get_claims(self._ctx.customer_id, case_ids)  # re-read (R3)
+        return ActionResult(
+            tool="disputes.create_claim",
+            status="applied",
+            verified=_claims_match(written, reread),
+            readback={"status": "Open", "count": len(written), "at": datetime.now(UTC)},
+            case_ids=case_ids,
+        )
+
+
+def _claims_match(written: list[ClaimRow], reread: list[ClaimRow]) -> bool:
+    """`True` only when every `written` row's amount, currency, product,
+    transaction id and `origin` reappear in `reread`, keyed by `complaint_id`
+    (D16, R3). `disputes.service.get_claims` already scopes `reread` to the
+    session's customer (R1), so a row that came back for someone else, or
+    didn't come back at all, fails the match here.
+    """
+    if len(written) != len(reread):
+        return False
+    by_id = {row.complaint_id: row for row in reread}
+    for row in written:
+        match = by_id.get(row.complaint_id)
+        if match is None:
+            return False
+        if (
+            match.claimed_amount != row.claimed_amount
+            or match.currency != row.currency
+            or match.affected_product_id != row.affected_product_id
+            or match.transaction_id != row.transaction_id
+            or match.origin != "app"
+        ):
+            return False
+    return True

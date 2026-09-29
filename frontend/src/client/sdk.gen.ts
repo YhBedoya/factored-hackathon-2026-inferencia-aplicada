@@ -45,7 +45,8 @@ export const loginApiV1AuthLoginPost = <ThrowOnError extends boolean = false>(op
  *
  * Re-issue the session and CSRF cookies for a still-valid, unrevoked
  * session (D6). No role dependency: the cookie + CSRF pair is the proof,
- * same as the spec's "public (needs a valid cookie + CSRF)".
+ * same as the spec's "public (needs a valid cookie + CSRF)" -- except that
+ * a staff session gets `403 forbidden_role` (D4-B D5).
  */
 export const refreshApiV1AuthRefreshPost = <ThrowOnError extends boolean = false>(options?: Options<RefreshApiV1AuthRefreshPostData, ThrowOnError>): RequestResult<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/refresh', ...options });
 
@@ -104,6 +105,14 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
  * already holds the lock for this conversation; `409 conversation_closed`
  * once the customer said goodbye (the client starts a new conversation
  * instead).
+ *
+ * D7's pick gate: a `selection` body is checked against this
+ * conversation's own last-checkpointed `pending`/`dispute`
+ * (`runner.checkpointed_dispute`) *before* anything is scheduled --
+ * paused at `awaiting_slot == "transactions"` and every picked id present
+ * in `dispute.offered_tx_ids` -- else `409 selection_invalid` and no turn
+ * runs (R1: a customer can't claim a transaction that was never offered).
+ * The flow re-checks the same rule once a turn does run, as a second gate.
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',

@@ -1,7 +1,9 @@
 import { CardPicker } from "@/components/chat/CardPicker";
 import { ConfirmCard } from "@/components/chat/ConfirmCard";
+import { HandoffBanner } from "@/components/chat/HandoffBanner";
 import { QuickReplies } from "@/components/chat/QuickReplies";
 import { StatusIndicator } from "@/components/chat/StatusIndicator";
+import { TransactionList } from "@/components/chat/TransactionList";
 import type { ConfirmationDecision } from "@/lib/api";
 import type { UiEvent } from "@/lib/sse";
 import { cn } from "@/lib/utils";
@@ -19,6 +21,7 @@ type MessageListProps = {
 	typing: boolean;
 	onWidgetSelect: (label: string) => void;
 	onConfirmDecision: (tokenId: string, decision: ConfirmationDecision) => void;
+	onTransactionSelect: (txIds: string[]) => void;
 };
 
 /**
@@ -31,6 +34,7 @@ export function MessageList({
 	typing,
 	onWidgetSelect,
 	onConfirmDecision,
+	onTransactionSelect,
 }: MessageListProps) {
 	return (
 		<div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -76,6 +80,23 @@ export function MessageList({
 										key={index}
 										payload={event.payload}
 										onDecide={onConfirmDecision}
+									/>
+								);
+							case "transaction_list":
+								return (
+									<TransactionList
+										// biome-ignore lint/suspicious/noArrayIndexKey: one turn emits at most one of each kind
+										key={index}
+										options={event.payload.options}
+										onSelect={onTransactionSelect}
+									/>
+								);
+							case "handoff_banner":
+								return (
+									<HandoffBanner
+										// biome-ignore lint/suspicious/noArrayIndexKey: one turn emits at most one of each kind
+										key={index}
+										payload={event.payload}
 									/>
 								);
 							default:

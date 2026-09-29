@@ -63,6 +63,8 @@ def _json(value: object) -> JsonValue:
 
 
 def _fact_value(result: ActionResult) -> JsonValue:
+    if result.case_ids is not None:
+        return list(result.case_ids)
     if result.tracking_id is not None:
         return result.tracking_id
     status = result.readback.get("status")
@@ -115,14 +117,19 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
                 audit_event_id=str(result.audit_event_id) if result.audit_event_id else None,
                 at=now,
                 tracking_id=result.tracking_id,
+                case_ids=result.case_ids,
             )
         )
+    # Claims the bot opened in this conversation (the fraud path, D4-B D16) are
+    # shown on the banner.
+    case_ids = [case_id for action in taken for case_id in action.case_ids or []]
 
+    # The rule's questions, then any a flow filled in code (D4-B D10).
     questions = [
         _OPEN_QUESTIONS[key][language]
         for key in rule(policy, reason).open_questions
         if key in _OPEN_QUESTIONS
-    ]
+    ] + list(state.get("handoff_open_questions", []))
     packet = HandoffPacket(
         handoff_id=candidate_id,
         conversation_id=session.conversation_id,
@@ -164,6 +171,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "confirmation_token_id": None,
         "intent_queue": [],
         "handoff_evidence": [],
+        "handoff_open_questions": [],
         "ui": [
             HandoffBannerEvent(
                 kind="handoff_banner",
@@ -172,6 +180,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
                     reference=reference,
                     queue=resolution.queue,
                     queue_label=label,
+                    case_ids=case_ids,
                 ),
             )
         ],

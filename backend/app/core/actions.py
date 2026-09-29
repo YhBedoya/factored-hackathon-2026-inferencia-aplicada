@@ -25,7 +25,8 @@ class ActionResult(BaseModel):
     `verified` has no default (R3): a caller that forgets to re-read the
     record after a write fails validation instead of silently reporting
     "done". `audit_event_id` stays `None` until audit logging lands (D3-A5).
-    `tracking_id` is set only by `order_replacement`.
+    `tracking_id` is set only by `order_replacement`. `case_ids` is set only
+    by `disputes.create_claim` (D4-B D16).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -37,3 +38,4 @@ class ActionResult(BaseModel):
     readback: dict[str, ReadbackValue]
     audit_event_id: UUID | None = None
     tracking_id: str | None = None
+    case_ids: list[str] | None = None

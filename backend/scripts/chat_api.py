@@ -19,7 +19,8 @@ compare this output against `make chat-sandbox` on the same persona: dates
 and card masks may differ (Postgres is date-shifted, `FakeBank` reads raw
 CSVs), everything else should match.
 
-Commands (D3-A D18), in addition to a plain-text line for a normal turn:
+Commands (D3-A D18; D4-B D7 adds `/pick`), in addition to a plain-text line
+for a normal turn:
 - `/otp <code>` -- `POST /auth/otp/verify {code}` (never prints the code),
   then, on `200`, runs the `resume: step_up` turn.
 - `/confirm` / `/cancel` -- runs a turn against
@@ -29,6 +30,11 @@ Commands (D3-A D18), in addition to a plain-text line for a normal turn:
 - `/replay` -- re-posts the last token this script itself posted to the
   confirmations route with `{"decision": "confirm"}`, without opening a
   stream, to show the server rejects a reused token (R2).
+- `/pick <n[,n...]>` -- posts `{"selection": {"tx_ids": [...]}}` for the
+  1-based indices into the last `ui.transaction_list` seen, and runs the
+  turn like a typed message (D7). Prints `no open transaction list` if no
+  `ui.transaction_list` event has arrived yet, or `invalid pick` for a bad
+  index -- the server, not this script, is the injection guard (R1).
 """
 
 import argparse
@@ -58,14 +64,17 @@ class _PersonaNotSeeded(Exception):
 @dataclass
 class _ChatState:
     """Cross-turn state D18's commands need: the last `ui.confirm` token
-    seen (for `/confirm`, `/cancel`) and the last token this script itself
-    posted to the confirmations route (for `/replay`). Neither is cleared
-    on use -- the server is the single-use enforcement point (R2); this
-    script only remembers what to point `/replay` back at.
+    seen (for `/confirm`, `/cancel`), the last token this script itself
+    posted to the confirmations route (for `/replay`), and the last
+    `ui.transaction_list`'s offered ids in the order printed (for `/pick`,
+    D4-B D7). None is cleared on use -- the server is the single-use/
+    injection enforcement point (R2, R1); this script only remembers what
+    a later command refers back to.
     """
 
     last_confirm_token: str | None = None
     last_posted_token: str | None = None
+    last_tx_options: list[str] | None = None
 
 
 def _load_persona(customer_id: str) -> tuple[str, str, str]:
@@ -150,7 +159,9 @@ def _handle_event(event: str, data: dict[str, Any], state: _ChatState) -> bool:
     """Print one line for `(event, data)` (`04` §3 SSE events). Returns
     `True` once `done` is seen, so the caller stops reading the stream. A
     `ui.confirm` event also updates `state.last_confirm_token` (D18) for a
-    later `/confirm` or `/cancel` line.
+    later `/confirm` or `/cancel` line; a `ui.transaction_list` event prints
+    each option with a 1-based index and updates `state.last_tx_options`
+    (D4-B D7) for a later `/pick` line.
     """
     if event == "status":
         print(f"status {data['step']}")
@@ -178,6 +189,11 @@ def _handle_event(event: str, data: dict[str, Any], state: _ChatState) -> bool:
             print(f"ui {kind}")
         if kind == "confirm":
             state.last_confirm_token = data["payload"]["token_id"]
+        elif data["kind"] == "transaction_list":
+            options = data["payload"]["options"]
+            state.last_tx_options = [option["tx_id"] for option in options]
+            for index, option in enumerate(options, start=1):
+                print(f"  {index}. {option['label']}")
     elif event == "debug":
         _print_debug(data)
     elif event == "error":
@@ -283,6 +299,33 @@ def _run_confirmation(
     )
 
 
+def _run_pick(client: httpx.Client, conversation_id: str, state: _ChatState, indices: str) -> None:
+    """`/pick <n[,n...]>` (D4-B D7): map 1-based indices into
+    `state.last_tx_options` and post `{"selection": {"tx_ids": [...]}}`,
+    running the turn like a typed message. Prints `no open transaction
+    list` if no `ui.transaction_list` has arrived yet, or `invalid pick`
+    for a non-numeric or out-of-range index -- the route's own D7 gate is
+    the actual guard against an id that was never offered (R1); this is
+    just a convenience for reading a valid index off what was just printed.
+    """
+    if state.last_tx_options is None:
+        print("no open transaction list")
+        return
+    try:
+        picked = [int(piece.strip()) for piece in indices.split(",") if piece.strip()]
+        tx_ids = [state.last_tx_options[index - 1] for index in picked]
+    except (ValueError, IndexError):
+        print("invalid pick")
+        return
+    _run_turn(
+        client,
+        conversation_id,
+        state,
+        post_url=f"{_API_PREFIX}/conversations/{conversation_id}/messages",
+        post_json={"selection": {"tx_ids": tx_ids}},
+    )
+
+
 def _replay(client: httpx.Client, conversation_id: str, state: _ChatState) -> None:
     """`/replay`: re-post the last token this script posted to the
     confirmations route, with `{"decision": "confirm"}`, and print the raw
@@ -334,6 +377,8 @@ def main(argv: list[str] | None = None) -> None:
                 _run_confirmation(client, conversation_id, state, "cancel")
             elif text == "/replay":
                 _replay(client, conversation_id, state)
+            elif text.startswith("/pick "):
+                _run_pick(client, conversation_id, state, text[len("/pick ") :].strip())
             else:
                 _run_turn(
                     client, conversation_id, state, post_url=messages_url, post_json={"text": text}

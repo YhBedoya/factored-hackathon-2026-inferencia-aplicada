@@ -18,7 +18,9 @@ No route here takes `customer_id` (R1): it always comes from the `Session`
 `get_session()` builds off the `session` cookie. `POST /auth/refresh` sits
 on `public_router` too (D6): it proves the caller through the `session`
 cookie plus CSRF, not a role dependency, since a session past `exp` has
-nothing left for `require_role` to check.
+nothing left for `require_role` to check -- except for one explicit role
+check after decoding (D4-B D5): a staff session gets `403 forbidden_role`
+instead of a re-issued cookie pair, since staff sessions never refresh here.
 
 `POST /auth/otp/verify` (D3-A4 D5) sits on `router`, not `public_router`:
 unlike refresh, stepping up needs a live, role-checked session to step up.
@@ -122,7 +124,8 @@ async def login(req: LoginRequest, response: Response) -> MeResponse:
 async def refresh(request: Request, response: Response) -> MeResponse:
     """Re-issue the session and CSRF cookies for a still-valid, unrevoked
     session (D6). No role dependency: the cookie + CSRF pair is the proof,
-    same as the spec's "public (needs a valid cookie + CSRF)".
+    same as the spec's "public (needs a valid cookie + CSRF)" -- except that
+    a staff session gets `403 forbidden_role` (D4-B D5).
     """
 
     settings = get_settings()
@@ -133,6 +136,8 @@ async def refresh(request: Request, response: Response) -> MeResponse:
         session, new_token, _claims = await identity_service.refresh(token)
     except identity_service.SessionExpired as exc:
         raise HTTPException(status_code=401, detail="session_expired") from exc
+    if session.role != "customer":
+        raise HTTPException(status_code=403, detail="forbidden_role")
 
     csrf_token = new_csrf_token()
     _set_auth_cookies(response, token=new_token, csrf_token=csrf_token, settings=settings)

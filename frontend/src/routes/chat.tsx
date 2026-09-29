@@ -6,6 +6,7 @@ import {
 	MessageList,
 	type TranscriptMessage,
 } from "@/components/chat/MessageList";
+import { ModeIndicator } from "@/components/chat/ModeIndicator";
 import { OtpModal } from "@/components/chat/OtpModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,10 @@ import {
 	me,
 	postConfirmation,
 	postMessage,
+	postSelection,
 } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
-import { openConversationStream } from "@/lib/sse";
+import { type ModePayload, openConversationStream } from "@/lib/sse";
 
 // R1/D3-B D12: the chat guard is the one place `me()` decides who reaches the
 // conversation. Nothing here ever sends a `customer_id`; the session cookie
@@ -68,6 +70,10 @@ function ChatPage() {
 	const [errorCode, setErrorCode] = useState<string | null>(null);
 	const [closed, setClosed] = useState(false);
 	const [otpTool, setOtpTool] = useState<string | null>(null);
+	const [mode, setMode] = useState<ModePayload>({
+		mode: "bot",
+		agent_display_name: null,
+	});
 
 	const connectStream = useCallback((id: string) => {
 		streamCleanupRef.current?.();
@@ -93,6 +99,7 @@ function ChatPage() {
 					setClosed(true);
 				}
 			},
+			onMode: (payload) => setMode(payload),
 			onError: (payload) => {
 				setTyping(false);
 				setErrorCode(payload.code);
@@ -171,6 +178,18 @@ function ChatPage() {
 		}
 	}
 
+	// D7: the pick is never shown as a customer bubble, only posted.
+	async function handleTransactionSelect(txIds: string[]) {
+		setErrorCode(null);
+		try {
+			const id = await ensureConversation();
+			setComposerDisabled(true);
+			await postSelection(id, txIds);
+		} catch (err) {
+			handleTurnError(err);
+		}
+	}
+
 	function handleOtpVerified() {
 		setOtpTool(null);
 		setComposerDisabled(true);
@@ -189,15 +208,21 @@ function ChatPage() {
 		setComposerDisabled(false);
 		setTyping(false);
 		setOtpTool(null);
+		setMode({ mode: "bot", agent_display_name: null });
 	}
 
 	return (
 		<div className="flex h-dvh flex-col bg-bg">
+			<ModeIndicator
+				mode={mode.mode}
+				agentDisplayName={mode.agent_display_name}
+			/>
 			<MessageList
 				messages={messages}
 				typing={typing}
 				onWidgetSelect={handleSend}
 				onConfirmDecision={handleConfirmDecision}
+				onTransactionSelect={handleTransactionSelect}
 			/>
 			{reconnecting && (
 				<div

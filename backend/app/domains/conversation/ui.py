@@ -10,9 +10,12 @@ conversation). `card_picker` carries the masked card options an `Ask` outcome
 already built (`flows/card_select.py`'s `card_picker_event`, D3); `quick_replies`
 carries the fixed lock-vs-block labels `card_block` emits while clarifying
 (D4). Both `PickerOption.label`s are formatted in code, never by the LLM (R4).
-`handoff_banner` (D4-A) announces the transfer to a person. `mode` and
-`message` payloads are the non-`ui` SSE events the runner publishes. `transaction_list`
-is not defined here -- it arrives with the card that emits it.
+`transaction_list` carries the picker for `unrecognized_charge`'s candidate
+transactions (`TxOption.label` is the code-formatted merchant/money/date/mask
+string, D4-B D13). `handoff_banner` (D4-A) announces the transfer to a
+person; on the fraud path it also carries the case ids
+`disputes.create_claim` returned (D4-B D16). `mode` and `message` payloads
+are the non-`ui` SSE events the runner publishes.
 """
 
 from typing import Annotated, Literal
@@ -39,6 +42,9 @@ __all__ = [
     "PickerOption",
     "QuickRepliesEvent",
     "QuickRepliesPayload",
+    "TransactionListEvent",
+    "TransactionListPayload",
+    "TxOption",
     "UIEvent",
 ]
 
@@ -150,8 +156,43 @@ class QuickRepliesEvent(BaseModel):
     payload: QuickRepliesPayload
 
 
+class TxOption(BaseModel):
+    """One offered transaction: its id and its code-formatted label (R4, D13)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tx_id: str
+    label: str
+
+
+class TransactionListPayload(BaseModel):
+    """`ui.transaction_list` payload: the candidates `unrecognized_charge`
+    offered (D12, D13). `multi` is always `True` -- the customer can pick
+    more than one -- so the frontend never has to infer it from `len(options)`.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    options: list[TxOption]
+    multi: Literal[True] = True
+
+
+class TransactionListEvent(BaseModel):
+    """Push event: the pick step of `unrecognized_charge` (D7, D12)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["transaction_list"]
+    payload: TransactionListPayload
+
+
 class HandoffBannerPayload(BaseModel):
-    """`ui.handoff_banner` payload: reference and queue label built in code (R4)."""
+    """`ui.handoff_banner` payload: reference and queue label built in code (R4).
+
+    `case_ids` lists the claims the conversation's verified
+    `disputes.create_claim` results opened before the handoff (D4-B D16);
+    it is empty for every other handoff.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -159,6 +200,7 @@ class HandoffBannerPayload(BaseModel):
     reference: str
     queue: Queue
     queue_label: str
+    case_ids: list[str] = Field(default_factory=list)
 
 
 class HandoffBannerEvent(BaseModel):
@@ -196,6 +238,7 @@ UIEvent = Annotated[
     | ConversationClosedEvent
     | CardPickerEvent
     | QuickRepliesEvent
+    | TransactionListEvent
     | HandoffBannerEvent,
     Field(discriminator="kind"),
 ]

@@ -4,15 +4,21 @@ scoped to its owner (`get_owned_conversation`, D18).
 
 Uses `create_app()` in `dev` -- `/test-idp` isn't mounted there (D8), so it
 never needs an exemption entry of its own; the exemptions here are exactly
-the routes `04` §3 documents as public: `/health` and `/auth/login`.
-`/auth/refresh` doesn't exist yet (a later task adds it) but stays in the
-exemption list, matching the spec's contract row for it.
+the routes `04` §3 documents as public: `/health`, `/auth/login`,
+`/auth/refresh` and, since D4-B, `/auth/staff/login` (D3, D5): staff login
+is CSRF-exempt the same way customer login is, for the same reason -- there
+is no cookie yet to double-submit against.
 
 `get_owned_conversation` lives in `app.api.v1.conversations` (T12 human
 decision, not `conversation/deps.py`, which does not exist).
 
+D4-B D5 adds two role-shape checks beyond "every non-public route has a
+`RoleGuard`": every `/api/v1/staff/...` route is agent-only, and
+`/auth/logout` (moved off `router` onto its own `logout_router`) accepts
+both roles, since it is the one route a staff session also reaches.
+
 See docs/specs/d2-a-login-read-tools-api.md D6, D18, "Test list" ->
-test_r13_routes.
+test_r13_routes; docs/specs/d4-b-disputes-handoff-screens.md D5.
 """
 
 from collections.abc import Iterator
@@ -54,6 +60,18 @@ def _declares_role_guard(ctx: routing.RouteContext) -> bool:
     """
 
     return any(isinstance(dependency.dependency, RoleGuard) for dependency in ctx.dependencies)
+
+
+def _role_guards(ctx: routing.RouteContext) -> list[RoleGuard]:
+    """Every `RoleGuard` instance declared on `ctx` (router or route level),
+    so a test can check *which* roles it names, not just that one exists.
+    """
+
+    return [
+        dependency.dependency
+        for dependency in ctx.dependencies
+        if isinstance(dependency.dependency, RoleGuard)
+    ]
 
 
 def _calls_somewhere(dependant: Dependant, target: object) -> bool:
