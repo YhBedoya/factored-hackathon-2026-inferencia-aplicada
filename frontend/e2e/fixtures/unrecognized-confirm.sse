@@ -1,0 +1,12 @@
+event: status
+data: {"step":"plan"}
+
+event: ui
+data: {"kind":"confirm","payload":{"token_id":"tok-e2e-201","steps":[{"tool":"block_card","summary_key":"block_card","facts":[{"key":"card_mask","value":"•••• 4242","source":"card"}]},{"tool":"create_claim","summary_key":"create_claim","facts":[{"key":"tx_count","value":2,"source":"selection"}]}]}}
+
+event: message
+data: {"role":"bot","text":"Vamos a bloquear tu tarjeta y abrir un reclamo por 2 cargos. ¿Confirmas?","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-202"}
+

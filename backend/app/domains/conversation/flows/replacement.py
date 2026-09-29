@@ -32,6 +32,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ToolUnavailable
 from app.domains.conversation.flows.actions import (
+    StepSpec,
     cancel,
     decision,
     execute,
@@ -264,15 +265,20 @@ async def _start_replacement_plan(
         "effect": _REPLACEMENT_EFFECT_LABEL[language],
         "card_last4": details.last4,
     }
+    text = fill(get_template("action_confirm", language), **dict(confirm_values))
     update = await start_plan(
         state,
         config,
         flow="replacement",
-        tool="cards.order_replacement",
-        args={"card_id": details.card_id, "address_ref": address_ref},
-        summary_key="order_replacement",
-        view_facts=view_facts,
-        confirm_values=confirm_values,
+        steps=[
+            StepSpec(
+                tool="cards.order_replacement",
+                args={"card_id": details.card_id, "address_ref": address_ref},
+                summary_key="order_replacement",
+                view_facts=view_facts,
+            )
+        ],
+        text=text,
         intent="replacement_request",
     )
     update["slots"] = NLUSlots(pending_answer=address_ref)

@@ -9,7 +9,7 @@ reference a write tool, by name or by import.
 import ast
 from pathlib import Path
 
-_FORBIDDEN_NAMES = ("bank_write_tools", "ConfirmedWriteTools", "BankWriteTools")
+_FORBIDDEN_NAMES = ("bank_write_tools", "ConfirmedWriteTools", "BankWriteTools", "handoff")
 _FORBIDDEN_MODULES = (
     "app.domains.conversation.tools.write",
     "app.domains.conversation.tools.executor",

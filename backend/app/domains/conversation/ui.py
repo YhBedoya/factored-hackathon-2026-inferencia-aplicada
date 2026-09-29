@@ -10,15 +10,20 @@ conversation). `card_picker` carries the masked card options an `Ask` outcome
 already built (`flows/card_select.py`'s `card_picker_event`, D3); `quick_replies`
 carries the fixed lock-vs-block labels `card_block` emits while clarifying
 (D4). Both `PickerOption.label`s are formatted in code, never by the LLM (R4).
-`transaction_list` and `handoff_banner` are not defined here -- they arrive
-with the cards that emit them.
+`transaction_list` carries the picker for `unrecognized_charge`'s candidate
+transactions (`TxOption.label` is the code-formatted merchant/money/date/mask
+string, D4-B D13); `handoff_banner` tells the customer a case was opened and
+which queue it went to, with the case ids `disputes.create_claim` returned
+(D4-B D16).
 """
 
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domains.conversation.state import Fact
+from app.domains.localization.format import Queue
 
 __all__ = [
     "CardPickerEvent",
@@ -28,11 +33,16 @@ __all__ = [
     "ConfirmStepView",
     "ConversationClosedEvent",
     "ConversationClosedPayload",
+    "HandoffBannerEvent",
+    "HandoffBannerPayload",
     "OtpRequiredEvent",
     "OtpRequiredPayload",
     "PickerOption",
     "QuickRepliesEvent",
     "QuickRepliesPayload",
+    "TransactionListEvent",
+    "TransactionListPayload",
+    "TxOption",
     "UIEvent",
 ]
 
@@ -144,7 +154,68 @@ class QuickRepliesEvent(BaseModel):
     payload: QuickRepliesPayload
 
 
+class TxOption(BaseModel):
+    """One offered transaction: its id and its code-formatted label (R4, D13)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tx_id: str
+    label: str
+
+
+class TransactionListPayload(BaseModel):
+    """`ui.transaction_list` payload: the candidates `unrecognized_charge`
+    offered (D12, D13). `multi` is always `True` -- the customer can pick
+    more than one -- so the frontend never has to infer it from `len(options)`.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    options: list[TxOption]
+    multi: Literal[True] = True
+
+
+class TransactionListEvent(BaseModel):
+    """Push event: the pick step of `unrecognized_charge` (D7, D12)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["transaction_list"]
+    payload: TransactionListPayload
+
+
+class HandoffBannerPayload(BaseModel):
+    """`ui.handoff_banner` payload: the case just opened (D9-D11, D16).
+
+    `case_ids` is empty on the compromise-refused-claim path where no claim
+    row was written (D10); `queue_label` is code-formatted so the frontend
+    never has to localize `queue` itself (R4).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    handoff_id: UUID
+    queue: Queue
+    queue_label: str
+    case_ids: list[str]
+
+
+class HandoffBannerEvent(BaseModel):
+    """Push event: a handoff packet was created for this turn (D9-D11)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["handoff_banner"]
+    payload: HandoffBannerPayload
+
+
 UIEvent = Annotated[
-    ConfirmEvent | OtpRequiredEvent | ConversationClosedEvent | CardPickerEvent | QuickRepliesEvent,
+    ConfirmEvent
+    | OtpRequiredEvent
+    | ConversationClosedEvent
+    | CardPickerEvent
+    | QuickRepliesEvent
+    | TransactionListEvent
+    | HandoffBannerEvent,
     Field(discriminator="kind"),
 ]

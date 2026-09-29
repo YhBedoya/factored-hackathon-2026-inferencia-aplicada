@@ -1,5 +1,6 @@
 """`uv run python -m app.domains.identity.provision` -- seed `identity.accounts`
-into `latam_golden` from `bank.customers` (D3, D4, D5).
+into `latam_golden` from `bank.customers` (D3, D4, D5), plus the one staff
+account (`docs/specs/d4-b-disputes-handoff-screens.md` D3).
 
 Customer-only accounts (D3): every `bank.customers` row gets exactly one
 `identity.accounts` row with a deterministic, seeded password (D4) and the
@@ -9,6 +10,14 @@ single transaction, so the row count and every generated password come out
 the same each time (D5). `data/secrets/credentials.csv` is the one place
 the raw document number and password ever touch disk together, and it stays
 git-ignored (R10); nothing here prints or logs either value.
+
+The single agent row (D4-B D3) is inserted in that same transaction, after
+the customer COPY: `customer_id NULL`, `username`/`display_name` from
+settings, `login_key = staff_login_key(username)`, and a password generated
+and hashed the same way as a customer's. Its plaintext export,
+`data/secrets/staff_credentials.csv`, is a second git-ignored file (not
+merged into `credentials.csv`, since it has a different, one-row shape) and
+nothing here ever prints or logs the username or password.
 
 Connects with sync `psycopg` (not the app's async engine): this is a
 one-shot CLI against `latam_golden`, run from `make seed-identity`/`make
@@ -29,11 +38,17 @@ from uuid import uuid4
 import psycopg
 
 from app.core.config import get_settings
-from app.domains.identity.passwords import generate_password, hash_password, login_key
+from app.domains.identity.passwords import (
+    generate_password,
+    hash_password,
+    login_key,
+    staff_login_key,
+)
 
 # `identity/provision.py` -> `identity/` -> `domains/` -> `app/` -> `backend/` -> repo root.
 REPO_ROOT = Path(__file__).resolve().parents[4]
 _CREDENTIALS_CSV = REPO_ROOT / "data" / "secrets" / "credentials.csv"
+_STAFF_CREDENTIALS_CSV = REPO_ROOT / "data" / "secrets" / "staff_credentials.csv"
 
 _PBKDF2_ITERATIONS = 1000
 
@@ -81,6 +96,20 @@ def _write_credentials_csv(rows: list[tuple[str, str, str, str]]) -> Path:
     return _CREDENTIALS_CSV
 
 
+def _write_staff_credentials_csv(username: str, password: str) -> Path:
+    """Write the git-ignored plaintext staff credential, mode `0600` (R10,
+    D4-B D3). Same shape and re-`chmod`-on-every-write reasoning as
+    `_write_credentials_csv`, for the one staff account.
+    """
+    _STAFF_CREDENTIALS_CSV.parent.mkdir(parents=True, exist_ok=True)
+    with _STAFF_CREDENTIALS_CSV.open("w", newline="") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(["username", "password"])
+        writer.writerow([username, password])
+    os.chmod(_STAFF_CREDENTIALS_CSV, 0o600)
+    return _STAFF_CREDENTIALS_CSV
+
+
 def main() -> None:
     settings = get_settings()
     _require_secrets(
@@ -120,14 +149,36 @@ def main() -> None:
                 )
                 csv_rows.append((customer_id, document_type, document_number, password))
                 row_count += 1
+
+        staff_username = settings.staff_username
+        staff_password = generate_password(
+            f"staff:{staff_username}", seed=settings.credentials_seed
+        )
+        cur.execute(
+            "INSERT INTO identity.accounts "
+            "(account_id, role, customer_id, username, display_name, login_key, "
+            "password_hash, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                str(uuid4()),
+                "agent",
+                None,
+                staff_username,
+                settings.staff_display_name,
+                staff_login_key(staff_username, hmac_key=settings.identity_hmac_key),
+                hash_password(staff_password, iterations=_PBKDF2_ITERATIONS),
+                "active",
+            ),
+        )
         # `with psycopg.connect(...)` commits on a clean exit (not
-        # autocommit): the TRUNCATE and every COPYed row land in one
-        # transaction, so a failure partway through leaves the previous
-        # `identity.accounts` state untouched.
+        # autocommit): the TRUNCATE, every COPYed customer row and the one
+        # agent row land in one transaction, so a failure partway through
+        # leaves the previous `identity.accounts` state untouched (D4-B D3).
 
     export_path = _write_credentials_csv(csv_rows)
-    print(f"identity.accounts: {row_count}")
+    staff_export_path = _write_staff_credentials_csv(staff_username, staff_password)
+    print(f"identity.accounts: {row_count} customers + 1 staff")
     print(export_path)
+    print(staff_export_path)
 
 
 if __name__ == "__main__":

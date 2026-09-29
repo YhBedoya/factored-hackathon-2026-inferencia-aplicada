@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     session_ttl_minutes: int = 60
     login_max_failures: int = 5
     login_window_seconds: int = 900
+    # D4-B D3: the one staff account every queue shares. Not a secret itself
+    # (the password is); see `identity/provision.py`.
+    staff_username: str = "agente"
+    staff_display_name: str = "Sofía"
 
 
 @lru_cache

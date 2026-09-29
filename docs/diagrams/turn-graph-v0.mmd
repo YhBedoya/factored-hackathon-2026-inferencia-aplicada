@@ -13,6 +13,7 @@ graph TD;
 	card_block(card_block)
 	card_unlock(card_unlock)
 	replacement(replacement)
+	unrecognized_charge(unrecognized_charge)
 	unsupported(unsupported)
 	fallback(fallback)
 	compose(compose)
@@ -39,6 +40,7 @@ graph TD;
 	enqueue -.-> card_unlock;
 	enqueue -.-> finish;
 	enqueue -.-> replacement;
+	enqueue -.-> unrecognized_charge;
 	enqueue -.-> unsupported;
 	fallback -.-> finish;
 	fallback -.-> next_intent;
@@ -48,11 +50,13 @@ graph TD;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
 	load_session -.-> understand;
+	load_session -.-> unrecognized_charge;
 	next_intent -.-> card_block;
 	next_intent -.-> card_info;
 	next_intent -.-> card_unlock;
 	next_intent -.-> finish;
 	next_intent -.-> replacement;
+	next_intent -.-> unrecognized_charge;
 	next_intent -.-> unsupported;
 	replacement -.-> compose;
 	replacement -.-> fallback;
@@ -66,7 +70,12 @@ graph TD;
 	understand -.-> fallback;
 	understand -.-> replacement;
 	understand -.-> smalltalk;
+	understand -.-> unrecognized_charge;
 	understand -.-> unsupported;
+	unrecognized_charge -.-> compose;
+	unrecognized_charge -.-> fallback;
+	unrecognized_charge -.-> finish;
+	unrecognized_charge -.-> next_intent;
 	unsupported -.-> finish;
 	unsupported -.-> next_intent;
 	finish --> __end__;

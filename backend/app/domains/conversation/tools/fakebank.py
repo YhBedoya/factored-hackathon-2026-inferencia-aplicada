@@ -230,6 +230,57 @@ class FakeBank:
         rows = await self._query(sql, params)
         return [self._to_tx_view(row) for row in rows]
 
+    async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
+        """`tx_ids`' own rows, in the same order (D4-B, `disputes.create_claim`'s
+        own-row check, R1). The card `get_card_details`/`_probe_card_exists`
+        shape, minus the card/non-card distinction: every transaction row
+        already is a transaction, so the probe below selects only the id
+        itself, no data column.
+        """
+        placeholders = ", ".join("?" for _ in tx_ids)
+        rows = await self._query(
+            f"""
+            SELECT transaction_id, product_id,
+                   CAST(transaction_date AS TIMESTAMP) AS occurred_at,
+                   CAST(amount AS DECIMAL(18,2)) AS amount, currency,
+                   CAST(NULLIF(amount_usd, '') AS DECIMAL(18,2)) AS amount_usd,
+                   transaction_type, NULLIF(transaction_category, '') AS transaction_category,
+                   NULLIF(merchant_name, '') AS merchant_name,
+                   NULLIF(merchant_category, '') AS merchant_category,
+                   channel, NULLIF(transaction_city, '') AS transaction_city,
+                   NULLIF(transaction_country, '') AS transaction_country,
+                   transaction_status, NULLIF(response_code, '') AS response_code,
+                   CAST(NULLIF(fraud_score, '') AS DECIMAL(9,4)) AS fraud_score
+            FROM read_csv({_sql_literal(self._transactions_glob)},
+                          hive_partitioning=true, union_by_name=true, all_varchar=true)
+            WHERE customer_id = ? AND transaction_id IN ({placeholders})
+            """,
+            [self._ctx.customer_id, *tx_ids],
+        )
+        by_id = {row["transaction_id"]: row for row in rows}
+        missing = [tx_id for tx_id in tx_ids if tx_id not in by_id]
+        if missing:
+            if await self._probe_transactions_exist(missing):
+                raise AccessDenied(f"transaction {missing[0]!r} does not belong to this customer")
+            raise NotFound(f"no transaction {missing[0]!r}")
+        return [self._to_tx_view(by_id[tx_id]) for tx_id in tx_ids]
+
+    async def _probe_transactions_exist(self, tx_ids: list[str]) -> bool:
+        """Whether any of `tx_ids` exists *at all*, regardless of owner (D17
+        R1 hardening). Selects only `transaction_id` -- no data column.
+        """
+        placeholders = ", ".join("?" for _ in tx_ids)
+        rows = await self._query(
+            f"""
+            SELECT transaction_id
+            FROM read_csv({_sql_literal(self._transactions_glob)},
+                          hive_partitioning=true, union_by_name=true, all_varchar=true)
+            WHERE transaction_id IN ({placeholders})
+            """,
+            list(tx_ids),
+        )
+        return bool(rows)
+
     def _build_tx_query(self, tx_filter: TxFilter) -> tuple[str, list[Any]]:
         conditions = ["customer_id = ?"]
         params: list[Any] = [self._ctx.customer_id]
@@ -319,10 +370,18 @@ class FakeBank:
 
     @staticmethod
     def _to_tx_view(row: dict[str, Any]) -> TxView:
+        # DuckDB's `CAST(... AS TIMESTAMP)` returns a naive datetime; every
+        # `bank.*` timestamp is UTC (`03` §5), so it's attached here rather
+        # than left for `TxView`'s `AwareDatetime` to reject outright (D4-B,
+        # first real caller of `search_transactions`/`get_transactions_by_ids`
+        # to build a `TxView` from this query shape).
+        occurred_at = row["occurred_at"]
+        if occurred_at.tzinfo is None:
+            occurred_at = occurred_at.replace(tzinfo=UTC)
         return TxView(
             tx_id=row["transaction_id"],
             card_id=row["product_id"],
-            occurred_at=row["occurred_at"],
+            occurred_at=occurred_at,
             amount=row["amount"],
             currency=row["currency"],
             amount_usd=row["amount_usd"],
@@ -437,6 +496,26 @@ class FakeBankWrites:
             verified=ordered,
             readback={"status": "ordered" if ordered else "unknown", "at": datetime.now(UTC)},
             tracking_id=tracking_id,
+        )
+        self._overlay.results[idempotency_key] = result
+        return result
+
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        # `answers` is only the code-built `bank.complaints.description`
+        # (D14) the Postgres path writes; the fake dataset has no complaints
+        # table to hold it.
+        if idempotency_key in self._overlay.results:  # D11/D15 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
+        transactions = await self._reads.get_transactions_by_ids(tx_ids)  # ownership probe (R1)
+        case_ids = ["CLM-" + secrets.token_hex(4).upper() for _ in transactions]
+        result = ActionResult(
+            tool="disputes.create_claim",
+            status="applied",
+            verified=len(case_ids) == len(tx_ids),
+            readback={"status": "Open", "count": len(case_ids), "at": datetime.now(UTC)},
+            case_ids=case_ids,
         )
         self._overlay.results[idempotency_key] = result
         return result

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
+import type { ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetData, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, ListHandoffsApiV1StaffHandoffsGetData, ListHandoffsApiV1StaffHandoffsGetErrors, ListHandoffsApiV1StaffHandoffsGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostData, PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostErrors, PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, StaffLoginApiV1AuthStaffLoginPostData, StaffLoginApiV1AuthStaffLoginPostErrors, StaffLoginApiV1AuthStaffLoginPostResponses, StaffMeApiV1StaffMeGetData, StaffMeApiV1StaffMeGetResponses, StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetData, StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetErrors, StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -41,20 +41,32 @@ export const loginApiV1AuthLoginPost = <ThrowOnError extends boolean = false>(op
 });
 
 /**
+ * Staff Login
+ *
+ * Verify `req` against the one agent row (D3), issue the same
+ * `session`/`csrf_token` cookie pair `login()` sets, and return the staff
+ * profile (`GET /staff/me`'s own shape) instead of `MeResponse`.
+ */
+export const staffLoginApiV1AuthStaffLoginPost = <ThrowOnError extends boolean = false>(options: Options<StaffLoginApiV1AuthStaffLoginPostData, ThrowOnError>): RequestResult<StaffLoginApiV1AuthStaffLoginPostResponses, StaffLoginApiV1AuthStaffLoginPostErrors, ThrowOnError> => (options.client ?? client).post<StaffLoginApiV1AuthStaffLoginPostResponses, StaffLoginApiV1AuthStaffLoginPostErrors, ThrowOnError>({
+    url: '/api/v1/auth/staff/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Refresh
  *
  * Re-issue the session and CSRF cookies for a still-valid, unrevoked
  * session (D6). No role dependency: the cookie + CSRF pair is the proof,
- * same as the spec's "public (needs a valid cookie + CSRF)".
+ * same as the spec's "public (needs a valid cookie + CSRF)" -- except for
+ * one explicit role check once the token has decoded (D5): a staff
+ * session never refreshes here, so it gets `403 forbidden_role` instead of
+ * a re-issued cookie pair.
  */
 export const refreshApiV1AuthRefreshPost = <ThrowOnError extends boolean = false>(options?: Options<RefreshApiV1AuthRefreshPostData, ThrowOnError>): RequestResult<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<RefreshApiV1AuthRefreshPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/refresh', ...options });
-
-/**
- * Logout
- *
- * Revoke the caller's `jti` and clear both cookies (D6).
- */
-export const logoutApiV1AuthLogoutPost = <ThrowOnError extends boolean = false>(options?: Options<LogoutApiV1AuthLogoutPostData, ThrowOnError>): RequestResult<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/logout', ...options });
 
 /**
  * Me
@@ -83,6 +95,15 @@ export const verifyOtpApiV1AuthOtpVerifyPost = <ThrowOnError extends boolean = f
 });
 
 /**
+ * Logout
+ *
+ * Revoke the caller's `jti` and clear both cookies (D6). Customer and
+ * agent sessions share this one route (D5): `identity_service.logout`
+ * only ever touches `claims.jti`, so it needs no role branch.
+ */
+export const logoutApiV1AuthLogoutPost = <ThrowOnError extends boolean = false>(options?: Options<LogoutApiV1AuthLogoutPostData, ThrowOnError>): RequestResult<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<LogoutApiV1AuthLogoutPostResponses, unknown, ThrowOnError>({ url: '/api/v1/auth/logout', ...options });
+
+/**
  * Create Conversation
  *
  * Start a new conversation for the caller's own `customer_id` (R1).
@@ -104,6 +125,14 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
  * already holds the lock for this conversation; `409 conversation_closed`
  * once the customer said goodbye (the client starts a new conversation
  * instead).
+ *
+ * D7's pick gate: a `selection` body is checked against this
+ * conversation's own last-checkpointed `pending`/`dispute`
+ * (`runner.checkpointed_dispute`) *before* anything is scheduled --
+ * paused at `awaiting_slot == "transactions"` and every picked id present
+ * in `dispute.offered_tx_ids` -- else `409 selection_invalid` and no turn
+ * runs (R1: a customer can't claim a transaction that was never offered).
+ * The flow re-checks the same rule once a turn does run, as a second gate.
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',
@@ -143,3 +172,66 @@ export const postConfirmationApiV1ConversationsConversationIdConfirmationsTokenI
  * disconnect, same as any other exit from the `async with` block.
  */
 export const streamConversationApiV1ConversationsConversationIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamConversationApiV1ConversationsConversationIdStreamGetData, ThrowOnError>): RequestResult<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError> => (options.client ?? client).get<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError>({ url: '/api/v1/conversations/{conversation_id}/stream', ...options });
+
+/**
+ * Staff Me
+ *
+ * The caller's own agent profile (D3, D5): display name only, the same
+ * way `GET /auth/me` reflects a customer session back.
+ */
+export const staffMeApiV1StaffMeGet = <ThrowOnError extends boolean = false>(options?: Options<StaffMeApiV1StaffMeGetData, ThrowOnError>): RequestResult<StaffMeApiV1StaffMeGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<StaffMeApiV1StaffMeGetResponses, unknown, ThrowOnError>({ url: '/api/v1/staff/me', ...options });
+
+/**
+ * List Handoffs
+ *
+ * The live inbox (D20). A implements this against the real
+ * `HandoffPort`; the inbox filter and order are Dev A's (spec open item 3).
+ */
+export const listHandoffsApiV1StaffHandoffsGet = <ThrowOnError extends boolean = false>(options?: Options<ListHandoffsApiV1StaffHandoffsGetData, ThrowOnError>): RequestResult<ListHandoffsApiV1StaffHandoffsGetResponses, ListHandoffsApiV1StaffHandoffsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListHandoffsApiV1StaffHandoffsGetResponses, ListHandoffsApiV1StaffHandoffsGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs', ...options });
+
+/**
+ * Get Handoff
+ *
+ * One packet's full detail. A implements this against the real
+ * `HandoffPort`.
+ */
+export const getHandoffApiV1StaffHandoffsHandoffIdGet = <ThrowOnError extends boolean = false>(options: Options<GetHandoffApiV1StaffHandoffsHandoffIdGetData, ThrowOnError>): RequestResult<GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, ThrowOnError> => (options.client ?? client).get<GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}', ...options });
+
+/**
+ * Claim Handoff
+ *
+ * Claim a queued handoff for the caller. A implements the claimed-by
+ * check behind `409 already_claimed`.
+ */
+export const claimHandoffApiV1StaffHandoffsHandoffIdClaimPost = <ThrowOnError extends boolean = false>(options: Options<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ThrowOnError>): RequestResult<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ThrowOnError> => (options.client ?? client).post<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/claim', ...options });
+
+/**
+ * Return Handoff
+ *
+ * Return a claimed handoff to the bot. A implements the claimed-by
+ * check behind `409 not_claimed`.
+ */
+export const returnHandoffApiV1StaffHandoffsHandoffIdReturnPost = <ThrowOnError extends boolean = false>(options: Options<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ThrowOnError>): RequestResult<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError> => (options.client ?? client).post<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/return', ...options });
+
+/**
+ * Post Agent Message
+ *
+ * An agent's message into a claimed conversation. A implements the
+ * relay to the customer's `/stream` and the claimed-by check.
+ */
+export const postAgentMessageApiV1StaffConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostAgentMessageApiV1StaffConversationsConversationIdMessagesPostErrors, ThrowOnError>({
+    url: '/api/v1/staff/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stream Agent Conversation
+ *
+ * The agent-side SSE stream for a claimed conversation (D6, `04` §3
+ * events). A implements the claimed-by check and the relay.
+ */
+export const streamAgentConversationApiV1StaffConversationsConversationIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetData, ThrowOnError>): RequestResult<StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetErrors, ThrowOnError> => (options.client ?? client).get<StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamAgentConversationApiV1StaffConversationsConversationIdStreamGetErrors, ThrowOnError>({ url: '/api/v1/staff/conversations/{conversation_id}/stream', ...options });

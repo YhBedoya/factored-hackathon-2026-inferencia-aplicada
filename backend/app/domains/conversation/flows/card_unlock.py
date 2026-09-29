@@ -29,6 +29,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ToolUnavailable
 from app.domains.conversation.flows.actions import (
+    StepSpec,
     cancel,
     decision,
     execute,
@@ -209,15 +210,20 @@ async def _start_unlock_plan(
         "effect": _UNLOCK_EFFECT_LABEL[language],
         "card_last4": details.last4,
     }
+    text = fill(get_template("action_confirm", language), **dict(confirm_values))
     return await start_plan(
         state,
         config,
         flow="card_unlock",
-        tool="cards.unlock_card",
-        args={"card_id": details.card_id},
-        summary_key="unlock_card",
-        view_facts=view_facts,
-        confirm_values=confirm_values,
+        steps=[
+            StepSpec(
+                tool="cards.unlock_card",
+                args={"card_id": details.card_id},
+                summary_key="unlock_card",
+                view_facts=view_facts,
+            )
+        ],
+        text=text,
         intent="card_unlock",
     )
 

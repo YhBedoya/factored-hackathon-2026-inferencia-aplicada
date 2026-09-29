@@ -53,6 +53,13 @@ class BankWriteTools(Protocol):
         # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
         ...
 
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        # Registry name: disputes.create_claim.
+        # May raise: NotFound, AccessDenied (any tx not the customer's), ToolUnavailable.
+        ...
+
 
 BankWriteToolsFactory = Callable[[ToolContext], BankWriteTools]
 """Binds a `ToolContext` to a `BankWriteTools` instance (D4, as K3 D1)."""

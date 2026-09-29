@@ -22,6 +22,7 @@ __all__ = [
     "login_key",
     "login_key_prefix",
     "normalize_document_number",
+    "staff_login_key",
     "verify_password",
 ]
 
@@ -46,6 +47,17 @@ def login_key(document_type: DocumentType, document_number: str, *, hmac_key: st
     """
 
     message = f"doc:{document_type}:{normalize_document_number(document_number)}"
+    return hmac.new(hmac_key.encode(), message.encode(), hashlib.sha256).hexdigest()
+
+
+def staff_login_key(username: str, *, hmac_key: str) -> str:
+    """Hex HMAC-SHA256 of `staff:<username>` (D3), the staff-account analogue
+    of `login_key`. Reuses the same `identity.accounts.login_key` lookup and
+    the same `rl:login:<key>` rate limiter, so no separate limiter namespace
+    exists for staff.
+    """
+
+    message = f"staff:{username}"
     return hmac.new(hmac_key.encode(), message.encode(), hashlib.sha256).hexdigest()
 
 

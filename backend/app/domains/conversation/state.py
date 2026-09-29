@@ -21,7 +21,15 @@ from pydantic import BaseModel, ConfigDict
 from app.core.actions import ActionResult
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
 
-__all__ = ["RESET_FACTS", "RESET_SEGMENTS", "Fact", "Pending", "TurnState", "bind_once"]
+__all__ = [
+    "RESET_FACTS",
+    "RESET_SEGMENTS",
+    "DisputeState",
+    "Fact",
+    "Pending",
+    "TurnState",
+    "bind_once",
+]
 
 
 def bind_once(current: str | None, update: str) -> str:
@@ -121,6 +129,31 @@ def _reduce_segments(current: list[str], update: list[str]) -> list[str]:
     return current + update
 
 
+class DisputeState(TypedDict):
+    """`unrecognized_charge`'s own sub-state (D4-B §Contracts "Graph and state").
+
+    `card_id` is the card the candidates were pulled from; `offered_tx_ids`
+    and `fraud_scores` are what `ui.transaction_list` showed (`fraud_scores`
+    keyed by `tx_id`, so the flow never re-reads the bank to compute the
+    compromise rule on a resume). `picked_tx_ids` and `answers` accumulate
+    across the pick and the question turns; `question_index` is where
+    `policies/disputes.yaml`'s `questions` list resumes on the single-charge
+    path. `compromise` and `block_refused` are read back by the plan's own
+    "confirm" resume to tell the two-step compromise plan, the claim-only
+    plan issued after a refused block (D10), and the single-charge one-step
+    plan apart -- they otherwise share the same `pending.node`.
+    """
+
+    card_id: str
+    offered_tx_ids: list[str]
+    fraud_scores: dict[str, Decimal | None]
+    picked_tx_ids: list[str]
+    answers: list[str]
+    question_index: int
+    compromise: bool
+    block_refused: bool
+
+
 class TurnState(TypedDict):
     """Checkpointed graph state, keyed by `conversation_id` (`02` §3, D3)."""
 
@@ -142,3 +175,4 @@ class TurnState(TypedDict):
     facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
     actions: NotRequired[Annotated[list[ActionResult], add]]
     escalation_reason: NotRequired[str | None]
+    dispute: NotRequired[DisputeState | None]

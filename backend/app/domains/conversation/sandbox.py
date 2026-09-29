@@ -56,6 +56,7 @@ from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.tools.fakebank import make_fakebank_factory
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.handoff.memory import InMemoryHandoffPort
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
@@ -138,6 +139,12 @@ class _RecordingWriteTools:
             card_id, address_ref, idempotency_key=idempotency_key
         )
 
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        self._calls.append("create_claim")
+        return await self._inner.create_claim(tx_ids, answers, idempotency_key=idempotency_key)
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Terminal sandbox for the v0 turn graph.")
@@ -215,6 +222,7 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
             "bank_write_tools": bank_write_tools,
             "vault": InMemoryAddressVault(),
             "llm": llm,
+            "handoff": InMemoryHandoffPort(conversation_id, bundle.hash),
         }
     }
     return _SandboxSession(graph=graph, config=config, bank_tools=bank_tools, gate=gate)

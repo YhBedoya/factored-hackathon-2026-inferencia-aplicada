@@ -15,28 +15,31 @@ given intent records `rule_hit {rule_id: "tool_not_allowed"}` (best effort)
 and raises `PolicyDenied("tool_not_allowed")` before the store or the raw
 call is ever touched.
 
-Each of the four writes runs D16's order: (1) `tool_call` audit, fail closed
+Each of the five writes runs D16's order: (1) `tool_call` audit, fail closed
 -- a failed record means the write never runs, before `consume_step`,
 surfaced as `ToolUnavailable`; (2) the step-up check: rule true and gate
 false raises `StepUpRequired` without consuming anything, recording
 `rule_hit` and `tool_result` best effort; (3) `consume_step`, recording
 `confirmation_used` on success, or `tool_result` and re-raising untouched on
 `ConfirmationRequired`; (4) the raw call, keyed `<token_id>:<step_index>`
-(`step_index` as returned by `consume_step`, D11); (5) on a raised exception
-or a returned but unverified `ActionResult`, `tool_result` (best effort) then
-`cancel` the plan, exactly as before (ADR-027: "deleted on the first failed
-or unverified step") -- on a verified result, `readback` (the read-back made
-JSON-safe through `result.model_dump(mode="json")`, never raw) then
-`tool_result`, whose id becomes `ActionResult.audit_event_id` (`model_copy`).
-A recording failure past that point never turns a verified write into a
-failure (D15, human decision for this card): it is logged
-`audit.write_failed` (ids and event type only, no payload) and
-`audit_event_id` stays `None`. Per the human decision for D2-K, only
-`except Exception` cancels the plan; an `asyncio.CancelledError` does not,
-and is deferred to D3-A3.
+(`step_index` as returned by `consume_step`, D11) -- an `AccessDenied` here
+(D4-B: `disputes.create_claim` on a foreign transaction, R1) additionally
+records `access_denied` before the shared `tool_result`/`cancel` handling;
+(5) on a raised exception or a returned but unverified `ActionResult`,
+`tool_result` (best effort) then `cancel` the plan, exactly as before
+(ADR-027: "deleted on the first failed or unverified step") -- on a verified
+result, `readback` (the read-back made JSON-safe through
+`result.model_dump(mode="json")`, never raw) then `tool_result`, whose id
+becomes `ActionResult.audit_event_id` (`model_copy`). A recording failure
+past that point never turns a verified write into a failure (D15, human
+decision for this card): it is logged `audit.write_failed` (ids and event
+type only, no payload) and `audit_event_id` stays `None`. Per the human
+decision for D2-K, only `except Exception` cancels the plan; an
+`asyncio.CancelledError` does not, and is deferred to D3-A3.
 """
 
 from collections.abc import Awaitable, Callable, Sequence
+from typing import cast
 
 import structlog
 from pydantic import JsonValue
@@ -181,6 +184,17 @@ class ConfirmedWriteTools:
             lambda key: self._raw.order_replacement(card_id, address_ref, idempotency_key=key),
         )
 
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], token_id: str
+    ) -> ActionResult:
+        args: ToolArgs = {"tx_ids": tx_ids, "answers": answers}
+        return await self._run(
+            "disputes.create_claim",
+            args,
+            token_id,
+            lambda key: self._raw.create_claim(tx_ids, answers, idempotency_key=key),
+        )
+
     async def _run(
         self,
         tool: str,
@@ -188,9 +202,17 @@ class ConfirmedWriteTools:
         token_id: str,
         call: Callable[[str], Awaitable[ActionResult]],
     ) -> ActionResult:
-        """D16's order, shared by the four writes above."""
+        """D16's order, shared by the five writes above."""
         await self._record_tool_call(
-            {"tool": tool, "card_id": args.get("card_id"), "args_hash": args_hash(tool, args)}
+            {
+                "tool": tool,
+                # `args.get("card_id")` is `ToolArg | None` (D4-B's `list[str]`
+                # widening, D17): every payload value here is already a valid
+                # `JsonValue`, but mypy's invariant `list[JsonValue]` can't see
+                # a `list[str]` argument as one without this cast.
+                "card_id": cast(JsonValue, args.get("card_id")),
+                "args_hash": args_hash(tool, args),
+            }
         )
 
         if self._requires_step_up(tool, args) and not await self._step_up.is_step_up_valid():
@@ -207,6 +229,15 @@ class ConfirmedWriteTools:
 
         try:
             result = await call(f"{token_id}:{step_index}")
+        except AccessDenied:
+            # D4-B: a `create_claim` tx id that isn't the customer's own
+            # (R1) -- audited the same way `get_block_origin`'s does, then
+            # falls into the same cancel-and-reraise path every other raised
+            # exception below takes.
+            await self._record("access_denied", {"tool": tool})
+            await self._record("tool_result", {"tool": tool, "error": "AccessDenied"})
+            await self._confirmations.cancel(token_id)
+            raise
         except Exception as exc:
             await self._record("tool_result", {"tool": tool, "error": type(exc).__name__})
             await self._confirmations.cancel(token_id)

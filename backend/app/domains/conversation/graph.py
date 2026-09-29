@@ -66,7 +66,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import TurnState, _reduce_segments
@@ -78,9 +78,31 @@ __all__ = [
     "GraphState",
     "TurnInput",
     "TurnOutput",
+    "TxSelection",
     "build_graph",
     "run_turn",
 ]
+
+
+class TxSelection(BaseModel):
+    """The pick step's input: which offered transactions the customer chose
+    (D4-B D7, `04` §3 selection body). It sits next to `ConfirmationDecision`
+    because the API imports both from here (D7). `tx_ids` are checked against
+    `dispute.offered_tx_ids` by the route (`409 selection_invalid`) and again
+    by the flow -- this model only enforces the input's own shape: 1-10 ids,
+    no duplicate.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    tx_ids: list[str] = Field(min_length=1, max_length=10)
+
+    @field_validator("tx_ids")
+    @classmethod
+    def _unique(cls, value: list[str]) -> list[str]:
+        if len(set(value)) != len(value):
+            raise ValueError("tx_ids must be unique")
+        return value
 
 
 class ConfirmationDecision(BaseModel):
@@ -105,12 +127,17 @@ class TurnInput(TypedDict):
     LLM call; `_entry` is the routing that does the skipping). `resume`
     (D8, D20) is the same idea for the OTP path: `"step_up"` means step-up
     just completed outside the graph, and this turn should try to resume
-    whatever paused on it.
+    whatever paused on it. `selection` (D4-B D7) is the same shape again for
+    `unrecognized_charge`'s pick step: every caller passes it explicitly
+    (`None` otherwise), and when it is set (and the checkpoint is actually
+    paused on it) `_entry` skips `understand` too -- the pick is never run
+    through NLU, and never saved as a customer message.
     """
 
     user_text: str
     confirmation: NotRequired[ConfirmationDecision | None]
     resume: NotRequired[Literal["step_up"] | None]
+    selection: NotRequired[TxSelection | None]
 
 
 class TurnOutput(TypedDict):
@@ -148,6 +175,7 @@ class GraphState(TurnState):
     reply: NotRequired[str]
     confirmation: NotRequired[ConfirmationDecision | None]
     resume: NotRequired[Literal["step_up"] | None]
+    selection: NotRequired[TxSelection | None]
     ui: NotRequired[list[UIEvent]]
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
 
@@ -172,6 +200,7 @@ _BRANCH_NODES = (
     "card_block",
     "card_unlock",
     "replacement",
+    "unrecognized_charge",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -189,6 +218,7 @@ _INTENT_NODES: dict[Intent, str] = {
     "card_block": "card_block",
     "card_unlock": "card_unlock",
     "replacement_request": "replacement",
+    "unrecognized_charge": "unrecognized_charge",
 }
 """Intent -> flow node, read by `_dispatch` (D20, P3). An intent with no
 entry here (every Stretch intent, and every card-action intent this card
@@ -201,6 +231,7 @@ _FLOW_NODES: dict[str, str] = {
     "card_block": "card_block",
     "card_unlock": "card_unlock",
     "replacement": "replacement",
+    "unrecognized_charge": "unrecognized_charge",
 }
 """`Pending.flow` -> flow node, read by `_entry` and `route` (D15, D17,
 D20). An unregistered flow name falls through to `unsupported`/`smalltalk`
@@ -209,16 +240,24 @@ rather than crashing (P3). Flow tasks add their own entry here.
 
 
 def _entry(state: GraphState) -> str:
-    """Conditional edge right after `load_session` (D8, D15, D17, `02` §3).
+    """Conditional edge right after `load_session` (D8, D15, D17, `02` §3, D4-B D7).
 
-    Three of this turn's shapes skip `understand` entirely (no LLM call): a
-    button confirmation, a step-up resume, and (once a flow ships one) a raw
-    address reply. Each continues straight into its flow's own node only
-    when it actually matches the open pause; anything else is `smalltalk`'s
-    job (a stale button, a resume with no OTP pause open). Everything else
-    is a fresh turn's text, so it goes to `understand`.
+    Four of this turn's shapes skip `understand` entirely (no LLM call): a
+    transaction pick, a button confirmation, a step-up resume, and (once a
+    flow ships one) a raw address reply. Each continues straight into its
+    flow's own node only when it actually matches the open pause; anything
+    else is `smalltalk`'s job (a stale button, a resume with no OTP pause
+    open, a pick with no list open). Everything else is a fresh turn's text,
+    so it goes to `understand`. The pick is checked first (step 0): it is
+    its own turn shape, never combined with a confirmation or a step-up
+    resume.
     """
     pending = state.get("pending")
+    selection = state.get("selection")
+    if selection is not None:
+        if pending is not None and pending["awaiting_slot"] == "transactions":
+            return _FLOW_NODES["unrecognized_charge"]
+        return "smalltalk"
     confirmation = state.get("confirmation")
     if confirmation is not None:
         if pending is not None and pending["awaiting_slot"] == "confirmation":
@@ -278,6 +317,7 @@ def build_graph(
     from app.domains.conversation.flows.card_info import card_info
     from app.domains.conversation.flows.card_unlock import card_unlock
     from app.domains.conversation.flows.replacement import replacement
+    from app.domains.conversation.flows.unrecognized_charge import unrecognized_charge
     from app.domains.conversation.nodes import (
         compose,
         enqueue,
@@ -300,6 +340,7 @@ def build_graph(
     graph.add_node("card_block", card_block)
     graph.add_node("card_unlock", card_unlock)
     graph.add_node("replacement", replacement)
+    graph.add_node("unrecognized_charge", unrecognized_charge)
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
     graph.add_node("compose", compose)
@@ -317,6 +358,7 @@ def build_graph(
             "card_block": "card_block",
             "card_unlock": "card_unlock",
             "replacement": "replacement",
+            "unrecognized_charge": "unrecognized_charge",
         },
     )
     graph.add_conditional_edges(
@@ -331,6 +373,7 @@ def build_graph(
             "card_block": "card_block",
             "card_unlock": "card_unlock",
             "replacement": "replacement",
+            "unrecognized_charge": "unrecognized_charge",
         },
     )
     graph.add_conditional_edges(
@@ -341,6 +384,7 @@ def build_graph(
             "card_block": "card_block",
             "card_unlock": "card_unlock",
             "replacement": "replacement",
+            "unrecognized_charge": "unrecognized_charge",
             "unsupported": "unsupported",
             "finish": "finish",
         },
@@ -386,6 +430,16 @@ def build_graph(
         },
     )
     graph.add_conditional_edges(
+        "unrecognized_charge",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
         "compose", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
     )
     graph.add_conditional_edges(
@@ -403,6 +457,7 @@ def build_graph(
             "card_block": "card_block",
             "card_unlock": "card_unlock",
             "replacement": "replacement",
+            "unrecognized_charge": "unrecognized_charge",
             "unsupported": "unsupported",
             "finish": "finish",
         },
@@ -419,6 +474,7 @@ async def run_turn(
     config: RunnableConfig,
     confirmation: ConfirmationDecision | None = None,
     resume: Literal["step_up"] | None = None,
+    selection: TxSelection | None = None,
 ) -> tuple[str, DebugInfo]:
     """Run one turn and build its debug line (D9, D20, `07` §1).
 
@@ -438,7 +494,7 @@ async def run_turn(
     ui_kinds: list[str] = []
 
     async for update in graph.astream(
-        {"user_text": text, "confirmation": confirmation, "resume": resume},
+        {"user_text": text, "confirmation": confirmation, "resume": resume, "selection": selection},
         config=config,
         stream_mode="updates",
     ):

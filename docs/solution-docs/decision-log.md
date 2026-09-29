@@ -47,6 +47,7 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 **Decision:** credentials generated at load for all customers (low-cost hash, git-ignored export, admin lookup) plus a curated persona catalog for the demo and the judges. JWT httpOnly cookie + CSRF. OTP only for step-up actions. A test-IdP endpoint for eval, disabled in prod.
 **Amended 2026-09-26:** the step-up OTP is a **fixed 4-digit code** read from an env var (never committed). It only marks where stronger step-up authentication would go, and a real OTP system (delivery, expiry, retries) is out of scope and listed as remaining deployment work (S6). The tool registry still enforces the step-up gate (R2). Judges receive the persona emails, passwords and the OTP code in the submission email, never in the repo.
 **Amended 2026-09-28 (D2-A):** customers log in with **document type + document number** + password, not email: dataset emails are shared by many customers (91,289 distinct over 147,016 non-null), while `document_number` is unique for all 150k. The document number is treated as PII (HMAC `login_key` in accounts, logs and rate-limit keys). There is no staff login for now: the staff panel is a separate page, and its protection is decided on the staff-panel card (D4). Judges receive persona documents and passwords in the submission email instead of emails.
+**Amended 2026-09-28 (D4-B, the staff-panel card):** staff log in. There is exactly **one** agent account (`role='agent'`, `customer_id` null, a `username` and a `display_name`) that works every queue. `POST /auth/staff/login {username, password}` issues the same `session` and CSRF cookies; `/staff/*` routers declare `require_role("agent")`, customer routes answer an agent session with `403`, and the audit actor is `agent:<account_id>` (R13 unchanged). The staff screens are `/staff/*` routes of the same SPA. See spec `docs/specs/d4-b-disputes-handoff-screens.md` D3–D5.
 **Alternatives:** curated personas only; persona picker (weaker auth story); OTP on every login (slower demo/eval); a simulated OTP inbox page (more to build for no extra evidence).
 
 ### ADR-009 — Data platform · Accepted
@@ -169,6 +170,10 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 **Decision:** `policies/tools.yaml`'s `step_up_window_minutes: 5` sets `SessionStepUpGate`'s window (valid when `now - session.step_up_at <= window`). An open confirmation plan is not tied to the session: it dies at its own 5-minute Redis TTL (ADR-027) regardless of session state, and `POST /conversations/{id}/confirmations/{token_id}` returns `401` once the session itself has expired, before the plan is even looked at.
 **Why:** resolves the "Step-up validity window" item below, decided while building the D3-A step-up flow (ADR-025) as planned. See spec `docs/specs/d3-a-guardrails-write-path.md` D4.
 
+### D4-B D8 — Suspected-compromise rule for `unrecognized_charge` · Resolved
+**Decision:** a pick is a suspected compromise when ≥ 2 transactions are picked, or any picked `fraud_score` > 30, or the customer answers "no" to the possession question. That question is asked right after the pick, and only if count and score haven't already triggered. Both thresholds live in `policies/disputes.yaml`. A compromise runs one ADR-027 plan (`block_card` then `create_claim`) and hands off to Fraudes. A refused block writes nothing, offers the claim alone, and still hands off to Fraudes.
+**Why:** resolves the deferred item "Suspected-compromise rule and threshold", decided while building the flow as planned. `fraud_score` > 30 covers about 0.07% of transactions, so the demo uses a picked persona. See spec `docs/specs/d4-b-disputes-handoff-screens.md` D8–D10.
+
 ---
 
 ## Deferred to implementation
@@ -177,7 +182,6 @@ These are known and owned, and they're decided while building the related featur
 
 | Item | Decided when |
 |---|---|
-| Suspected-compromise rule and threshold for `unrecognized_charge` (count, possession, `fraud_score`) | Building the `unrecognized_charge` flow |
 | Numeric targets for the D1.5 outcome metrics (the metrics themselves are defined in `05` §6) | After the first dev eval run, before freezing held-out |
 | Model family for the customer simulator, paraphrases and LLM judge (non-Claude, to avoid self-grading bias) | Building the eval harness |
 | Exact Bedrock model IDs per step | Benchmark on the dev set |

@@ -8,7 +8,8 @@ See `docs/specs/d2-k-write-contracts.md` §"Test list" and
 `test_step_up_checked_before_token_is_consumed` and
 `test_failed_or_unverified_step_cancels_the_plan`; T9 adds the allowlist gate
 (`_ALLOW_ALL`, `_ListRecorder`, `test_intent_not_allowed_is_refused`) against
-the `ConfirmedWriteTools` executor.
+the `ConfirmedWriteTools` executor. D4-B T4 adds `_StubRawWrites.create_claim`
+and `test_compromise_plan_order_and_allowlist` (spec D18).
 """
 
 import asyncio
@@ -24,6 +25,7 @@ from app.domains.audit.schemas import AuditType
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.policy.confirmation import ConfirmationPlan, PlanStep, ToolArgs, args_hash
+from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.tools_policy import load_tools_policy, tool_allowed
 
 
@@ -122,6 +124,11 @@ class _StubRawWrites:
         self, card_id: str, address_ref: AddressRef, *, idempotency_key: str
     ) -> ActionResult:
         return await self._call("order_replacement", (card_id, address_ref), idempotency_key)
+
+    async def create_claim(
+        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+    ) -> ActionResult:
+        return await self._call("create_claim", (tx_ids, answers), idempotency_key)
 
     async def _call(self, name: str, args: tuple[Any, ...], idempotency_key: str) -> ActionResult:
         self.calls.append((name, args))
@@ -321,5 +328,63 @@ def test_intent_not_allowed_is_refused() -> None:
                 {"rule_id": "tool_not_allowed", "tool": "cards.lock_card", "intent": "card_unlock"},
             )
         ]
+
+    asyncio.run(_run())
+
+
+def test_compromise_plan_order_and_allowlist() -> None:
+    """D18: a `[block_card, create_claim]` compromise plan (B2 "compromise
+    path") enforces step order through the real `InMemoryConfirmationStore` --
+    calling `create_claim` first is `step_mismatch`, and replaying it once
+    the plan is fully consumed is `unknown_or_expired` -- and `create_claim`
+    is refused under an intent that doesn't allow it (`card_block` lacks
+    `disputes.create_claim`, `policies/tools.yaml`).
+    """
+
+    async def _run() -> None:
+        result = ActionResult(
+            tool="?", status="applied", verified=True, readback={}, case_ids=["CLM-1"]
+        )
+        raw = _StubRawWrites(result=result)
+        store = InMemoryConfirmationStore("CLI-1", "conv-1")
+        gate = _StubGate(valid=True)
+        policy = load_tools_policy()
+        executor = ConfirmedWriteTools(
+            raw,
+            store,
+            gate,
+            requires_step_up=lambda t, a: False,
+            allowed=tool_allowed(policy),
+            audit=_ListRecorder(),
+        )
+
+        plan = await executor.issue_plan(
+            [
+                PlanStep(
+                    tool="cards.block_card",
+                    args={"card_id": "PRD-1", "reason": "suspected_fraud"},
+                ),
+                PlanStep(tool="disputes.create_claim", args={"tx_ids": ["TRX-1"], "answers": []}),
+            ],
+            "unrecognized_charge",
+        )
+
+        with pytest.raises(ConfirmationRequired) as exc_info:
+            await executor.create_claim(["TRX-1"], [], plan.token_id)
+        assert exc_info.value.reason == "step_mismatch"
+
+        await executor.block_card("PRD-1", "suspected_fraud", plan.token_id)
+        await executor.create_claim(["TRX-1"], [], plan.token_id)
+
+        with pytest.raises(ConfirmationRequired) as exc_info2:
+            await executor.create_claim(["TRX-1"], [], plan.token_id)
+        assert exc_info2.value.reason == "unknown_or_expired"
+
+        with pytest.raises(PolicyDenied) as exc_info3:
+            await executor.issue_plan(
+                [PlanStep(tool="disputes.create_claim", args={"tx_ids": ["TRX-1"], "answers": []})],
+                "card_block",
+            )
+        assert exc_info3.value.reason_code == "tool_not_allowed"
 
     asyncio.run(_run())

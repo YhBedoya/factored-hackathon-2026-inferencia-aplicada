@@ -33,6 +33,7 @@ from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.tools.fakebank import FakeBank, FakeBankOverlay, FakeBankWrites
 from app.domains.conversation.tools.write import BankWriteTools
+from app.domains.handoff.memory import InMemoryHandoffPort
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.tools_policy import load_tools_policy, step_up_rule, tool_allowed
@@ -99,13 +100,14 @@ def fakebank_dir() -> Path:
 class Session:
     """One write-flow test session (T10): the compiled graph, its `config`,
     and the pieces a test pokes at directly (`gate.verify`, `store`'s raw
-    plans, `overlay`'s locked/blocked sets)."""
+    plans, `overlay`'s locked/blocked sets, `handoff`'s recorded packets, D4-B)."""
 
     graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
     config: RunnableConfig
     gate: FakeStepUpGate
     store: InMemoryConfirmationStore
     overlay: FakeBankOverlay
+    handoff: InMemoryHandoffPort
 
 
 def make_session(
@@ -143,6 +145,7 @@ def make_session(
     write_tools = ConfirmedWriteTools(
         raw, store, gate, step_up_rule(policy), tool_allowed(policy), NullAuditRecorder()
     )
+    handoff = InMemoryHandoffPort(conversation_id, "unversioned")
 
     config: RunnableConfig = {
         "configurable": {
@@ -152,7 +155,10 @@ def make_session(
             "bank_write_tools": write_tools,
             "vault": InMemoryAddressVault(),
             "llm": llm,
+            "handoff": handoff,
         }
     }
     graph = build_graph(MemorySaver())
-    return Session(graph=graph, config=config, gate=gate, store=store, overlay=overlay)
+    return Session(
+        graph=graph, config=config, gate=gate, store=store, overlay=overlay, handoff=handoff
+    )

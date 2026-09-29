@@ -53,8 +53,8 @@ class TokenClaims(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sub: UUID
-    role: Literal["customer"]
-    customer_id: str
+    role: Literal["customer", "agent"]
+    customer_id: str | None
     step_up_at: datetime | None
     jti: str
     exp: datetime
