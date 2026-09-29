@@ -29,6 +29,7 @@ forbidden_modules=
     boto3
     aioboto3
     langchain_aws
+    langfuse
     openai
     langchain_openai
 ignore_imports=
@@ -42,6 +43,8 @@ ignore_imports=
     app.core.llm.** -> aioboto3
     app.core.llm -> langchain_aws
     app.core.llm.** -> langchain_aws
+    app.core.llm -> langfuse
+    app.core.llm.** -> langfuse
     app.core.llm -> openai
     app.core.llm.** -> openai
     app.core.llm -> langchain_openai

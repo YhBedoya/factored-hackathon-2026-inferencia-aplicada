@@ -1,0 +1,32 @@
+seed_id: a-human_request-human_required-es-ar-01
+intent: human_request
+category: human_required
+persona: CLI-KX9TL8GMCQUT
+goal: Hablar con una persona y no con el bot
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - human_request
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: a-human_request-human_required-es-ar-01.s
+  language_variant: es-AR
+  expected_language: es
+  source: seed
+  turns:
+  - say: Quiero hablar con una persona, no con un bot.
+  reviewer: null
+  reviewed_at: null

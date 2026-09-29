@@ -15,7 +15,7 @@ import asyncio
 import contextlib
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, get_args
+from typing import Any, Literal, get_args
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
@@ -104,11 +104,16 @@ class TurnHost:
     tasks: set[asyncio.Task[None]] = field(default_factory=set)
 
 
-async def open_host(database_url: str, llm: LLMClient) -> TurnHost:
+async def open_host(
+    database_url: str,
+    llm: LLMClient,
+    system: Literal["proposed", "baseline"] = "proposed",
+) -> TurnHost:
     """Open the checkpointer pool, run its one-time `setup()`, and compile
     the graph over it (D16). `search_path=langgraph` keeps the checkpoint
     tables out of `public` (migration `0002`'s `CREATE SCHEMA IF NOT EXISTS
-    langgraph`).
+    langgraph`). `system` picks the graph variant (D17); the baseline is
+    eval-only, which `_lifespan` enforces before calling this.
     """
     pool: AsyncConnectionPool[AsyncConnection[DictRow]] = AsyncConnectionPool(
         psycopg_conninfo(database_url),
@@ -123,7 +128,7 @@ async def open_host(database_url: str, llm: LLMClient) -> TurnHost:
     await pool.open()
     saver = AsyncPostgresSaver(pool, serde=checkpoint_serde())
     await saver.setup()
-    graph = build_graph(saver)
+    graph = build_graph(saver, system=system)
     return TurnHost(graph=graph, pool=pool, llm=llm)
 
 

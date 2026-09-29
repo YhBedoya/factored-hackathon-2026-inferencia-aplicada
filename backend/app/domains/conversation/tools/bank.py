@@ -9,6 +9,7 @@ K3 ships the Protocol and factory type only: no implementation, `FakeBank` or
 from collections.abc import Callable
 from typing import Protocol
 
+from app.core.pii import KnownPii
 from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers.schemas import CustomerProfile
@@ -49,6 +50,11 @@ class BankReadTools(Protocol):
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         # Registry name: reference.get_fx_rate. May raise: NotFound, ToolUnavailable.
+        ...
+
+    async def get_pii_profile(self) -> KnownPii:
+        # No registry name and no `tool_call` audit event (D34): the runner's masking
+        # step reads it, never an LLM node. May raise: ToolUnavailable.
         ...
 
 

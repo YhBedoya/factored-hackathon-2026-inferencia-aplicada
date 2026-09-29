@@ -28,5 +28,7 @@ class LLMSettings(BaseSettings):
     aws_region: str | None = None
     aws_profile: str | None = None
     langfuse_host: str | None = None
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
     timeout_s: float = 20.0
     max_retries: int = 2

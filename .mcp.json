@@ -1,50 +1,16 @@
 {
   "mcpServers": {
     "victorialogs": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--network",
-        "host",
-        "-e",
-        "VL_INSTANCE_ENTRYPOINT",
-        "ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0"
-      ],
-      "env": {
-        "VL_INSTANCE_ENTRYPOINT": "http://localhost:9428"
-      }
+      "type": "http",
+      "url": "http://localhost:8081/mcp"
     },
     "victoriatraces": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--network",
-        "host",
-        "-e",
-        "VT_INSTANCE_ENTRYPOINT",
-        "ghcr.io/victoriametrics-community/mcp-victoriatraces:v1.5.0"
-      ],
-      "env": {
-        "VT_INSTANCE_ENTRYPOINT": "http://localhost:10428"
-      }
+      "type": "http",
+      "url": "http://localhost:8082/mcp"
     },
     "playwright": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--init",
-        "--network",
-        "host",
-        "mcr.microsoft.com/playwright/mcp:v0.0.82",
-        "--headless",
-        "--isolated"
-      ]
+      "type": "http",
+      "url": "http://localhost:8931/mcp"
     },
     "deepwiki": {
       "type": "http",

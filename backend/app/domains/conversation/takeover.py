@@ -9,16 +9,21 @@ turn runner uses, so a customer turn can't race the checkpoint edit.
 from uuid import UUID, uuid4
 
 from app.core import events
+from app.core.pii import KnownPii
 from app.core.redis import get_redis
 from app.domains.conversation import store
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import MessagePayload, ModePayload
 from app.domains.localization.format import Language
+from app.domains.safety.vault import PostgresPiiVault
 
 __all__ = ["TurnBusy", "publish_mode", "relay_agent_message", "return_to_bot"]
 
 _LOCK_TTL_SECONDS = 120
+# D33: agent and system text is masked with the pattern detectors only, so no
+# document number and no customer names are matched.
+_PATTERNS_ONLY = KnownPii(document_number=None, names=())
 # Same compare-and-delete as the runner's, so a lock that expired and was
 # re-taken by a later turn is never deleted out from under it.
 _RELEASE_LOCK_SCRIPT = """
@@ -42,7 +47,10 @@ async def publish_mode(conversation_id: UUID, mode: str, agent_display_name: str
 async def relay_agent_message(conversation_id: UUID, text: str, agent_display_name: str) -> UUID:
     """Persist an agent message under a fresh `turn_id` and publish it."""
     turn_id = uuid4()
-    await store.add_message(conversation_id, turn_id, role="agent", content=text)
+    masked = await PostgresPiiVault(conversation_id).mask(text, _PATTERNS_ONLY)
+    await store.add_message(
+        conversation_id, turn_id, role="agent", content=text, content_masked=masked
+    )
     payload = MessagePayload(
         role="agent", text=text, sources=[], agent_display_name=agent_display_name
     )
@@ -80,7 +88,10 @@ async def return_to_bot(host: TurnHost, conversation_id: UUID, language: Languag
             },
         )
         text = get_template("back_with_cardy", language)
-        await store.add_message(conversation_id, uuid4(), role="system", content=text)
+        masked = await PostgresPiiVault(conversation_id).mask(text, _PATTERNS_ONLY)
+        await store.add_message(
+            conversation_id, uuid4(), role="system", content=text, content_masked=masked
+        )
         payload = MessagePayload(role="system", text=text, sources=[])
         await events.publish(conversation_id, "message", payload.model_dump(mode="json"))
         await publish_mode(conversation_id, "bot", None)

@@ -21,7 +21,7 @@ from starlette.responses import Response
 
 from app.core.telemetry import get_trace_id
 
-__all__ = ["RequestIDMiddleware", "bind_conversation_id", "configure_logging"]
+__all__ = ["RequestIDMiddleware", "bind_conversation_id", "bind_turn_id", "configure_logging"]
 
 _REQUEST_ID_HEADER = "X-Request-ID"
 
@@ -71,6 +71,11 @@ def configure_logging() -> None:
 def bind_conversation_id(conversation_id: str) -> None:
     """Bind `conversation_id` into the current request's log context."""
     structlog.contextvars.bind_contextvars(conversation_id=conversation_id)
+
+
+def bind_turn_id(turn_id: str) -> None:
+    """Bind `turn_id` next to `conversation_id`, for the `audit.llm_calls` ledger (D9)."""
+    structlog.contextvars.bind_contextvars(turn_id=turn_id)
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):

@@ -16,6 +16,7 @@ from pydantic import JsonValue
 
 from app.core.actions import ActionResult
 from app.domains.audit.schemas import Recorder
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import ToolContext
@@ -161,6 +162,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
 
     reference = reference_for(handoff_id)
     label = queue_label(resolution.queue, language)
+    record(label, reference)
     text = get_template("handoff_transfer", language).format(queue_label=label, reference=reference)
     return {
         "mode": "human",

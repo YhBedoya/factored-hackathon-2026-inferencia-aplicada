@@ -29,6 +29,7 @@ from pydantic import JsonValue
 
 from app.core.config import get_settings
 from app.core.errors import AccessDenied, ToolUnavailable
+from app.core.pii import KnownPii
 from app.domains.audit.schemas import AuditType, Recorder
 from app.domains.audit.service import AuditRecorder
 from app.domains.cards.schemas import CardDetails, CardSummary
@@ -48,7 +49,13 @@ from app.domains.policy.registry import get_policies
 from app.domains.policy.tools_policy import step_up_rule, tool_allowed
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
-__all__ = ["RecordingBankTools", "audit_recorder_for", "build_tool_context", "turn_tools"]
+__all__ = [
+    "RecordingBankTools",
+    "audit_recorder_for",
+    "build_tool_context",
+    "known_pii",
+    "turn_tools",
+]
 
 # `backend/app/domains/conversation/tools/registry.py` -> repo root is five
 # parents up (tools, conversation, domains, app, backend), one level deeper
@@ -188,6 +195,11 @@ class RecordingBankTools:
         await self._record("tool_result", {"tool": tool})
         return result
 
+    async def get_pii_profile(self) -> KnownPii:
+        # Pass-through (A5, D34): the runner's masking step, not an LLM-driven
+        # read, so no `tool_call` audit event and no `.calls` entry.
+        return await self._inner.get_pii_profile()
+
     async def _record_tool_call(self, tool: str, card_id: str | None) -> None:
         """Fail closed (D15): a `tool_call` that can't be recorded means the
         read never runs."""
@@ -214,6 +226,20 @@ class RecordingBankTools:
             await self._audit.record(event_type, payload)
         except Exception:
             pass
+
+
+def _bank_reads(ctx: ToolContext) -> BankReadTools:
+    if get_settings().bank == "fake":
+        read_factory, _ = make_fakebank_factory(_DATA_DIR)
+        return read_factory(ctx)
+    return PostgresBank(ctx)
+
+
+async def known_pii(ctx: ToolContext) -> KnownPii:
+    """The session customer's document number and names, for the runner's
+    masking step (D3, D4). Built from `ctx` (R1), never audited, and not
+    reachable from any LLM node."""
+    return await _bank_reads(ctx).get_pii_profile()
 
 
 def turn_tools(

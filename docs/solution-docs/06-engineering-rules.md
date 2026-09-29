@@ -8,9 +8,9 @@
 | R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so). A token may cover an ordered plan of steps; each call must match the next step exactly (ADR-027) | D3.2 | Tool executor + unit tests (reordered, extra, replayed and cross-customer steps are rejected) |
 | R3 | The bot never reports an action as done without a verified read-back | D2.5 | `ActionResult.verified` required by the composer + eval check |
 | R4 | Money, dates and card masks are formatted in code and inserted through placeholders. The LLM never writes them | Correctness, localization | Composer grounding check (every number must come from facts) |
-| R5 | Only tokenized text goes to the LLM provider (Anthropic API during the build, then Bedrock; ADR-028) or Langfuse | B3 | `core/llm` client refuses un-masked input (vault check) + Langfuse `mask` hook + unit tests |
+| R5 | Only tokenized text goes to the LLM provider (Anthropic API during the build, then Bedrock; ADR-028) or Langfuse | B3 | `core/llm` client refuses un-masked input (`app.core.pii` detectors, `find_pii`) + Langfuse `mask` hook + unit tests |
 | R6 | Tool output enters prompts only inside data fences, and LLM nodes that read tool output have **no write tools** | Injection | Graph construction test + adversarial eval suite |
-| R7 | Every LLM call pins the model ID, prompt version and temperature, and is traced (Langfuse + audit `llm_calls`) | E2, D6.1 | `core/llm` is the only way to call an LLM provider (import-linter) |
+| R7 | Every LLM call pins the model ID, prompt version and temperature (where the model accepts one), and is traced (Langfuse + audit `llm_calls`) | E2, D6.1 | `core/llm` is the only way to call an LLM provider (import-linter) |
 | R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions | B7, D3.4 | Startup validation + code review |
 | R9 | The held-out suite is frozen. Nobody tunes prompts or flows against it | D5.1, D4.8 | Suite hash in the repo + CI check that held-out files are unchanged |
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
@@ -25,6 +25,7 @@ Contracts in `backend/.importlinter`, run in pre-commit and CI:
 - **Independence:** bank domains (`cards`, `transactions`, `disputes`, `customers`) don't import each other's repositories. They can only call each other through their `service` modules.
 - `app.domains.conversation` may reach bank data **only** through `app.domains.conversation.tools` (the registry). It may not import any bank `repository`.
 - Only `app.core.llm` may import LLM SDKs: `anthropic` / `langchain_anthropic` (during the build, ADR-028), `boto3` / `aioboto3` Bedrock clients, `langchain_aws`, and `openai` / `langchain_openai` (eval paraphrase only, ADR-030).
+- `langfuse` is importable only from `app.core.llm` (the tracing hook, ADR-006).
 - `app.core.llm` does not import `app.domains.*.repository` (LLM code can't touch the DB).
 
 ## 3. Repository layout
@@ -42,7 +43,9 @@ frontend/
   src/pages/ components/{ui,common,layout,<domain>}/ hooks/ routes/ lib/ client/ (generated)
 pipeline/           ingest/, contracts/ (Pandera), dbt/ (dbt-duckdb project), load/, fixtures/, tests/
 policies/           *.yaml (team-generated synthetic)
-eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, baseline/, judges/, reports/
+eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, judges/, reports/
+                    (also eval/harness/: runner, checks, report (A); eval/driver/: B's, read-only for A)
+                    (the keyword baseline lives in backend/app/domains/conversation/baseline/, not eval/)
 docker/             docker-compose.{base,dev,test,prod,observability}.yml, nginx/
 infra/aws/          ec2-stack.yaml (CloudFormation), render-env.sh, deploy.sh, smoke.sh (08)
 notebooks/          EDA (aggregates only, no PII printed)

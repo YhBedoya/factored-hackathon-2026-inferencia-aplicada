@@ -1,0 +1,37 @@
+# Dev-only agent tooling: MCP servers for Claude Code (.mcp.json). Loaded by the
+# dev COMPOSE in the Makefile, never by COMPOSE_PROD. Ports are localhost-only.
+# The images are distroless, so no healthcheck; `--wait` accepts "running".
+services:
+  mcp-victorialogs:
+    image: ghcr.io/victoriametrics/mcp-victorialogs:v1.9.0
+    environment:
+      VL_INSTANCE_ENTRYPOINT: http://victorialogs:9428
+      MCP_SERVER_MODE: http
+      MCP_LISTEN_ADDR: ":8081"
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      - victorialogs
+
+  mcp-victoriatraces:
+    image: ghcr.io/victoriametrics-community/mcp-victoriatraces:v1.5.0
+    environment:
+      VT_INSTANCE_ENTRYPOINT: http://victoriatraces:10428
+      MCP_SERVER_MODE: http
+      MCP_LISTEN_ADDR: ":8081"
+    ports:
+      - "127.0.0.1:8082:8081"
+    depends_on:
+      - victoriatraces
+
+  # The image entrypoint already passes --headless --browser chromium
+  # --no-sandbox, so the command only adds what it lacks. Agents open the app
+  # at http://nginx/ on the compose network.
+  mcp-playwright:
+    image: mcr.microsoft.com/playwright/mcp:v0.0.82
+    init: true
+    command: ["--isolated", "--port", "8931", "--host", "0.0.0.0", "--allowed-hosts", "*"]
+    ports:
+      - "127.0.0.1:8931:8931"
+    depends_on:
+      - nginx

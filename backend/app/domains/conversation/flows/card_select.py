@@ -19,6 +19,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict
 
 from app.domains.cards.schemas import CardSummary
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.templates import TemplateKind, get_template
 from app.domains.conversation.ui import CardPickerEvent, CardPickerPayload, PickerOption
 from app.domains.localization import kind_label, mask_card, status_label
@@ -126,6 +127,7 @@ def ask_which_card_text(action: AskAction, outcome: "Ask", language: Language) -
     masked options (D12, R4). A template, not a `compose` draft, so the
     question always names the action the customer asked for.
     """
+    record(outcome.card_options)
     return get_template(_ASK_TEMPLATES[action], language).replace(
         "{card_options}", outcome.card_options
     )

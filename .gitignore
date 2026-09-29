@@ -33,3 +33,6 @@ frontend/src/routeTree.gen.ts
 # Playwright output (B5)
 frontend/test-results/
 frontend/playwright-report/
+# Eval run exports carry LLM-call text and persona ids (D16); report.md/metrics.json/meta.json may be committed
+eval/reports/*/results.jsonl
+eval/reports/*/llm_calls.jsonl

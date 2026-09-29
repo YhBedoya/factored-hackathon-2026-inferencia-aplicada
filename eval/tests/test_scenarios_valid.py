@@ -34,14 +34,21 @@ def _heldout_dir() -> Path:
 def _persona_splits() -> dict[str, str | None]:
     if not _PERSONAS_FILE.exists():
         return {}
-    raw: dict[str, Any] = yaml.safe_load(_PERSONAS_FILE.read_text(encoding="utf-8")) or {}
-    return {persona["customer_id"]: persona.get("split") for persona in raw.get("personas", [])}
+    raw: dict[str, Any] = (
+        yaml.safe_load(_PERSONAS_FILE.read_text(encoding="utf-8")) or {}
+    )
+    return {
+        persona["customer_id"]: persona.get("split")
+        for persona in raw.get("personas", [])
+    }
 
 
 def _assert_personas_match_suite(cases: list[Case], suite: str) -> None:
     splits = _persona_splits()
     for case in cases:
-        assert case.persona in splits, f"{case.case_id}: unknown persona {case.persona!r}"
+        assert case.persona in splits, (
+            f"{case.case_id}: unknown persona {case.persona!r}"
+        )
         assert splits[case.persona] == suite, (
             f"{case.case_id}: persona {case.persona!r} has split "
             f"{splits[case.persona]!r}, expected {suite!r}"

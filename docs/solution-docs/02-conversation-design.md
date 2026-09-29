@@ -34,7 +34,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 ```
 load_session ─┬─ mode == human ─► relay_to_agent ─► END   (_entry, no LLM, no bot reply)
-              └─► mask_pii ─► understand ─► route
+              └─► understand ─► route
                                             ├─ escalation rule hit ───────► handoff_summary ─► handoff ─► END
                                             ├─ status out_of_market ──────► abstain(out_of_market) ─► compose
                                             ├─ status out_of_scope ───────► abstain(scope) ─► compose
@@ -42,8 +42,12 @@ load_session ─┬─ mode == human ─► relay_to_agent ─► END   (_entry,
                                             ├─ pending flow & answer fits ► resume pending flow
                                             ├─ intent has flow ───────────► push intents to queue ─► run flow
                                             └─ general_question ──────────► answer_node ─► compose
-flow finished ─► pop next queued intent (if any) ─► …   compose ─► grounding_check ─► unmask ─► persist+audit ─► END
+flow finished ─► pop next queued intent (if any) ─► …   compose (grounding_check) ─► unmask ─► persist+audit ─► END
 ```
+
+**Masking and grounding (D5-A).** There is no `mask_pii` node: `start_turn` in the runner masks the typed text through the conversation's `PostgresPiiVault` before it becomes graph input (`⟨KIND_n⟩` tokens, `03` §6 `pii_vault`), so the checkpoint never holds raw `user_text`. `grounding_check` is not a separate node: it runs inside `compose` on each draft, in this order: (1) placeholders only from the offered keys, (2) no stray braces, (3) no digit outside a placeholder, (4) no PII detector hit, (5) the draft's language equals the turn language (a stopword heuristic; drafts too short to judge pass). On the first failure `compose` calls the LLM once more with the reason; a second failure uses the goal's fact template (`goal_card_status`, `goal_balance_due`, `abstain`, in `templates.py`, no digits). `fallback` is used only on an `LLMError`. Each outcome (`ok`, `regenerated`, `template`) goes on `reply_sent.payload.grounding` (`04` §6). `unmask` then resolves the tokens (nested ones included) just before the reply is published and stored.
+
+**Baseline (D5-A).** `build_graph(system="baseline")` swaps four nodes and keeps the tools, policy, flows and graph shape: `understand` becomes a keyword NLU (no lexicon hit gives `general_question`), `compose` fills the goal templates, `handoff_summary` uses its fixed template and `abstain` goes straight to the four-part template. It makes no LLM call and is refused at startup unless `APP_ENV=eval`.
 
 **Handoff nodes (D4-A).** `handoff_summary` is the only LLM step: it writes `request` from masked facts (fixed template on a raw digit or an `LLMError`, R4/R11). `handoff` is code only: it assembles the packet from verified read-backs, calls `HandoffTools.create`, sets `mode = human` and emits the `handoff_transfer` text and the banner; the flow that triggers a handoff never writes the reply. `relay_to_agent` publishes the customer's text as `message{role: customer}`. `abstain` builds its four facts from `policies/scope.yaml` with no tool call and `compose@v5` phrases them.
 

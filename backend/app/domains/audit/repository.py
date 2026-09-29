@@ -6,15 +6,19 @@ insert-only, and a row's `payload`/`sources` never change after the fact.
 lands (ADR-006); this module never writes to those columns.
 """
 
+from datetime import datetime
+from uuid import UUID
+
 from sqlalchemy import bindparam, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
+from app.core.llm.sink import LLMCallRecord
 from app.domains.audit.schemas import AuditEvent
 
-__all__ = ["insert_event"]
+__all__ = ["insert_event", "insert_llm_call"]
 
 _INSERT_EVENT_SQL = text(
     """
@@ -58,3 +62,54 @@ async def insert_event(event: AuditEvent) -> None:
             )
     except (SQLAlchemyError, OSError) as exc:
         raise ToolUnavailable(f"audit event insert failed: {exc}") from exc
+
+
+_INSERT_LLM_CALL_SQL = text(
+    """
+    INSERT INTO audit.llm_calls
+        (id, at, conversation_id, turn_id, step, provider, model_id,
+         prompt_version, temperature, attempt, status, input_text,
+         output_json, input_tokens, output_tokens, cost_usd, latency_ms,
+         langfuse_trace_id)
+    VALUES
+        (:id, :at, :conversation_id, :turn_id, :step, :provider, :model_id,
+         :prompt_version, :temperature, :attempt, :status, :input_text,
+         :output_json, :input_tokens, :output_tokens, :cost_usd, :latency_ms,
+         :langfuse_trace_id)
+    """
+).bindparams(bindparam("output_json", type_=JSONB))
+
+
+async def insert_llm_call(row_id: UUID, at: datetime, record: LLMCallRecord) -> None:
+    """Insert one `audit.llm_calls` row (append-only, D9). `id` and `at` come
+    from `AuditLLMCallSink`, never from the record. Raises `ToolUnavailable`.
+    """
+    try:
+        async with get_engine().begin() as conn:
+            await conn.execute(
+                _INSERT_LLM_CALL_SQL,
+                {
+                    "id": row_id,
+                    "at": at,
+                    "conversation_id": UUID(record.conversation_id)
+                    if record.conversation_id
+                    else None,
+                    "turn_id": UUID(record.turn_id) if record.turn_id else None,
+                    "step": record.step,
+                    "provider": record.provider,
+                    "model_id": record.model_id,
+                    "prompt_version": record.prompt_version,
+                    "temperature": record.temperature,
+                    "attempt": record.attempt,
+                    "status": record.status,
+                    "input_text": record.input_text,
+                    "output_json": record.output_json,
+                    "input_tokens": record.input_tokens,
+                    "output_tokens": record.output_tokens,
+                    "cost_usd": record.cost_usd,
+                    "latency_ms": record.latency_ms,
+                    "langfuse_trace_id": record.langfuse_trace_id,
+                },
+            )
+    except (SQLAlchemyError, OSError, ValueError) as exc:
+        raise ToolUnavailable(f"llm call insert failed: {exc}") from exc

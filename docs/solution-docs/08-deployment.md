@@ -170,6 +170,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 |---|---|
 | `JWT_SECRET`, `IDENTITY_HMAC_KEY`, `CREDENTIALS_SEED` | SSM SecureString. The seed must equal the one behind the credentials sent to the judges |
 | `DEMO_OTP_CODE` | SSM SecureString (ADR-008) |
+| `PII_VAULT_KEY` | SSM SecureString at `/swip/prod/PII_VAULT_KEY`, a Fernet key. Losing it makes the vault rows and the encrypted message content unreadable, so back it up with the other secrets |
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
 | `S3_BUCKET` | SSM (our bucket) |
 | `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-1`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
@@ -184,7 +185,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 2. `make infra-up` → the instance boots with the repo cloned.
 3. SSM session → render `.env` → start `postgres` + `redis` → `make data` (§6).
 4. Issue the certificate (§8), then start the full prod stack.
-5. Smoke test: `GET /api/v1/health` returns 200 over HTTPS, a persona logs in, and one chat turn streams through SSE and reaches Bedrock (visible in `audit.llm_calls`; until D5-A1 creates that ledger, in the backend's `llm.call` log line with `provider=bedrock`).
+5. Smoke test: `GET /api/v1/health` returns 200 over HTTPS, a persona logs in, and one chat turn streams through SSE and reaches Bedrock (visible in the ledger: `SELECT provider, model_id, status FROM audit.llm_calls ORDER BY at DESC LIMIT 5` shows `bedrock`).
 
 **Redeploy: `make deploy` on the box (proposed):**
 1. `git fetch` and check out the deploy ref **(OPEN: `main` or a release tag)**.

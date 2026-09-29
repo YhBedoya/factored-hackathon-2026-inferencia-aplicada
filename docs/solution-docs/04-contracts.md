@@ -226,6 +226,8 @@ Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml` and `min_
 }
 ```
 
+`reply_sent` payload adds two keys. `grounding: {outcome: ok | regenerated | template}` is the worst compose outcome of the turn (`template` > `regenerated` > `ok`) and is absent when `compose` didn't run. `fact_values: [str]` lists, deduplicated in order, every value code wrote into the turn's reply (masked card numbers, money, dates, labels; never raw PII and never `customer_name`); the eval `grounding` check reads it.
+
 ## 7. Confirmation token
 
 Issued by `policy` (`app/domains/policy/confirmation.py`) when a flow reaches one or more side-effecting steps. Every token is a **plan** (ADR-027): an ordered list of steps, where a single action is a plan of one. The `ConfirmationStore` protocol, bound to one customer + conversation at construction:

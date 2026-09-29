@@ -176,6 +176,12 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 **Alternatives:** Bedrock Nova or Llama (avoids a third SDK, but Bedrock model access wasn't confirmed at build time — ADR-028's plan — and a paraphrase script has no served-latency reason to wait on it); reusing ADR-028's Anthropic-then-Bedrock plan for this step too (keeps the SDK surface to two providers, but self-grades paraphrase variety against the same model family the flows, and eventually the judge, use).
 **Temperature note (T10):** `paraphrase` runs at temperature 1.0, not 0 like every other step, because `gpt-6-luna` rejects any non-default value ("Only the default (1) value is supported"); variety still comes from the request (N distinct items per call), not from sampling.
 
+### ADR-031 — NLU model: Sonnet 5.5 · Accepted (2026-09-29)
+**Context:** the `07` D1 row started with Haiku 4.5 for intent detection and replies. Intent detection drives routing and slots, so it gets the stronger model.
+**Decision:** the `nlu` step is pinned to `claude-sonnet-5-5` ($2/$10 per MTok); Bedrock uses `us.anthropic.claude-sonnet-5-5-v1:0`, unconfirmed until K2. `compose` and `handoff_summary` stay on Haiku 4.5. The eval baseline comparison (proposed vs keyword baseline) uses this NLU model.
+**Temperature note (T32):** `claude-sonnet-5-5` rejects `temperature` ("deprecated for this model"), so the `nlu` step sends none and uses the model default; the ledger records NULL. This makes the NLU slightly less repeatable from run to run, and eval reports carry that caveat.
+**Structured output note (T31):** `claude-sonnet-5-5` also rejects forced `tool_choice` (`any`/`tool`), so on the `anthropic` provider every step uses `with_structured_output(..., method="json_schema")` (API structured outputs, supported on Sonnet 5.5 and Haiku 4.5). `bedrock` keeps function calling until K2 confirms.
+
 ### D3-A D4 — Step-up validity window · Resolved
 **Decision:** `policies/tools.yaml`'s `step_up_window_minutes: 5` sets `SessionStepUpGate`'s window (valid when `now - session.step_up_at <= window`). An open confirmation plan is not tied to the session: it dies at its own 5-minute Redis TTL (ADR-027) regardless of session state, and `POST /conversations/{id}/confirmations/{token_id}` returns `401` once the session itself has expired, before the plan is even looked at.
 **Why:** resolves the "Step-up validity window" item below, decided while building the D3-A step-up flow (ADR-025) as planned. See spec `docs/specs/d3-a-guardrails-write-path.md` D4.

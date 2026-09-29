@@ -8,9 +8,8 @@ This is conversation's own data (not bank data reached through the tools
 registry), so it is read and written directly, over `app.core.db` -- the
 only internal import this module takes.
 
-D17: `app.messages.content_masked` stays `NULL` on every insert until G6b
-adds the PII vault and Fernet encryption. `add_message` never writes to that
-column.
+D6: `app.messages.content` is Fernet-encrypted (`add_message` encrypts,
+`list_messages` decrypts) and `content_masked` holds the tokenized text.
 """
 
 from datetime import datetime
@@ -22,6 +21,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.core.db import get_engine
+from app.domains.safety.vault import decrypt_text, encrypt_text
 
 __all__ = [
     "ConversationRow",
@@ -121,12 +121,13 @@ async def add_message(
     turn_id: UUID,
     role: str,
     content: str,
+    content_masked: str,
     ui_payload: dict[str, Any] | list[dict[str, Any]] | None = None,
 ) -> UUID:
     """Insert one `app.messages` row and return its id. The id is generated
     here, in Python (`uuid4()`), not by the database (no server default,
-    same convention as `create_conversation`). `content_masked` stays `NULL`
-    (D17): this module never writes to that column.
+    same convention as `create_conversation`). `content` is stored encrypted
+    (D6); `content_masked` is the tokenized form, stored as is.
 
     `ui_payload` accepts a list too (T11): the turn runner persists the
     dumped `UIEvent` list as-is, one JSON array in the JSONB column, not
@@ -137,8 +138,13 @@ async def add_message(
         await conn.execute(
             text(
                 """
-                INSERT INTO app.messages (id, conversation_id, turn_id, role, content, ui_payload)
-                VALUES (:id, :conversation_id, :turn_id, :role, :content, :ui_payload)
+                INSERT INTO app.messages (
+                    id, conversation_id, turn_id, role, content, content_masked, ui_payload
+                )
+                VALUES (
+                    :id, :conversation_id, :turn_id, :role, :content, :content_masked,
+                    :ui_payload
+                )
                 """
             ).bindparams(
                 # `ui_payload` needs an explicit JSONB bind type: asyncpg's
@@ -151,7 +157,8 @@ async def add_message(
                 "conversation_id": conversation_id,
                 "turn_id": turn_id,
                 "role": role,
-                "content": content,
+                "content": encrypt_text(content),
+                "content_masked": content_masked,
                 "ui_payload": ui_payload,
             },
         )
@@ -179,7 +186,7 @@ async def list_messages(conversation_id: UUID) -> list[MessageRow]:
             conversation_id=row["conversation_id"],
             turn_id=row["turn_id"],
             role=row["role"],
-            content=row["content"],
+            content=decrypt_text(row["content"]),
             ui_payload=row["ui_payload"],
             created_at=row["created_at"],
         )

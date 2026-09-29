@@ -143,15 +143,17 @@ make test         # Backend + pipeline unit tests only
 
 ## 7. Claude Code MCP servers
 
-[`.mcp.json`](.mcp.json) declares four MCP servers for Claude Code:
-`playwright` and the two Victoria MCPs (`victorialogs`, `victoriatraces`)
-run from pinned Docker images as runtime verification harnesses, and
-`deepwiki` (remote HTTP) is a docs-lookup helper, not a harness. `make setup`
-calls `make mcp-setup`, which pulls the three Docker-run images.
+[`.mcp.json`](.mcp.json) declares four MCP servers for Claude Code. `playwright`,
+`victorialogs` and `victoriatraces` are compose services
+(`docker/docker-compose.devtools.yml`, dev only) on `localhost:8931`, `:8081`
+and `:8082`, so they are available only while `make up` is running. `deepwiki`
+(remote HTTP) is a docs-lookup helper, not a harness. `make setup` calls
+`make mcp-setup`, which pulls the three images.
 
-After cloning, or after any change to `.mcp.json`, restart Claude Code and
-approve the project's MCP servers when prompted. The two Victoria MCPs need
-the dev stack up (`make up`) since they query `localhost:9428`/`:10428`.
+Agents open the app at `http://nginx/` (the Playwright browser runs on the
+compose network, so `localhost` is not the app). After cloning, or after any
+change to `.mcp.json`, restart Claude Code to reload it and approve the
+project's MCP servers when prompted.
 
 The `/wave-run` card workflow's verifier uses these three as mandatory
 runtime harnesses — see

@@ -1,0 +1,30 @@
+seed_id: a-general_question-unsupported-pt-br-01
+intent: general_question
+category: unsupported
+persona: CLI-UAJ81O52ZM1R
+goal: Pedir uma transferência por Pix
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools:
+  - cards.lock_card
+  - cards.block_card
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: a-general_question-unsupported-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero fazer um Pix para um amigo pelo chat.
+  reviewer: null
+  reviewed_at: null

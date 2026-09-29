@@ -45,6 +45,7 @@ import duckdb
 
 from app.core.actions import ActionResult
 from app.core.errors import AccessDenied, NotFound, ToolUnavailable
+from app.core.pii import KnownPii
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
@@ -109,6 +110,19 @@ def _run_query(sql: str, params: list[Any]) -> list[dict[str, Any]]:
         con.close()
 
 
+def _known_pii(
+    document_number: str | None, first_name: str | None, last_name: str | None
+) -> KnownPii:
+    """Same shape as `customers.service.build_known_pii`, repeated here because
+    `conversation` may not import a service that reaches a repository."""
+    words: dict[str, None] = {}
+    for full in (first_name, last_name):
+        for word in (full or "").split():
+            if len(word) >= 3:
+                words.setdefault(word, None)
+    return KnownPii(document_number=(document_number or "").strip() or None, names=tuple(words))
+
+
 class FakeBank:
     """`BankReadTools` bound to one `ToolContext` over CSVs under `data_dir`."""
 
@@ -152,6 +166,20 @@ class FakeBank:
             first_name=(row["first_name"] or "").strip() or None,
             city=(row["city"] or "").strip() or None,
         )
+
+    async def get_pii_profile(self) -> KnownPii:
+        rows = await self._query(
+            f"""
+            SELECT document_number, first_name, last_name
+            FROM read_csv({_sql_literal(self._customers_csv)}, all_varchar=true)
+            WHERE customer_id = ?
+            """,
+            [self._ctx.customer_id],
+        )
+        if not rows:
+            raise ToolUnavailable(f"no profile for customer {self._ctx.customer_id!r}")
+        row = rows[0]
+        return _known_pii(row["document_number"], row["first_name"], row["last_name"])
 
     async def list_cards(self) -> list[CardSummary]:
         rows = await self._query(

@@ -1,0 +1,74 @@
+# Keyword lexicon for the baseline NLU (ADR-005). Matching runs on lowercase,
+# accent-stripped text, so every term here is written without accents.
+# Terms are regexes matched with \b...\b. `es` covers MX/CO/AR regional terms.
+negators: ["no", "nunca", "jamas", "ni", "nao", "sem", "nem"]  # quoted: bare no is a YAML boolean
+negation_window: 3
+# Intents whose own wording already contains a negator ("no reconozco").
+negation_exempt: [unrecognized_charge]
+intents:
+  unrecognized_charge:
+    es: ["no reconozco", "no fui yo", "cargo raro", "cargo desconocido", "cobro que no hice", "fraude", "cargo no autorizado"]
+    pt: ["nao reconheco", "nao fui eu", "cobranca estranha", "cobranca desconhecida", "compra que nao fiz", "fraude", "cobranca nao autorizada"]
+  card_unlock:
+    es: ["desbloque\\w*", "reactiv\\w+", "descongel\\w+", "destrab\\w+"]
+    pt: ["desbloque\\w*", "reativ\\w+", "descongel\\w+"]
+  card_block:
+    es: ["bloque\\w*", "congel\\w+", "trab(a|ar|arla)"]
+    pt: ["bloque\\w*", "congel\\w+", "travar"]
+  balance_due:
+    es: ["saldo", "cuanto debo", "pago minimo", "fecha de pago", "fecha limite", "estado de cuenta"]
+    pt: ["saldo", "quanto devo", "pagamento minimo", "vencimento", "fatura fechada", "fatura"]
+  decline_explain:
+    es: ["rechaz\\w+", "declin\\w+", "no paso", "no pasa", "no funciono"]
+    pt: ["recus\\w+", "negad\\w+", "nao passou", "nao passa", "nao funcionou"]
+  transaction_search:
+    es: ["ultimas compras", "movimientos", "cuanto gaste", "compras de", "buscar compra"]
+    pt: ["ultimas compras", "movimentacoes", "quanto gastei", "compras de", "buscar compra"]
+  replacement_request:
+    es: ["reposicion", "reponer", "nueva tarjeta", "perdi mi tarjeta", "me robaron", "extravi\\w+", "tarjeta danada"]
+    pt: ["segunda via", "nova via", "novo cartao", "perdi meu cartao", "roubaram", "extravi\\w+", "cartao danificado"]
+  card_status:
+    es: ["estado de mi tarjeta", "esta activa", "esta bloqueada", "mi tarjeta esta"]
+    pt: ["status do meu cartao", "esta ativo", "esta bloqueado", "meu cartao esta"]
+  human_request:
+    es: ["humano", "asesor", "agente", "persona real", "hablar con alguien"]
+    pt: ["humano", "atendente", "agente", "pessoa de verdade", "falar com alguem"]
+  greeting:
+    es: ["hola", "buenos dias", "buenas tardes", "buenas noches", "buenas"]
+    pt: ["ola", "oi", "bom dia", "boa tarde", "boa noite"]
+  thanks_close:
+    es: ["gracias", "eso es todo", "adios", "hasta luego"]
+    pt: ["obrigado", "obrigada", "valeu", "tchau", "so isso"]
+# Words that make "bloquear" specific (temporary lock vs permanent block).
+block_qualifiers:
+  temporary_lock:
+    es: ["temporal\\w*", "pausar", "por un rato", "por ahora"]
+    pt: ["temporari\\w+", "pausar", "por enquanto"]
+  permanent_block:
+    es: ["permanente\\w*", "definitiv\\w+", "para siempre", "cancelar"]
+    pt: ["permanente\\w*", "definitiv\\w+", "para sempre", "cancelar"]
+# Out-of-market: Pix, boleto, CPF exist only in Brazil (ADR-026).
+out_of_market:
+  es: ["pix", "boleto", "cpf"]
+  pt: ["pix", "boleto", "cpf"]
+# Out-of-scope products, mapped to the Topic literal.
+out_of_scope:
+  loans:
+    es: ["prestamo\\w*", "credito personal", "hipoteca"]
+    pt: ["emprestimo\\w*", "credito pessoal", "financiamento"]
+  investments:
+    es: ["inversion\\w*", "invertir", "acciones", "cdt"]
+    pt: ["investimento\\w*", "investir", "acoes", "cdb"]
+  insurance:
+    es: ["seguro\\w*"]
+    pt: ["seguro\\w*"]
+  transfers:
+    es: ["transferencia\\w*", "transferir", "spei"]
+    pt: ["transferencia\\w*", "transferir", "ted", "doc"]
+  accounts:
+    es: ["cuenta de ahorro\\w*", "cuenta corriente", "abrir una cuenta"]
+    pt: ["conta poupanca", "conta corrente", "abrir uma conta"]
+# Language-only markers (no intent), to break ties on short texts.
+language_markers:
+  es: ["mi", "tarjeta", "quiero", "puedo", "por favor", "que"]
+  pt: ["meu", "cartao", "quero", "preciso", "um", "por favor", "voce", "nao"]

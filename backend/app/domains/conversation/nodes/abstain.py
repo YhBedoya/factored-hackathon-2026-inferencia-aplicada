@@ -10,11 +10,13 @@ Reads no bank or handoff tools -- only policy and the fixed texts below.
 """
 
 import re
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
 from app.core.llm import LLMClient
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.nodes.compose import compose_reply
 from app.domains.conversation.state import Fact
@@ -22,7 +24,7 @@ from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
 from app.domains.policy.registry import get_policies
 
-__all__ = ["abstain"]
+__all__ = ["abstain", "make_abstain"]
 
 _SOURCE = "policies/scope.yaml"
 
@@ -71,9 +73,27 @@ def _closest_action(intents: list[str], language: Language) -> str:
     return ""
 
 
+def make_abstain(*, llm_wording: bool = True) -> Callable[..., Awaitable[dict[str, Any]]]:
+    """The abstain node; `llm_wording=False` is the baseline's swap (D17, D30).
+
+    Only the wording step differs: the baseline fills `abstain_fallback`
+    directly and never touches the LLM. Facts, chips and `pending` are shared.
+    """
+
+    async def node(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+        return await _abstain(state, config, llm_wording=llm_wording)
+
+    return node
+
+
 async def abstain(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Compose the four-part abstain reply and offer the chips (ADR-026)."""
-    llm: LLMClient = config["configurable"]["llm"]
+    return await _abstain(state, config, llm_wording=True)
+
+
+async def _abstain(
+    state: GraphState, config: RunnableConfig, *, llm_wording: bool
+) -> dict[str, Any]:
     language = state["language"]
     nlu = state.get("nlu")
     topic = nlu.slots.topic if nlu is not None and nlu.slots.topic else "other"
@@ -90,12 +110,16 @@ async def abstain(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "closest_action": closest_action,
         "human_offer": human_offer,
     }
+    record(*(v for v in values.values() if v))
     # An absent closest action is left out, so the composer never offers a
     # placeholder that would fill as an empty string.
     facts = [Fact(key=k, value=v, source=_SOURCE) for k, v in values.items() if v]
-    text = await compose_reply(
-        llm, language=language, country=state["country"], goal="abstain", facts=facts
-    )
+    text = get_template("fallback", language)
+    if llm_wording:
+        llm: LLMClient = config["configurable"]["llm"]
+        text = await compose_reply(
+            llm, language=language, country=state["country"], goal="abstain", facts=facts
+        )
     if text == get_template("fallback", language):
         text = get_template("abstain_fallback", language).format(
             topic_label=topic_label,

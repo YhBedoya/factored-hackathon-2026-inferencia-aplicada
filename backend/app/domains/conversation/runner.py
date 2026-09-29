@@ -48,9 +48,10 @@ from pydantic import JsonValue
 
 from app.core import events
 from app.core.config import get_settings
+from app.core.logging import bind_conversation_id, bind_turn_id
 from app.core.redis import get_redis
 from app.domains.audit.schemas import AuditType
-from app.domains.conversation import store
+from app.domains.conversation import fact_values, store
 from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TxSelection
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
@@ -59,7 +60,7 @@ from app.domains.conversation.tools import registry
 from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
 from app.domains.identity.models import Session
-from app.domains.safety.vault import InMemoryAddressVault
+from app.domains.safety.vault import PiiVault, PostgresPiiVault
 
 __all__ = [
     "TurnInProgress",
@@ -131,8 +132,26 @@ async def start_turn(
     if not acquired:
         raise TurnInProgress(f"a turn is already running for conversation {conversation_id}")
 
+    vault = PostgresPiiVault(conversation_id)
+    graph_text = text
     if text is not None:
-        await store.add_message(conversation_id, turn_id, role="customer", content=text)
+        try:
+            # D4: mask once, here, so the checkpoint never holds the raw text.
+            # `mask()` flushes the tokens; `text` stays raw only for the
+            # `relay_to_agent` echo (D7) and the encrypted `content`.
+            ctx = registry.build_tool_context(session, conversation_id, trace_id)
+            graph_text = await vault.mask(text, await registry.known_pii(ctx))
+            await store.add_message(
+                conversation_id,
+                turn_id,
+                role="customer",
+                content=text,
+                content_masked=graph_text,
+            )
+        except BaseException:
+            # Nothing was scheduled, so nobody else will free the lock.
+            await get_redis().eval(_RELEASE_LOCK_SCRIPT, 1, lock_key, str(turn_id))
+            raise
 
     task = asyncio.create_task(
         _run_turn(
@@ -141,6 +160,8 @@ async def start_turn(
             conversation_id=conversation_id,
             turn_id=turn_id,
             text=text,
+            graph_text=graph_text,
+            vault=vault,
             resume=resume,
             confirmation=confirmation,
             selection=selection,
@@ -189,6 +210,15 @@ async def checkpointed_offer(
     return pending, offered, True
 
 
+_GROUNDING_RANK = {"ok": 0, "regenerated": 1, "template": 2}
+
+
+def _worse_grounding(current: str | None, new: str) -> str:
+    if current is None or _GROUNDING_RANK.get(new, 0) > _GROUNDING_RANK.get(current, 0):
+        return new
+    return current
+
+
 async def _run_turn(
     host: TurnHost,
     *,
@@ -196,12 +226,20 @@ async def _run_turn(
     conversation_id: UUID,
     turn_id: UUID,
     text: str | None,
+    graph_text: str | None,
+    vault: PiiVault,
     resume: Literal["step_up"] | None,
     confirmation: ConfirmationDecision | None,
     selection: TxSelection | None,
     trace_id: str,
 ) -> None:
     lock_key = f"turn:{conversation_id}"
+    # `text` is the raw typed text (relay echo only); the graph gets `graph_text`.
+    # `create_task` runs on a copy of the request's context, so these bindings
+    # die with the task and can't leak into a later turn. The `llm.call` lines
+    # carry both ids into `audit.llm_calls` (D9).
+    bind_conversation_id(str(conversation_id))
+    bind_turn_id(str(turn_id))
     try:
         ctx = registry.build_tool_context(session, conversation_id, trace_id)
         audit = registry.audit_recorder_for(ctx, turn_id)
@@ -230,7 +268,7 @@ async def _run_turn(
                 "bank_tools": tools,
                 "llm": host.llm,
                 "bank_write_tools": write_tools,
-                "vault": InMemoryAddressVault(),
+                "vault": vault,
                 "handoff_tools": ServiceHandoffTools(ctx),
                 "audit": audit,
             }
@@ -243,57 +281,64 @@ async def _run_turn(
         ui: list[UIEvent] = []
         handed_off = False
 
-        async for update in host.graph.astream(
-            {
-                "user_text": text or "",
-                "confirmation": confirmation,
-                "resume": resume,
-                "selection": selection,
-            },
-            config=config,
-            stream_mode="updates",
-        ):
-            for node_name, values in update.items():
-                await events.publish(conversation_id, "status", {"step": node_name})
-                if node_name == "relay_to_agent":
-                    # Human mode (D13): echo the typed text for the agent and
-                    # stop. Checked before the `None` guard because this node
-                    # returns an empty update. The customer message was
-                    # persisted by `start_turn`.
-                    await events.publish(
-                        conversation_id, "message", {"role": "customer", "text": text or ""}
-                    )
-                    await events.publish(conversation_id, "done", {"turn_id": str(turn_id)})
-                    return
-                # A node whose returned update is empty (e.g. `next_intent`
-                # with nothing left to pop) streams as `None`, not `{}`.
-                if values is None:
-                    continue
-                if node_name == "handoff" and values.get("handoff_id") is not None:
-                    handed_off = True
-                if node_name == "understand":
-                    nlu = values.get("nlu")
-                    language = values.get("language", language)
-                    if nlu is not None:
-                        await _record(
-                            "nlu_result",
-                            {
-                                "language": language,
-                                "status": nlu.status,
-                                "intents": [intent for intent in nlu.intents],
-                            },
+        grounding_outcome: str | None = None
+        with fact_values.collecting() as collected_values:
+            async for update in host.graph.astream(
+                {
+                    "user_text": graph_text or "",
+                    "confirmation": confirmation,
+                    "resume": resume,
+                    "selection": selection,
+                },
+                config=config,
+                stream_mode="updates",
+            ):
+                for node_name, values in update.items():
+                    await events.publish(conversation_id, "status", {"step": node_name})
+                    if node_name == "relay_to_agent":
+                        # Human mode (D13): echo the typed text for the agent and
+                        # stop. Checked before the `None` guard because this node
+                        # returns an empty update. The customer message was
+                        # persisted by `start_turn`.
+                        await events.publish(
+                            conversation_id, "message", {"role": "customer", "text": text or ""}
                         )
-                elif route_taken is None and node_name in _BRANCH_NODES:
-                    route_taken = node_name
-                reply_value = values.get("reply")
-                if reply_value is not None:
-                    reply = reply_value
-                ui_value = values.get("ui")
-                if ui_value is not None:
-                    ui = ui_value
-                escalation_reason = values.get("escalation_reason")
-                if escalation_reason is not None:
-                    await _record("rule_hit", {"rule_id": escalation_reason})
+                        await events.publish(conversation_id, "done", {"turn_id": str(turn_id)})
+                        return
+                    # A node whose returned update is empty (e.g. `next_intent`
+                    # with nothing left to pop) streams as `None`, not `{}`.
+                    if values is None:
+                        continue
+                    if node_name == "handoff" and values.get("handoff_id") is not None:
+                        handed_off = True
+                    if node_name == "understand":
+                        nlu = values.get("nlu")
+                        language = values.get("language", language)
+                        if nlu is not None:
+                            await _record(
+                                "nlu_result",
+                                {
+                                    "language": language,
+                                    "status": nlu.status,
+                                    "intents": [intent for intent in nlu.intents],
+                                },
+                            )
+                    elif route_taken is None and node_name in _BRANCH_NODES:
+                        route_taken = node_name
+                    reply_value = values.get("reply")
+                    if reply_value is not None:
+                        reply = reply_value
+                    ui_value = values.get("ui")
+                    if ui_value is not None:
+                        ui = ui_value
+                    escalation_reason = values.get("escalation_reason")
+                    if escalation_reason is not None:
+                        await _record("rule_hit", {"rule_id": escalation_reason})
+                if node_name == "compose":
+                    outcome = values.get("grounding")
+                    if outcome is not None:
+                        # Worst of the turn (D32); the channel is last-write-wins.
+                        grounding_outcome = _worse_grounding(grounding_outcome, outcome)
 
         for event in ui:
             await events.publish(conversation_id, "ui", event.model_dump(mode="json"))
@@ -302,9 +347,20 @@ async def _run_turn(
                 conversation_id, "mode", {"mode": "human", "agent_display_name": None}
             )
 
+        # The graph's reply carries tokens; the customer sees the real values
+        # (D4). Flush first so tokens minted this turn (`put_address`) resolve.
+        await vault.flush()
+        masked_reply = reply
+        reply = await vault.unmask(reply)
+
         ui_payload = [event.model_dump(mode="json") for event in ui] if ui else None
         await store.add_message(
-            conversation_id, turn_id, role="bot", content=reply, ui_payload=ui_payload
+            conversation_id,
+            turn_id,
+            role="bot",
+            content=reply,
+            content_masked=masked_reply,
+            ui_payload=ui_payload,
         )
         await _record(
             "reply_sent",
@@ -312,6 +368,9 @@ async def _run_turn(
                 "route": route_taken or "fallback",
                 "ui_kinds": [event.kind for event in ui],
                 "length": len(reply),
+                # Deduplicated in order; only code-written values, never raw PII.
+                "fact_values": list(dict.fromkeys(collected_values)),
+                **({"grounding": {"outcome": grounding_outcome}} if grounding_outcome else {}),
             },
         )
         await events.publish(
