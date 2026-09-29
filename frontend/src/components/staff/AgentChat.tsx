@@ -99,7 +99,7 @@ export function AgentChat({ conversationId }: AgentChatProps) {
 	return (
 		<div className="flex flex-col gap-2" data-testid="agent-chat">
 			<h3 className="text-sm font-medium">{t("staff.chat.title")}</h3>
-			<div className="flex max-h-96 flex-col gap-2 overflow-y-auto rounded-md border p-3">
+			<div className="flex max-h-96 flex-col gap-2 overflow-y-auto rounded-md border p-3 lg:h-[60vh] lg:max-h-none">
 				{messages.length === 0 ? (
 					<p className="text-sm text-muted-foreground">
 						{t("staff.chat.empty")}
