@@ -13,8 +13,8 @@ type InboxListProps = {
  * fixed-value catalog translated through the dictionary
  * (`staff.queue.<slug>`, `staff.status.<slug>`) -- the same pattern
  * `login.tsx` uses for `document_type_options`, not server-formatted text
- * (R4 covers money/dates/masks, not a fixed enum). `reason` and `created_at`
- * are shown exactly as the server sent them.
+ * (R4 covers money/dates/masks, not a fixed enum); `reason` too
+ * (`staff.reason.<slug>`). `reference` is shown exactly as the server sent it.
  */
 export function InboxList({ items }: InboxListProps) {
 	const { t } = useI18n();
@@ -41,7 +41,8 @@ export function InboxList({ items }: InboxListProps) {
 										{t(`staff.queue.${item.queue}` as TKey)}
 									</span>
 									<span className="text-sm text-muted-foreground">
-										{item.reason}
+										{item.reference} ·{" "}
+										{t(`staff.reason.${item.reason}` as TKey)}
 									</span>
 								</div>
 								<span className="text-sm text-muted-foreground">

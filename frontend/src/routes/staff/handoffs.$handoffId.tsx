@@ -97,7 +97,7 @@ function StaffHandoffDetailPage() {
 				</Button>
 			) : (
 				<>
-					<PacketView packet={detail.packet} />
+					<PacketView summary={detail.summary} packet={detail.packet} />
 					<AgentChat conversationId={detail.summary.conversation_id} />
 					<Button
 						variant="outline"

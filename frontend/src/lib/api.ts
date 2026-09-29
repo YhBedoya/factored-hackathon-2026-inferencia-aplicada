@@ -5,6 +5,7 @@ import {
 	type HandoffDetail,
 	type HandoffSummary,
 	type LoginRequest,
+	listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet,
 	listHandoffsApiV1StaffHandoffsGet,
 	loginApiV1AuthLoginPost,
 	logoutApiV1AuthLogoutPost,
@@ -18,6 +19,7 @@ import {
 	type StaffMeResponse,
 	staffLoginApiV1AuthStaffLoginPost,
 	staffMeApiV1StaffMeGet,
+	type TranscriptMessage,
 } from "@/client";
 import { client } from "@/client/client.gen";
 import type { Lang } from "@/lib/i18n";
@@ -272,6 +274,18 @@ export async function returnStaffHandoff(
 	const result = await withStaffAuth(() =>
 		returnHandoffApiV1StaffHandoffsHandoffIdReturnPost({
 			path: { handoff_id: handoffId },
+		}),
+	);
+	return unwrap(result);
+}
+
+// The claimed conversation's messages so far, oldest first (D4-A).
+export async function getStaffTranscript(
+	conversationId: string,
+): Promise<TranscriptMessage[]> {
+	const result = await withStaffAuth(() =>
+		listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet({
+			path: { conversation_id: conversationId },
 		}),
 	);
 	return unwrap(result);

@@ -67,11 +67,23 @@
 	"staff.queue.atencion": "Atención",
 	"staff.queue.cobranza": "Cobranza",
 	"staff.queue.fraudes": "Fraudes",
+	"staff.queue.reclamos": "Reclamos",
 
 	"staff.status.queued": "En cola",
 	"staff.status.claimed": "Reclamado",
 	"staff.status.returned": "Devuelto",
 	"staff.status.closed": "Cerrado",
+
+	"staff.reason.human_request": "Pidió hablar con una persona",
+	"staff.reason.clarification_exhausted": "No se logró entender la solicitud",
+	"staff.reason.legal_regulator": "Mención legal o de regulador",
+	"staff.reason.customer_not_active": "Cliente no activo",
+	"staff.reason.bank_side_block": "Bloqueo del banco",
+	"staff.reason.action_unverified": "Acción sin verificar",
+	"staff.reason.unauthorized_access": "Intento de acceso a datos ajenos",
+	"staff.reason.suspected_fraud": "Sospecha de fraude",
+	"staff.priority.high": "Prioridad alta",
+	"staff.priority.normal": "Prioridad normal",
 
 	"staff.detail.claim": "Reclamar caso",
 	"staff.detail.return": "Devolver al bot",
@@ -81,6 +93,15 @@
 	"staff.packet.actions_taken": "Acciones realizadas",
 	"staff.packet.evidence": "Evidencia",
 	"staff.packet.open_questions": "Preguntas abiertas",
+	"staff.packet.request": "Solicitud",
+	"staff.packet.claimed_by": "Atendido por {name}",
+	"staff.packet.none": "Sin datos",
 
-	"staff.chat.send": "Enviar"
+	"staff.chat.send": "Enviar",
+	"staff.chat.title": "Conversación",
+	"staff.chat.empty": "Todavía no hay mensajes.",
+	"staff.chat.role.bot": "Cardy",
+	"staff.chat.role.customer": "Cliente",
+	"staff.chat.role.agent": "Agente",
+	"staff.chat.role.system": "Sistema"
 }

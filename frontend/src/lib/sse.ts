@@ -80,9 +80,10 @@ export type UiEvent =
 
 export type StatusPayload = { step: string };
 export type MessagePayload = {
-	role: "bot" | "customer" | "agent";
+	role: "bot" | "customer" | "agent" | "system";
 	text: string;
 	sources: string[];
+	agent_display_name?: string | null;
 };
 export type ErrorPayload = { code: string };
 export type DonePayload = { turn_id: string };
