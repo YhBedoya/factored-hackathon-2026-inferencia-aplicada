@@ -155,10 +155,28 @@ def _handle_event(event: str, data: dict[str, Any], state: _ChatState) -> bool:
     if event == "status":
         print(f"status {data['step']}")
     elif event == "message":
-        print(f"bot: {data['text']}")
+        # The customer's own echo (human-mode relay) is for the agent's
+        # screen, so it prints nothing here.
+        role = data.get("role", "bot")
+        if role == "agent":
+            print(f"agent: {data['text']}")
+        elif role == "system":
+            print(f"system: {data['text']}")
+        elif role != "customer":
+            print(f"bot: {data['text']}")
+    elif event == "mode":
+        print(f"mode: {data['mode']} ({data['agent_display_name']})")
     elif event == "ui":
-        print(f"ui {data['kind']}")
-        if data["kind"] == "confirm":
+        kind = data["kind"]
+        if kind == "handoff_banner":
+            payload = data["payload"]
+            print(f"ui handoff_banner {payload['reference']} {payload['queue_label']}")
+        elif kind == "quick_replies" and data["payload"]["slot"] == "abstain":
+            labels = ", ".join(option["label"] for option in data["payload"]["options"])
+            print(f"ui quick_replies abstain: {labels}")
+        else:
+            print(f"ui {kind}")
+        if kind == "confirm":
             state.last_confirm_token = data["payload"]["token_id"]
     elif event == "debug":
         _print_debug(data)

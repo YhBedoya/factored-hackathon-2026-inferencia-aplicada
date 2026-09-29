@@ -44,6 +44,7 @@ pipeline/           ingest/, contracts/ (Pandera), dbt/ (dbt-duckdb project), lo
 policies/           *.yaml (team-generated synthetic)
 eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, baseline/, judges/, reports/
 docker/             docker-compose.{base,dev,test,prod,observability}.yml, nginx/
+infra/aws/          ec2-stack.yaml (CloudFormation), render-env.sh, deploy.sh, smoke.sh (08)
 notebooks/          EDA (aggregates only, no PII printed)
 docs/solution-docs/ this design
 Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json  .env.example

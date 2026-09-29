@@ -1,0 +1,12 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 1
+# ADR-026 structured abstain: one entry per NLU Topic. closest_intents are the
+# chips offered next to "talk to a person"; the reason_key maps to fixed ES/PT text in code.
+topics:
+  pix_boleto:  {kind: out_of_market, reason_key: market_not_served,   closest_intents: [balance_due], human_queue: atencion}
+  loans:       {kind: out_of_scope,  reason_key: not_card_product,     closest_intents: [card_status], human_queue: atencion}
+  accounts:    {kind: out_of_scope,  reason_key: not_card_product,     closest_intents: [card_status], human_queue: atencion}
+  investments: {kind: out_of_scope,  reason_key: not_card_product,     closest_intents: [],            human_queue: atencion}
+  insurance:   {kind: out_of_scope,  reason_key: not_card_product,     closest_intents: [],            human_queue: atencion}
+  transfers:   {kind: out_of_scope,  reason_key: not_card_product,     closest_intents: [],            human_queue: atencion}
+  other:       {kind: out_of_scope,  reason_key: outside_card_support, closest_intents: [],            human_queue: atencion}

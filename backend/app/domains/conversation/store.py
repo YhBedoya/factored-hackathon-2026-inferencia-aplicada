@@ -56,7 +56,7 @@ class MessageRow(BaseModel):
     turn_id: UUID | None
     role: str
     content: str
-    ui_payload: dict[str, Any] | None
+    ui_payload: dict[str, Any] | list[dict[str, Any]] | None
     created_at: datetime
 
 

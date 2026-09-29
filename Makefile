@@ -6,7 +6,10 @@ export
 
 COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.observability.yml
 
-.PHONY: setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration
+COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
+STACK_NAME ?= swip-card-support
+
+.PHONY: setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -98,3 +101,29 @@ graph-diagram: ## Regenerate the turn-graph Mermaid diagram.
 
 test-integration: ## Integration tests against `make up`'s Postgres/Redis (D19). Local only, needs `make up`.
 	cd backend && uv run pytest tests/integration -q
+
+# --- D4-A5 AWS deploy v0 (08-deployment.md). The human runs the AWS-calling targets. ---
+
+infra-up: ## Create/update the EC2 stack: make infra-up ALERT_EMAIL_1= ALERT_EMAIL_2= DATA_BUCKET= BEDROCK_ARNS=arn1,arn2
+	@test -n "$(ALERT_EMAIL_1)" -a -n "$(ALERT_EMAIL_2)" -a -n "$(DATA_BUCKET)" -a -n "$(BEDROCK_ARNS)" || \
+	  (echo "Usage: make infra-up ALERT_EMAIL_1=<e> ALERT_EMAIL_2=<e> DATA_BUCKET=<b> BEDROCK_ARNS=<arn,arn>" && exit 1)
+	aws cloudformation deploy --stack-name $(STACK_NAME) --template-file infra/aws/ec2-stack.yaml \
+	  --capabilities CAPABILITY_IAM --region us-east-1 --parameter-overrides \
+	  AlertEmail1="$(ALERT_EMAIL_1)" AlertEmail2="$(ALERT_EMAIL_2)" \
+	  DataBucketName="$(DATA_BUCKET)" BedrockModelArns="$(BEDROCK_ARNS)"
+
+infra-down: ## Delete the EC2 stack (turn off termination protection first).
+	aws cloudformation delete-stack --stack-name $(STACK_NAME) --region us-east-1
+
+deploy: ## On the box: fetch DEPLOY_REF (default main), render .env, build, up, migrate, smoke.
+	bash infra/aws/deploy.sh
+
+deploy-remote: ## From a laptop: run `make deploy` on the box via SSM. INSTANCE_ID= [DEPLOY_REF=].
+	@test -n "$(INSTANCE_ID)" || (echo "Usage: make deploy-remote INSTANCE_ID=<i-...> [DEPLOY_REF=main]" && exit 1)
+	aws ssm send-command --region us-east-1 --instance-ids "$(INSTANCE_ID)" \
+	  --document-name AWS-RunShellScript \
+	  --parameters 'commands=["cd /opt/swip && sudo -u ubuntu env DEPLOY_REF=$(or $(DEPLOY_REF),main) make deploy"]'
+
+smoke-prod: ## HTTPS smoke test: make smoke-prod HOST=<ip>.sslip.io (SMOKE_* env vars).
+	@test -n "$(HOST)" || (echo "Usage: make smoke-prod HOST=<host>" && exit 1)
+	bash infra/aws/smoke.sh "$(HOST)"

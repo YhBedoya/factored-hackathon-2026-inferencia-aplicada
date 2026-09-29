@@ -18,27 +18,28 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
-from pydantic import BaseModel
+from pydantic import BaseModel, JsonValue
 
 from app.core.llm import LLMError, PromptRef, Step
-from app.domains.audit.schemas import NullAuditRecorder
+from app.domains.audit.schemas import AuditType, NullAuditRecorder
 from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.tools.fakebank import FakeBank, FakeBankOverlay, FakeBankWrites
+from app.domains.conversation.tools.handoff import InMemoryHandoffTools
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.tools_policy import load_tools_policy, step_up_rule, tool_allowed
 from app.domains.safety.vault import InMemoryAddressVault
 
-__all__ = ["Call", "ScriptedLLM", "Session", "make_session"]
+__all__ = ["Call", "RecordingAudit", "ScriptedLLM", "Session", "make_session"]
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,20 @@ def fakebank_dir() -> Path:
 
 
 @dataclass
+class RecordingAudit:
+    """A `Recorder` fake that keeps what it was asked to record, so a flow
+    test can assert which audit events a turn wrote."""
+
+    events: list[tuple[AuditType, dict[str, JsonValue]]] = field(default_factory=list)
+
+    async def record(
+        self, type: AuditType, payload: dict[str, JsonValue], sources: Sequence[str] = ()
+    ) -> UUID:
+        self.events.append((type, payload))
+        return uuid4()
+
+
+@dataclass
 class Session:
     """One write-flow test session (T10): the compiled graph, its `config`,
     and the pieces a test pokes at directly (`gate.verify`, `store`'s raw
@@ -106,6 +121,8 @@ class Session:
     gate: FakeStepUpGate
     store: InMemoryConfirmationStore
     overlay: FakeBankOverlay
+    handoff_tools: InMemoryHandoffTools
+    audit: RecordingAudit
 
 
 def make_session(
@@ -144,6 +161,9 @@ def make_session(
         raw, store, gate, step_up_rule(policy), tool_allowed(policy), NullAuditRecorder()
     )
 
+    handoff_tools = InMemoryHandoffTools()
+    audit = RecordingAudit()
+
     config: RunnableConfig = {
         "configurable": {
             "thread_id": str(conversation_id),
@@ -152,7 +172,17 @@ def make_session(
             "bank_write_tools": write_tools,
             "vault": InMemoryAddressVault(),
             "llm": llm,
+            "handoff_tools": handoff_tools,
+            "audit": audit,
         }
     }
     graph = build_graph(MemorySaver())
-    return Session(graph=graph, config=config, gate=gate, store=store, overlay=overlay)
+    return Session(
+        graph=graph,
+        config=config,
+        gate=gate,
+        store=store,
+        overlay=overlay,
+        handoff_tools=handoff_tools,
+        audit=audit,
+    )

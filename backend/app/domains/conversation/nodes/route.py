@@ -5,8 +5,10 @@
 as `docs/plans/d2-b-card-info-block.md` §"Graph shape" pins it:
 
 1. A missing NLU result always falls back first.
-2. The three "we don't do that at all" statuses always go to `unsupported`,
-   `pending` kept as-is (D14): `route` never touches it.
+2. `injection_suspected` goes to `unsupported` (which counts the attempt, D6).
+   A legal keyword or a `human_request` intent goes to `handoff_summary`
+   (D4); `out_of_market`/`out_of_scope` go to `abstain` (D13). `pending` is
+   kept as-is (D14): `route` never touches it.
 3. A `pending` continuation whose answer fits goes straight to that flow's
    own node (`_FLOW_NODES`) -- an unregistered flow name (no flow shipped
    for it yet) falls back to `unsupported` (P3).
@@ -25,10 +27,12 @@ from app.domains.conversation.graph import (
 )
 from app.domains.conversation.schemas import NLUResult
 from app.domains.conversation.state import Pending
+from app.domains.policy.escalation import resolve_escalation
+from app.domains.policy.registry import get_policies
 
 __all__ = ["route"]
 
-_UNROUTABLE_STATUSES = {"out_of_market", "out_of_scope", "injection_suspected"}
+_ABSTAIN_STATUSES = {"out_of_market", "out_of_scope"}
 _CONFIRMATION_SLOTS = {"confirmation", "address_confirm", "offer_replacement"}
 
 
@@ -37,10 +41,25 @@ def route(state: GraphState) -> str:
     nlu = state.get("nlu")
     if nlu is None:
         return "fallback"
-    if nlu.status in _UNROUTABLE_STATUSES:
+    if nlu.status == "injection_suspected":
         return "unsupported"
 
+    # Only a rule hit *this* turn escalates from here: a reason already in
+    # state belongs to a flow's own edge (`_after_flow`), not to `route`.
     pending = state.get("pending")
+    resolution = resolve_escalation(
+        get_policies().escalation,
+        reason=None,
+        queue=None,
+        pending_flow=pending["flow"] if pending is not None else None,
+        intents=list(nlu.intents),
+        text=state.get("user_text", ""),
+    )
+    if resolution is not None:
+        return "handoff_summary"
+    if nlu.status in _ABSTAIN_STATUSES:
+        return "abstain"
+
     if pending is not None and _answer_fits(nlu, pending):
         return _FLOW_NODES.get(pending["flow"], "unsupported")
 

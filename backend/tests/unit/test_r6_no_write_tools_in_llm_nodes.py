@@ -9,10 +9,17 @@ reference a write tool, by name or by import.
 import ast
 from pathlib import Path
 
-_FORBIDDEN_NAMES = ("bank_write_tools", "ConfirmedWriteTools", "BankWriteTools")
+_FORBIDDEN_NAMES = (
+    "bank_write_tools",
+    "ConfirmedWriteTools",
+    "BankWriteTools",
+    "handoff_tools",
+    "HandoffTools",
+)
 _FORBIDDEN_MODULES = (
     "app.domains.conversation.tools.write",
     "app.domains.conversation.tools.executor",
+    "app.domains.conversation.tools.handoff",
 )
 _FORBIDDEN_ATTRS = ("write", "executor")
 
@@ -68,9 +75,18 @@ def test_llm_nodes_cannot_reach_write_tools() -> None:
             )
 
     assert scanned_llm_modules, "expected at least one nodes/flows module to import app.core.llm"
+    # The handoff summary is an LLM node: it must be inside the scan, not skipped.
+    assert any(path.name == "handoff_summary.py" for path in scanned_llm_modules)
 
     # Prove the scan isn't vacuous: it must flag a synthetic violation.
     snippet = "from app.core.llm import LLMClient\nx = config['configurable']['bank_write_tools']"
     snippet_tree = ast.parse(snippet)
     assert _imports_llm(snippet_tree)
     assert _write_tool_references(snippet, snippet_tree)
+
+    for bad in (
+        "from app.domains.conversation.tools.handoff import HandoffTools",
+        "x = config['configurable']['handoff_tools']",
+    ):
+        bad_source = f"from app.core.llm import LLMClient\n{bad}"
+        assert _write_tool_references(bad_source, ast.parse(bad_source))

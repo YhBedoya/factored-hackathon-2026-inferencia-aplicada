@@ -32,9 +32,10 @@ from app.domains.conversation.ui import (
     OtpRequiredEvent,
     OtpRequiredPayload,
 )
-from app.domains.localization.format import Queue, format_time, queue_label
+from app.domains.handoff.schemas import HandoffReason
+from app.domains.localization.format import Queue, format_time
 from app.domains.policy.confirmation import PlanStep, ToolArg
-from app.domains.policy.escalation import load_escalation_policy
+from app.domains.policy.escalation import load_escalation_policy, rule_queue
 
 __all__ = [
     "DoneValues",
@@ -190,20 +191,20 @@ async def execute(
 
 
 def _action_unverified_handoff(language: Language) -> dict[str, Any]:
-    queue = load_escalation_policy().action_queues.action_unverified
+    queue = rule_queue(load_escalation_policy(), "action_unverified")
     return handoff(queue, "action_unverified", language)
 
 
-def handoff(queue: Queue, reason: str, language: Language) -> dict[str, Any]:
-    """The fixed handoff-placeholder reply naming `queue`, no packet yet (D9)."""
-    text = fill(
-        get_template("handoff_placeholder", language), queue_label=queue_label(queue, language)
-    )
+def handoff(queue: Queue, reason: HandoffReason, language: Language) -> dict[str, Any]:
+    """Mark the turn for handoff (D4): the `handoff_summary`/`handoff` nodes
+    write the packet and the customer's reply, so no segment is set here.
+    `language` stays in the signature so callers are unchanged.
+    """
     return {
+        "escalation_reason": reason,
+        "handoff_queue": queue,
         "pending": None,
         "confirmation_token_id": None,
-        "escalation_reason": reason,
-        "segments": [text],
     }
 
 

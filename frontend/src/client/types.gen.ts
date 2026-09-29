@@ -5,6 +5,42 @@ export type ClientOptions = {
 };
 
 /**
+ * ActionTaken
+ *
+ * A write the bot already applied and read back before the handoff (R3).
+ */
+export type ActionTaken = {
+    /**
+     * Tool
+     */
+    tool: string;
+    /**
+     * Result
+     */
+    result: 'applied';
+    /**
+     * Verified
+     */
+    verified: true;
+    /**
+     * Audit Event Id
+     */
+    audit_event_id: string | null;
+    /**
+     * At
+     */
+    at: string;
+    /**
+     * Tracking Id
+     */
+    tracking_id?: string | null;
+    /**
+     * Case Id
+     */
+    case_id?: string | null;
+};
+
+/**
  * ConfirmationRequest
  *
  * `POST /confirmations/{token_id}` body (D7).
@@ -37,6 +73,20 @@ export type CreateConversationResponse = {
 };
 
 /**
+ * DemoResetResponse
+ */
+export type DemoResetResponse = {
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Duration Ms
+     */
+    duration_ms: number;
+};
+
+/**
  * HTTPValidationError
  */
 export type HttpValidationError = {
@@ -45,6 +95,154 @@ export type HttpValidationError = {
      */
     detail?: Array<ValidationError>;
 };
+
+/**
+ * HandoffDetail
+ *
+ * `GET /staff/handoffs/{id}`: the summary plus the full packet.
+ */
+export type HandoffDetail = {
+    summary: HandoffSummary;
+    packet: HandoffPacket;
+};
+
+/**
+ * HandoffEvidence
+ *
+ * A piece of evidence a flow attaches to the packet (fraud path).
+ */
+export type HandoffEvidence = {
+    /**
+     * Type
+     */
+    type: 'transaction';
+    /**
+     * Ref
+     */
+    ref: string;
+    /**
+     * Fraud Score
+     */
+    fraud_score: number | null;
+};
+
+/**
+ * HandoffPacket
+ *
+ * The `04` §4 packet. `request` is the only LLM-written field (D10).
+ */
+export type HandoffPacket = {
+    /**
+     * Handoff Id
+     */
+    handoff_id: string;
+    /**
+     * Conversation Id
+     */
+    conversation_id: string;
+    /**
+     * Queue
+     */
+    queue: 'atencion' | 'cobranza' | 'fraudes' | 'reclamos';
+    /**
+     * Priority
+     */
+    priority: 'high' | 'normal';
+    /**
+     * Reason
+     */
+    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud';
+    /**
+     * Language
+     */
+    language: 'es' | 'pt';
+    /**
+     * Sentiment
+     */
+    sentiment?: null;
+    /**
+     * Request
+     */
+    request: string;
+    /**
+     * Verified Facts
+     */
+    verified_facts: Array<VerifiedFact>;
+    /**
+     * Actions Taken
+     */
+    actions_taken: Array<ActionTaken>;
+    /**
+     * Evidence
+     */
+    evidence: Array<HandoffEvidence>;
+    /**
+     * Open Questions
+     */
+    open_questions: Array<string>;
+    /**
+     * Escalation Rules Hit
+     */
+    escalation_rules_hit: Array<'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud'>;
+    /**
+     * Policy Version
+     */
+    policy_version: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
+ * HandoffSummary
+ *
+ * A row of the staff inbox; `claimed_by` is the agent's display name.
+ */
+export type HandoffSummary = {
+    /**
+     * Handoff Id
+     */
+    handoff_id: string;
+    /**
+     * Reference
+     */
+    reference: string;
+    /**
+     * Conversation Id
+     */
+    conversation_id: string;
+    /**
+     * Queue
+     */
+    queue: 'atencion' | 'cobranza' | 'fraudes' | 'reclamos';
+    /**
+     * Priority
+     */
+    priority: 'high' | 'normal';
+    /**
+     * Reason
+     */
+    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud';
+    /**
+     * Status
+     */
+    status: 'queued' | 'claimed' | 'returned';
+    /**
+     * Language
+     */
+    language: 'es' | 'pt';
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Claimed By
+     */
+    claimed_by: string | null;
+};
+
+export type JsonValue = unknown;
 
 /**
  * LoginRequest
@@ -142,6 +340,87 @@ export type PostMessageResponse = {
 };
 
 /**
+ * RelayMessageRequest
+ */
+export type RelayMessageRequest = {
+    /**
+     * Text
+     */
+    text: string;
+};
+
+/**
+ * RelayMessageResponse
+ */
+export type RelayMessageResponse = {
+    /**
+     * Message Id
+     */
+    message_id: string;
+};
+
+/**
+ * StaffLoginRequest
+ *
+ * `POST /auth/staff/login` body (D15).
+ */
+export type StaffLoginRequest = {
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
+ * StaffMeResponse
+ *
+ * `GET /staff/me` and the staff login response body (D15). `queue` is
+ * `None` for `admin`.
+ */
+export type StaffMeResponse = {
+    /**
+     * Role
+     */
+    role: 'agent' | 'admin';
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Queue
+     */
+    queue: 'atencion' | 'cobranza' | 'fraudes' | 'reclamos' | null;
+};
+
+/**
+ * TranscriptMessage
+ *
+ * One message of a claimed conversation's transcript.
+ */
+export type TranscriptMessage = {
+    /**
+     * Role
+     */
+    role: 'bot' | 'customer' | 'agent' | 'system';
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -167,6 +446,23 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * VerifiedFact
+ *
+ * One fact backed by a verified `ActionResult` (R3).
+ */
+export type VerifiedFact = {
+    /**
+     * Fact
+     */
+    fact: string;
+    value: JsonValue;
+    /**
+     * Source
+     */
+    source: string;
 };
 
 export type HealthApiV1HealthGetData = {
@@ -397,3 +693,320 @@ export type StreamConversationApiV1ConversationsConversationIdStreamGetResponses
      */
     200: unknown;
 };
+
+export type StaffLoginApiV1AuthStaffLoginPostData = {
+    body: StaffLoginRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/staff/login';
+};
+
+export type StaffLoginApiV1AuthStaffLoginPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StaffLoginApiV1AuthStaffLoginPostError = StaffLoginApiV1AuthStaffLoginPostErrors[keyof StaffLoginApiV1AuthStaffLoginPostErrors];
+
+export type StaffLoginApiV1AuthStaffLoginPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: StaffMeResponse;
+};
+
+export type StaffLoginApiV1AuthStaffLoginPostResponse = StaffLoginApiV1AuthStaffLoginPostResponses[keyof StaffLoginApiV1AuthStaffLoginPostResponses];
+
+export type StaffMeApiV1StaffMeGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/staff/me';
+};
+
+export type StaffMeApiV1StaffMeGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: StaffMeResponse;
+};
+
+export type StaffMeApiV1StaffMeGetResponse = StaffMeApiV1StaffMeGetResponses[keyof StaffMeApiV1StaffMeGetResponses];
+
+export type StaffLogoutApiV1StaffLogoutPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/staff/logout';
+};
+
+export type StaffLogoutApiV1StaffLogoutPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type StaffLogoutApiV1StaffLogoutPostResponse = StaffLogoutApiV1StaffLogoutPostResponses[keyof StaffLogoutApiV1StaffLogoutPostResponses];
+
+export type ListHandoffsApiV1StaffHandoffsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Queue
+         */
+        queue?: string | null;
+        /**
+         * Status
+         */
+        status?: string;
+    };
+    url: '/api/v1/staff/handoffs';
+};
+
+export type ListHandoffsApiV1StaffHandoffsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListHandoffsApiV1StaffHandoffsGetError = ListHandoffsApiV1StaffHandoffsGetErrors[keyof ListHandoffsApiV1StaffHandoffsGetErrors];
+
+export type ListHandoffsApiV1StaffHandoffsGetResponses = {
+    /**
+     * Response List Handoffs Api V1 Staff Handoffs Get
+     *
+     * Successful Response
+     */
+    200: Array<HandoffSummary>;
+};
+
+export type ListHandoffsApiV1StaffHandoffsGetResponse = ListHandoffsApiV1StaffHandoffsGetResponses[keyof ListHandoffsApiV1StaffHandoffsGetResponses];
+
+export type StreamHandoffsApiV1StaffHandoffsStreamGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Queue
+         */
+        queue?: string | null;
+    };
+    url: '/api/v1/staff/handoffs/stream';
+};
+
+export type StreamHandoffsApiV1StaffHandoffsStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StreamHandoffsApiV1StaffHandoffsStreamGetError = StreamHandoffsApiV1StaffHandoffsStreamGetErrors[keyof StreamHandoffsApiV1StaffHandoffsStreamGetErrors];
+
+export type StreamHandoffsApiV1StaffHandoffsStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type GetHandoffApiV1StaffHandoffsHandoffIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Handoff Id
+         */
+        handoff_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/handoffs/{handoff_id}';
+};
+
+export type GetHandoffApiV1StaffHandoffsHandoffIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetHandoffApiV1StaffHandoffsHandoffIdGetError = GetHandoffApiV1StaffHandoffsHandoffIdGetErrors[keyof GetHandoffApiV1StaffHandoffsHandoffIdGetErrors];
+
+export type GetHandoffApiV1StaffHandoffsHandoffIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: HandoffDetail;
+};
+
+export type GetHandoffApiV1StaffHandoffsHandoffIdGetResponse = GetHandoffApiV1StaffHandoffsHandoffIdGetResponses[keyof GetHandoffApiV1StaffHandoffsHandoffIdGetResponses];
+
+export type ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData = {
+    body?: never;
+    path: {
+        /**
+         * Handoff Id
+         */
+        handoff_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/handoffs/{handoff_id}/claim';
+};
+
+export type ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostError = ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors[keyof ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors];
+
+export type ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: HandoffDetail;
+};
+
+export type ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponse = ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses[keyof ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses];
+
+export type ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData = {
+    body?: never;
+    path: {
+        /**
+         * Handoff Id
+         */
+        handoff_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/handoffs/{handoff_id}/return';
+};
+
+export type ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostError = ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors[keyof ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors];
+
+export type ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: HandoffSummary;
+};
+
+export type ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponse = ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses[keyof ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses];
+
+export type ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/conversations/{conversation_id}/messages';
+};
+
+export type ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetError = ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors[keyof ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors];
+
+export type ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses = {
+    /**
+     * Response List Conversation Messages Api V1 Staff Conversations  Conversation Id  Messages Get
+     *
+     * Successful Response
+     */
+    200: Array<TranscriptMessage>;
+};
+
+export type ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponse = ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses[keyof ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses];
+
+export type PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostData = {
+    body: RelayMessageRequest;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/conversations/{conversation_id}/messages';
+};
+
+export type PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostError = PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors[keyof PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors];
+
+export type PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: RelayMessageResponse;
+};
+
+export type PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponse = PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses[keyof PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses];
+
+export type StreamConversationApiV1StaffConversationsConversationIdStreamGetData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/conversations/{conversation_id}/stream';
+};
+
+export type StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type StreamConversationApiV1StaffConversationsConversationIdStreamGetError = StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors[keyof StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors];
+
+export type StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type DemoResetApiV1AdminDemoResetPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/demo/reset';
+};
+
+export type DemoResetApiV1AdminDemoResetPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemoResetResponse;
+};
+
+export type DemoResetApiV1AdminDemoResetPostResponse = DemoResetApiV1AdminDemoResetPostResponses[keyof DemoResetApiV1AdminDemoResetPostResponses];

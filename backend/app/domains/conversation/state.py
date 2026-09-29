@@ -20,6 +20,8 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.actions import ActionResult
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
+from app.domains.handoff.schemas import HandoffEvidence
+from app.domains.localization.format import Queue
 
 __all__ = ["RESET_FACTS", "RESET_SEGMENTS", "Fact", "Pending", "TurnState", "bind_once"]
 
@@ -142,3 +144,10 @@ class TurnState(TypedDict):
     facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
     actions: NotRequired[Annotated[list[ActionResult], add]]
     escalation_reason: NotRequired[str | None]
+    # Handoff (D4-A): the queue a flow or rule chose, the created row's id, the
+    # count of attempts on another person's data (D6) and evidence the fraud
+    # flow attaches to the packet. All are cleared on return to bot (D14).
+    handoff_queue: NotRequired[Queue | None]
+    handoff_id: NotRequired[str | None]
+    unauthorized_attempts: NotRequired[int]
+    handoff_evidence: NotRequired[list[HandoffEvidence]]

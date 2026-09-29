@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
+import type { ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, DemoResetApiV1AdminDemoResetPostData, DemoResetApiV1AdminDemoResetPostResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetData, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListHandoffsApiV1StaffHandoffsGetData, ListHandoffsApiV1StaffHandoffsGetErrors, ListHandoffsApiV1StaffHandoffsGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostData, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, StaffLoginApiV1AuthStaffLoginPostData, StaffLoginApiV1AuthStaffLoginPostErrors, StaffLoginApiV1AuthStaffLoginPostResponses, StaffLogoutApiV1StaffLogoutPostData, StaffLogoutApiV1StaffLogoutPostResponses, StaffMeApiV1StaffMeGetData, StaffMeApiV1StaffMeGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1StaffConversationsConversationIdStreamGetData, StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors, StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamHandoffsApiV1StaffHandoffsStreamGetData, StreamHandoffsApiV1StaffHandoffsStreamGetErrors, StreamHandoffsApiV1StaffHandoffsStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -143,3 +143,90 @@ export const postConfirmationApiV1ConversationsConversationIdConfirmationsTokenI
  * disconnect, same as any other exit from the `async with` block.
  */
 export const streamConversationApiV1ConversationsConversationIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamConversationApiV1ConversationsConversationIdStreamGetData, ThrowOnError>): RequestResult<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError> => (options.client ?? client).get<StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, ThrowOnError>({ url: '/api/v1/conversations/{conversation_id}/stream', ...options });
+
+/**
+ * Staff Login
+ *
+ * Verify the staff username + password, issue the session and CSRF
+ * cookie pair, and return the same body `GET /staff/me` would.
+ */
+export const staffLoginApiV1AuthStaffLoginPost = <ThrowOnError extends boolean = false>(options: Options<StaffLoginApiV1AuthStaffLoginPostData, ThrowOnError>): RequestResult<StaffLoginApiV1AuthStaffLoginPostResponses, StaffLoginApiV1AuthStaffLoginPostErrors, ThrowOnError> => (options.client ?? client).post<StaffLoginApiV1AuthStaffLoginPostResponses, StaffLoginApiV1AuthStaffLoginPostErrors, ThrowOnError>({
+    url: '/api/v1/auth/staff/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Staff Me
+ *
+ * The staff profile for the caller's own session.
+ */
+export const staffMeApiV1StaffMeGet = <ThrowOnError extends boolean = false>(options?: Options<StaffMeApiV1StaffMeGetData, ThrowOnError>): RequestResult<StaffMeApiV1StaffMeGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<StaffMeApiV1StaffMeGetResponses, unknown, ThrowOnError>({ url: '/api/v1/staff/me', ...options });
+
+/**
+ * Staff Logout
+ *
+ * Revoke the caller's `jti` and clear both cookies.
+ */
+export const staffLogoutApiV1StaffLogoutPost = <ThrowOnError extends boolean = false>(options?: Options<StaffLogoutApiV1StaffLogoutPostData, ThrowOnError>): RequestResult<StaffLogoutApiV1StaffLogoutPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<StaffLogoutApiV1StaffLogoutPostResponses, unknown, ThrowOnError>({ url: '/api/v1/staff/logout', ...options });
+
+/**
+ * List Handoffs
+ */
+export const listHandoffsApiV1StaffHandoffsGet = <ThrowOnError extends boolean = false>(options?: Options<ListHandoffsApiV1StaffHandoffsGetData, ThrowOnError>): RequestResult<ListHandoffsApiV1StaffHandoffsGetResponses, ListHandoffsApiV1StaffHandoffsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListHandoffsApiV1StaffHandoffsGetResponses, ListHandoffsApiV1StaffHandoffsGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs', ...options });
+
+/**
+ * Stream Handoffs
+ */
+export const streamHandoffsApiV1StaffHandoffsStreamGet = <ThrowOnError extends boolean = false>(options?: Options<StreamHandoffsApiV1StaffHandoffsStreamGetData, ThrowOnError>): RequestResult<StreamHandoffsApiV1StaffHandoffsStreamGetResponses, StreamHandoffsApiV1StaffHandoffsStreamGetErrors, ThrowOnError> => (options?.client ?? client).get<StreamHandoffsApiV1StaffHandoffsStreamGetResponses, StreamHandoffsApiV1StaffHandoffsStreamGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/stream', ...options });
+
+/**
+ * Get Handoff
+ */
+export const getHandoffApiV1StaffHandoffsHandoffIdGet = <ThrowOnError extends boolean = false>(options: Options<GetHandoffApiV1StaffHandoffsHandoffIdGetData, ThrowOnError>): RequestResult<GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, ThrowOnError> => (options.client ?? client).get<GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}', ...options });
+
+/**
+ * Claim Handoff
+ */
+export const claimHandoffApiV1StaffHandoffsHandoffIdClaimPost = <ThrowOnError extends boolean = false>(options: Options<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ThrowOnError>): RequestResult<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ThrowOnError> => (options.client ?? client).post<ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/claim', ...options });
+
+/**
+ * Return Handoff
+ */
+export const returnHandoffApiV1StaffHandoffsHandoffIdReturnPost = <ThrowOnError extends boolean = false>(options: Options<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ThrowOnError>): RequestResult<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError> => (options.client ?? client).post<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/return', ...options });
+
+/**
+ * List Conversation Messages
+ */
+export const listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData, ThrowOnError>): RequestResult<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ThrowOnError> => (options.client ?? client).get<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ThrowOnError>({ url: '/api/v1/staff/conversations/{conversation_id}/messages', ...options });
+
+/**
+ * Post Conversation Message
+ */
+export const postConversationMessageApiV1StaffConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors, ThrowOnError>({
+    url: '/api/v1/staff/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stream Conversation
+ */
+export const streamConversationApiV1StaffConversationsConversationIdStreamGet = <ThrowOnError extends boolean = false>(options: Options<StreamConversationApiV1StaffConversationsConversationIdStreamGetData, ThrowOnError>): RequestResult<StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors, ThrowOnError> => (options.client ?? client).get<StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors, ThrowOnError>({ url: '/api/v1/staff/conversations/{conversation_id}/stream', ...options });
+
+/**
+ * Demo Reset
+ *
+ * Recreate `latam_app` from the golden DB (D21).
+ *
+ * The checkpointer pool holds connections to the database being dropped, so
+ * the turn host is closed first and reopened in `finally`: a failed reset
+ * must not leave the app without a host. The failure then propagates as a 500.
+ */
+export const demoResetApiV1AdminDemoResetPost = <ThrowOnError extends boolean = false>(options?: Options<DemoResetApiV1AdminDemoResetPostData, ThrowOnError>): RequestResult<DemoResetApiV1AdminDemoResetPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<DemoResetApiV1AdminDemoResetPostResponses, unknown, ThrowOnError>({ url: '/api/v1/admin/demo/reset', ...options });

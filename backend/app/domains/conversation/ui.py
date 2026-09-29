@@ -10,8 +10,9 @@ conversation). `card_picker` carries the masked card options an `Ask` outcome
 already built (`flows/card_select.py`'s `card_picker_event`, D3); `quick_replies`
 carries the fixed lock-vs-block labels `card_block` emits while clarifying
 (D4). Both `PickerOption.label`s are formatted in code, never by the LLM (R4).
-`transaction_list` and `handoff_banner` are not defined here -- they arrive
-with the cards that emit them.
+`handoff_banner` (D4-A) announces the transfer to a person. `mode` and
+`message` payloads are the non-`ui` SSE events the runner publishes. `transaction_list`
+is not defined here -- it arrives with the card that emits it.
 """
 
 from typing import Annotated, Literal
@@ -19,6 +20,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domains.conversation.state import Fact
+from app.domains.localization.format import Queue
 
 __all__ = [
     "CardPickerEvent",
@@ -28,6 +30,10 @@ __all__ = [
     "ConfirmStepView",
     "ConversationClosedEvent",
     "ConversationClosedPayload",
+    "HandoffBannerEvent",
+    "HandoffBannerPayload",
+    "MessagePayload",
+    "ModePayload",
     "OtpRequiredEvent",
     "OtpRequiredPayload",
     "PickerOption",
@@ -131,7 +137,7 @@ class QuickRepliesPayload(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    slot: Literal["block_kind"]
+    slot: Literal["block_kind", "abstain"]
     options: list[PickerOption]
 
 
@@ -144,7 +150,52 @@ class QuickRepliesEvent(BaseModel):
     payload: QuickRepliesPayload
 
 
+class HandoffBannerPayload(BaseModel):
+    """`ui.handoff_banner` payload: reference and queue label built in code (R4)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    handoff_id: str
+    reference: str
+    queue: Queue
+    queue_label: str
+
+
+class HandoffBannerEvent(BaseModel):
+    """Push event: the conversation was handed to a person."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["handoff_banner"]
+    payload: HandoffBannerPayload
+
+
+class ModePayload(BaseModel):
+    """`mode` SSE payload: who answers (`agent_display_name` once claimed)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    mode: Literal["bot", "human"]
+    agent_display_name: str | None
+
+
+class MessagePayload(BaseModel):
+    """`message` SSE payload; `customer` is published only in human mode."""
+
+    model_config = ConfigDict(frozen=True)
+
+    role: Literal["bot", "customer", "agent", "system"]
+    text: str
+    sources: list[str]
+    agent_display_name: str | None = None
+
+
 UIEvent = Annotated[
-    ConfirmEvent | OtpRequiredEvent | ConversationClosedEvent | CardPickerEvent | QuickRepliesEvent,
+    ConfirmEvent
+    | OtpRequiredEvent
+    | ConversationClosedEvent
+    | CardPickerEvent
+    | QuickRepliesEvent
+    | HandoffBannerEvent,
     Field(discriminator="kind"),
 ]

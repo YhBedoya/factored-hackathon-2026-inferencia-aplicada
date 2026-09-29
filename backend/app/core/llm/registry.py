@@ -10,9 +10,9 @@ from typing import Literal
 __all__ = ["MODEL_REGISTRY", "TEMPERATURE", "PromptRef", "Provider", "Step"]
 
 Provider = Literal["anthropic", "bedrock"]
-Step = Literal["nlu", "compose"]
+Step = Literal["nlu", "compose", "handoff_summary"]
 
-# Haiku 4.5 for both steps (D6). The Bedrock ID is a placeholder until Dev A's
+# Haiku 4.5 for every step (D6). The Bedrock ID is a placeholder until Dev A's
 # K2 confirms the inference-profile ARN/region; do not build on it before then.
 MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "nlu": {
@@ -23,9 +23,13 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
         "anthropic": "claude-haiku-4-5-20251001",
         "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
     },
+    "handoff_summary": {
+        "anthropic": "claude-haiku-4-5-20251001",
+        "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
+    },
 }
 
-TEMPERATURE: dict[Step, float] = {"nlu": 0.0, "compose": 0.0}
+TEMPERATURE: dict[Step, float] = {"nlu": 0.0, "compose": 0.0, "handoff_summary": 0.0}
 
 
 @dataclass(frozen=True)

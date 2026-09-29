@@ -54,6 +54,7 @@ from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import BankReadTools, ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.tools.fakebank import make_fakebank_factory
+from app.domains.conversation.tools.handoff import InMemoryHandoffTools
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.identity.step_up_fake import FakeStepUpGate
@@ -215,6 +216,8 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
             "bank_write_tools": bank_write_tools,
             "vault": InMemoryAddressVault(),
             "llm": llm,
+            "handoff_tools": InMemoryHandoffTools(),
+            "audit": NullAuditRecorder(),
         }
     }
     return _SandboxSession(graph=graph, config=config, bank_tools=bank_tools, gate=gate)

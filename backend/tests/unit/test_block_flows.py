@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 from app.domains.conversation.graph import ConfirmationDecision, run_turn
+from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
 from tests.conftest import ScriptedLLM, make_session
@@ -155,7 +156,10 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
             {
                 "nlu": [
                     NLUResult(language="pt", intents=["card_unlock"], status="clear"),
-                ]
+                ],
+                "handoff_summary": [
+                    HandoffSummaryDraft(request="Bloqueio do banco em {queue_label}.")
+                ],
             }
         )
         past_due_session = make_session("CLI-TFPASTD00005", fakebank_dir, llm)
@@ -163,8 +167,10 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
             past_due_session.graph, "quero desbloquear meu cartao", config=past_due_session.config
         )
         assert "Cobrança" in reply1
+        packet1 = past_due_session.handoff_tools.created[-1]
+        assert (packet1.queue, packet1.reason) == ("cobranza", "bank_side_block")
         assert debug1.pending is None
-        assert debug1.ui == []
+        assert debug1.ui == ["handoff_banner"]
         assert past_due_session.overlay.locked == set()
         assert past_due_session.overlay.blocked == set()
 
@@ -172,7 +178,10 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
             {
                 "nlu": [
                     NLUResult(language="pt", intents=["card_unlock"], status="clear"),
-                ]
+                ],
+                "handoff_summary": [
+                    HandoffSummaryDraft(request="Bloqueio do banco em {queue_label}.")
+                ],
             }
         )
         blocked_session = make_session("CLI-TFBLOCKD0003", fakebank_dir, llm2)
@@ -180,8 +189,10 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
             blocked_session.graph, "quero desbloquear meu cartao", config=blocked_session.config
         )
         assert "Fraudes" in reply2
+        packet2 = blocked_session.handoff_tools.created[-1]
+        assert (packet2.queue, packet2.reason) == ("fraudes", "bank_side_block")
         assert debug2.pending is None
-        assert debug2.ui == []
+        assert debug2.ui == ["handoff_banner"]
         assert blocked_session.overlay.locked == set()
         assert blocked_session.overlay.blocked == set()
 

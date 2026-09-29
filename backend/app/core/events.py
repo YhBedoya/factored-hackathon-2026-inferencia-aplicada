@@ -21,7 +21,16 @@ from redis.asyncio.client import PubSub
 
 from app.core.redis import get_redis
 
-__all__ = ["channel", "publish", "subscribe"]
+__all__ = [
+    "channel",
+    "handoff_channel",
+    "publish",
+    "publish_handoff",
+    "subscribe",
+    "subscribe_handoffs",
+]
+
+_HANDOFF_PATTERN = "handoff:*"
 
 
 def channel(conversation_id: UUID) -> str:
@@ -33,6 +42,17 @@ async def publish(conversation_id: UUID, event: str, data: Any) -> None:
     """Publish one `{"event": ..., "data": ...}` JSON envelope (D14)."""
     envelope = json.dumps({"event": event, "data": data})
     await get_redis().publish(channel(conversation_id), envelope)
+
+
+def handoff_channel(queue: str) -> str:
+    """The pub/sub channel name for one handoff queue (D12, D17)."""
+    return f"handoff:{queue}"
+
+
+async def publish_handoff(queue: str, event: str, data: Any) -> None:
+    """Publish one `{"event": ..., "data": ...}` envelope on a handoff queue channel (D12)."""
+    envelope = json.dumps({"event": event, "data": data})
+    await get_redis().publish(handoff_channel(queue), envelope)
 
 
 @asynccontextmanager
@@ -53,12 +73,33 @@ async def subscribe(conversation_id: UUID) -> AsyncIterator[AsyncIterator[tuple[
         await pubsub.aclose()  # type: ignore[no-untyped-call]  # redis-py's `aclose` has no stub annotation
 
 
+@asynccontextmanager
+async def subscribe_handoffs(queue: str | None) -> AsyncIterator[AsyncIterator[tuple[str, Any]]]:
+    """Subscribe to one queue's handoff channel, or to every queue
+    (`psubscribe("handoff:*")`) when `queue is None` (D17). Same contract as
+    `subscribe`: subscribed on entry, always unsubscribed and closed on exit.
+    """
+    pubsub = get_redis().pubsub()
+    if queue is None:
+        await pubsub.psubscribe(_HANDOFF_PATTERN)
+    else:
+        await pubsub.subscribe(handoff_channel(queue))
+    try:
+        yield _events(pubsub)
+    finally:
+        if queue is None:
+            await pubsub.punsubscribe(_HANDOFF_PATTERN)
+        else:
+            await pubsub.unsubscribe(handoff_channel(queue))
+        await pubsub.aclose()  # type: ignore[no-untyped-call]  # redis-py's `aclose` has no stub annotation
+
+
 async def _events(pubsub: PubSub) -> AsyncIterator[tuple[str, Any]]:
     """Decode `pubsub.listen()`'s messages, skipping the subscribe/unsubscribe
-    acks (`type != "message"`) that `listen()` also yields.
+    acks (`type` not in `message|pmessage`) that `listen()` also yields.
     """
     async for raw in pubsub.listen():
-        if raw["type"] != "message":
+        if raw["type"] not in ("message", "pmessage"):
             continue
         envelope = json.loads(raw["data"])
         yield envelope["event"], envelope["data"]

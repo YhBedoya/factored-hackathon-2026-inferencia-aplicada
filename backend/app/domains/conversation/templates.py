@@ -22,8 +22,6 @@ Language = Literal["es", "pt"]
 TemplateKind = Literal[
     "greeting",
     "greeting_named",
-    "out_of_market",
-    "out_of_scope",
     "injection_suspected",
     "unsupported_intent",
     "fallback",
@@ -57,10 +55,12 @@ TemplateKind = Literal[
     "offer_replacement",
     "replacement_declined",
     "replacement_not_eligible",
-    "handoff_placeholder",
     "credit_only",
     "synthetic_footnote",
     "read_only_note",
+    "handoff_transfer",
+    "back_with_cardy",
+    "abstain_fallback",
 ]
 
 _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
@@ -73,28 +73,6 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "greeting": {
         "es": "Hola. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?",
         "pt": "Oi. Sou a Cardy, do Swip. Como posso ajudar com seu cartão hoje?",
-    },
-    # D14: a real request, but for a rail/market Swip does not offer today.
-    "out_of_market": {
-        "es": (
-            "Ese medio de pago no lo manejamos en Swip por ahora. "
-            "Puedo ayudarte con tus tarjetas o conectarte con una persona del equipo."
-        ),
-        "pt": (
-            "Essa forma de pagamento o Swip ainda não oferece. "
-            "Posso ajudar com seus cartões ou te conectar com uma pessoa da equipe."
-        ),
-    },
-    # D14: a real request, but for another product this chat does not cover.
-    "out_of_scope": {
-        "es": (
-            "Eso no lo puedo gestionar por aquí. "
-            "Puedo ayudarte con tus tarjetas o conectarte con una persona del equipo."
-        ),
-        "pt": (
-            "Isso eu não consigo resolver por aqui. "
-            "Posso ajudar com seus cartões ou te conectar com uma pessoa da equipe."
-        ),
     },
     # D14: the message tried to redefine instructions or asked for someone else's data.
     "injection_suspected": {
@@ -345,18 +323,6 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
         "es": "Tu tarjeta no cumple las condiciones para pedir un reemplazo en este momento.",
         "pt": "Seu cartão não cumpre as condições para pedir uma substituição neste momento.",
     },
-    # D9: names the queue without claiming a transfer already happened
-    # (there is no packet or mode=human yet).
-    "handoff_placeholder": {
-        "es": (
-            "Esto lo va a revisar una persona del equipo de {queue_label}. "
-            "Ya tiene el contexto de lo que me contaste."
-        ),
-        "pt": (
-            "Isso vai ser revisado por uma pessoa da equipe de {queue_label}. "
-            "Ela já tem o contexto do que você me contou."
-        ),
-    },
     # ADR-020: balance_due on a debit card has no balance or minimum payment.
     # No offer here: the card's status follows right away in the same reply,
     # so there is never an offer the customer has to answer.
@@ -391,6 +357,37 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "información es solo de consulta."
         ),
         "pt": "Sua conta não está ativa no momento, então esta informação é só para consulta.",
+    },
+    # D12: the handoff happened (row, mode=human, event). `reference` is the
+    # already-formatted case reference.
+    "handoff_transfer": {
+        "es": (
+            "Te estoy transfiriendo con una persona del equipo de {queue_label}. "
+            "Tu caso es {reference}. Ya tiene el contexto de lo que me contaste "
+            "y, desde aquí, yo dejo de responder para que ella te atienda."
+        ),
+        "pt": (
+            "Estou transferindo você para uma pessoa da equipe de {queue_label}. "
+            "Seu caso é {reference}. Ela já tem o contexto do que você me contou "
+            "e, daqui em diante, eu paro de responder para que ela atenda você."
+        ),
+    },
+    # D14: system message when the agent returns the conversation to the bot.
+    "back_with_cardy": {
+        "es": "Vuelves a hablar conmigo, Cardy. ¿Qué más necesitas con tu tarjeta?",
+        "pt": "Você voltou a falar comigo, a Cardy. Do que mais precisa com seu cartão?",
+    },
+    # D18: fixed four-part abstain when the composed draft fails or is
+    # rejected: topic, reason, closest action, human offer. The caller passes
+    # an empty `closest_action` when there is none and collapses the
+    # resulting double space.
+    "abstain_fallback": {
+        "es": (
+            "Por aquí no puedo gestionar {topic_label}. {reason} {closest_action} {human_offer}"
+        ),
+        "pt": (
+            "Por aqui não consigo cuidar de {topic_label}. {reason} {closest_action} {human_offer}"
+        ),
     },
 }
 

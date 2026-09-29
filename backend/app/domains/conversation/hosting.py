@@ -14,18 +14,75 @@ carries for SQLAlchemy: same database, same host, a plain psycopg3 DSN.
 import asyncio
 import contextlib
 from dataclasses import dataclass, field
-from typing import Any
+from enum import Enum
+from typing import Any, get_args
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph.state import CompiledStateGraph
 from psycopg import AsyncConnection
 from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool
+from pydantic import BaseModel
 
+from app.core.actions import ActionResult
 from app.core.llm import LLMClient
-from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
+from app.domains.conversation.graph import (
+    ConfirmationDecision,
+    GraphState,
+    TurnInput,
+    TurnOutput,
+    build_graph,
+)
+from app.domains.conversation.schemas import NLUResult
+from app.domains.conversation.state import Fact
+from app.domains.conversation.ui import UIEvent
+from app.domains.handoff.schemas import HandoffEvidence
 
 __all__ = ["TurnHost", "close_host", "open_host", "psycopg_conninfo"]
+
+
+def _models_in(annotation: object, seen: set[type]) -> None:
+    """Collect every Pydantic model and enum reachable from `annotation`."""
+    if isinstance(annotation, type) and issubclass(annotation, (BaseModel, Enum)):
+        if annotation in seen:
+            return
+        seen.add(annotation)
+        if issubclass(annotation, BaseModel):
+            for info in annotation.model_fields.values():
+                _models_in(info.annotation, seen)
+        return
+    for arg in get_args(annotation):
+        _models_in(arg, seen)
+
+
+def _checkpoint_types() -> tuple[type, ...]:
+    seen: set[type] = set()
+    for root in (
+        *get_args(get_args(UIEvent)[0]),
+        ActionResult,
+        ConfirmationDecision,
+        Fact,
+        *(HandoffEvidence, NLUResult),
+    ):
+        _models_in(root, seen)
+    return tuple(sorted(seen, key=lambda t: (t.__module__, t.__qualname__)))
+
+
+# Every Pydantic model (and enum) the graph writes into checkpointed state:
+# the `UIEvent` union, `NLUResult`, `Fact`, `ActionResult`, `HandoffEvidence`,
+# `ConfirmationDecision`, plus whatever they nest. The msgpack serde is strict
+# (`allowed_msgpack_modules` is a set, not `True`), so an unlisted type would
+# come back as a raw dict and break a flow silently. Derived from the models
+# themselves so a new UI event or nested field is covered without editing this.
+CHECKPOINT_TYPES: tuple[type, ...] = _checkpoint_types()
+
+
+def checkpoint_serde() -> JsonPlusSerializer:
+    """The checkpointer's serde, allowing exactly `CHECKPOINT_TYPES`."""
+    return JsonPlusSerializer(
+        allowed_msgpack_modules=[(t.__module__, t.__qualname__) for t in CHECKPOINT_TYPES]
+    )
 
 
 def psycopg_conninfo(database_url: str) -> str:
@@ -63,7 +120,7 @@ async def open_host(database_url: str, llm: LLMClient) -> TurnHost:
         },
     )
     await pool.open()
-    saver = AsyncPostgresSaver(pool)
+    saver = AsyncPostgresSaver(pool, serde=checkpoint_serde())
     await saver.setup()
     graph = build_graph(saver)
     return TurnHost(graph=graph, pool=pool, llm=llm)

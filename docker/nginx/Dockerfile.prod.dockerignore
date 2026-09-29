@@ -1,0 +1,6 @@
+# Keeps the repo-root build context small (data/ is GBs, R10).
+*
+!frontend
+!docker/nginx
+frontend/node_modules
+frontend/dist

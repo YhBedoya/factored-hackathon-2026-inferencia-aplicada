@@ -11,7 +11,16 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-__all__ = ["DocumentType", "LoginRequest", "MeResponse", "Session"]
+from app.domains.localization.format import Queue
+
+__all__ = [
+    "DocumentType",
+    "LoginRequest",
+    "MeResponse",
+    "Session",
+    "StaffLoginRequest",
+    "StaffMeResponse",
+]
 
 DocumentType = Literal["DNI", "CC", "CE", "Pasaporte"]
 
@@ -19,14 +28,16 @@ DocumentType = Literal["DNI", "CC", "CE", "Pasaporte"]
 class Session(BaseModel):
     """What `get_session()` returns to a route (D6). `customer_id` lives
     only here on the request path (R1): no route, tool or prompt takes it
-    as an argument, and no other model in this module carries it.
+    as an argument, and no other model in this module carries it. Staff
+    sessions (`agent`, `admin`) have no `customer_id` (D15); every customer
+    path narrows it before use.
     """
 
     model_config = ConfigDict(frozen=True)
 
     account_id: UUID
-    role: Literal["customer"]
-    customer_id: str
+    role: Literal["customer", "agent", "admin"]
+    customer_id: str | None
     step_up_at: datetime | None
 
 
@@ -58,3 +69,25 @@ class MeResponse(BaseModel):
     display_name: str
     country: Literal["MX", "CO", "AR"]
     customer_status: Literal["Active", "Inactive", "Suspended", "Closed"]
+
+
+class StaffLoginRequest(BaseModel):
+    """`POST /auth/staff/login` body (D15)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    username: str
+    password: str
+
+
+class StaffMeResponse(BaseModel):
+    """`GET /staff/me` and the staff login response body (D15). `queue` is
+    `None` for `admin`.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    role: Literal["agent", "admin"]
+    username: str
+    display_name: str
+    queue: Queue | None

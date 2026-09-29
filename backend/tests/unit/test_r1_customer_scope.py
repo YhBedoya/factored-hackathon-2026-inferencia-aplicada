@@ -91,3 +91,18 @@ def test_no_customer_id_on_write_side() -> None:
 
     assert "customer_id" not in PlanStep.model_fields
     assert "customer_id" not in ConfirmationDecision.model_fields
+
+
+def test_staff_session_cannot_build_tool_context() -> None:
+    """R1 (D15): only a customer session with a `customer_id` builds a `ToolContext`."""
+    from uuid import uuid4
+
+    from app.domains.conversation.tools.registry import build_tool_context
+    from app.domains.identity.models import Session
+
+    staff = Session(account_id=uuid4(), role="agent", customer_id=None, step_up_at=None)
+    with pytest.raises(PermissionError):
+        build_tool_context(staff, uuid4(), "trace")
+    broken = Session(account_id=uuid4(), role="customer", customer_id=None, step_up_at=None)
+    with pytest.raises(PermissionError):
+        build_tool_context(broken, uuid4(), "trace")
