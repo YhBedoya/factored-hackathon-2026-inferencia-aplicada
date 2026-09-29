@@ -24,6 +24,7 @@ from pathlib import Path
 import psycopg
 import pytest
 import structlog
+from cryptography.fernet import Fernet
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
@@ -203,6 +204,7 @@ def it_env(it_db: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("JWT_SECRET", secrets.token_urlsafe(32))
     monkeypatch.setenv("IDENTITY_HMAC_KEY", secrets.token_urlsafe(32))
     monkeypatch.setenv("CREDENTIALS_SEED", secrets.token_urlsafe(32))
+    monkeypatch.setenv("PII_VAULT_KEY", Fernet.generate_key().decode())
     get_settings.cache_clear()
     get_engine.cache_clear()
     get_redis.cache_clear()

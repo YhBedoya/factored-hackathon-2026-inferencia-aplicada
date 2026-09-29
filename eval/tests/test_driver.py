@@ -54,7 +54,9 @@ def _frame(event: str, data: str) -> str:
 def _run(case: Case, transport: httpx.MockTransport) -> Transcript:
     async def _go() -> Transcript:
         async with httpx.AsyncClient(transport=transport, base_url=_BASE_URL) as client:
-            return await run_case(case, base_url=_BASE_URL, otp_code="0000", client=client)
+            return await run_case(
+                case, base_url=_BASE_URL, otp_code="0000", client=client
+            )
 
     return asyncio.run(_go())
 
@@ -69,11 +71,17 @@ def _scripted_handler(call_log: list[str]) -> Callable[[httpx.Request], httpx.Re
     stream_bodies = [
         # turn 1 (say): the bot offers a confirmation, then done.
         _sse(
-            _frame("ui", '{"kind": "confirm", "payload": {"token_id": "tok-1", "steps": []}}'),
+            _frame(
+                "ui",
+                '{"kind": "confirm", "payload": {"token_id": "tok-1", "steps": []}}',
+            ),
             _done_frame,
         ),
         # turn 2 (confirm): a plain reply, then done.
-        _sse(_frame("message", '{"role": "bot", "text": "listo", "sources": []}'), _done_frame),
+        _sse(
+            _frame("message", '{"role": "bot", "text": "listo", "sources": []}'),
+            _done_frame,
+        ),
         # turn 3 (otp resume): the bot offers a transaction list, then done.
         _sse(
             _frame(
@@ -106,8 +114,10 @@ def _scripted_handler(call_log: list[str]) -> Callable[[httpx.Request], httpx.Re
             return httpx.Response(200, content=body, headers=headers)
         if path == "/api/v1/auth/otp/verify":
             return httpx.Response(200, json={"customer_id": _PERSONA})
-        if path.endswith("/confirmations/tok-1") or path.endswith("/messages"):
-            return httpx.Response(202, json={"turn_id": "22222222-2222-2222-2222-222222222222"})
+        if path.endswith(("/confirmations/tok-1", "/messages")):
+            return httpx.Response(
+                202, json={"turn_id": "22222222-2222-2222-2222-222222222222"}
+            )
         raise AssertionError(f"unexpected request: {request.method} {request.url}")
 
     return handler
@@ -129,7 +139,12 @@ def test_plays_say_confirm_otp_select() -> None:
 
     assert transcript.ended_by == "done"
     assert transcript.conversation_id == "conv-1"
-    assert [turn.input.kind for turn in transcript.turns] == ["say", "confirm", "otp", "select"]
+    assert [turn.input.kind for turn in transcript.turns] == [
+        "say",
+        "confirm",
+        "otp",
+        "select",
+    ]
     assert transcript.turns[0].events[0].data["payload"]["token_id"] == "tok-1"
     assert transcript.turns[3].http_status == 202
     assert call_log == [

@@ -228,17 +228,17 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 4. "¿Puedo pagar con Pix?" → abstains and offers alternatives. "Quiero hablar con una persona" → Atención. "Voy a demandar al banco" → Reclamos. Unlocking a bank-blocked card → Cobranza/Fraudes.
 5. DB: the new complaint row has `origin = 'app'` and the transaction's exact amount.
 
-**If behind:** A finishes the deploy on D5 morning, and today's test runs locally. B moves the single-charge questions to D5 and the return-to-bot button to D6.
+**If behind:** A finishes the deploy later (moved to the end of D6, decided 2026-09-29, §8), and today's test runs locally. B moves the single-charge questions to D5 and the return-to-bot button to D6.
 
 ---
 
 ### D5 · Thu 1 Oct — MVP gate
-**Goal:** every item in the §4 checklist passes on the public URL, and `make eval` prints the first proposed-vs-baseline report.
+**Goal:** every item in the §4 checklist passes locally (the public URL follows with the deploy at the end of D6, §8), and `make eval` proves the harness with a smoke run.
 
 **Dev A: G6b privacy and grounding, and G11 runner and baseline**
 | # | Task | Done when |
 |---|---|---|
-| A1 | Harden `core/llm`:<br>• PII masking before every call (card numbers, document numbers, emails, phones, names → tokens), with an encrypted per-conversation vault that is unmasked only in the customer's view<br>• the client refuses unmasked input<br>• self-hosted Langfuse in the Compose observability layer (localhost, ADR-006) + its mask hook<br>• `audit.llm_calls` ledger (tokens, cost, latency, model, prompt version) | Unit tests; an LLM call with a raw card number raises an error |
+| A1 | Harden `core/llm`:<br>• PII masking before every call (card numbers, document numbers, emails, phones, names → tokens), with an encrypted per-conversation vault that is unmasked in the customer's and the claiming agent's views<br>• the client refuses unmasked input<br>• self-hosted Langfuse in the Compose observability layer (localhost, ADR-006) + its mask hook<br>• `audit.llm_calls` ledger (tokens, cost, latency, model, prompt version) | Unit tests; an LLM call with a raw card number raises an error |
 | A2 | Grounding check in the reply writer: every number comes from a fact, the language matches, no raw PII → regenerate once → otherwise a safe template | An injected wrong amount is caught and never sent |
 | A3 | Eval runner: a golden-DB clone per run, test-IdP sessions, deterministic checks (tools called and forbidden, DB state, confirm before act, read-back before "done", language, grounding, packet fields), metrics with n + Wilson CI, `report.md`, run metadata. `make eval SUITE= SYSTEM=` | A broken flow fails the right check |
 | A4 | Keyword baseline (`SYSTEM=baseline`): clause split, precedence rules, negation window, ES/PT template replies, same tools and policy | Runs on the same cases as the proposed system |
@@ -251,9 +251,8 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 | B3 | Test sets:<br>• seeds per intent × category (the 10 categories in `05` §2), ES-MX/CO/AR, PT-BR, portuñol<br>• paraphrases by a non-Claude model<br>• ~80 dev + ~150 held-out, split by seed, no shared personas<br>• **both review 100% of held-out (~2 h each, afternoon)**<br>• freeze hash + CI check | The mix report hits the targets; a one-character change to held-out fails CI |
 
 **End-of-day test = the MVP gate (§4)**, plus:
-- `make eval SUITE=dev` for both systems → a report with a side-by-side table, CIs and failures.
-- Numeric D1.5 targets are recorded in `05` §6 **before** any held-out run.
-- No raw PII in any `audit.llm_calls` input from the dev run (a script checks this).
+- `make eval SUITE=dev SYSTEM=proposed CASES=a-` → a smoke-run report on the 4 `a-*` cases (decided 2026-09-29: the system is still evolving). The full dev run for both systems, with the side-by-side table, and the numeric D1.5 targets move to a later card; the targets are still recorded in `05` §6 **before** any held-out run.
+- No raw PII in any `audit.llm_calls` input from the smoke run (a script checks this).
 
 **If behind:** the gate items come first. The baseline's first run may move to D6 morning. D6 morning closes any gate gaps before new work starts.
 
@@ -351,7 +350,7 @@ If everything after D5 failed, this is what we'd submit.
 - [ ] A staff agent claims a handoff, chats live and returns the conversation to the bot
 - [ ] Unit tests for R1–R5 and R12 green. Only masked text reaches the LLM
 - [ ] `make data` reproduces the golden DB. Langfuse (local) and the audit log record every turn. LLM calls go through Bedrock
-- [ ] Held-out frozen (hash + CI check). Dev report for proposed vs baseline, with CIs. D1.5 targets recorded
+- [ ] Held-out frozen (hash + CI check). Eval harness smoke run (`CASES=a-`, proposed only) at D5; the dev report for proposed vs baseline with CIs and the recorded D1.5 targets move to a later card (decided 2026-09-29)
 - [ ] The README quickstart works on a fresh clone
 
 ## 5. Feature-list coverage
@@ -420,7 +419,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | Bedrock access or quotas missing | K2 fails on D1 | Switch region the same day and request quota. B keeps going on the Anthropic API (ADR-028) |
 | The Bedrock switch changes behavior | Sandbox answers or structured outputs differ after the switch | Switch as soon as K2 passes, not on deploy day. Rerun B's scripted conversations on both providers |
 | A overloaded on D4–D6 | End-of-day tests slip twice in a row | Apply the cut lines. B already builds the disputes tools on D4; B can also take the data-quality fixtures on D6 |
-| Deploy slips | No URL at the end of D4 | A finishes it on D5 morning. The gate needs the URL |
+| Deploy slips | No URL at the end of D4 | Moved to the end of D6 (decided 2026-09-29, §8), unless strictly required earlier. The gate's URL item waits for it |
 | Held-out review takes longer than 2 h | Test sets not finished at 16:00 on D5 | Shrink held-out to ~120 while keeping the mix. Never skip review |
 | Slow replies | p95 > 8 s in the D5 report | Smaller model for intent detection, shorter replies. Report it honestly |
 | Scope creep | Unsafe outcomes in the D7 report | The D8 rule: fixes only |
@@ -429,7 +428,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 
 | Day | Decision | Proposal |
 |---|---|---|
-| D1 | Bedrock region, model per step | Haiku 4.5 for intent detection and replies to start |
+| D1 | Bedrock region, model per step | Sonnet 5.5 (`claude-sonnet-5-5`) for intent detection, Haiku 4.5 for replies to start |
 | D1–D4 | When B's connection moves from the Anthropic API to Bedrock (ADR-028) | As soon as K2 passes; before the D4 deploy at the latest |
 | D4 | Whether the public deployment runs Langfuse too (ADR-006) | **Decided 2026-09-28:** no. Langfuse stays local (`08` §1) |
 | D5 | When self-hosted Langfuse is set up | A adds it with D5 A1 (mask hook). Earlier if the observability layer has room |
@@ -438,6 +437,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D2 | Final persona list | B's 10 + ~20 found by query |
 | D4 | AWS setup (ADR-017) | **Decided 2026-09-28:** single EC2 t3.xlarge + Compose + IAM role, us-east-1 (`08-deployment.md`) |
 | D4 | Suspected-compromise rule | ≥ 2 transactions picked, or card not in hand, or `fraud_score` > 30 |
-| D5 | D1.5 numeric targets | After the first dev run |
+| D5 | D1.5 numeric targets | **Moved 2026-09-29** to a later card, after the first full dev run; still recorded before any held-out run |
+| D5 | Deploy of main after D5-A merge | **Decided 2026-09-29:** postponed to the end of D6 unless strictly required earlier. The human deploys `main` with the D5-A runbook (T27), and `/wave-run D5-A-deploy` records the results then |
 | D5–D6 | Paraphrase, simulator and judge model family | Non-Claude Bedrock family, picked on D5 |
 | D7 | Final model per step | From the held-out model comparison |

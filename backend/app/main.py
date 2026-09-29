@@ -7,8 +7,8 @@ served at `/api/v1/openapi.json`, not the FastAPI default `/openapi.json`,
 because it lives under the versioned prefix everything else does; the docs
 UI follows it to `/api/v1/docs`.
 
-The lifespan (D16) refuses to start with an empty `JWT_SECRET` or
-`IDENTITY_HMAC_KEY` (D21), naming only the variable(s) that are actually
+The lifespan (D16) refuses to start with an empty `JWT_SECRET`,
+`IDENTITY_HMAC_KEY` or `PII_VAULT_KEY` (D21), naming only the variable(s) that are actually
 empty, then opens the turn host -- the checkpointer pool and compiled graph
 `start_turn` (`conversation/runner.py`) runs turns against -- and closes it
 on shutdown. `tests/unit/test_health.py` builds `TestClient(app)` without a
@@ -39,6 +39,7 @@ from app.core.config import get_settings
 from app.core.llm import get_llm_client
 from app.core.logging import RequestIDMiddleware, configure_logging
 from app.core.telemetry import instrument_app
+from app.domains.audit.service import AuditLLMCallSink
 from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.hosting import close_host, open_host
 from app.domains.policy.registry import get_policies
@@ -55,17 +56,29 @@ __all__ = ["app", "create_app"]
 _KEPT_ERROR_KEYS = ("type", "loc", "msg")
 
 
-def _require_secrets(*, jwt_secret: str, identity_hmac_key: str) -> None:
-    """Refuse to start with an empty `JWT_SECRET`/`IDENTITY_HMAC_KEY` (D21),
-    naming only the variable(s) that are actually empty.
+def _require_secrets(*, jwt_secret: str, identity_hmac_key: str, pii_vault_key: str) -> None:
+    """Refuse to start with an empty `JWT_SECRET`/`IDENTITY_HMAC_KEY`/`PII_VAULT_KEY`
+    (D21), naming only the variable(s) that are actually empty.
     """
     empty = [
         name
-        for name, value in (("JWT_SECRET", jwt_secret), ("IDENTITY_HMAC_KEY", identity_hmac_key))
+        for name, value in (
+            ("JWT_SECRET", jwt_secret),
+            ("IDENTITY_HMAC_KEY", identity_hmac_key),
+            ("PII_VAULT_KEY", pii_vault_key),
+        )
         if not value
     ]
     if empty:
         raise RuntimeError(f"refusing to start: empty {', '.join(empty)}")
+
+
+def _require_eval_for_baseline(*, agent_system: str, app_env: str) -> None:
+    """Refuse to start the LLM-free baseline graph (D17) outside `APP_ENV=eval`."""
+    if agent_system == "baseline" and app_env != "eval":
+        raise RuntimeError(
+            "refusing to start: AGENT_SYSTEM=baseline is only allowed under APP_ENV=eval"
+        )
 
 
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -85,14 +98,23 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    _require_secrets(jwt_secret=settings.jwt_secret, identity_hmac_key=settings.identity_hmac_key)
+    _require_secrets(
+        jwt_secret=settings.jwt_secret,
+        identity_hmac_key=settings.identity_hmac_key,
+        pii_vault_key=settings.pii_vault_key,
+    )
+    _require_eval_for_baseline(agent_system=settings.agent_system, app_env=settings.app_env)
     # Fails the whole startup on a header-less or malformed policy file (D1);
     # the combined hash below is what every audit event's `policy_version`
     # carries for the rest of the process's life (D2).
     bundle = get_policies()
     _logger.info("policy.loaded", hash=bundle.hash, files=bundle.files)
     load_card_select_policy()
-    app.state.turn_host = await open_host(settings.database_url, get_llm_client())
+    app.state.turn_host = await open_host(
+        settings.database_url,
+        get_llm_client(sink=AuditLLMCallSink()),
+        system=settings.agent_system,
+    )
     try:
         yield
     finally:

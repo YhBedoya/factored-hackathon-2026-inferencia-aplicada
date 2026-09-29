@@ -84,7 +84,8 @@ def _wait_for_bot_message(dsn: str, turn_id: str, *, timeout: float = 20.0) -> d
     while True:
         with psycopg.connect(dsn, row_factory=dict_row) as conn:
             row = conn.execute(
-                "SELECT content, ui_payload FROM app.messages WHERE turn_id = %s AND role = 'bot'",
+                "SELECT content_masked AS content, ui_payload FROM app.messages"
+                " WHERE turn_id = %s AND role = 'bot'",
                 (uuid.UUID(turn_id),),
             ).fetchone()
         if row is not None:

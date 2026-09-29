@@ -61,6 +61,9 @@ TemplateKind = Literal[
     "handoff_transfer",
     "back_with_cardy",
     "abstain_fallback",
+    "goal_card_status",
+    "goal_balance_due",
+    "goal_decline_explain",
     "ask_which_card_dispute",
     "dispute_no_transactions",
     "dispute_transactions_prompt",
@@ -591,6 +594,26 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
         "pt": (
             "Por aqui não consigo cuidar de {topic_label}. {reason} {closest_action} {human_offer}"
         ),
+    },
+    # Per-goal fact templates (D12): what `compose` sends when the LLM's draft
+    # fails the grounding check twice. Placeholders are filled in code, no digits.
+    "goal_card_status": {
+        "es": "Tu tarjeta {card_kind} {card_mask} está {status} y vence el {expiry}.",
+        "pt": "Seu cartão {card_kind} {card_mask} está {status} e vence em {expiry}.",
+    },
+    "goal_balance_due": {
+        "es": (
+            "Tu saldo actual es {current_balance}. Tu pago mínimo estimado es "
+            "{min_payment} y vence el {due_date}."
+        ),
+        "pt": (
+            "Seu saldo atual é {current_balance}. Seu pagamento mínimo estimado é "
+            "{min_payment} e vence em {due_date}."
+        ),
+    },
+    "goal_decline_explain": {
+        "es": "Tu compra fue rechazada: {decline_cause} {decline_next_step}",
+        "pt": "Sua compra foi recusada: {decline_cause} {decline_next_step}",
     },
 }
 

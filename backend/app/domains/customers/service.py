@@ -13,10 +13,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 from app.core.errors import ToolUnavailable
+from app.core.pii import KnownPii
 from app.domains.customers import repository
 from app.domains.customers.schemas import CustomerProfile
 
-__all__ = ["LoginProfile", "get_login_profile", "get_profile"]
+__all__ = ["LoginProfile", "build_known_pii", "get_known_pii", "get_login_profile", "get_profile"]
 
 _COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
     "México": "MX",
@@ -37,6 +38,19 @@ class LoginProfile(BaseModel):
     customer_status: Literal["Active", "Inactive", "Suspended", "Closed"]
     document_type: str
     document_last3: str
+
+
+def build_known_pii(
+    document_number: str | None, first_name: str | None, last_name: str | None
+) -> KnownPii:
+    """Names are split into words (3+ letters) so a customer typing only one
+    surname is still masked; the shared shape for `FakeBank` and Postgres."""
+    words: dict[str, None] = {}
+    for full in (first_name, last_name):
+        for word in (full or "").split():
+            if len(word) >= 3:
+                words.setdefault(word, None)
+    return KnownPii(document_number=(document_number or "").strip() or None, names=tuple(words))
 
 
 def _map_country(raw: str) -> Literal["MX", "CO", "AR"]:
@@ -69,3 +83,10 @@ async def get_login_profile(customer_id: str) -> LoginProfile:
         document_type=row["document_type"],
         document_last3=row["document_last3"],
     )
+
+
+async def get_known_pii(customer_id: str) -> KnownPii:
+    row = await repository.fetch_known_pii(customer_id)
+    if row is None:
+        raise ToolUnavailable(f"no profile for customer {customer_id!r}")
+    return build_known_pii(row["document_number"], row["first_name"], row["last_name"])

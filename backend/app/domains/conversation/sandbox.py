@@ -40,6 +40,7 @@ from langgraph.graph.state import CompiledStateGraph
 from app.core.actions import ActionResult
 from app.core.config import get_settings
 from app.core.llm import LLMClient, get_llm_client
+from app.core.pii import KnownPii
 from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
 from app.domains.conversation.graph import (
@@ -50,6 +51,7 @@ from app.domains.conversation.graph import (
     build_graph,
     run_turn,
 )
+from app.domains.conversation.masking import mask_user_text
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import BankReadTools, ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -62,8 +64,8 @@ from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.registry import get_policies
 from app.domains.policy.tools_policy import step_up_rule, tool_allowed
-from app.domains.safety.vault import InMemoryAddressVault
-from app.domains.transactions.schemas import TxFilter, TxView
+from app.domains.safety.vault import InMemoryPiiVault, PiiVault
+from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["build_sandbox_session", "main"]
 
@@ -97,9 +99,17 @@ class _RecordingBankTools:
         self.calls.append("search_transactions")
         return await self._inner.search_transactions(tx_filter)
 
+    async def explain_decline(self, tx_id: str) -> DeclineExplanation:
+        self.calls.append("explain_decline")
+        return await self._inner.explain_decline(tx_id)
+
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         self.calls.append("get_fx_rate")
         return await self._inner.get_fx_rate(source, target)
+
+    async def get_pii_profile(self) -> KnownPii:
+        # Not recorded: the masking step reads it, not an LLM node (D34).
+        return await self._inner.get_pii_profile()
 
 
 class _RecordingWriteTools:
@@ -164,6 +174,7 @@ class _SandboxSession:
     config: RunnableConfig
     bank_tools: _RecordingBankTools
     gate: FakeStepUpGate
+    vault: PiiVault
 
 
 def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
@@ -213,6 +224,7 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
     )
 
     llm: LLMClient = get_llm_client()
+    vault = InMemoryPiiVault()
     graph = build_graph(MemorySaver())
     config: RunnableConfig = {
         "configurable": {
@@ -220,13 +232,15 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
             "session": session,
             "bank_tools": bank_tools,
             "bank_write_tools": bank_write_tools,
-            "vault": InMemoryAddressVault(),
+            "vault": vault,
             "llm": llm,
             "handoff_tools": InMemoryHandoffTools(),
             "audit": NullAuditRecorder(),
         }
     }
-    return _SandboxSession(graph=graph, config=config, bank_tools=bank_tools, gate=gate)
+    return _SandboxSession(
+        graph=graph, config=config, bank_tools=bank_tools, gate=gate, vault=vault
+    )
 
 
 def build_sandbox_session(
@@ -287,11 +301,14 @@ async def _run_session(customer_id: str, data_dir: Path) -> None:
                 continue
             reply, debug = await run_turn(graph, "", config=config, resume="step_up")
         else:
+            # D4: mask the typed line before it becomes graph input; slash
+            # commands above carry no customer text and are not masked.
+            masked = await mask_user_text(text, bank_tools=bank_tools, vault=session.vault)
             reply, debug = await run_turn(
-                graph, text, config=config, confirmation=None, resume=None
+                graph, masked, config=config, confirmation=None, resume=None
             )
 
-        print(reply)
+        print(await session.vault.unmask(reply))
         print(
             f"debug language={debug.language} status={debug.status} "
             f"intents={debug.intents} slots={debug.slots.model_dump(exclude_none=True)} "

@@ -20,6 +20,7 @@ number, before it re-raises.
 import structlog
 
 from app.core.errors import AccessDenied
+from app.core.pii import KnownPii
 from app.domains.cards import service as cards_service
 from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
@@ -45,6 +46,9 @@ class PostgresBank:
 
     async def get_profile(self) -> CustomerProfile:
         return await customers_service.get_profile(self._ctx.customer_id)
+
+    async def get_pii_profile(self) -> KnownPii:
+        return await customers_service.get_known_pii(self._ctx.customer_id)
 
     async def list_cards(self) -> list[CardSummary]:
         return await cards_service.list_cards(self._ctx.customer_id)

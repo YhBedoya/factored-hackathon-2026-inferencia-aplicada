@@ -20,6 +20,7 @@ from app.core.llm.client import StructuredLLMClient, build_chat_model
 from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable
 from app.core.llm.registry import MODEL_REGISTRY, PromptRef
 from app.core.llm.settings import LLMSettings
+from app.core.llm.sink import LLMCallRecord
 
 
 class _Echo(BaseModel):
@@ -53,8 +54,9 @@ class _StubChatModel:
         self.runnable: _StubRunnable | None = None
 
     def with_structured_output(
-        self, schema: type[Any], *, include_raw: bool = False
+        self, schema: type[Any], *, include_raw: bool = False, method: str | None = None
     ) -> _StubRunnable:
+        assert method in (None, "json_schema")  # anthropic must use API structured outputs
         self.runnable = _StubRunnable(self._outputs)
         return self.runnable
 
@@ -104,15 +106,17 @@ def test_transport_failure_is_bounded_and_logged() -> None:
     assert chat_model.default_request_timeout == settings.timeout_s  # type: ignore[attr-defined]
 
     request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
-    stub = _StubChatModel([APIConnectionError(request=request)])
+    raw_pii = ("4111111111111111", "ana.perez@example.com", "+52 55 1234 5678")
+    error = APIConnectionError(message="echoed input: " + " ".join(raw_pii), request=request)
+    stub = _StubChatModel([error])
     client = StructuredLLMClient(settings, chat_model_factory=lambda s, step: stub)
 
-    user_text = "mi numero de tarjeta es 4111 1111 1111 1111"
+    user_text = "mi tarjeta es ⟨CARD_1⟩ y quiero bloquearla"
     with capture_logs() as logs:
         with pytest.raises(LLMUnavailable):
             asyncio.run(
                 client.structured(
-                    step="nlu",
+                    step="compose",
                     prompt=PromptRef("nlu", 1),
                     system="sys",
                     user=user_text,
@@ -124,14 +128,49 @@ def test_transport_failure_is_bounded_and_logged() -> None:
     event = logs[0]
     assert event["event"] == "llm.call"
     assert event["provider"] == "anthropic"
-    assert event["model_id"] == MODEL_REGISTRY["nlu"]["anthropic"]
+    assert event["model_id"] == MODEL_REGISTRY["compose"]["anthropic"]
     assert event["prompt_version"] == "nlu@v1"
     assert event["temperature"] == 0.0
     assert event["outcome"] == "unavailable"
     assert event["attempt"] == 1
+    assert event["error_type"] == "APIConnectionError"
+    assert len(event["error_message"]) <= 300
+    # R5: an error body can echo the input, so the logged text is masked.
+    for value in raw_pii:
+        assert value not in event["error_message"]
+    for kind in ("CARD", "EMAIL", "PHONE"):
+        assert f"⟨{kind}⟩" in event["error_message"]
 
     for value in logs[0].values():
         assert user_text not in str(value)
+
+
+class _RecordingSink:
+    def __init__(self) -> None:
+        self.records: list[LLMCallRecord] = []
+
+    async def record(self, record: LLMCallRecord) -> None:
+        self.records.append(record)
+
+
+def test_nlu_sends_no_temperature() -> None:
+    """claude-sonnet-5-5 rejects `temperature` (400): NLU omits it and the ledger stores NULL."""
+    model = build_chat_model(_settings(), "nlu")
+    assert model.temperature is None  # type: ignore[attr-defined]
+    payload = model._get_request_payload([("human", "hola")])  # type: ignore[attr-defined]
+    assert "temperature" not in payload
+
+    valid = {"raw": None, "parsed": _Echo(text="ok"), "parsing_error": None}
+    sink = _RecordingSink()
+    client = StructuredLLMClient(
+        _settings(), chat_model_factory=lambda s, step: _StubChatModel([valid]), sink=sink
+    )
+    asyncio.run(
+        client.structured(
+            step="nlu", prompt=PromptRef("nlu", 1), system="sys", user="hola", schema=_Echo
+        )
+    )
+    assert [r.temperature for r in sink.records] == [None]
 
 
 def test_provider_switch_is_local(monkeypatch: pytest.MonkeyPatch) -> None:

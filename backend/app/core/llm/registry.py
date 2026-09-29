@@ -21,14 +21,15 @@ __all__ = [
 Provider = Literal["anthropic", "bedrock", "openai"]
 Step = Literal["nlu", "compose", "handoff_summary", "paraphrase"]
 
-# Haiku 4.5 for every served step (D6). The Bedrock ID is a placeholder until
-# Dev A's K2 confirms the inference-profile ARN/region; do not build on it
-# before then. `paraphrase` is eval-only tooling (ADR-030): it has no
-# Bedrock/Anthropic entry because `STEP_PROVIDER` pins it to `openai` always.
+# Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
+# The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
+# ARN/region; do not build on them before then. `paraphrase` is eval-only tooling
+# (ADR-030): it has no Bedrock/Anthropic entry because `STEP_PROVIDER` pins it to
+# `openai` always.
 MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "nlu": {
-        "anthropic": "claude-haiku-4-5-20251001",
-        "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
+        "anthropic": "claude-sonnet-5-5",
+        "bedrock": "us.anthropic.claude-sonnet-5-5-v1:0",  # unconfirmed until K2
     },
     "compose": {
         "anthropic": "claude-haiku-4-5-20251001",
@@ -41,8 +42,11 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "paraphrase": {"openai": "gpt-6-luna"},
 }
 
-TEMPERATURE: dict[Step, float] = {
-    "nlu": 0.0,
+# `None` means "send no temperature" (the model default). claude-sonnet-5-5 answers
+# `400 invalid_request_error: "temperature" is deprecated for this model` to any
+# value, so `nlu` omits it; the ledger records NULL for those calls.
+TEMPERATURE: dict[Step, float | None] = {
+    "nlu": None,
     "compose": 0.0,
     "handoff_summary": 0.0,
     # gpt-6-luna rejects any non-default temperature ("Only the default (1)

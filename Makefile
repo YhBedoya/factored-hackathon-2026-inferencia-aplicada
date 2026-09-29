@@ -4,12 +4,12 @@
 -include .env
 export
 
-COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.observability.yml
+COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.devtools.yml
 
 COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
 STACK_NAME ?= swip-card-support
 
-.PHONY: setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check
+.PHONY: langfuse-up langfuse-down eval eval-pii-check setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -19,32 +19,36 @@ setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cd frontend && npm ci
 	pre-commit install --hook-type pre-commit --hook-type commit-msg
 
-fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED in .env with random values (D21). Never prints a value.
+fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED / PII_VAULT_KEY (Fernet) in .env with random values (D21). Never prints a value.
 	python3 -c "\
-	import re, secrets; \
-	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED']; \
+	import base64, os, re, secrets; \
+	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED', 'PII_VAULT_KEY']; \
+	gen = lambda k: base64.urlsafe_b64encode(os.urandom(32)).decode() if k == 'PII_VAULT_KEY' else secrets.token_urlsafe(32); \
 	lines = open('.env').read().splitlines(); \
 	matches = [re.match(r'^([A-Z_]+)=(.*)$$', l) for l in lines]; \
 	present = {m.group(1) for m in matches if m and m.group(1) in keys}; \
 	filled = []; \
-	out = [(filled.append(m.group(1)) or f'{m.group(1)}={secrets.token_urlsafe(32)}') if (m and m.group(1) in keys and m.group(2) == '') else l for l, m in zip(lines, matches)]; \
-	out = out + [(filled.append(k) or f'{k}={secrets.token_urlsafe(32)}') for k in keys if k not in present]; \
+	out = [(filled.append(m.group(1)) or f'{m.group(1)}={gen(m.group(1))}') if (m and m.group(1) in keys and m.group(2) == '') else l for l, m in zip(lines, matches)]; \
+	out = out + [(filled.append(k) or f'{k}={gen(k)}') for k in keys if k not in present]; \
 	open('.env', 'w').write('\n'.join(out) + '\n'); \
 	print('filled: ' + (', '.join(filled) if filled else 'none (already set)'))"
 
-mcp-setup: ## Pull every Docker-run MCP image pinned in .mcp.json (Playwright, VictoriaLogs, VictoriaTraces).
-	python3 -c "\
-	import json, subprocess; \
-	servers = json.load(open('.mcp.json'))['mcpServers']; \
-	images = [a for s in servers.values() if s.get('command') == 'docker' \
-	          for a in s.get('args', []) if '/' in a and ':' in a and not a.startswith('-')]; \
-	[subprocess.run(['docker', 'pull', image], check=True) for image in images]"
+mcp-setup: ## Pull the three agent-tooling MCP images (compose services, docker-compose.devtools.yml).
+	$(COMPOSE) pull mcp-victorialogs mcp-victoriatraces mcp-playwright
 
 up: ## Dev stack, hot reload.
 	$(COMPOSE) up -d --build --wait
 
 down: ## Stop the dev stack.
 	$(COMPOSE) down
+
+LANGFUSE_SERVICES := langfuse-web langfuse-worker langfuse-postgres langfuse-clickhouse langfuse-redis langfuse-minio
+
+langfuse-up: ## Self-hosted Langfuse (opt-in) at http://localhost:3100. Create a project, put its keys in .env.
+	$(COMPOSE) --profile langfuse up -d --wait $(LANGFUSE_SERVICES)
+
+langfuse-down: ## Stop and remove the Langfuse services (data volumes are kept).
+	$(COMPOSE) --profile langfuse rm -sf $(LANGFUSE_SERVICES)
 
 test: ## Backend + pipeline unit tests.
 	cd backend && uv run pytest tests/unit -q
@@ -89,6 +93,13 @@ chat-ui: ## Streamlit sandbox page on http://localhost:8501.
 
 nlu-smoke: ## Live NLU smoke set (needs ANTHROPIC_API_KEY).
 	cd backend && uv run python scripts/nlu_smoke.py
+
+eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] (proposed|baseline|both).
+	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES))
+
+eval-pii-check: ## PII scan of a run's LLM-call export (RUN=<run_id>).
+	@test -n "$(RUN)" || { echo "usage: make eval-pii-check RUN=<run_id>"; exit 2; }
+	uv run --project backend python -m eval.harness.pii_check --run $(RUN)
 
 # --- D2-A live API chat (real login, real Postgres, `make up` running) ------
 

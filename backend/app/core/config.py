@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     identity_hmac_key: str = ""
     credentials_seed: str = ""
+    pii_vault_key: str = ""  # Fernet key (D21); vault rows and message content need it
+    agent_system: Literal["proposed", "baseline"] = "proposed"  # baseline only under APP_ENV=eval
     session_ttl_minutes: int = 60
     login_max_failures: int = 5
     login_window_seconds: int = 900

@@ -172,7 +172,7 @@ class GraphState(TurnState):
     node's partial-update return dict never has to restate a key it did not
     touch.
 
-    `segments` and `resume` are graph-local, not part of the checkpointed
+    `segments`, `grounding` and `resume` are graph-local, not part of the checkpointed
     `TurnState` contract (B3): a flow's filled reply text and this turn's
     step-up resume flag are this graph's own bookkeeping, not something a
     tool, a policy or another domain ever reads.
@@ -186,6 +186,7 @@ class GraphState(TurnState):
     ui: NotRequired[list[UIEvent]]
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
     handoff_request: NotRequired[str]
+    grounding: NotRequired[str]
 
 
 class DebugInfo(BaseModel):
@@ -371,8 +372,20 @@ def _guard_access[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
 
 def build_graph(
     checkpointer: BaseCheckpointSaver[Any],
+    system: Literal["proposed", "baseline"] = "proposed",
 ) -> CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]:
-    """Compile the v0 turn graph (D8, D9, D20)."""
+    """Compile the v0 turn graph (D8, D9, D20).
+
+    `system="baseline"` (D17) swaps exactly four nodes -- `understand`,
+    `compose`, `handoff_summary` and `abstain`'s wording -- for LLM-free
+    ones. Tools, policy, flows and graph shape stay identical.
+    """
+    from app.domains.conversation.baseline.template_compose import (
+        baseline_abstain,
+        baseline_compose,
+        baseline_handoff_summary,
+        baseline_understand,
+    )
     from app.domains.conversation.flows.card_block import card_block
     from app.domains.conversation.flows.card_info import card_info
     from app.domains.conversation.flows.card_unlock import card_unlock
@@ -398,7 +411,8 @@ def build_graph(
 
     graph = StateGraph(GraphState, input_schema=TurnInput, output_schema=TurnOutput)
     graph.add_node("load_session", load_session)
-    graph.add_node("understand", understand)
+    baseline = system == "baseline"
+    graph.add_node("understand", baseline_understand if baseline else understand)
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
     graph.add_node("card_info", _guard_access(card_info))
@@ -409,11 +423,11 @@ def build_graph(
     graph.add_node("decline_explain", _guard_access(decline_explain))
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
-    graph.add_node("compose", compose)
+    graph.add_node("compose", baseline_compose if baseline else compose)
     graph.add_node("next_intent", next_intent)
     graph.add_node("finish", finish)
-    graph.add_node("abstain", abstain)
-    graph.add_node("handoff_summary", handoff_summary)
+    graph.add_node("abstain", baseline_abstain if baseline else abstain)
+    graph.add_node("handoff_summary", baseline_handoff_summary if baseline else handoff_summary)
     graph.add_node("handoff", handoff)
     graph.add_node("relay_to_agent", relay_to_agent)
 

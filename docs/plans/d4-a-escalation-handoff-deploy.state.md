@@ -73,8 +73,8 @@ Branch `feat/d4-a-escalation-handoff-deploy`, based on `develop`.
 | T29 | done | a313d17 | staff round-trip ES/PT + access boundaries + bank-blocked test; 3/3 round-trip pass after T22 runner fix |
 | T30 | done | ab7d438 | docs 02 §3/§5/§6, 03 §6, 04 §3–§5, 06 §3, 08 §7/§10 (compose order) reflect mid-card decisions |
 | T31 | done | abbf16d | cleanup, make client, live e2e (Pix abstain, human_request handoff, admin reset 200 but ~354 s) |
-| T32 | pending | | |
-| T33 | pending | | |
+| T32 | moved → D5-A | | Runbook written in D5-A T27 |
+| T33 | moved → D5-A | | Recorded by `/wave-run D5-A-deploy` |
 
 <!-- IMPLEMENTER ZONE — append-only, written by the task agents. -->
 ## Task log

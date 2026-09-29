@@ -32,6 +32,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ToolUnavailable
 from app.domains.cards.schemas import BlockReason, CardDetails
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.flows.actions import (
     StepSpec,
     decision,
@@ -115,6 +116,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     outcome = select_card(cards, hint, failures, policy, language)
 
     if isinstance(outcome, Ask):
+        record(outcome.card_options)
         text = get_template("ask_which_card_dispute", language).replace(
             "{card_options}", outcome.card_options
         )

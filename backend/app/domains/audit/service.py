@@ -14,10 +14,11 @@ from uuid import UUID, uuid4
 
 from pydantic import JsonValue
 
+from app.core.llm.sink import LLMCallRecord
 from app.domains.audit import repository
 from app.domains.audit.schemas import AuditActor, AuditEvent, AuditType
 
-__all__ = ["AuditRecorder"]
+__all__ = ["AuditLLMCallSink", "AuditRecorder"]
 
 
 class AuditRecorder:
@@ -62,3 +63,12 @@ class AuditRecorder:
         )
         await self._insert(event)
         return event.id
+
+
+class AuditLLMCallSink:
+    """`LLMCallSink` backed by `audit.llm_calls` (D9). `core/llm` only sees the
+    protocol, so it imports no domain; id and timestamp are set here.
+    """
+
+    async def record(self, call: LLMCallRecord) -> None:
+        await repository.insert_llm_call(uuid4(), datetime.now(UTC), call)

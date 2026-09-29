@@ -21,6 +21,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.actions import ActionResult
 from app.core.errors import ConfirmationRequired
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
@@ -64,6 +65,7 @@ def fill(template: str, **values: str) -> str:
     Plain `str.replace`, not `str.format`: a stray, unfilled `{other}` in the
     template is left untouched rather than raising `KeyError`.
     """
+    record(*values.values())
     text = template
     for key, value in values.items():
         text = text.replace(f"{{{key}}}", value)

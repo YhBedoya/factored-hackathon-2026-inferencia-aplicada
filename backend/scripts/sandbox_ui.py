@@ -29,6 +29,7 @@ if str(_BACKEND_ROOT) not in sys.path:
 
 from app.core.llm import LLMSettings  # noqa: E402
 from app.domains.conversation.graph import run_turn  # noqa: E402
+from app.domains.conversation.masking import mask_user_text  # noqa: E402
 from app.domains.conversation.sandbox import build_sandbox_session  # noqa: E402
 
 _REPO_ROOT = _BACKEND_ROOT.parent
@@ -114,9 +115,18 @@ def _send(text: str) -> None:
     st.session_state.messages.append(("user", text, None))
     loop = _event_loop()
     st.session_state.bank_tools.calls.clear()
-    reply, debug = loop.run_until_complete(
-        run_turn(st.session_state.graph, text, config=st.session_state.config)
-    )
+    # R5, D4: the graph only ever sees the masked line; the reply is unmasked
+    # for display. The vault is the session's own (`build_sandbox_session`).
+    vault = st.session_state.config["configurable"]["vault"]
+
+    async def _turn() -> tuple[str, Any]:
+        masked = await mask_user_text(text, bank_tools=st.session_state.bank_tools, vault=vault)
+        reply, debug = await run_turn(
+            st.session_state.graph, masked, config=st.session_state.config
+        )
+        return await vault.unmask(reply), debug
+
+    reply, debug = loop.run_until_complete(_turn())
     st.session_state.messages.append(("assistant", reply, debug))
     st.session_state.closed = "conversation_closed" in debug.ui
 
