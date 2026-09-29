@@ -33,9 +33,9 @@ The NLU call must return intents from this list only. Anything else is `status =
 ## 3. Turn graph (LangGraph)
 
 ```
-load_session ─► mask_pii ─► understand ─► route
-                                            ├─ mode == human ─────────────► relay_to_agent ─► END
-                                            ├─ escalation rule hit ───────► handoff ─► compose
+load_session ─┬─ mode == human ─► relay_to_agent ─► END   (_entry, no LLM, no bot reply)
+              └─► mask_pii ─► understand ─► route
+                                            ├─ escalation rule hit ───────► handoff_summary ─► handoff ─► END
                                             ├─ status out_of_market ──────► abstain(out_of_market) ─► compose
                                             ├─ status out_of_scope ───────► abstain(scope) ─► compose
                                             ├─ status ambiguous ──────────► clarify (counter++) ─► compose
@@ -45,12 +45,14 @@ load_session ─► mask_pii ─► understand ─► route
 flow finished ─► pop next queued intent (if any) ─► …   compose ─► grounding_check ─► unmask ─► persist+audit ─► END
 ```
 
+**Handoff nodes (D4-A).** `handoff_summary` is the only LLM step: it writes `request` from masked facts (fixed template on a raw digit or an `LLMError`, R4/R11). `handoff` is code only: it assembles the packet from verified read-backs, calls `HandoffTools.create`, sets `mode = human` and emits the `handoff_transfer` text and the banner; the flow that triggers a handoff never writes the reply. `relay_to_agent` publishes the customer's text as `message{role: customer}`. `abstain` builds its four facts from `policies/scope.yaml` with no tool call and `compose@v5` phrases them.
+
 **Graph state** (checkpointed in Postgres, keyed by `conversation_id`):
 `customer_id` (bound from the validated session passed in the run config, read-only; ADR-025), `language`, `country`, `mode` (`bot` / `human`), `nlu` (the current turn's `NLUResult`, or none), `intent_queue`, `pending` (`flow`, `node`, `awaiting_slot`), `slots`, `selected_card_id`, `clarification_failures`, `confirmation_token_id`, `dispute` (`unrecognized_charge`'s `DisputeState`: card, offered and picked tx ids, fraud scores, answers, question index, compromise and block-refused flags; D4-B), `facts[]` (for the composer, reset by `load_session` at the start of each turn and appended to by flows within that turn; Dev A reviews the reducer), `actions: list[ActionResult]` (tool results, D9), `escalation_reason`. `user_text`, `confirmation`, `resume` (in) and `reply`, `ui` (out) are graph-local channels, not part of the checkpointed `TurnState`: `confirmation` carries the button's `ConfirmationDecision{token_id, decision}` and is `None` on a typed turn (D17); `resume: Literal["step_up"] | None` marks a step-up completed outside the chat and is `None` on every other turn (D2-B D1, amends D2-K D17); `ui` is `list[UIEvent]`, reset to `[]` by `load_session` each turn (D16).
 
 `pending.awaiting_slot` values: `"confirmation"` and `"otp"` for a plan pause and a step-up pause (D2-K D15); `"card_hint"` (`card_select`'s re-ask, D2-B); `"block_kind"` (`card_block`'s lock-vs-block clarification); `"address_confirm"` (`replacement`'s "send it to the address on file?" gate) and `"address"` (the raw-address turn that follows a "no", D2-B D4); `"offer_replacement"` (the yes/no gate `card_block` and `card_unlock` both use to offer a replacement after a verified permanent block); `"transactions"` (`unrecognized_charge` waiting on a `selection` from `ui.transaction_list`), `"card_possession"` and `"dispute_question"` (its yes/no questions, D4-B).
 
-**Entry routing** (the conditional edge right after `load_session`, before `understand`; D2-B D1/D4/D20), in this order: (0) `selection` set (the transaction pick, `04` §3, D4-B D7) → resume `unrecognized_charge` when paused at `awaiting_slot == "transactions"`, else `smalltalk` (the route has already rejected ids that weren't offered with `409 selection_invalid`, and the flow checks again); (1) `confirmation` set → resume the flow paused at `awaiting_slot == "confirmation"`, else `smalltalk`; (2) `resume == "step_up"` → resume the flow paused at `awaiting_slot == "otp"`, else `smalltalk`; (3) `awaiting_slot == "address"` → resume that flow directly; (4) otherwise → `understand`. Steps 0–3 skip the LLM entirely; `smalltalk` is what a stale button or an OTP resume with no matching pause falls to instead of crashing.
+**Entry routing** (the conditional edge right after `load_session`, before `understand`; D2-B D1/D4/D20), in this order: (0) `selection` set (the transaction pick, `04` §3, D4-B D7) → resume `unrecognized_charge` when paused at `awaiting_slot == "transactions"`, else `smalltalk` (the route has already rejected ids that weren't offered with `409 selection_invalid`, and the flow checks again); (1) `confirmation` set → resume the flow paused at `awaiting_slot == "confirmation"`, else `smalltalk`; (2) `resume == "step_up"` → resume the flow paused at `awaiting_slot == "otp"`, else `smalltalk`; (3) `awaiting_slot == "address"` → resume that flow directly; (4) otherwise → `understand`. The human-mode check comes before all five: `mode == human` goes `load_session → relay_to_agent → finish` (D4-A D13). Steps 0–3 skip the LLM entirely; `smalltalk` is what a stale button or an OTP resume with no matching pause falls to instead of crashing.
 
 **A new flow intent while one is paused (P1).** `route` sends a fresh (or replacing) card-action turn to `enqueue` rather than queuing it behind the paused flow: `enqueue` cancels any open plan (`bank_write_tools.cancel_plan`, only if a token is set), clears `pending`, `confirmation_token_id` and `clarification_failures`, then queues this turn's non-management intents in message order. A queued intent with no flow of its own yet (P3 — `decline_explain`, `human_request`, `transaction_search`, the Stretch intents) becomes an `unsupported_intent` template segment at its place in the queue, with no LLM call. `next_intent` pops the intent a flow node just answered and, when another remains queued, resets `facts` so `compose` never blends two intents' facts into one segment; an empty queue ends the turn.
 
@@ -129,11 +131,11 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Legal / regulator mention | Keywords or NLU flag (demanda, abogado, Condusef, SIC, BCRA, Procon…) | Handoff to Reclamos with priority |
 | Claim priority flags | See 4.8 | Handoff to Reclamos |
 | Customer not active | Customer status is Closed, Suspended or Inactive (it takes precedence over card status, ADR-021) | Card info read-only, block still allowed, no unlock or replacement; handoff (Atención) |
-| Unauthorized access | Asks about another customer's card or account | Refuse, audit `access_denied`; repeated attempts → end the session **(proposed)** |
+| Unauthorized access | An `injection_suspected` turn (another person's data) or a tool raising `AccessDenied` | Refuse with the `injection_suspected` template and audit `access_denied{source: nlu\|tool, attempt}` every time; the 2nd attempt in a conversation (`attempts_before_handoff`) → handoff (Atención, `unauthorized_access`) |
 | Tool / LLM failure | Retries exhausted | Safe fallback template + handoff |
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |
 
-Queues **(proposed)**: `fraudes`, `cobranza`, `reclamos`, `retencion`, `creditos`, `atencion`.
+Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `retencion` and `creditos` are Stretch **(proposed)**.
 
 **Structured abstain (ADR-026).** An abstain reply is never just a list of topics. Code builds four facts from `policies/scope.yaml` using the NLU `topic`, and `compose` phrases them: (1) acknowledge the topic, (2) the `reason_key` (why this chat can't do it), (3) the closest supported action, if `closest_intents` has one, as a one-tap suggestion, and (4) an offer of a human (`human_queue`). After two abstains in a row, the human offer becomes a button **(proposed)**. If a flow is pending, it stays pending and the reply restates its question. Example: "¿Me das un préstamo?" → "Por aquí no puedo gestionar préstamos: este chat atiende tus tarjetas. Si quieres, reviso el cupo disponible de tu tarjeta de crédito, o te paso con un asesor."
 
@@ -143,7 +145,7 @@ Queues **(proposed)**: `fraudes`, `cobranza`, `reclamos`, `retencion`, `creditos
 2. The customer sees, in their language, "Te estoy transfiriendo con un especialista de Fraudes. Caso #…" plus the facts already verified. The bot stops replying.
 3. An agent claims the handoff in the staff console and sees the packet, the audit timeline and the (unmasked, role-gated) conversation. Agent messages are posted over HTTP and relayed to the customer's SSE stream through Redis pub/sub.
 4. Agents can trigger one-click actions (e.g., unlock). These go through the **same policy engine** and are audited with `actor = agent:<id>`.
-5. **Return to bot**: `mode = bot`, and the graph resumes with a summary fact of what the agent did.
+5. **Return to bot** (D4-A D27, D28): only the claimant may return; anyone else gets `409 not_claimant` with nothing changed. `return_to_bot` runs first: under the conversation's turn lock it sets `mode = bot` (graph and `app.conversations`) and clears `pending`, `intent_queue`, `confirmation_token_id`, `clarification_failures` and all handoff state (`escalation_reason`, `handoff_queue`, `unauthorized_attempts`, `handoff_id`, `handoff_evidence`, `handoff_request`). A busy lock is `409 turn_in_progress` with nothing changed. Only after that succeeds is the handoff marked `returned` and the fixed `back_with_cardy` system message and `mode{bot}` persisted and emitted. **No summary fact is written:** `facts` are reset every turn by `load_session`, so a fact written between turns would never reach `compose`.
 
 ## 7. Language and localization
 

@@ -56,8 +56,8 @@ from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.state import DisputeState, Pending
 from app.domains.conversation.tools import registry
+from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
-from app.domains.handoff.memory import InMemoryHandoffPort
 from app.domains.identity.models import Session
 from app.domains.safety.vault import InMemoryAddressVault
 
@@ -84,6 +84,8 @@ _BRANCH_NODES = (
     "unsupported",
     "fallback",
     "smalltalk",
+    "abstain",
+    "handoff",
 )
 
 _RELEASE_LOCK_SCRIPT = """
@@ -215,7 +217,8 @@ async def _run_turn(
                 "llm": host.llm,
                 "bank_write_tools": write_tools,
                 "vault": InMemoryAddressVault(),
-                "handoff": InMemoryHandoffPort(conversation_id, ctx.policy_version),
+                "handoff_tools": ServiceHandoffTools(ctx),
+                "audit": audit,
             }
         }
 
@@ -224,6 +227,7 @@ async def _run_turn(
         language: Literal["es", "pt"] = "es"
         reply = ""
         ui: list[UIEvent] = []
+        handed_off = False
 
         async for update in host.graph.astream(
             {
@@ -237,10 +241,22 @@ async def _run_turn(
         ):
             for node_name, values in update.items():
                 await events.publish(conversation_id, "status", {"step": node_name})
+                if node_name == "relay_to_agent":
+                    # Human mode (D13): echo the typed text for the agent and
+                    # stop. Checked before the `None` guard because this node
+                    # returns an empty update. The customer message was
+                    # persisted by `start_turn`.
+                    await events.publish(
+                        conversation_id, "message", {"role": "customer", "text": text or ""}
+                    )
+                    await events.publish(conversation_id, "done", {"turn_id": str(turn_id)})
+                    return
                 # A node whose returned update is empty (e.g. `next_intent`
                 # with nothing left to pop) streams as `None`, not `{}`.
                 if values is None:
                     continue
+                if node_name == "handoff" and values.get("handoff_id") is not None:
+                    handed_off = True
                 if node_name == "understand":
                     nlu = values.get("nlu")
                     language = values.get("language", language)
@@ -267,6 +283,10 @@ async def _run_turn(
 
         for event in ui:
             await events.publish(conversation_id, "ui", event.model_dump(mode="json"))
+        if handed_off:
+            await events.publish(
+                conversation_id, "mode", {"mode": "human", "agent_display_name": None}
+            )
 
         ui_payload = [event.model_dump(mode="json") for event in ui] if ui else None
         await store.add_message(

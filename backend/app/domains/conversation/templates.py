@@ -22,8 +22,6 @@ Language = Literal["es", "pt"]
 TemplateKind = Literal[
     "greeting",
     "greeting_named",
-    "out_of_market",
-    "out_of_scope",
     "injection_suspected",
     "unsupported_intent",
     "fallback",
@@ -57,11 +55,12 @@ TemplateKind = Literal[
     "offer_replacement",
     "replacement_declined",
     "replacement_not_eligible",
-    "handoff_placeholder",
-    "handoff_request",
     "credit_only",
     "synthetic_footnote",
     "read_only_note",
+    "handoff_transfer",
+    "back_with_cardy",
+    "abstain_fallback",
     "ask_which_card_dispute",
     "dispute_no_transactions",
     "dispute_transactions_prompt",
@@ -87,28 +86,6 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "greeting": {
         "es": "Hola. Soy Cardy, de Swip. ¿Qué necesitas hoy con tu tarjeta?",
         "pt": "Oi. Sou a Cardy, do Swip. Como posso ajudar com seu cartão hoje?",
-    },
-    # D14: a real request, but for a rail/market Swip does not offer today.
-    "out_of_market": {
-        "es": (
-            "Ese medio de pago no lo manejamos en Swip por ahora. "
-            "Puedo ayudarte con tus tarjetas o conectarte con una persona del equipo."
-        ),
-        "pt": (
-            "Essa forma de pagamento o Swip ainda não oferece. "
-            "Posso ajudar com seus cartões ou te conectar com uma pessoa da equipe."
-        ),
-    },
-    # D14: a real request, but for another product this chat does not cover.
-    "out_of_scope": {
-        "es": (
-            "Eso no lo puedo gestionar por aquí. "
-            "Puedo ayudarte con tus tarjetas o conectarte con una persona del equipo."
-        ),
-        "pt": (
-            "Isso eu não consigo resolver por aqui. "
-            "Posso ajudar com seus cartões ou te conectar com uma pessoa da equipe."
-        ),
     },
     # D14: the message tried to redefine instructions or asked for someone else's data.
     "injection_suspected": {
@@ -359,31 +336,6 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
         "es": "Tu tarjeta no cumple las condiciones para pedir un reemplazo en este momento.",
         "pt": "Seu cartão não cumpre as condições para pedir uma substituição neste momento.",
     },
-    # D9: names the queue without claiming a transfer already happened
-    # (there is no packet or mode=human yet).
-    "handoff_placeholder": {
-        "es": (
-            "Esto lo va a revisar una persona del equipo de {queue_label}. "
-            "Ya tiene el contexto de lo que me contaste."
-        ),
-        "pt": (
-            "Isso vai ser revisado por uma pessoa da equipe de {queue_label}. "
-            "Ela já tem o contexto do que você me contou."
-        ),
-    },
-    # D4-B D1: `InMemoryHandoffPort.create`'s fixed stand-in for the
-    # LLM-written `request` field, until A3's real port replaces it.
-    # `{queue_label}` is filled in code (`localization.format.queue_label`).
-    "handoff_request": {
-        "es": (
-            "Un cliente necesita ayuda del equipo de {queue_label}. "
-            "Revisa el paquete de contexto adjunto."
-        ),
-        "pt": (
-            "Um cliente precisa de ajuda da equipe de {queue_label}. "
-            "Revise o pacote de contexto anexado."
-        ),
-    },
     # ADR-020: balance_due on a debit card has no balance or minimum payment.
     # No offer here: the card's status follows right away in the same reply,
     # so there is never an offer the customer has to answer.
@@ -506,18 +458,13 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "{time}. Número do caso: {case_ids}."
         ),
     },
-    # D10: both the block and the claim were refused. No case, still a handoff.
+    # D10: both the block and the claim were refused. No case, still a
+    # handoff: `handoff_transfer` follows and names the queue.
     "dispute_handoff_no_claim": {
-        "es": (
-            "No hice ningún cambio en tu tarjeta ni abrí un reclamo. Esto lo "
-            "va a revisar el equipo de {queue_label}."
-        ),
-        "pt": (
-            "Não fiz nenhuma alteração no seu cartão nem abri um caso. Isso "
-            "vai ser revisado pela equipe de {queue_label}."
-        ),
+        "es": "No hice ningún cambio en tu tarjeta ni abrí un reclamo.",
+        "pt": "Não fiz nenhuma alteração no seu cartão nem abri um caso.",
     },
-    # D10: `HandoffDraft.open_questions` entries, code-filled (D1), never LLM text.
+    # D10: packet `open_questions` entries (`handoff_open_questions`), code-filled, never LLM text.
     "dispute_open_question_card_active": {
         "es": "La tarjeta del cliente sigue activa porque rechazó el bloqueo.",
         "pt": "O cartão do cliente continua ativo porque ele recusou o bloqueio.",
@@ -525,6 +472,37 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "dispute_open_question_claim_refused": {
         "es": "El cliente también rechazó abrir el reclamo.",
         "pt": "O cliente também recusou abrir o caso.",
+    },
+    # D12: the handoff happened (row, mode=human, event). `reference` is the
+    # already-formatted case reference.
+    "handoff_transfer": {
+        "es": (
+            "Te estoy transfiriendo con una persona del equipo de {queue_label}. "
+            "Tu caso es {reference}. Ya tiene el contexto de lo que me contaste "
+            "y, desde aquí, yo dejo de responder para que ella te atienda."
+        ),
+        "pt": (
+            "Estou transferindo você para uma pessoa da equipe de {queue_label}. "
+            "Seu caso é {reference}. Ela já tem o contexto do que você me contou "
+            "e, daqui em diante, eu paro de responder para que ela atenda você."
+        ),
+    },
+    # D14: system message when the agent returns the conversation to the bot.
+    "back_with_cardy": {
+        "es": "Vuelves a hablar conmigo, Cardy. ¿Qué más necesitas con tu tarjeta?",
+        "pt": "Você voltou a falar comigo, a Cardy. Do que mais precisa com seu cartão?",
+    },
+    # D18: fixed four-part abstain when the composed draft fails or is
+    # rejected: topic, reason, closest action, human offer. The caller passes
+    # an empty `closest_action` when there is none and collapses the
+    # resulting double space.
+    "abstain_fallback": {
+        "es": (
+            "Por aquí no puedo gestionar {topic_label}. {reason} {closest_action} {human_offer}"
+        ),
+        "pt": (
+            "Por aqui não consigo cuidar de {topic_label}. {reason} {closest_action} {human_offer}"
+        ),
     },
 }
 

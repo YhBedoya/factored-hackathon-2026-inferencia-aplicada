@@ -6,6 +6,15 @@ type PacketViewProps = {
 	packet: HandoffPacket;
 };
 
+// A verified fact's value is whatever JSON the server stored: a case-id list,
+// a tracking id, a status or `true`. Shown as-is, never reformatted (R4).
+function factValue(value: unknown): string {
+	if (Array.isArray(value)) {
+		return value.join(", ");
+	}
+	return typeof value === "string" ? value : JSON.stringify(value);
+}
+
 /**
  * The claimed handoff's packet (`04` §4): verified facts, the writes already
  * applied (with their case ids), the transaction evidence and any open
@@ -28,9 +37,7 @@ export function PacketView({ packet }: PacketViewProps) {
 					<ul className="text-sm text-muted-foreground">
 						{packet.verified_facts.map((fact) => (
 							<li key={fact.fact} data-testid="packet-verified-fact">
-								{fact.fact}:{" "}
-								{Array.isArray(fact.value) ? fact.value.join(", ") : fact.value}{" "}
-								({fact.source})
+								{fact.fact}: {factValue(fact.value)}({fact.source})
 							</li>
 						))}
 					</ul>

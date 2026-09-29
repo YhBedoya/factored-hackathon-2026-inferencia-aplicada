@@ -19,7 +19,7 @@ test("login, live inbox, claim, packet, agent chat, return to bot", async ({
 	});
 
 	await page.goto("/staff/login");
-	await page.getByTestId("staff-login-username").fill("agente");
+	await page.getByTestId("staff-login-username").fill("agent.fraudes");
 	await page.getByTestId("staff-login-password").fill(PASSWORD);
 	await page.getByTestId("staff-login-submit").click();
 	await page.waitForURL("**/staff");

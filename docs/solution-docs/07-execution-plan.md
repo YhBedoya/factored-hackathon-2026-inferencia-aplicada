@@ -202,7 +202,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 ### D4 · Wed 30 Sep — Fraud, human handoff, public URL
 **Goal:** on the public URL, a customer reports charges they don't recognize → the card is blocked → a claim is filed → a Fraudes agent takes over live in the staff console and hands the conversation back to the bot. Out-of-market and human requests are handled.
 
-**Morning decision (30 min, both):** the concrete AWS setup (ADR-017). Proposal: a single EC2 instance running the Compose prod layer + Nginx + TLS, with Postgres on an EBS volume and an IAM instance role for Bedrock. The alternative is ECS Fargate + RDS.
+**AWS setup (ADR-017): decided 2026-09-28.** A single EC2 t3.xlarge (us-east-1) running the Compose prod layer + Nginx + TLS, an IAM instance role for S3 and Bedrock, and data from our own S3 copy built on the box. A5 follows [`08-deployment.md`](08-deployment.md).
 
 **Dev A: G10 escalation and handoff backend, and G12a deploy**
 | # | Task | Done when |
@@ -211,7 +211,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 | A2 | Abstention: out of market (Pix, boleto, CPF, a Brazilian account) and out of scope → fixed facts + what the bot can offer | Pix → no tool called |
 | A3 | Handoff packet built in code (the one-line request summary is the only LLM part) + `handoffs` table + `mode = human` + Redis pub/sub. The bot stops replying | Packet test: all fields present, facts only from read-backs, no transcript |
 | A4 | Live-takeover backend: staff API (inbox by queue, claim, agent message, return to bot), agent stream, and agent messages relayed to the customer's stream | The API test for the round trip passes |
-| A5 | AWS deploy v0: prod compose, Nginx + TLS, IAM role for Bedrock, golden DB restore, secrets, Budgets alarm, `make deploy`, demo-reset endpoint. `/test-idp` off | The public URL serves the D3 flows |
+| A5 | AWS deploy v0 (`08-deployment.md`): prod compose, Nginx + TLS, IAM role for S3 and Bedrock, golden DB built on the box with `make data`, secrets from SSM, Budgets alarm, `make deploy`, demo-reset endpoint. `/test-idp` off | The public URL serves the D3 flows |
 
 **Dev B: G9 disputes and fraud, and the handoff screens**
 | # | Task | Done when |
@@ -431,12 +431,12 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 |---|---|---|
 | D1 | Bedrock region, model per step | Haiku 4.5 for intent detection and replies to start |
 | D1–D4 | When B's connection moves from the Anthropic API to Bedrock (ADR-028) | As soon as K2 passes; before the D4 deploy at the latest |
-| D4 | Whether the public deployment runs Langfuse too (ADR-006) | Decided with the AWS setup |
+| D4 | Whether the public deployment runs Langfuse too (ADR-006) | **Decided 2026-09-28:** no. Langfuse stays local (`08` §1) |
 | D5 | When self-hosted Langfuse is set up | A adds it with D5 A1 (mask hook). Earlier if the observability layer has room |
 | D1 | Time zone of `transaction_date` | **Decided (A5, D1-A D1):** every `bank.*` TIMESTAMP column is UTC (`timestamptz`); local display uses `BANK_TZ` per country (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`) |
 | D2 | Minimum payment formula (synthetic) | `max(5% × balance, floor)` with floors USD 10 / COP 40.000 / ARS 5.000, plus overdue amounts when `days_past_due > 0` |
 | D2 | Final persona list | B's 10 + ~20 found by query |
-| D4 | AWS setup (ADR-017) | Single EC2 + Compose + IAM role |
+| D4 | AWS setup (ADR-017) | **Decided 2026-09-28:** single EC2 t3.xlarge + Compose + IAM role, us-east-1 (`08-deployment.md`) |
 | D4 | Suspected-compromise rule | ≥ 2 transactions picked, or card not in hand, or `fraud_score` > 30 |
 | D5 | D1.5 numeric targets | After the first dev run |
 | D5–D6 | Paraphrase, simulator and judge model family | Non-Claude Bedrock family, picked on D5 |

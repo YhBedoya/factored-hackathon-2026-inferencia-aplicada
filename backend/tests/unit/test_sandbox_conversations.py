@@ -102,7 +102,7 @@ def test_pt_single_card_answers_in_pt(fakebank_dir: Path) -> None:
 
 
 def test_pix_routes_out_of_market(fakebank_dir: Path) -> None:
-    """B8: Pix asks about a rail this bank doesn't support here (`out_of_market`)."""
+    """B8, D4-A: Pix (`out_of_market`) routes to the structured `abstain` node."""
     ctx = ToolContext(
         customer_id="CLI-TFMULTI00001",
         conversation_id=uuid4(),
@@ -112,17 +112,21 @@ def test_pix_routes_out_of_market(fakebank_dir: Path) -> None:
     )
     bank_tools = FakeBank(ctx, fakebank_dir)
     nlu = NLUResult(
-        language="es", intents=["general_question"], status="out_of_market", slots=NLUSlots()
+        language="es",
+        intents=["general_question"],
+        status="out_of_market",
+        slots=NLUSlots(topic="pix_boleto"),
     )
-    llm = ScriptedLLM({"nlu": [nlu]})
+    draft = ComposeDraft(text="{topic_label}: {abstain_reason} {closest_action}. {human_offer}.")
+    llm = ScriptedLLM({"nlu": [nlu], "compose": [draft]})
     graph = build_graph(MemorySaver())
     config = _config(ctx, bank_tools, llm, "t-pix")
 
     reply, debug = asyncio.run(run_turn(graph, "quiero pagar con Pix", config=config))
     assert debug.status == "out_of_market"
-    assert debug.route == "unsupported"
-    assert reply == get_template("out_of_market", "es")
-    assert all(call.step != "compose" for call in llm.calls)
+    assert debug.route == "abstain"
+    assert debug.tools_called == []
+    assert "Pix" in reply
 
 
 def test_es_greeting_gets_cardy_template(fakebank_dir: Path) -> None:

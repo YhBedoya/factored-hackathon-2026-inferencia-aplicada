@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_COOKIE_VALUE = "e2e-fake-staff-csrf-token";
 
-const HANDOFF_ID = "hnd-e2e-001";
+const HANDOFF_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 const CONVERSATION_ID = "conv-e2e-staff-001";
 
 export type RecordedRequest = {
@@ -39,12 +39,13 @@ function packetFor() {
 				verified: true,
 				audit_event_id: "aud-e2e-001",
 				at: "2026-03-30T12:00:05Z",
+				tracking_id: null,
 				case_ids: ["CLM-AB12CD34", "CLM-EF56GH78"],
 			},
 		],
 		evidence: [{ type: "transaction", ref: "TRX-001", fraud_score: "45.00" }],
 		open_questions: ["El cliente aún tiene la tarjeta en su poder."],
-		escalation_rules_hit: [],
+		escalation_rules_hit: ["suspected_fraud"],
 		handoff_id: HANDOFF_ID,
 		conversation_id: CONVERSATION_ID,
 		request: "Cliente reporta cargos no reconocidos.",
@@ -72,14 +73,24 @@ export async function installMockStaffApi(
 	let claimed = false;
 	let messageCounter = 0;
 
+	// D4-A's `StaffMeResponse`, `HandoffSummary` and `HandoffDetail` shapes.
+	const profile = {
+		role: "agent",
+		username: "agent.fraudes",
+		display_name: displayName,
+		queue: "fraudes",
+	};
+
 	function summary() {
 		return {
 			handoff_id: HANDOFF_ID,
+			reference: "HO-3FA85F64",
 			conversation_id: CONVERSATION_ID,
 			queue: "fraudes",
 			priority: "high",
 			reason: "suspected_fraud",
 			status: claimed ? "claimed" : "queued",
+			language: "es",
 			created_at: "2026-03-30T12:00:00Z",
 			claimed_by: claimed ? displayName : null,
 		};
@@ -93,7 +104,7 @@ export async function installMockStaffApi(
 		if (pathname.endsWith("/staff/me") && method === "GET") {
 			await route.fulfill(
 				loggedIn
-					? { status: 200, json: { role: "agent", display_name: displayName } }
+					? { status: 200, json: profile }
 					: { status: 401, json: { detail: "session_expired" } },
 			);
 			return;
@@ -117,10 +128,7 @@ export async function installMockStaffApi(
 					httpOnly: false,
 				},
 			]);
-			await route.fulfill({
-				status: 200,
-				json: { role: "agent", display_name: displayName },
-			});
+			await route.fulfill({ status: 200, json: profile });
 			return;
 		}
 
@@ -130,7 +138,7 @@ export async function installMockStaffApi(
 			handoffsPolls += 1;
 			await route.fulfill({
 				status: 200,
-				json: { items: handoffsPolls > 1 ? [summary()] : [] },
+				json: handoffsPolls > 1 ? [summary()] : [],
 			});
 			return;
 		}
@@ -141,7 +149,7 @@ export async function installMockStaffApi(
 		) {
 			await route.fulfill({
 				status: 200,
-				json: { ...summary(), packet: packetFor() },
+				json: { summary: summary(), packet: packetFor() },
 			});
 			return;
 		}
@@ -153,7 +161,7 @@ export async function installMockStaffApi(
 			claimed = true;
 			await route.fulfill({
 				status: 200,
-				json: { ...summary(), packet: packetFor() },
+				json: { summary: summary(), packet: packetFor() },
 			});
 			return;
 		}
@@ -175,7 +183,7 @@ export async function installMockStaffApi(
 			requests.push({ pathname, method, body: request.postDataJSON() });
 			messageCounter += 1;
 			await route.fulfill({
-				status: 202,
+				status: 201,
 				json: { message_id: `msg-e2e-${messageCounter}` },
 			});
 			return;

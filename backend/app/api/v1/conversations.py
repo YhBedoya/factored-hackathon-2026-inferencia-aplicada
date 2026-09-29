@@ -64,10 +64,20 @@ from app.domains.conversation.runner import (
 )
 from app.domains.conversation.store import ConversationRow
 from app.domains.identity.deps import get_session, require_csrf, require_role
-from app.domains.identity.models import Session, require_customer_id
+from app.domains.identity.models import Session
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
 
 __all__ = ["router"]
+
+
+def _customer_id(session: Session) -> str:
+    """Narrow `session.customer_id` for the type checker. `None` means a
+    staff session, which `require_role("customer")` already refused, so
+    this is unreachable in practice (D15).
+    """
+    if session.customer_id is None:
+        raise HTTPException(status_code=403, detail="forbidden_role")
+    return session.customer_id
 
 
 async def get_owned_conversation(
@@ -79,7 +89,7 @@ async def get_owned_conversation(
     way -- when the row doesn't exist or belongs to a different customer.
     """
     conversation = await store.get_conversation(conversation_id)
-    if conversation is None or conversation.customer_id != session.customer_id:
+    if conversation is None or conversation.customer_id != _customer_id(session):
         raise HTTPException(status_code=404, detail="not_found")
     return conversation
 
@@ -153,7 +163,7 @@ async def create_conversation(
     """Start a new conversation for the caller's own `customer_id` (R1)."""
 
     conversation_id = await store.create_conversation(
-        require_customer_id(session), body.language or _DEFAULT_LANGUAGE
+        _customer_id(session), body.language or _DEFAULT_LANGUAGE
     )
     return CreateConversationResponse(conversation_id=conversation_id)
 
@@ -231,7 +241,7 @@ async def post_confirmation(
     """
 
     host = request.app.state.turn_host
-    confirmation_store = RedisConfirmationStore(require_customer_id(session), str(conversation.id))
+    confirmation_store = RedisConfirmationStore(_customer_id(session), str(conversation.id))
     is_open = await confirmation_store.is_open(token_id)
     checkpointed_token = await checkpointed_confirmation_token(host, conversation.id)
     if not is_open or checkpointed_token != token_id:

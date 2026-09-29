@@ -2,7 +2,7 @@ event: status
 data: {"step":"execute"}
 
 event: ui
-data: {"kind":"handoff_banner","payload":{"handoff_id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","queue":"fraudes","queue_label":"Fraudes","case_ids":["CLM-AB12CD34","CLM-EF56GH78"]}}
+data: {"kind":"handoff_banner","payload":{"handoff_id":"3fa85f64-5717-4562-b3fc-2c963f66afa6","reference":"HO-3FA85F64","queue":"fraudes","queue_label":"Fraudes","case_ids":["CLM-AB12CD34","CLM-EF56GH78"]}}
 
 event: message
 data: {"role":"bot","text":"Listo. Bloqueamos tu tarjeta y abrimos los casos CLM-AB12CD34 y CLM-EF56GH78 con Fraudes.","sources":[]}

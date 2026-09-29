@@ -29,6 +29,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 
 from app.api.v1.conversations import get_owned_conversation
+from app.api.v1.staff import get_claimed_conversation
 from app.core.config import get_settings
 from app.domains.identity.deps import RoleGuard
 
@@ -83,6 +84,14 @@ def _calls_somewhere(dependant: Dependant, target: object) -> bool:
     return any(_calls_somewhere(sub, target) for sub in dependant.dependencies)
 
 
+def _role_guard_roles(ctx: routing.RouteContext) -> list[tuple[str, ...]]:
+    return [
+        dependency.dependency.roles
+        for dependency in ctx.dependencies
+        if isinstance(dependency.dependency, RoleGuard)
+    ]
+
+
 def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "dev")
     get_settings.cache_clear()
@@ -109,18 +118,24 @@ def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch
                 f"{ctx.path} doesn't depend on get_owned_conversation"
             )
 
-        staff_contexts = [
-            ctx for ctx in contexts if ctx.path is not None and ctx.path.startswith("/api/v1/staff")
+        # D16: staff routes need agent/admin, admin routes admin only, and
+        # every claimed-conversation route is scoped to the claimant.
+        for ctx in contexts:
+            if ctx.path is None:
+                continue
+            if ctx.path.startswith("/api/v1/staff/"):
+                assert ("agent", "admin") in _role_guard_roles(ctx), ctx.path
+            if ctx.path.startswith("/api/v1/admin/"):
+                assert ("admin",) in _role_guard_roles(ctx), ctx.path
+        claimed_prefix = "/api/v1/staff/conversations/{conversation_id}"
+        claimed_contexts = [
+            ctx for ctx in contexts if ctx.path is not None and ctx.path.startswith(claimed_prefix)
         ]
-        assert len(staff_contexts) >= 7
-        for ctx in staff_contexts:
-            roles = {guard.roles for guard in _role_guards(ctx)}
-            assert roles == {("agent",)}, f"{ctx.path} isn't agent-only: {roles}"
-
-        logout_contexts = [ctx for ctx in contexts if ctx.path == "/api/v1/auth/logout"]
-        assert len(logout_contexts) == 1
-        logout_roles = {guard.roles for guard in _role_guards(logout_contexts[0])}
-        assert logout_roles == {("customer", "agent")}, logout_roles
+        assert len(claimed_contexts) >= 3
+        for ctx in claimed_contexts:
+            assert _calls_somewhere(ctx.dependant, get_claimed_conversation), (
+                f"{ctx.path} doesn't depend on get_claimed_conversation"
+            )
     finally:
         monkeypatch.undo()
         get_settings.cache_clear()

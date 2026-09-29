@@ -19,19 +19,28 @@ graph TD;
 	compose(compose)
 	next_intent(next_intent)
 	finish(finish)
+	abstain(abstain)
+	handoff_summary(handoff_summary)
+	handoff(handoff)
+	relay_to_agent(relay_to_agent)
 	__end__([<p>__end__</p>]):::last
 	__start__ --> load_session;
+	abstain -.-> finish;
+	abstain -.-> next_intent;
 	card_block -.-> compose;
 	card_block -.-> fallback;
 	card_block -.-> finish;
+	card_block -.-> handoff_summary;
 	card_block -.-> next_intent;
 	card_info -.-> compose;
 	card_info -.-> fallback;
 	card_info -.-> finish;
+	card_info -.-> handoff_summary;
 	card_info -.-> next_intent;
 	card_unlock -.-> compose;
 	card_unlock -.-> fallback;
 	card_unlock -.-> finish;
+	card_unlock -.-> handoff_summary;
 	card_unlock -.-> next_intent;
 	compose -.-> finish;
 	compose -.-> next_intent;
@@ -44,9 +53,12 @@ graph TD;
 	enqueue -.-> unsupported;
 	fallback -.-> finish;
 	fallback -.-> next_intent;
+	handoff --> finish;
+	handoff_summary --> handoff;
 	load_session -.-> card_block;
 	load_session -.-> card_info;
 	load_session -.-> card_unlock;
+	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
 	load_session -.-> understand;
@@ -58,16 +70,20 @@ graph TD;
 	next_intent -.-> replacement;
 	next_intent -.-> unrecognized_charge;
 	next_intent -.-> unsupported;
+	relay_to_agent --> finish;
 	replacement -.-> compose;
 	replacement -.-> fallback;
 	replacement -.-> finish;
+	replacement -.-> handoff_summary;
 	replacement -.-> next_intent;
 	smalltalk --> finish;
+	understand -.-> abstain;
 	understand -.-> card_block;
 	understand -.-> card_info;
 	understand -.-> card_unlock;
 	understand -.-> enqueue;
 	understand -.-> fallback;
+	understand -.-> handoff_summary;
 	understand -.-> replacement;
 	understand -.-> smalltalk;
 	understand -.-> unrecognized_charge;
@@ -75,8 +91,10 @@ graph TD;
 	unrecognized_charge -.-> compose;
 	unrecognized_charge -.-> fallback;
 	unrecognized_charge -.-> finish;
+	unrecognized_charge -.-> handoff_summary;
 	unrecognized_charge -.-> next_intent;
 	unsupported -.-> finish;
+	unsupported -.-> handoff_summary;
 	unsupported -.-> next_intent;
 	finish --> __end__;
 	classDef default fill:#f2f0ff,line-height:1.2

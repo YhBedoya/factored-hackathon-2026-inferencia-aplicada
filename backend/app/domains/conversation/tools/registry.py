@@ -40,7 +40,7 @@ from app.domains.conversation.tools.postgres import PostgresBank
 from app.domains.conversation.tools.postgres_writes import PostgresBankWrites
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
-from app.domains.identity.models import Session, require_customer_id
+from app.domains.identity.models import Session
 from app.domains.identity.step_up_session import SessionStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
@@ -63,9 +63,13 @@ def build_tool_context(session: Session, conversation_id: UUID, trace_id: str) -
     always comes from `session.customer_id`, never from a route argument, a
     tool call or anything the LLM produced. `policy_version` is the combined
     policy hash (D2), so it reaches every audit event this turn writes.
+    Only a customer session with a `customer_id` gets a context (D15): a
+    staff session raises `PermissionError`.
     """
+    if session.role != "customer" or session.customer_id is None:
+        raise PermissionError("R1: a tool context needs a customer session with a customer_id")
     return ToolContext(
-        customer_id=require_customer_id(session),
+        customer_id=session.customer_id,
         conversation_id=conversation_id,
         actor="customer",
         policy_version=get_policies().hash,

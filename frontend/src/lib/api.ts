@@ -10,7 +10,7 @@ import {
 	logoutApiV1AuthLogoutPost,
 	type MeResponse,
 	meApiV1AuthMeGet,
-	postAgentMessageApiV1StaffConversationsConversationIdMessagesPost,
+	postConversationMessageApiV1StaffConversationsConversationIdMessagesPost,
 	postMessageApiV1ConversationsConversationIdMessagesPost,
 	refreshApiV1AuthRefreshPost,
 	returnHandoffApiV1StaffHandoffsHandoffIdReturnPost,
@@ -241,7 +241,7 @@ export async function staffMe(): Promise<StaffMeResponse | null> {
 
 export async function listStaffHandoffs(): Promise<HandoffSummary[]> {
 	const result = await withStaffAuth(() => listHandoffsApiV1StaffHandoffsGet());
-	return unwrap(result).items;
+	return unwrap(result);
 }
 
 export async function getStaffHandoff(
@@ -282,7 +282,7 @@ export async function postAgentMessage(
 	text: string,
 ): Promise<string> {
 	const result = await withStaffAuth(() =>
-		postAgentMessageApiV1StaffConversationsConversationIdMessagesPost({
+		postConversationMessageApiV1StaffConversationsConversationIdMessagesPost({
 			path: { conversation_id: conversationId },
 			body: { text },
 		}),

@@ -12,13 +12,13 @@ carries the fixed lock-vs-block labels `card_block` emits while clarifying
 (D4). Both `PickerOption.label`s are formatted in code, never by the LLM (R4).
 `transaction_list` carries the picker for `unrecognized_charge`'s candidate
 transactions (`TxOption.label` is the code-formatted merchant/money/date/mask
-string, D4-B D13); `handoff_banner` tells the customer a case was opened and
-which queue it went to, with the case ids `disputes.create_claim` returned
-(D4-B D16).
+string, D4-B D13). `handoff_banner` (D4-A) announces the transfer to a
+person; on the fraud path it also carries the case ids
+`disputes.create_claim` returned (D4-B D16). `mode` and `message` payloads
+are the non-`ui` SSE events the runner publishes.
 """
 
 from typing import Annotated, Literal
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,6 +35,8 @@ __all__ = [
     "ConversationClosedPayload",
     "HandoffBannerEvent",
     "HandoffBannerPayload",
+    "MessagePayload",
+    "ModePayload",
     "OtpRequiredEvent",
     "OtpRequiredPayload",
     "PickerOption",
@@ -141,7 +143,7 @@ class QuickRepliesPayload(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    slot: Literal["block_kind"]
+    slot: Literal["block_kind", "abstain"]
     options: list[PickerOption]
 
 
@@ -185,28 +187,49 @@ class TransactionListEvent(BaseModel):
 
 
 class HandoffBannerPayload(BaseModel):
-    """`ui.handoff_banner` payload: the case just opened (D9-D11, D16).
+    """`ui.handoff_banner` payload: reference and queue label built in code (R4).
 
-    `case_ids` is empty on the compromise-refused-claim path where no claim
-    row was written (D10); `queue_label` is code-formatted so the frontend
-    never has to localize `queue` itself (R4).
+    `case_ids` lists the claims the conversation's verified
+    `disputes.create_claim` results opened before the handoff (D4-B D16);
+    it is empty for every other handoff.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    handoff_id: UUID
+    handoff_id: str
+    reference: str
     queue: Queue
     queue_label: str
-    case_ids: list[str]
+    case_ids: list[str] = Field(default_factory=list)
 
 
 class HandoffBannerEvent(BaseModel):
-    """Push event: a handoff packet was created for this turn (D9-D11)."""
+    """Push event: the conversation was handed to a person."""
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["handoff_banner"]
     payload: HandoffBannerPayload
+
+
+class ModePayload(BaseModel):
+    """`mode` SSE payload: who answers (`agent_display_name` once claimed)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    mode: Literal["bot", "human"]
+    agent_display_name: str | None
+
+
+class MessagePayload(BaseModel):
+    """`message` SSE payload; `customer` is published only in human mode."""
+
+    model_config = ConfigDict(frozen=True)
+
+    role: Literal["bot", "customer", "agent", "system"]
+    text: str
+    sources: list[str]
+    agent_display_name: str | None = None
 
 
 UIEvent = Annotated[

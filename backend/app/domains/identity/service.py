@@ -22,7 +22,7 @@ See `docs/specs/d2-a-login-read-tools-api.md` D2, D6, D7, D9.
 
 import hmac
 from datetime import UTC, datetime
-from typing import Protocol
+from typing import Literal, Protocol
 
 import structlog
 
@@ -36,7 +36,6 @@ from app.domains.identity.models import (
     Session,
     StaffLoginRequest,
     StaffMeResponse,
-    require_customer_id,
 )
 from app.domains.identity.passwords import (
     login_key,
@@ -182,17 +181,15 @@ async def login(
     """Verify `req` against the account keyed by its `login_key` (D1, D2, D6),
     behind the D7 rate limit.
 
-    Requires `status == "active"` and `role == "customer"` (D3): a staff
-    row that somehow matched this `login_key` is treated exactly like an
-    unknown account. Every failure path -- unknown `login_key`, wrong role,
-    inactive account, wrong password -- logs `auth.login_failed` with only
-    `login_key_prefix`, counts against the `rl:login:<login_key>` limit, and
-    raises the same `InvalidCredentials`, so a caller can't distinguish
-    "no such account" from "wrong password". Once that counter reaches
-    `settings.login_max_failures`, every further attempt -- including one
-    with the right password -- logs `auth.login_throttled` and raises
-    `TooManyAttempts` instead, without touching the counter or the account
-    store again.
+    Requires `status == "active"`. Every failure path -- unknown
+    `login_key`, inactive account, wrong password -- logs
+    `auth.login_failed` with only `login_key_prefix`, counts against the
+    `rl:login:<login_key>` limit, and raises the same `InvalidCredentials`,
+    so a caller can't distinguish "no such account" from "wrong password".
+    Once that counter reaches `settings.login_max_failures`, every further
+    attempt -- including one with the right password -- logs
+    `auth.login_throttled` and raises `TooManyAttempts` instead, without
+    touching the counter or the account store again.
     """
 
     store = store or _default_store
@@ -212,7 +209,6 @@ async def login(
     if (
         account is None
         or account.status != "active"
-        or account.role != "customer"
         or not verify_password(req.password, account.password_hash)
     ):
         await limiter.record_failure(rate_limit_key, window_seconds=settings.login_window_seconds)
@@ -230,6 +226,9 @@ async def login(
     )
 
 
+_OTP_RATE_LIMIT_KEY_PREFIX = "rl:otp:"
+
+
 async def staff_login(
     req: StaffLoginRequest,
     *,
@@ -237,13 +236,10 @@ async def staff_login(
     limiter: LoginLimiter | None = None,
     settings: Settings | None = None,
 ) -> Session:
-    """Verify `req` against the account keyed by `staff_login_key(req.username)`
-    (D3), behind the same D7 rate limit as `login()`.
-
-    Requires `status == "active"` and `role == "agent"`: a customer row
-    that somehow matched this key is treated exactly like an unknown staff
-    account. Same failure shape as `login()` -- one `InvalidCredentials`
-    message, `429` checked first, and only `login_key_prefix` ever logged.
+    """`login()` for seeded staff accounts (D15): same limiter shape, keyed
+    `rl:login:<staff_login_key>` and checked first, same errors. Requires
+    role `agent|admin` and `status == "active"`; a customer account can't
+    come in through this door. The session has no `customer_id`.
     """
 
     store = store or _default_store
@@ -256,32 +252,48 @@ async def staff_login(
 
     failures = await limiter.get_failures(rate_limit_key)
     if failures >= settings.login_max_failures:
-        _logger.warning("auth.login_throttled", login_key_prefix=prefix)
+        _logger.warning("auth.staff_login_throttled", login_key_prefix=prefix)
         raise TooManyAttempts(f"too many failed attempts for {prefix}")
 
     account = await store.get_account_by_login_key(key)
     if (
         account is None
+        or account.role not in ("agent", "admin")
         or account.status != "active"
-        or account.role != "agent"
         or not verify_password(req.password, account.password_hash)
     ):
         await limiter.record_failure(rate_limit_key, window_seconds=settings.login_window_seconds)
-        _logger.warning("auth.login_failed", login_key_prefix=prefix)
+        _logger.warning("auth.staff_login_failed", login_key_prefix=prefix)
         raise InvalidCredentials(_INVALID_CREDENTIALS_MESSAGE)
 
     _logger.info(
-        "auth.login_succeeded", login_key_prefix=prefix, account_id=str(account.account_id)
+        "auth.staff_login_succeeded", login_key_prefix=prefix, account_id=str(account.account_id)
     )
-    return Session(
-        account_id=account.account_id,
-        role="agent",
-        customer_id=None,
-        step_up_at=None,
-    )
+    role: Literal["agent", "admin"] = "admin" if account.role == "admin" else "agent"
+    return Session(account_id=account.account_id, role=role, customer_id=None, step_up_at=None)
 
 
-_OTP_RATE_LIMIT_KEY_PREFIX = "rl:otp:"
+async def staff_me(session: Session) -> StaffMeResponse:
+    """The staff profile for `session` (D15). A customer session, or an
+    account that lost its staff fields, is a `SessionExpired`.
+    """
+
+    if session.role == "customer":
+        raise SessionExpired("not a staff session")
+    account = await repository.get_account_by_id(session.account_id)
+    if (
+        account is None
+        or account.status != "active"
+        or account.username is None
+        or account.display_name is None
+    ):
+        raise SessionExpired("staff account unavailable")
+    return StaffMeResponse(
+        role=session.role,
+        username=account.username,
+        display_name=account.display_name,
+        queue=account.staff_queue,  # type: ignore[arg-type]  # CHECKed by seeding from Queue
+    )
 
 
 async def verify_otp(
@@ -333,7 +345,9 @@ async def me(session: Session) -> MeResponse:
     in code, never by the LLM (R4).
     """
 
-    profile = await customers_service.get_login_profile(require_customer_id(session))
+    if session.customer_id is None:
+        raise ValueError("me() requires a customer session")
+    profile = await customers_service.get_login_profile(session.customer_id)
     hint = f"{profile.document_type} {_FOUR_BULLETS}{profile.document_last3}"
     return MeResponse(
         role="customer",
@@ -342,23 +356,6 @@ async def me(session: Session) -> MeResponse:
         country=profile.country,
         customer_status=profile.customer_status,
     )
-
-
-async def staff_me(session: Session) -> StaffMeResponse:
-    """`GET /staff/me` (D3, D5): the display name for this agent session's
-    own `account_id`. Never takes a username as an argument -- like `me()`,
-    it only ever reflects the caller's own session back.
-
-    A missing account or `display_name` means the row behind an
-    already-valid token was deleted or never provisioned correctly; that is
-    a stale session, not a bad credential, so it raises `SessionExpired`
-    the same way a revoked token does.
-    """
-
-    account = await repository.get_account_by_id(session.account_id)
-    if account is None or account.display_name is None:
-        raise SessionExpired("staff account no longer exists")
-    return StaffMeResponse(role="agent", display_name=account.display_name)
 
 
 async def session_from_token(token: str) -> tuple[Session, TokenClaims]:
@@ -408,12 +405,9 @@ async def mint_session_for_customer(customer_id: str) -> Session:
     account = await repository.get_account_by_customer_id(customer_id)
     if account is None:
         raise InvalidCredentials(_INVALID_CREDENTIALS_MESSAGE)
-    # `customer_id` (the argument that found `account`) is already the
-    # narrowed `str`, unlike `account.customer_id` (D4: nullable on the
-    # row, for the staff rows that share this table).
     return Session(
         account_id=account.account_id,
         role="customer",
-        customer_id=customer_id,
+        customer_id=account.customer_id,
         step_up_at=None,
     )

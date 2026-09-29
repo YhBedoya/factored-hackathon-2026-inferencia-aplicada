@@ -14,6 +14,7 @@ from app.core.actions import ActionResult
 from app.core.errors import ConfirmationRequired
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.graph import run_turn
+from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from tests.conftest import ScriptedLLM, make_session
 
@@ -58,7 +59,10 @@ def test_unverified_write_never_says_done(fakebank_dir: Path) -> None:
                         slots=NLUSlots(block_kind="temporary_lock"),
                     ),
                     NLUResult(language="es", intents=["affirm"], status="clear"),
-                ]
+                ],
+                "handoff_summary": [
+                    HandoffSummaryDraft(request="Acción sin verificar en {queue_label}.")
+                ],
             }
         )
         session = make_session(
@@ -74,6 +78,8 @@ def test_unverified_write_never_says_done(fakebank_dir: Path) -> None:
 
         assert "Listo" not in reply
         assert "Atención" in reply
+        packet = session.handoff_tools.created[-1]
+        assert (packet.queue, packet.reason) == ("atencion", "action_unverified")
         assert debug.pending is None
 
         final_state = await session.graph.aget_state(session.config)

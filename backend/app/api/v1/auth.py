@@ -1,36 +1,26 @@
 """Auth routes (D2, D6, D7, D9): `POST /auth/login`, `POST /auth/logout`,
-`GET /auth/me`, `POST /auth/otp/verify` (D3-A4), and the D4-B staff split:
-`POST /auth/staff/login` (D3) and the shared `/auth/logout` (D5).
+`GET /auth/me`, `POST /auth/otp/verify` (D3-A4).
 
-`public_router` carries `/auth/login` and `/auth/staff/login`, the two
-non-GET routes CSRF never guards (D6): there is no cookie yet to
-double-submit against. `router` declares `require_role("customer")` and
-`require_csrf` at the *router* level (R13, ADR-025), not per-route, so a
-future route added here can't forget either check -- it still holds
-`/auth/me` and `/auth/otp/verify`, customer-only per D5. `/auth/logout`
-moved to its own `logout_router` (D5): the only route here an agent session
-may also reach, so it needs `require_role("customer", "agent")` instead of
-`router`'s single role. `require_csrf` is a no-op on GET, so mounting it
-next to `GET /auth/me` costs nothing.
+`public_router` carries `/auth/login`, the one non-GET route CSRF never
+guards (D6): there is no cookie yet to double-submit against. `router`
+declares `require_role("customer")` and `require_csrf` at the *router*
+level (R13, ADR-025), not per-route, so a future route added here can't
+forget either check. `require_csrf` is a no-op on GET, so mounting it next
+to `GET /auth/me` costs nothing.
 
-`login()` and `staff_login()` each turn `identity_service.TooManyAttempts`
-(D7's rate limit) into `429 too_many_attempts` before `InvalidCredentials`
-into `401 invalid_credentials` -- the two never collapse into one status,
-since a caller past the rate limit needs to know to stop retrying rather
-than to try a different password. `staff_login()` sets the same cookie pair
-`login()` does and returns `StaffMeResponse` instead of `MeResponse` (D3):
-the two account rows never collide, since `service.login()` accepts only
-`role="customer"` and `service.staff_login()` only `role="agent"`.
+`login()` turns `identity_service.TooManyAttempts` (D7's rate limit) into
+`429 too_many_attempts` before `InvalidCredentials` into `401
+invalid_credentials` -- the two never collapse into one status, since a
+caller past the rate limit needs to know to stop retrying rather than to
+try a different password.
 
 No route here takes `customer_id` (R1): it always comes from the `Session`
-`get_session()` builds off the `session` cookie (a staff session never
-carries one, D4). `POST /auth/refresh` sits on `public_router` too (D6): it
-proves the caller through the `session` cookie plus CSRF, not a role
-dependency, since a session past `exp` has nothing left for `require_role`
-to check -- except for one explicit role check after decoding (D5): an
-agent session gets `403 forbidden_role` instead of a re-issued cookie pair,
-since a staff session never refreshes here (the staff SPA sends any `401`
-straight to `/staff/login`, per D5's own note).
+`get_session()` builds off the `session` cookie. `POST /auth/refresh` sits
+on `public_router` too (D6): it proves the caller through the `session`
+cookie plus CSRF, not a role dependency, since a session past `exp` has
+nothing left for `require_role` to check -- except for one explicit role
+check after decoding (D4-B D5): a staff session gets `403 forbidden_role`
+instead of a re-issued cookie pair, since staff sessions never refresh here.
 
 `POST /auth/otp/verify` (D3-A4 D5) sits on `router`, not `public_router`:
 unlike refresh, stepping up needs a live, role-checked session to step up.
@@ -39,8 +29,7 @@ It mirrors `refresh()`'s re-issue shape exactly -- new `session` and
 session carries a fresh `step_up_at` instead of the same one.
 
 See `docs/specs/d2-a-login-read-tools-api.md` "Contracts" -> "HTTP",
-D6, D7, D9, `docs/specs/d3-a-guardrails-write-path.md` D4, D5 and
-`docs/specs/d4-b-disputes-handoff-screens.md` D3, D5.
+D6, D7, D9 and `docs/specs/d3-a-guardrails-write-path.md` D4, D5.
 """
 
 from typing import Annotated
@@ -51,13 +40,7 @@ from pydantic import BaseModel, ConfigDict
 from app.core.config import Settings, get_settings
 from app.domains.identity import service as identity_service
 from app.domains.identity.deps import get_session, require_csrf, require_role
-from app.domains.identity.models import (
-    LoginRequest,
-    MeResponse,
-    Session,
-    StaffLoginRequest,
-    StaffMeResponse,
-)
+from app.domains.identity.models import LoginRequest, MeResponse, Session
 from app.domains.identity.tokens import (
     CSRF_COOKIE,
     SESSION_COOKIE,
@@ -66,7 +49,7 @@ from app.domains.identity.tokens import (
     new_csrf_token,
 )
 
-__all__ = ["OtpVerifyRequest", "logout_router", "public_router", "router"]
+__all__ = ["OtpVerifyRequest", "public_router", "router"]
 
 
 class OtpVerifyRequest(BaseModel):
@@ -81,9 +64,6 @@ class OtpVerifyRequest(BaseModel):
 
 public_router = APIRouter()
 router = APIRouter(dependencies=[Depends(require_role("customer")), Depends(require_csrf)])
-logout_router = APIRouter(
-    dependencies=[Depends(require_role("customer", "agent")), Depends(require_csrf)]
-)
 
 
 def _set_auth_cookies(
@@ -138,39 +118,14 @@ async def login(req: LoginRequest, response: Response) -> MeResponse:
     return await identity_service.me(session)
 
 
-@public_router.post("/auth/staff/login", response_model=StaffMeResponse)
-async def staff_login(req: StaffLoginRequest, response: Response) -> StaffMeResponse:
-    """Verify `req` against the one agent row (D3), issue the same
-    `session`/`csrf_token` cookie pair `login()` sets, and return the staff
-    profile (`GET /staff/me`'s own shape) instead of `MeResponse`.
-    """
-
-    settings = get_settings()
-    try:
-        session = await identity_service.staff_login(req, settings=settings)
-    except identity_service.TooManyAttempts as exc:
-        raise HTTPException(status_code=429, detail="too_many_attempts") from exc
-    except identity_service.InvalidCredentials as exc:
-        raise HTTPException(status_code=401, detail="invalid_credentials") from exc
-
-    token, _claims = issue_token(
-        session, secret=settings.jwt_secret, ttl_minutes=settings.session_ttl_minutes
-    )
-    csrf_token = new_csrf_token()
-    _set_auth_cookies(response, token=token, csrf_token=csrf_token, settings=settings)
-    return await identity_service.staff_me(session)
-
-
 @public_router.post(
     "/auth/refresh", response_model=MeResponse, dependencies=[Depends(require_csrf)]
 )
 async def refresh(request: Request, response: Response) -> MeResponse:
     """Re-issue the session and CSRF cookies for a still-valid, unrevoked
     session (D6). No role dependency: the cookie + CSRF pair is the proof,
-    same as the spec's "public (needs a valid cookie + CSRF)" -- except for
-    one explicit role check once the token has decoded (D5): a staff
-    session never refreshes here, so it gets `403 forbidden_role` instead of
-    a re-issued cookie pair.
+    same as the spec's "public (needs a valid cookie + CSRF)" -- except that
+    a staff session gets `403 forbidden_role` (D4-B D5).
     """
 
     settings = get_settings()
@@ -189,12 +144,9 @@ async def refresh(request: Request, response: Response) -> MeResponse:
     return await identity_service.me(session)
 
 
-@logout_router.post("/auth/logout", status_code=204)
+@router.post("/auth/logout", status_code=204)
 async def logout(request: Request, response: Response) -> None:
-    """Revoke the caller's `jti` and clear both cookies (D6). Customer and
-    agent sessions share this one route (D5): `identity_service.logout`
-    only ever touches `claims.jti`, so it needs no role branch.
-    """
+    """Revoke the caller's `jti` and clear both cookies (D6)."""
 
     claims: TokenClaims = request.state.session_claims
     await identity_service.logout(claims)

@@ -30,10 +30,19 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.redis import get_redis, ping_redis
-from app.domains.identity.passwords import hash_password, login_key
+from app.domains.identity.passwords import hash_password, login_key, staff_login_key
 from app.main import create_app
 
-__all__ = ["ItAccount", "app_client", "it_accounts", "it_db", "it_env", "restore_cards"]
+__all__ = [
+    "ItAccount",
+    "ItStaff",
+    "app_client",
+    "it_accounts",
+    "it_db",
+    "it_env",
+    "it_staff",
+    "restore_cards",
+]
 
 _CONNECT_TIMEOUT_SECONDS = 2
 _BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -62,6 +71,17 @@ class ItAccount:
     document_type: str
     document_number: str
     password: str
+
+
+@dataclass(frozen=True)
+class ItStaff:
+    """One `it_staff` agent login, in-test only (D4-A T29)."""
+
+    account_id: uuid.UUID
+    username: str
+    password: str
+    display_name: str
+    queue: str
 
 
 def _psycopg_dsn(database_url: str, dbname: str) -> str:
@@ -333,3 +353,71 @@ def app_client(it_env: None) -> Iterator[TestClient]:
 
     with TestClient(create_app()) as client:
         yield client
+
+
+# (username, display name, queue): two agents in different queues so a test
+# can prove one can't touch the other's claimed conversation (R13).
+_STAFF = (
+    ("it.atencion", "Laura", "atencion"),
+    ("it.fraudes", "Sofia", "fraudes"),
+)
+
+
+async def _insert_staff(staff: list[ItStaff]) -> None:
+    async with get_engine().begin() as conn:
+        for agent in staff:
+            await conn.execute(
+                text(
+                    """
+                    INSERT INTO identity.accounts
+                        (account_id, customer_id, login_key, password_hash, role,
+                         username, display_name, staff_queue)
+                    VALUES (:account_id, NULL, :login_key, :password_hash, 'agent',
+                            :username, :display_name, :queue)
+                    """
+                ),
+                {
+                    "account_id": str(agent.account_id),
+                    "login_key": staff_login_key(
+                        agent.username, hmac_key=get_settings().identity_hmac_key
+                    ),
+                    "password_hash": hash_password(agent.password),
+                    "username": agent.username,
+                    "display_name": agent.display_name,
+                    "queue": agent.queue,
+                },
+            )
+
+
+async def _delete_staff(staff: list[ItStaff]) -> None:
+    async with get_engine().begin() as conn:
+        for agent in staff:
+            # `app.handoffs.agent_id` references the account: clear it first.
+            await conn.execute(
+                text("UPDATE app.handoffs SET agent_id = NULL WHERE agent_id = :id"),
+                {"id": str(agent.account_id)},
+            )
+            await conn.execute(
+                text("DELETE FROM identity.accounts WHERE account_id = :id"),
+                {"id": str(agent.account_id)},
+            )
+
+
+@pytest.fixture
+def it_staff(it_env: None) -> Iterator[dict[str, ItStaff]]:
+    """Two seeded-style agents (`atencion`, `fraudes`) keyed by queue, with
+    known passwords. Deleted on teardown, like `it_accounts`.
+    """
+
+    staff = [
+        ItStaff(uuid.uuid4(), username, f"it-staff-{secrets.token_hex(4)}", name, queue)
+        for username, name, queue in _STAFF
+    ]
+    asyncio.run(_insert_staff(staff))
+    get_engine.cache_clear()  # loop-bound: see `it_accounts`
+
+    yield {agent.queue: agent for agent in staff}
+
+    get_engine.cache_clear()
+    asyncio.run(_delete_staff(staff))
+    get_engine.cache_clear()

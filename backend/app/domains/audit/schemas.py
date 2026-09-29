@@ -9,10 +9,10 @@ pull that dependency in too (`06` §2).
 
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Literal, Protocol
+from typing import Annotated, Literal, Protocol
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, JsonValue
+from pydantic import BaseModel, ConfigDict, JsonValue, StringConstraints
 
 __all__ = ["AuditActor", "AuditEvent", "AuditType", "NullAuditRecorder", "Recorder"]
 
@@ -25,13 +25,22 @@ AuditType = Literal[
     "confirmation_used",
     "readback",
     "access_denied",
+    "handoff",
     "reply_sent",
     "error",
 ]
 
-AuditActor = Literal["bot", "customer", "system"]
-"""Who the event is attributed to. A customer turn's events use `"bot"`
-(human decision, this card): the assistant is the one calling tools and
+AuditActor = (
+    Literal["bot", "customer", "system"]
+    | Annotated[
+        str,
+        StringConstraints(pattern=r"^agent:[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"),
+    ]
+)
+"""Who the event is attributed to; staff actions use `agent:<account_id>` (D23).
+
+A customer turn's events use `"bot"` (human decision, D2-K): the assistant is the one
+calling tools and
 composing the reply, not the customer directly.
 """
 

@@ -50,11 +50,15 @@ export type TransactionListUiEvent = {
 	payload: TransactionListPayload;
 };
 
-export type Queue = "atencion" | "cobranza" | "fraudes";
+export type Queue = "atencion" | "cobranza" | "fraudes" | "reclamos";
 
-/** `queue_label` and every `case_ids` entry are code-formatted server-side (R4). */
+/**
+ * `reference`, `queue_label` and every `case_ids` entry are code-formatted
+ * server-side (R4). `case_ids` is empty unless the bot opened claims first.
+ */
 export type HandoffBannerPayload = {
 	handoff_id: string;
+	reference: string;
 	queue: Queue;
 	queue_label: string;
 	case_ids: string[];

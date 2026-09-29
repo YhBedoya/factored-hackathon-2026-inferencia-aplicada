@@ -58,8 +58,10 @@ not be the one that set `pending`) and `ui` from the last `ui` value any
 node wrote this turn.
 """
 
+import functools
 import sys
-from typing import Annotated, Any, Literal, NotRequired, TypedDict
+from collections.abc import Awaitable, Callable
+from typing import Annotated, Any, Literal, NotRequired, TypedDict, cast, get_args
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -68,9 +70,14 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.errors import AccessDenied
+from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import TurnState, _reduce_segments
+from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import UIEvent
+from app.domains.handoff.schemas import HandoffReason
+from app.domains.policy.registry import get_policies
 
 __all__ = [
     "ConfirmationDecision",
@@ -178,6 +185,7 @@ class GraphState(TurnState):
     selection: NotRequired[TxSelection | None]
     ui: NotRequired[list[UIEvent]]
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
+    handoff_request: NotRequired[str]
 
 
 class DebugInfo(BaseModel):
@@ -204,6 +212,9 @@ _BRANCH_NODES = (
     "unsupported",
     "fallback",
     "smalltalk",
+    "abstain",
+    "handoff_summary",
+    "relay_to_agent",
 )
 
 _MANAGEMENT_INTENTS: frozenset[Intent] = frozenset({"greeting", "thanks_close", "affirm", "deny"})
@@ -242,6 +253,9 @@ rather than crashing (P3). Flow tasks add their own entry here.
 def _entry(state: GraphState) -> str:
     """Conditional edge right after `load_session` (D8, D15, D17, `02` §3, D4-B D7).
 
+    A conversation in human mode goes to `relay_to_agent` before any other
+    check (D7): the bot stays silent while an agent owns the conversation.
+
     Four of this turn's shapes skip `understand` entirely (no LLM call): a
     transaction pick, a button confirmation, a step-up resume, and (once a
     flow ships one) a raw address reply. Each continues straight into its
@@ -252,6 +266,8 @@ def _entry(state: GraphState) -> str:
     its own turn shape, never combined with a confirmation or a step-up
     resume.
     """
+    if state.get("mode") == "human":
+        return "relay_to_agent"
     pending = state.get("pending")
     selection = state.get("selection")
     if selection is not None:
@@ -284,15 +300,18 @@ def _dispatch(state: GraphState) -> str:
 
 
 def _after_flow(state: GraphState) -> str:
-    """Conditional edge after a flow node (D8, D15): an escalation reason
+    """Conditional edge after a flow node (D8, D15): a handoff reason (or a
+    queue a flow chose) goes to `handoff_summary`; an escalation reason
     with no card left to talk about goes to the fixed-template `fallback`;
     non-empty `facts` goes to `compose`. A flow that already answered with
     its own fixed template (no facts, e.g. a future `already_in_state`)
     falls straight into `_after_segment`'s own decision instead of a third,
     redundant node.
     """
-    escalation_reasons = {"tool_unavailable", "no_cards", "clarification_exhausted"}
-    if state.get("escalation_reason") in escalation_reasons:
+    reason = state.get("escalation_reason")
+    if reason in get_args(HandoffReason) or state.get("handoff_queue") is not None:
+        return "handoff_summary"
+    if reason in {"tool_unavailable", "no_cards"}:
         return "fallback"
     if state.get("facts"):
         return "compose"
@@ -309,6 +328,42 @@ def _after_segment(state: GraphState) -> str:
     return "finish" if state.get("pending") is not None else "next_intent"
 
 
+def _after_unsupported(state: GraphState) -> str:
+    """Conditional edge after `unsupported` (D6): the attempt that reaches the
+    threshold set `unauthorized_access` and no segment, so it hands off.
+    """
+    if state.get("escalation_reason") == "unauthorized_access":
+        return "handoff_summary"
+    return _after_segment(state)
+
+
+def _guard_access[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
+    """Wrap a flow node so an `AccessDenied` from a tool is a refusal, not a crash (D6).
+
+    Same accounting as `unsupported`'s NLU path: each attempt is audited and
+    counted, and the one that reaches the policy threshold hands off.
+    """
+
+    @functools.wraps(node)
+    async def guarded(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+        try:
+            return await node(state, config)
+        except AccessDenied:
+            attempt = state.get("unauthorized_attempts", 0) + 1
+            recorder = config["configurable"].get("audit") or NullAuditRecorder()
+            await recorder.record("access_denied", {"source": "tool", "attempt": attempt})
+            threshold = get_policies().escalation.unauthorized_access.attempts_before_handoff
+            if attempt >= threshold:
+                return {
+                    "unauthorized_attempts": attempt,
+                    "escalation_reason": "unauthorized_access",
+                }
+            text = get_template("injection_suspected", state.get("language", "es"))
+            return {"unauthorized_attempts": attempt, "segments": [text]}
+
+    return cast(N, guarded)
+
+
 def build_graph(
     checkpointer: BaseCheckpointSaver[Any],
 ) -> CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]:
@@ -319,12 +374,16 @@ def build_graph(
     from app.domains.conversation.flows.replacement import replacement
     from app.domains.conversation.flows.unrecognized_charge import unrecognized_charge
     from app.domains.conversation.nodes import (
+        abstain,
         compose,
         enqueue,
         fallback,
         finish,
+        handoff,
+        handoff_summary,
         load_session,
         next_intent,
+        relay_to_agent,
         route,
         smalltalk,
         understand,
@@ -336,16 +395,20 @@ def build_graph(
     graph.add_node("understand", understand)
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
-    graph.add_node("card_info", card_info)
-    graph.add_node("card_block", card_block)
-    graph.add_node("card_unlock", card_unlock)
-    graph.add_node("replacement", replacement)
-    graph.add_node("unrecognized_charge", unrecognized_charge)
+    graph.add_node("card_info", _guard_access(card_info))
+    graph.add_node("card_block", _guard_access(card_block))
+    graph.add_node("card_unlock", _guard_access(card_unlock))
+    graph.add_node("replacement", _guard_access(replacement))
+    graph.add_node("unrecognized_charge", _guard_access(unrecognized_charge))
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
     graph.add_node("compose", compose)
     graph.add_node("next_intent", next_intent)
     graph.add_node("finish", finish)
+    graph.add_node("abstain", abstain)
+    graph.add_node("handoff_summary", handoff_summary)
+    graph.add_node("handoff", handoff)
+    graph.add_node("relay_to_agent", relay_to_agent)
 
     graph.set_entry_point("load_session")
     graph.add_conditional_edges(
@@ -353,6 +416,7 @@ def build_graph(
         _entry,
         {
             "understand": "understand",
+            "relay_to_agent": "relay_to_agent",
             "smalltalk": "smalltalk",
             "card_info": "card_info",
             "card_block": "card_block",
@@ -367,6 +431,8 @@ def build_graph(
         {
             "fallback": "fallback",
             "unsupported": "unsupported",
+            "abstain": "abstain",
+            "handoff_summary": "handoff_summary",
             "smalltalk": "smalltalk",
             "enqueue": "enqueue",
             "card_info": "card_info",
@@ -395,6 +461,7 @@ def build_graph(
         {
             "compose": "compose",
             "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
             "finish": "finish",
             "next_intent": "next_intent",
         },
@@ -405,6 +472,7 @@ def build_graph(
         {
             "compose": "compose",
             "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
             "finish": "finish",
             "next_intent": "next_intent",
         },
@@ -415,6 +483,7 @@ def build_graph(
         {
             "compose": "compose",
             "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
             "finish": "finish",
             "next_intent": "next_intent",
         },
@@ -425,6 +494,7 @@ def build_graph(
         {
             "compose": "compose",
             "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
             "finish": "finish",
             "next_intent": "next_intent",
         },
@@ -435,6 +505,7 @@ def build_graph(
         {
             "compose": "compose",
             "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
             "finish": "finish",
             "next_intent": "next_intent",
         },
@@ -443,8 +514,16 @@ def build_graph(
         "compose", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
     )
     graph.add_conditional_edges(
-        "unsupported", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+        "unsupported",
+        _after_unsupported,
+        {"handoff_summary": "handoff_summary", "finish": "finish", "next_intent": "next_intent"},
     )
+    graph.add_conditional_edges(
+        "abstain", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+    )
+    graph.add_edge("handoff_summary", "handoff")
+    graph.add_edge("handoff", "finish")
+    graph.add_edge("relay_to_agent", "finish")
     graph.add_conditional_edges(
         "fallback", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
     )
@@ -501,7 +580,10 @@ async def run_turn(
         for node_name, values in update.items():
             # A node whose returned update is empty (e.g. `next_intent` with
             # nothing left to pop) streams as `None`, not `{}` (D20).
+            # `relay_to_agent` returns `{}` too, and it is still the route.
             if values is None:
+                if route_taken is None and node_name in _BRANCH_NODES:
+                    route_taken = node_name
                 continue
             if node_name == "understand":
                 nlu = values.get("nlu")

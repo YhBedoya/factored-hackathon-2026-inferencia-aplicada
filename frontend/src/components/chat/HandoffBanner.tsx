@@ -7,9 +7,10 @@ type HandoffBannerProps = {
 };
 
 /**
- * `ui.handoff_banner`: the case just opened (D9-D11). `queue_label` and
- * every `case_ids` entry are code-formatted server-side (R4); this only
- * lays them out, never re-formats them.
+ * `ui.handoff_banner`: the handoff just opened (D4-A D12) and, on the fraud
+ * path, the claims opened before it (D4-B D9-D11). `reference`,
+ * `queue_label` and every `case_ids` entry are code-formatted server-side
+ * (R4); this only lays them out, never re-formats them.
  */
 export function HandoffBanner({ payload }: HandoffBannerProps) {
 	const { t } = useI18n();
@@ -21,6 +22,9 @@ export function HandoffBanner({ payload }: HandoffBannerProps) {
 			<CardContent className="flex flex-col gap-1">
 				<p className="text-sm">
 					{t("handoff.sent_to", { queue: payload.queue_label })}
+				</p>
+				<p className="text-sm" data-testid="handoff-reference">
+					{payload.reference}
 				</p>
 				{payload.case_ids.length > 0 && (
 					<ul className="text-sm text-muted-foreground">

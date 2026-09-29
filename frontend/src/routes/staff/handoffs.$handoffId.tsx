@@ -87,7 +87,7 @@ function StaffHandoffDetailPage() {
 
 	return (
 		<div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-6 py-10">
-			{detail.status === "queued" ? (
+			{detail.summary.status === "queued" ? (
 				<Button
 					data-testid="claim-handoff"
 					disabled={claiming}
@@ -98,7 +98,7 @@ function StaffHandoffDetailPage() {
 			) : (
 				<>
 					<PacketView packet={detail.packet} />
-					<AgentChat conversationId={detail.conversation_id} />
+					<AgentChat conversationId={detail.summary.conversation_id} />
 					<Button
 						variant="outline"
 						data-testid="return-handoff"

@@ -53,7 +53,7 @@ class TokenClaims(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     sub: UUID
-    role: Literal["customer", "agent"]
+    role: Literal["customer", "agent", "admin"]
     customer_id: str | None
     step_up_at: datetime | None
     jti: str
@@ -104,7 +104,7 @@ def decode_token(token: str, *, secret: str) -> TokenClaims:
         return TokenClaims(
             sub=payload["sub"],
             role=payload["role"],
-            customer_id=payload["customer_id"],
+            customer_id=payload.get("customer_id"),
             step_up_at=payload.get("step_up_at"),
             jti=payload["jti"],
             exp=payload["exp"],

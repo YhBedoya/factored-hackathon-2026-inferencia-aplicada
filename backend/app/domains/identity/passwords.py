@@ -51,14 +51,11 @@ def login_key(document_type: DocumentType, document_number: str, *, hmac_key: st
 
 
 def staff_login_key(username: str, *, hmac_key: str) -> str:
-    """Hex HMAC-SHA256 of `staff:<username>` (D3), the staff-account analogue
-    of `login_key`. Reuses the same `identity.accounts.login_key` lookup and
-    the same `rl:login:<key>` rate limiter, so no separate limiter namespace
-    exists for staff.
+    """Hex HMAC-SHA256 of `staff:<username>` (D15): the lookup key and the
+    limiter key for staff accounts, so a raw username never keys Redis.
     """
 
-    message = f"staff:{username}"
-    return hmac.new(hmac_key.encode(), message.encode(), hashlib.sha256).hexdigest()
+    return hmac.new(hmac_key.encode(), f"staff:{username}".encode(), hashlib.sha256).hexdigest()
 
 
 def login_key_prefix(key: str) -> str:

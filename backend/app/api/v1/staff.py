@@ -1,118 +1,240 @@
-"""Staff routes (D2, D5, D6): `/staff/*`, agent-only.
+"""Staff routes (D4-A D16), all under `/staff`.
 
-`router` declares `require_role("agent")` and `require_csrf` at the
-*router* level (R13, ADR-025), the same convention `auth.py` and
-`conversations.py` set: a future route added here can't forget either
-check. `GET /staff/me` is the only route this card actually implements
-(`identity_service.staff_me`); the other six exist only so OpenAPI and the
-generated client are final today (D2) -- their bodies raise `501
-not_implemented` until A3/A4 land the real `HandoffPort` and the agent
-relay. Each still declares its real request/response model, so the client
-generated against this OpenAPI never needs to change shape once A wires the
-body in.
+T23 adds `GET /staff/me` and `POST /staff/logout`. T24 adds the handoff queue
+(`GET /staff/handoffs`, `GET /staff/handoffs/stream`,
+`GET /staff/handoffs/{id}`, `POST /staff/handoffs/{id}/claim`,
+`POST /staff/handoffs/{id}/return`) and the claimed-conversation routes
+(`GET|POST /staff/conversations/{id}/messages`,
+`GET /staff/conversations/{id}/stream`), each of the latter depending on
+`get_claimed_conversation`.
 
-No route here takes `customer_id` (R1): a staff session never carries one
-(D4), and nothing here reads or writes one either.
+The router declares `require_role("agent", "admin")` and `require_csrf` at
+the router level (R13, ADR-025), so a route added here can't forget either.
 
-`GET /staff/conversations/{conversation_id}/stream` is D6's agent-side
-stream, distinct from the customer-only `GET /conversations/{id}/stream` in
-`conversations.py` -- an agent reaches the customer's turn events only
-through this route, once claimed.
-
-See `docs/specs/d4-b-disputes-handoff-screens.md` D2, D5, D6, "Contracts"
--> "HTTP".
+See `docs/specs/d4-a-escalation-handoff-deploy.md` D16 and "Contracts" ->
+"Staff API".
 """
 
-from typing import Annotated
-from uuid import UUID
+from collections.abc import AsyncIterator
+from typing import Annotated, Any, NoReturn
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.api.v1.conversations import _sse_stream
+from app.core import events
+from app.core.errors import NotFound
+from app.core.telemetry import get_trace_id
+from app.domains.audit.service import AuditRecorder
+from app.domains.conversation import store
+from app.domains.conversation.store import ConversationRow
+from app.domains.conversation.takeover import (
+    TurnBusy,
+    publish_mode,
+    relay_agent_message,
+    return_to_bot,
+)
+from app.domains.handoff import service as handoff_service
 from app.domains.handoff.schemas import (
-    AgentMessageRequest,
-    AgentMessageResponse,
     HandoffDetail,
-    HandoffListResponse,
+    HandoffStatus,
     HandoffSummary,
+    TranscriptMessage,
 )
 from app.domains.identity import service as identity_service
 from app.domains.identity.deps import get_session, require_csrf, require_role
-from app.domains.identity.models import Session, StaffMeResponse
-from app.domains.localization.format import Queue
+from app.domains.identity.models import Session
 
-__all__ = ["router"]
+__all__ = ["get_claimed_conversation", "router"]
 
 router = APIRouter(
     prefix="/staff",
-    dependencies=[Depends(require_role("agent")), Depends(require_csrf)],
+    dependencies=[Depends(require_role("agent", "admin")), Depends(require_csrf)],
 )
 
+_VALID_STATUSES: tuple[HandoffStatus, ...] = ("queued", "claimed", "returned")
 
-@router.get("/me", response_model=StaffMeResponse)
-async def staff_me(session: Annotated[Session, Depends(get_session)]) -> StaffMeResponse:
-    """The caller's own agent profile (D3, D5): display name only, the same
-    way `GET /auth/me` reflects a customer session back.
+
+class RelayMessageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class RelayMessageResponse(BaseModel):
+    message_id: str
+
+
+async def get_claimed_conversation(
+    conversation_id: UUID,
+    session: Annotated[Session, Depends(get_session)],
+) -> ConversationRow:
+    """The `{conversation_id}` path's conversation, only while it has an open
+    handoff claimed by the caller (R13, D16). `404 not_found` -- same body
+    either way -- for a missing conversation, an unclaimed one or another
+    agent's.
     """
-
-    return await identity_service.staff_me(session)
-
-
-@router.get("/handoffs", response_model=HandoffListResponse)
-async def list_handoffs(queue: Queue | None = None) -> HandoffListResponse:
-    """The live inbox (D20). A implements this against the real
-    `HandoffPort`; the inbox filter and order are Dev A's (spec open item 3).
-    """
-
-    raise HTTPException(status_code=501, detail="not_implemented")
+    conversation = await store.get_conversation(conversation_id)
+    if conversation is None or not await handoff_service.is_claimed_by(
+        conversation_id, session.account_id
+    ):
+        raise HTTPException(status_code=404, detail="not_found")
+    return conversation
 
 
-@router.get("/handoffs/{handoff_id}", response_model=HandoffDetail)
+def _raise_handoff_error(exc: Exception) -> NoReturn:
+    """Map the handoff service's errors to the API's (T11: no `code` attr)."""
+    if isinstance(exc, NotFound):
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    if isinstance(exc, handoff_service.AlreadyClaimed):
+        raise HTTPException(status_code=409, detail="already_claimed") from exc
+    if isinstance(exc, handoff_service.HandoffClosed):
+        raise HTTPException(status_code=409, detail="handoff_closed") from exc
+    if isinstance(exc, handoff_service.NotClaimant):
+        raise HTTPException(status_code=409, detail="not_claimant") from exc
+    raise exc
+
+
+async def _display_name(session: Session) -> str:
+    return (await identity_service.staff_me(session)).display_name
+
+
+def _audit(
+    session: Session, detail_or_summary: HandoffSummary, policy_version: str
+) -> AuditRecorder:
+    return AuditRecorder(
+        conversation_id=detail_or_summary.conversation_id,
+        turn_id=uuid4(),
+        trace_id=get_trace_id(),
+        policy_version=policy_version,
+        actor=f"agent:{session.account_id}",
+    )
+
+
+async def _sse_response(subscription: Any) -> StreamingResponse:
+    """Subscribe *before* returning (D14), unsubscribe on any exit."""
+    stream = await subscription.__aenter__()
+
+    async def _generate() -> AsyncIterator[str]:
+        try:
+            async for chunk in _sse_stream(stream):
+                yield chunk
+        finally:
+            await subscription.__aexit__(None, None, None)
+
+    return StreamingResponse(
+        _generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/handoffs")
+async def list_handoffs(
+    queue: str | None = None,
+    status: str = "queued,claimed",
+) -> list[HandoffSummary]:
+    statuses = [s for s in status.split(",") if s]
+    if not statuses or any(s not in _VALID_STATUSES for s in statuses):
+        raise HTTPException(status_code=422, detail="invalid_status")
+    return await handoff_service.list_handoffs(
+        [queue] if queue else None,
+        statuses,  # type: ignore[arg-type]  # validated against _VALID_STATUSES
+    )
+
+
+@router.get("/handoffs/stream")
+async def stream_handoffs(queue: Annotated[str | None, Query()] = None) -> StreamingResponse:
+    return await _sse_response(events.subscribe_handoffs(queue))
+
+
+@router.get("/handoffs/{handoff_id}")
 async def get_handoff(handoff_id: UUID) -> HandoffDetail:
-    """One packet's full detail. A implements this against the real
-    `HandoffPort`.
-    """
-
-    raise HTTPException(status_code=501, detail="not_implemented")
-
-
-@router.post("/handoffs/{handoff_id}/claim", response_model=HandoffDetail)
-async def claim_handoff(handoff_id: UUID) -> HandoffDetail:
-    """Claim a queued handoff for the caller. A implements the claimed-by
-    check behind `409 already_claimed`.
-    """
-
-    raise HTTPException(status_code=501, detail="not_implemented")
+    try:
+        return await handoff_service.get_detail(handoff_id)
+    except NotFound as exc:
+        _raise_handoff_error(exc)
 
 
-@router.post("/handoffs/{handoff_id}/return", response_model=HandoffSummary)
-async def return_handoff(handoff_id: UUID) -> HandoffSummary:
-    """Return a claimed handoff to the bot. A implements the claimed-by
-    check behind `409 not_claimed`.
-    """
+@router.post("/handoffs/{handoff_id}/claim")
+async def claim_handoff(
+    handoff_id: UUID, session: Annotated[Session, Depends(get_session)]
+) -> HandoffDetail:
+    try:
+        detail = await handoff_service.claim(handoff_id, session.account_id)
+    except (NotFound, handoff_service.AlreadyClaimed, handoff_service.HandoffClosed) as exc:
+        _raise_handoff_error(exc)
+    display_name = await _display_name(session)
+    await publish_mode(detail.summary.conversation_id, "human", display_name)
+    await _audit(session, detail.summary, detail.packet.policy_version).record(
+        "handoff",
+        {"event": "claimed", "handoff_id": str(handoff_id), "queue": detail.summary.queue},
+    )
+    return detail
 
-    raise HTTPException(status_code=501, detail="not_implemented")
+
+@router.post("/handoffs/{handoff_id}/return")
+async def return_handoff(
+    handoff_id: UUID,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+) -> HandoffSummary:
+    try:
+        detail = await handoff_service.get_detail(handoff_id)
+    except NotFound as exc:
+        _raise_handoff_error(exc)
+    # Only the claimant may flip the mode: check before `return_to_bot` so a
+    # non-claimant can't change anything.
+    if not await handoff_service.is_claimed_by(detail.summary.conversation_id, session.account_id):
+        raise HTTPException(status_code=409, detail="not_claimant")
+    # Mode first (under the turn lock), then close the handoff: a busy lock
+    # leaves everything unchanged and the agent retries.
+    try:
+        await return_to_bot(
+            request.app.state.turn_host,
+            detail.summary.conversation_id,
+            detail.summary.language,
+        )
+    except TurnBusy as exc:
+        raise HTTPException(status_code=409, detail="turn_in_progress") from exc
+    try:
+        summary = await handoff_service.return_handoff(handoff_id, session.account_id)
+    except (NotFound, handoff_service.NotClaimant, handoff_service.HandoffClosed) as exc:
+        _raise_handoff_error(exc)
+    await _audit(session, summary, detail.packet.policy_version).record(
+        "handoff",
+        {"event": "returned", "handoff_id": str(handoff_id), "queue": summary.queue},
+    )
+    return summary
 
 
-@router.post(
-    "/conversations/{conversation_id}/messages",
-    response_model=AgentMessageResponse,
-    status_code=202,
-)
-async def post_agent_message(
-    conversation_id: UUID, body: AgentMessageRequest
-) -> AgentMessageResponse:
-    """An agent's message into a claimed conversation. A implements the
-    relay to the customer's `/stream` and the claimed-by check.
-    """
+@router.get("/conversations/{conversation_id}/messages")
+async def list_conversation_messages(
+    conversation: Annotated[ConversationRow, Depends(get_claimed_conversation)],
+) -> list[TranscriptMessage]:
+    rows = await store.list_messages(conversation.id)
+    return [
+        TranscriptMessage.model_validate(
+            {"role": row.role, "text": row.content, "created_at": row.created_at}
+        )
+        for row in rows
+    ]
 
-    raise HTTPException(status_code=501, detail="not_implemented")
+
+@router.post("/conversations/{conversation_id}/messages", status_code=201)
+async def post_conversation_message(
+    body: RelayMessageRequest,
+    conversation: Annotated[ConversationRow, Depends(get_claimed_conversation)],
+    session: Annotated[Session, Depends(get_session)],
+) -> RelayMessageResponse:
+    message_id = await relay_agent_message(conversation.id, body.text, await _display_name(session))
+    return RelayMessageResponse(message_id=str(message_id))
 
 
 @router.get("/conversations/{conversation_id}/stream")
-async def stream_agent_conversation(conversation_id: UUID) -> StreamingResponse:
-    """The agent-side SSE stream for a claimed conversation (D6, `04` §3
-    events). A implements the claimed-by check and the relay.
-    """
-
-    raise HTTPException(status_code=501, detail="not_implemented")
+async def stream_conversation(
+    conversation: Annotated[ConversationRow, Depends(get_claimed_conversation)],
+) -> StreamingResponse:
+    return await _sse_response(events.subscribe(conversation.id))

@@ -15,9 +15,13 @@ different plans that share this one `pending.node`
 `_resume_confirm`).
 
 Every side effect goes through `flows/actions.py`, which is the one place
-that reads `config["configurable"]["bank_write_tools"]`; the Fraudes handoff
-goes through `config["configurable"]["handoff"]` the same way (D19, R6). This
-module never imports `app.core.llm`.
+that reads `config["configurable"]["bank_write_tools"]` (R6). The Fraudes
+handoff is not a write this module makes: it sets `escalation_reason`
+(`disputes.yaml`'s `handoff.reason`), `handoff_queue`, `handoff_evidence` and
+`handoff_open_questions`, and `graph._after_flow` routes the turn through
+D4-A's `handoff_summary` -> `handoff` nodes, which build the packet from the
+verified `actions`, persist it and emit `ui.handoff_banner` (with the claim's
+case ids). This module never imports `app.core.llm`.
 """
 
 from datetime import datetime
@@ -49,21 +53,13 @@ from app.domains.conversation.templates import Language, TemplateKind, get_templ
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.ui import (
-    HandoffBannerEvent,
-    HandoffBannerPayload,
     TransactionListEvent,
     TransactionListPayload,
     TxOption,
 )
-from app.domains.handoff.schemas import (
-    ActionTaken,
-    Evidence,
-    HandoffDraft,
-    HandoffPort,
-    VerifiedFact,
-)
-from app.domains.localization import mask_card, queue_label
-from app.domains.localization.format import Country, Queue, format_date, format_money, format_time
+from app.domains.handoff.schemas import HandoffEvidence
+from app.domains.localization import mask_card
+from app.domains.localization.format import Country, format_date, format_money, format_time
 from app.domains.policy.disputes import load_disputes_policy
 from app.domains.transactions.schemas import TxFilter, TxStatus, TxView
 
@@ -472,7 +468,7 @@ async def _resume_cancel(
 
     if dispute["compromise"] and dispute["block_refused"]:
         # D10: the claim was refused too. Hand off to Fraudes with no claim.
-        return await _handoff_no_claim(state, config, dispute)
+        return _handoff_no_claim(state, dispute)
 
     return {
         "pending": None,
@@ -505,12 +501,11 @@ async def _confirm_compromise_plan(
         return outcome
 
     block_result, claim_result = outcome
-    return await _compromise_success(state, config, dispute, details, block_result, claim_result)
+    return _compromise_success(state, dispute, details, block_result, claim_result)
 
 
-async def _compromise_success(
+def _compromise_success(
     state: GraphState,
-    config: RunnableConfig,
     dispute: DisputeState,
     details: CardDetails,
     block_result: ActionResult,
@@ -518,7 +513,6 @@ async def _compromise_success(
 ) -> dict[str, Any]:
     language = state["language"]
     country = state["country"]
-    policy = load_disputes_policy()
     case_ids = claim_result.case_ids or []
 
     at = block_result.readback.get("at")
@@ -530,39 +524,13 @@ async def _compromise_success(
         time=time_text,
     )
 
-    handoff_port: HandoffPort = config["configurable"]["handoff"]
-    draft = HandoffDraft(
-        queue=policy.handoff.queue,
-        priority=policy.handoff.priority,
-        reason=policy.handoff.reason,
-        language=language,
-        verified_facts=[
-            VerifiedFact(fact="card_masked", value=mask_card(details.last4), source=details.source)
-        ],
-        actions_taken=[_action_taken(block_result), _action_taken(claim_result)],
-        evidence=_evidence(dispute),
-        open_questions=[],
-        escalation_rules_hit=["dispute_compromise"],
-    )
-    ref = await handoff_port.create(draft)
-
     return {
         "actions": [block_result, claim_result],
         "pending": None,
         "confirmation_token_id": None,
         "dispute": None,
-        "segments": [text, _handoff_reply_text(ref.queue, language)],
-        "ui": [
-            HandoffBannerEvent(
-                kind="handoff_banner",
-                payload=HandoffBannerPayload(
-                    handoff_id=ref.handoff_id,
-                    queue=ref.queue,
-                    queue_label=queue_label(ref.queue, language),
-                    case_ids=case_ids,
-                ),
-            )
-        ],
+        "segments": [text],
+        **_fraud_handoff(dispute, []),
     }
 
 
@@ -585,50 +553,25 @@ async def _confirm_claim_plan(
 
     (claim_result,) = outcome
     if dispute["block_refused"]:
-        return await _claim_only_success(state, config, dispute, claim_result)
+        return _claim_only_success(state, dispute, claim_result)
     return _single_charge_success(state, claim_result)
 
 
-async def _claim_only_success(
-    state: GraphState, config: RunnableConfig, dispute: DisputeState, claim_result: ActionResult
+def _claim_only_success(
+    state: GraphState, dispute: DisputeState, claim_result: ActionResult
 ) -> dict[str, Any]:
     """D10: the claim confirmed after the block was refused -- case id, plus
     a Fraudes handoff noting the card is still active."""
     language = state["language"]
     text = _claim_reply_text(state, claim_result)
 
-    policy = load_disputes_policy()
-    handoff_port: HandoffPort = config["configurable"]["handoff"]
-    draft = HandoffDraft(
-        queue=policy.handoff.queue,
-        priority=policy.handoff.priority,
-        reason=policy.handoff.reason,
-        language=language,
-        verified_facts=[],
-        actions_taken=[_action_taken(claim_result)],
-        evidence=_evidence(dispute),
-        open_questions=[get_template("dispute_open_question_card_active", language)],
-        escalation_rules_hit=["dispute_compromise"],
-    )
-    ref = await handoff_port.create(draft)
-
     return {
         "actions": [claim_result],
         "pending": None,
         "confirmation_token_id": None,
         "dispute": None,
-        "segments": [text, _handoff_reply_text(ref.queue, language)],
-        "ui": [
-            HandoffBannerEvent(
-                kind="handoff_banner",
-                payload=HandoffBannerPayload(
-                    handoff_id=ref.handoff_id,
-                    queue=ref.queue,
-                    queue_label=queue_label(ref.queue, language),
-                    case_ids=claim_result.case_ids or [],
-                ),
-            )
-        ],
+        "segments": [text],
+        **_fraud_handoff(dispute, [get_template("dispute_open_question_card_active", language)]),
     }
 
 
@@ -643,60 +586,37 @@ def _single_charge_success(state: GraphState, claim_result: ActionResult) -> dic
     }
 
 
-async def _handoff_no_claim(
-    state: GraphState, config: RunnableConfig, dispute: DisputeState
-) -> dict[str, Any]:
+def _handoff_no_claim(state: GraphState, dispute: DisputeState) -> dict[str, Any]:
     """D10: both the block and the claim were refused. Still a Fraudes
     handoff, with no claim and both refusals in `open_questions`."""
     language = state["language"]
-    policy = load_disputes_policy()
-    handoff_port: HandoffPort = config["configurable"]["handoff"]
-    draft = HandoffDraft(
-        queue=policy.handoff.queue,
-        priority=policy.handoff.priority,
-        reason=policy.handoff.reason,
-        language=language,
-        verified_facts=[],
-        actions_taken=[],
-        evidence=_evidence(dispute),
-        open_questions=[
-            get_template("dispute_open_question_card_active", language),
-            get_template("dispute_open_question_claim_refused", language),
-        ],
-        escalation_rules_hit=["dispute_compromise"],
-    )
-    ref = await handoff_port.create(draft)
-
-    text = fill(
-        get_template("dispute_handoff_no_claim", language),
-        queue_label=queue_label(ref.queue, language),
-    )
     return {
         "pending": None,
         "confirmation_token_id": None,
         "dispute": None,
-        "segments": [text],
-        "ui": [
-            HandoffBannerEvent(
-                kind="handoff_banner",
-                payload=HandoffBannerPayload(
-                    handoff_id=ref.handoff_id,
-                    queue=ref.queue,
-                    queue_label=queue_label(ref.queue, language),
-                    case_ids=[],
-                ),
-            )
-        ],
+        "segments": [get_template("dispute_handoff_no_claim", language)],
+        **_fraud_handoff(
+            dispute,
+            [
+                get_template("dispute_open_question_card_active", language),
+                get_template("dispute_open_question_claim_refused", language),
+            ],
+        ),
     }
 
 
-def _handoff_reply_text(queue: Queue, language: Language) -> str:
-    """The same fixed handoff-placeholder sentence `flows/actions.handoff`
-    uses elsewhere, naming the queue (D9, D10) -- the reply text itself, not
-    just `ui.handoff_banner`, says a person from Fraudes is picking this up."""
-    return fill(
-        get_template("handoff_placeholder", language), queue_label=queue_label(queue, language)
-    )
+def _fraud_handoff(dispute: DisputeState, open_questions: list[str]) -> dict[str, Any]:
+    """The state keys that send this turn to D4-A's handoff nodes (D9, D10):
+    `disputes.yaml`'s reason and queue, the picked transactions as evidence
+    and the code-filled open questions. The packet, `mode = human` and the
+    banner are the `handoff` node's job."""
+    policy = load_disputes_policy()
+    return {
+        "escalation_reason": policy.handoff.reason,
+        "handoff_queue": policy.handoff.queue,
+        "handoff_evidence": _evidence(dispute),
+        "handoff_open_questions": open_questions,
+    }
 
 
 def _claim_reply_text(state: GraphState, claim_result: ActionResult) -> str:
@@ -712,23 +632,13 @@ def _claim_reply_text(state: GraphState, claim_result: ActionResult) -> str:
     )
 
 
-def _evidence(dispute: DisputeState) -> list[Evidence]:
+def _evidence(dispute: DisputeState) -> list[HandoffEvidence]:
     return [
-        Evidence(type="transaction", ref=tx_id, fraud_score=dispute["fraud_scores"].get(tx_id))
+        HandoffEvidence(
+            type="transaction", ref=tx_id, fraud_score=dispute["fraud_scores"].get(tx_id)
+        )
         for tx_id in dispute["picked_tx_ids"]
     ]
-
-
-def _action_taken(result: ActionResult) -> ActionTaken:
-    at = result.readback.get("at")
-    return ActionTaken(
-        tool=result.tool,
-        result="applied",
-        verified=result.verified,
-        audit_event_id=result.audit_event_id,
-        at=at if isinstance(at, datetime) else None,
-        case_ids=result.case_ids,
-    )
 
 
 def _replace(dispute: DisputeState, **changes: Any) -> DisputeState:

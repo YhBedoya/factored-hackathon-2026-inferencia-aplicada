@@ -53,7 +53,7 @@ from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.localization import mask_card
-from app.domains.policy.escalation import load_escalation_policy
+from app.domains.policy.escalation import load_escalation_policy, rule_queue
 
 __all__ = ["card_unlock"]
 
@@ -139,7 +139,9 @@ async def _check_status_and_origin(
 
     not_active = escalation.customer_not_active
     if profile.customer_status in not_active.statuses and "unlock_card" not in not_active.allowed:
-        return handoff(not_active.queue, "customer_not_active", language)
+        return handoff(
+            rule_queue(escalation, "customer_not_active"), "customer_not_active", language
+        )
 
     try:
         origin = await bank_write_tools.get_block_origin(card_id, "card_unlock")

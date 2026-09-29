@@ -59,10 +59,10 @@ async def _insert_staff_account(account: _StaffAccount) -> uuid.UUID:
                 """
                 INSERT INTO identity.accounts
                     (account_id, role, customer_id, username, display_name,
-                     login_key, password_hash)
+                     staff_queue, login_key, password_hash)
                 VALUES
                     (:account_id, 'agent', NULL, :username, :display_name,
-                     :login_key, :password_hash)
+                     'fraudes', :login_key, :password_hash)
                 """
             ),
             {
@@ -86,8 +86,8 @@ async def _delete_account(account_id: uuid.UUID) -> None:
 
 @pytest.fixture
 def it_staff_account(it_env: None) -> Iterator[_StaffAccount]:
-    """One `role='agent'` row (D3): `customer_id NULL`, `username`,
-    `display_name`, `login_key = staff_login_key(username, ...)`. Deletes
+    """One `role='agent'` row (D3, D4-A D15): `customer_id NULL`, `username`,
+    `display_name`, `staff_queue`, `login_key = staff_login_key(username, ...)`. Deletes
     its own row on teardown, the same shape `it_accounts` uses.
     """
 
@@ -249,8 +249,8 @@ def test_staff_login_and_role_split(
     it_accounts: dict[str, ItAccount],
     it_staff_account: _StaffAccount,
 ) -> None:
-    """D3-D5, R13: staff login -> `/staff/me` 200 with `display_name`; that
-    session on `/conversations` -> 403; a customer session on `/staff/me` ->
+    """D3-D5, R13: staff login -> `/staff/me` 200 with the staff profile; that
+    session on `/auth/refresh` and `/conversations` -> 403; a customer session on `/staff/me` ->
     403; customer credentials on staff login -> 401.
     """
 
@@ -259,20 +259,25 @@ def test_staff_login_and_role_split(
         json={"username": it_staff_account.username, "password": it_staff_account.password},
     )
     assert staff_login_response.status_code == 200
-    assert staff_login_response.json() == {
+    staff_profile = {
         "role": "agent",
+        "username": it_staff_account.username,
         "display_name": it_staff_account.display_name,
+        "queue": "fraudes",
     }
+    assert staff_login_response.json() == staff_profile
     assert "session" in staff_login_response.cookies
     assert "csrf_token" in staff_login_response.cookies
     csrf_token = staff_login_response.cookies["csrf_token"]
 
     staff_me_response = app_client.get("/api/v1/staff/me")
     assert staff_me_response.status_code == 200
-    assert staff_me_response.json() == {
-        "role": "agent",
-        "display_name": it_staff_account.display_name,
-    }
+    assert staff_me_response.json() == staff_profile
+
+    # A staff session never refreshes through the customer route (D5).
+    forbidden_refresh = app_client.post("/api/v1/auth/refresh", headers={CSRF_HEADER: csrf_token})
+    assert forbidden_refresh.status_code == 403
+    assert forbidden_refresh.json() == {"detail": "forbidden_role"}
 
     # The staff session is forbidden from the customer-only conversations
     # router (D5, R13), even with a valid CSRF pair.
