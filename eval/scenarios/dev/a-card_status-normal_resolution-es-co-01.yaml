@@ -1,0 +1,31 @@
+seed_id: a-card_status-normal_resolution-es-co-01
+intent: card_status
+category: normal_resolution
+persona: CLI-8U06DH6VYHA3
+goal: Saber si mi tarjeta está activa
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  forbidden_tools:
+  - cards.lock_card
+  - cards.block_card
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: a-card_status-normal_resolution-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¿Mi tarjeta está activa?
+  reviewer: null
+  reviewed_at: null

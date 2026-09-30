@@ -1,11 +1,16 @@
 import {
+	type ConversationPage,
+	type ConversationTimeline,
 	claimHandoffApiV1StaffHandoffsHandoffIdClaimPost,
 	createConversationApiV1ConversationsPost,
+	getConversationTimelineApiV1StaffConversationsConversationIdTimelineGet,
 	getHandoffApiV1StaffHandoffsHandoffIdGet,
 	type HandoffDetail,
 	type HandoffSummary,
+	type ListConversationsApiV1StaffConversationsGetData,
 	type LoginRequest,
 	listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet,
+	listConversationsApiV1StaffConversationsGet,
 	listHandoffsApiV1StaffHandoffsGet,
 	loginApiV1AuthLoginPost,
 	logoutApiV1AuthLogoutPost,
@@ -376,6 +381,33 @@ export async function postAgentMessage(
 		}),
 	);
 	return unwrap(result).message_id;
+}
+
+/** `GET /staff/conversations` query (D7-A D19): every filter is optional and ANDed. */
+export type StaffConversationQuery = NonNullable<
+	ListConversationsApiV1StaffConversationsGetData["query"]
+>;
+
+// D7-A1 traceability console (read-only, masked data only): the list needs no
+// `{id}` and the timeline uses `get_any_conversation`, so neither needs a claim.
+export async function listStaffConversations(
+	query: StaffConversationQuery,
+): Promise<ConversationPage> {
+	const result = await withStaffAuth(() =>
+		listConversationsApiV1StaffConversationsGet({ query }),
+	);
+	return unwrap(result);
+}
+
+export async function getStaffConversationTimeline(
+	conversationId: string,
+): Promise<ConversationTimeline> {
+	const result = await withStaffAuth(() =>
+		getConversationTimelineApiV1StaffConversationsConversationIdTimelineGet({
+			path: { conversation_id: conversationId },
+		}),
+	);
+	return unwrap(result);
 }
 
 const CONVERSATION_STORAGE_KEY = "swip.conversation_id";

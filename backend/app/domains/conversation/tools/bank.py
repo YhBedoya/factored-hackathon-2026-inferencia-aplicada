@@ -13,6 +13,7 @@ from app.core.pii import KnownPii
 from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.disputes.schemas import PrioritySignals
 from app.domains.localization.schemas import FxRate
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
@@ -50,6 +51,11 @@ class BankReadTools(Protocol):
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         # Registry name: reference.get_fx_rate. May raise: NotFound, ToolUnavailable.
+        ...
+
+    async def get_priority_signals(self) -> PrioritySignals:
+        # Registry name: disputes.get_priority_signals. No arguments: bound
+        # to this session's customer_id only (R1). May raise: ToolUnavailable.
         ...
 
     async def get_pii_profile(self) -> KnownPii:

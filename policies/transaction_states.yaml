@@ -1,0 +1,4 @@
+provenance: team-generated-synthetic   # REQUIRED on every policy file
+version: 1
+pending:  {hold_days: 3, cause_key: pending_hold, next_step_key: wait_until_date, overdue_next_step_key: offer_human}
+reversed: {cause_key: reversed_charge, next_step_key: no_action_needed}

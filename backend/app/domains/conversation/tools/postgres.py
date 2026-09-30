@@ -1,14 +1,17 @@
 """`PostgresBank`: `BankReadTools` over Postgres, via the `service` modules.
 
 D11: it calls only `customers.service`, `cards.service`,
-`transactions.service` and `localization.service` (D2-B's FX reference
-read), never a `repository` directly (import-linter's
-`conversation-no-repository` contract enforces this). Country labels, card
-kinds, `last4` and the transaction filter set already live in those
-`service` modules (D1-B D17), matched to `FakeBank`'s own SQL. This module
-adds only the one thing those `service` calls don't do on their own:
-`search_transactions`' card-ownership check (D11 -- `transactions.service`
-doesn't call `cards.service` itself, so `PostgresBank` does it first).
+`transactions.service`, `localization.service` (D2-B's FX reference read)
+and `disputes.service` (D7-B B2's priority signals), never a `repository`
+directly (import-linter's `conversation-no-repository` contract enforces
+this). Country labels, card kinds, `last4` and the transaction filter set
+already live in those `service` modules (D1-B D17), matched to `FakeBank`'s
+own SQL. This module adds only the one thing those `service` calls don't do
+on their own: `search_transactions`' card-ownership check (D11 --
+`transactions.service` doesn't call `cards.service` itself, so `PostgresBank`
+does it first) and `get_priority_signals`' `open_statuses` (read from
+`policies/disputes.yaml`, R8 -- `disputes.service` takes it as an argument
+rather than loading the policy itself).
 
 R1/D12: a foreign `card_id` -- in `get_card_details` or `tx_filter.card_id`
 -- surfaces as `AccessDenied` from `cards.service` (D1-B D17's
@@ -27,9 +30,12 @@ from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers import service as customers_service
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.disputes import service as disputes_service
+from app.domains.disputes.schemas import PrioritySignals
 from app.domains.localization import service as localization_service
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.decline_codes import lookup_decline_code
+from app.domains.policy.disputes import load_disputes_policy
 from app.domains.transactions import service as transactions_service
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
@@ -85,6 +91,10 @@ class PostgresBank:
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         # Reference data (D2-B D3): no `customer_id` to bind.
         return await localization_service.get_fx_rate(source, target)
+
+    async def get_priority_signals(self) -> PrioritySignals:
+        open_statuses = load_disputes_policy().priority.open_statuses
+        return await disputes_service.priority_signals(self._ctx.customer_id, open_statuses)
 
     def _log_access_denied(self, *, tool: str, requested_id: str) -> None:
         _logger.warning(

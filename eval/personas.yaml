@@ -399,3 +399,26 @@ personas:
     blocked: false
     expiring_card: true
     notes: Held-out. Card expiring within 90 days of load_date.
+  - customer_id: CLI-070BYEV7ZYHC
+    split: dev
+    country: AR
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    repeat_complainer: true
+    notes: >-
+      D7-B: repeat-complainer persona for the priority-claim handoff seed
+      (d-unrecognized_charge-human_required-es-ar-01). Its one Active credit
+      card has an Approved transaction (Tienda Don José,
+      TRX-UEH8OCMKQKC0AWRUU8AR) eligible for a claim. Used by no other dev
+      seed (suite lint, D14).
+  - customer_id: CLI-M9B56QX9KMBU
+    split: dev
+    country: CO
+    card_count: 1
+    card_kinds: [credit]
+    blocked: false
+    notes: >-
+      D7-B: transaction_search normal_resolution seed persona
+      (d-transaction_search-normal_resolution-es-co-01); real Super
+      Ahorro row named in the seed turn.

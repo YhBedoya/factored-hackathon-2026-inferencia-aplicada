@@ -212,14 +212,16 @@ class ConfirmedWriteTools:
         )
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], token_id: str
+        self, tx_ids: list[str], answers: list[str], priority_flags: list[str], token_id: str
     ) -> ActionResult:
-        args: ToolArgs = {"tx_ids": tx_ids, "answers": answers}
+        args: ToolArgs = {"tx_ids": tx_ids, "answers": answers, "priority_flags": priority_flags}
         return await self._run(
             "disputes.create_claim",
             args,
             token_id,
-            lambda key: self._raw.create_claim(tx_ids, answers, idempotency_key=key),
+            lambda key: self._raw.create_claim(
+                tx_ids, answers, priority_flags, idempotency_key=key
+            ),
         )
 
     async def _run(

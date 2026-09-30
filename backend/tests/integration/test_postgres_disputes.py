@@ -55,7 +55,7 @@ async def _claims_by_conversation(conversation_id: UUID) -> list[dict[str, Any]]
         result = await conn.execute(
             text(
                 "SELECT complaint_id, transaction_id, affected_product_id, claimed_amount, "
-                "currency, origin, conversation_id FROM bank.complaints "
+                "currency, priority, origin, conversation_id FROM bank.complaints "
                 "WHERE conversation_id = :conversation_id"
             ),
             {"conversation_id": conversation_id},
@@ -79,7 +79,7 @@ def test_claim_row_matches_transaction(it_env: None, monkeypatch: pytest.MonkeyP
     async def _run() -> None:
         first_key = secrets.token_urlsafe(8)
         result = await writes.create_claim(
-            _TX_IDS, ["card_in_possession=no"], idempotency_key=first_key
+            _TX_IDS, ["card_in_possession=no"], [], idempotency_key=first_key
         )
         assert result.verified is True
         assert result.readback["status"] == "Open"
@@ -98,6 +98,21 @@ def test_claim_row_matches_transaction(it_env: None, monkeypatch: pytest.MonkeyP
         for row in rows:
             assert row["origin"] == "app"
             assert row["conversation_id"] == conversation_id
+            # SA1: no `priority_flags` on this call -> NULL priority.
+            assert row["priority"] is None
+
+        # SA1: a non-empty `priority_flags` writes `priority = 'High'` on the
+        # re-read row, a separate claim over the same conversation.
+        flagged = await writes.create_claim(
+            [_TX_IDS[0]],
+            ["card_in_possession=no"],
+            ["repeat_complainer"],
+            idempotency_key=secrets.token_urlsafe(8),
+        )
+        assert flagged.case_ids is not None
+        flagged_rows = await _claims_by_conversation(conversation_id)
+        by_complaint = {row["complaint_id"]: row for row in flagged_rows}
+        assert by_complaint[flagged.case_ids[0]]["priority"] == "High"
 
         # A stale re-read (the separate `get_claims` call finding nothing, as
         # if it hit a lagging replica) must not report `verified=True` (R3).
@@ -109,7 +124,7 @@ def test_claim_row_matches_transaction(it_env: None, monkeypatch: pytest.MonkeyP
 
         monkeypatch.setattr(postgres_writes.disputes_service, "get_claims", _stale_get_claims)
         stale_result = await writes.create_claim(
-            _TX_IDS, ["card_in_possession=no"], idempotency_key=secrets.token_urlsafe(8)
+            _TX_IDS, ["card_in_possession=no"], [], idempotency_key=secrets.token_urlsafe(8)
         )
         assert stale_result.verified is False
         monkeypatch.undo()
@@ -118,7 +133,7 @@ def test_claim_row_matches_transaction(it_env: None, monkeypatch: pytest.MonkeyP
         # case ids (D15).
         before = await _claims_by_conversation(conversation_id)
         replay_result = await writes.create_claim(
-            _TX_IDS, ["card_in_possession=no"], idempotency_key=first_key
+            _TX_IDS, ["card_in_possession=no"], [], idempotency_key=first_key
         )
         after = await _claims_by_conversation(conversation_id)
         assert len(after) == len(before)
@@ -157,12 +172,13 @@ def test_foreign_transaction_refused(it_env: None) -> None:
 
     async def _run() -> None:
         step = PlanStep(
-            tool="disputes.create_claim", args={"tx_ids": [_FOREIGN_TX_ID], "answers": []}
+            tool="disputes.create_claim",
+            args={"tx_ids": [_FOREIGN_TX_ID], "answers": [], "priority_flags": []},
         )
         plan = await executor.issue_plan([step], "unrecognized_charge")
 
         with pytest.raises(AccessDenied):
-            await executor.create_claim([_FOREIGN_TX_ID], [], plan.token_id)
+            await executor.create_claim([_FOREIGN_TX_ID], [], [], plan.token_id)
 
         assert await _claims_by_transaction(_FOREIGN_TX_ID) == []
         access_denied_events = [event for event in events if event.type == "access_denied"]

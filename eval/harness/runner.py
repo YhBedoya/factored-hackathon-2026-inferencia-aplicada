@@ -308,18 +308,39 @@ async def _play(
     golden_conn: psycopg.Connection[Any],
     driver: Driver,
     system: str,
+    run_id: str,
+    run_index: int,
     faults: frozenset[str] = frozenset(),
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]]:
     write_tools = load_write_tools()
     otp = os.environ.get("DEMO_OTP_CODE", "")
     verdicts: list[dict[str, Any]] = []
     llm_rows: list[dict[str, Any]] = []
+    transcripts: list[dict[str, Any]] = []
     restores = 0
     for played, case in enumerate(cases, start=1):
         db_patches = case.setup.db_patches
         if db_patches:
             patches.apply(clone_conn, db_patches)
         transcript = await driver(case, base_url=base_url, otp_code=otp)
+        # SA2: the played `Transcript` beside `results.jsonl`/`llm_calls.jsonl`
+        # (pinned row shape), so `python -m eval.judges sample` can read it
+        # without replaying the run. Written for every system, but `sample`
+        # only ever reads the `proposed` rows (R9).
+        transcripts.append(
+            {
+                "run_id": run_id,
+                "run": run_index,
+                "system": system,
+                "case_id": case.case_id,
+                "seed_id": case.seed_id,
+                "persona": case.persona,
+                "intent": case.intent,
+                "language_variant": case.language_variant,
+                "expected_language": case.expected_language,
+                "transcript": transcript.model_dump(mode="json"),
+            }
+        )
         evidence = collect(clone_conn, case, transcript)
         if db_patches:
             # A diff raises `PatchDiffError`, which aborts the run like `RestoreDiffError`.
@@ -347,7 +368,7 @@ async def _play(
             raise LLMUnreachableError(
                 first.get("model_id"), first.get("step"), len(llm_rows)
             )
-    return verdicts, llm_rows, restores
+    return verdicts, llm_rows, restores, transcripts
 
 
 def _reset_personas(
@@ -373,9 +394,15 @@ def _reset_personas(
 
 
 async def _run_system(
-    system: str, dbname: str, cases: list[Case], driver: Driver
+    system: str,
+    dbname: str,
+    cases: list[Case],
+    driver: Driver,
+    run_id: str,
+    run_index: int,
 ) -> dict[str, Any]:
-    """One run of `system` on the shared clone `dbname` (created and dropped by `run`)."""
+    """Run `run_index` (1-based) of `system` on the shared clone `dbname` (created and
+    dropped by `run`)."""
     conns: list[psycopg.Connection[Any]] = []
     try:
         golden_conn = psycopg.connect(clone.dsn(clone.GOLDEN_DB))
@@ -400,9 +427,17 @@ async def _run_system(
             handle: tuple[subprocess.Popen[bytes], str],
             faults: frozenset[str],
             group: list[Case],
-        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]]:
             return await _play(
-                group, handle[1], clone_conn, golden_conn, driver, system, faults
+                group,
+                handle[1],
+                clone_conn,
+                golden_conn,
+                driver,
+                system,
+                run_id,
+                run_index,
+                faults,
             )
 
         group_results = await _play_groups(
@@ -411,6 +446,7 @@ async def _run_system(
         verdicts = [v for r in group_results for v in r[0]]
         llm_rows = [row for r in group_results for row in r[1]]
         restores = sum(r[2] for r in group_results)
+        transcripts = [t for r in group_results for t in r[3]]
     finally:
         for conn in conns:
             with contextlib.suppress(Exception):
@@ -419,6 +455,7 @@ async def _run_system(
         "system": system,
         "verdicts": verdicts,
         "llm_rows": llm_rows,
+        "transcripts": transcripts,
         "restores": restores,
         "resets": resets,
     }
@@ -444,12 +481,15 @@ async def _run_all(
     dbname: str,
     cases: list[Case],
     driver: Driver,
+    run_id: str,
 ) -> list[dict[str, Any]]:
     """Proposed x`runs`, baseline x1 (D4), sequentially on the one clone."""
     results: list[dict[str, Any]] = []
     for system in systems:
-        for _ in range(runs if system == "proposed" else 1):
-            results.append(await _run_system(system, dbname, cases, driver))
+        for index in range(1, (runs if system == "proposed" else 1) + 1):
+            results.append(
+                await _run_system(system, dbname, cases, driver, run_id, index)
+            )
     return results
 
 
@@ -514,7 +554,7 @@ def run(
     # One clone per invocation (D10); the name is the folder name with `-` -> `_`.
     dbname, clone_seconds = clone.create(run_id.replace("-", "_").lower())
     try:
-        results = asyncio.run(_run_all(systems, runs, dbname, cases, play))
+        results = asyncio.run(_run_all(systems, runs, dbname, cases, play, run_id))
     finally:
         clone.drop(dbname)
 
@@ -535,6 +575,11 @@ def run(
     # The NLU rows go in before the PII scan reads the file (D20).
     llm_rows = [row for r in results for row in r["llm_rows"]] + nlu_ledger
     _write_jsonl(out / "llm_calls.jsonl", llm_rows)
+    # SA2: one row per played case, both systems, so `python -m eval.judges sample`
+    # can read it without replaying the run. Gitignored like `results.jsonl`.
+    _write_jsonl(
+        out / "transcripts.jsonl", [t for r in results for t in r["transcripts"]]
+    )
     pii_hits = _pii_scan(run_id)
 
     by_system: dict[str, list[list[dict[str, Any]]]] = {}

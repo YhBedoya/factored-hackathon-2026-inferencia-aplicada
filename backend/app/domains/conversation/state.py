@@ -31,6 +31,7 @@ __all__ = [
     "Fact",
     "Pending",
     "TurnState",
+    "TxOfferState",
     "bind_once",
 ]
 
@@ -171,6 +172,21 @@ class DeclineState(TypedDict):
     offered_tx_ids: list[str]
 
 
+class TxOfferState(TypedDict):
+    """`tx_search`/`tx_explain`'s own sub-state (this card's B1, `02` §4.4/§4.5
+    D1/D3).
+
+    Both flows share one shape: `flow` tells a resume which of the two is
+    paused (they reuse the same `awaiting_slot = "transactions"`), and
+    `offered_tx_ids` is what the single-pick `ui.transaction_list` showed --
+    the same "re-check the pick is exactly one offered id" use as
+    `DeclineState.offered_tx_ids`.
+    """
+
+    flow: Literal["tx_search", "tx_explain"]
+    offered_tx_ids: list[str]
+
+
 class TurnState(TypedDict):
     """Checkpointed graph state, keyed by `conversation_id` (`02` §3, D3)."""
 
@@ -203,3 +219,10 @@ class TurnState(TypedDict):
     unauthorized_attempts: NotRequired[int]
     handoff_evidence: NotRequired[list[HandoffEvidence]]
     handoff_open_questions: NotRequired[list[str]]
+    # `tx_search`/`tx_explain`'s single-pick offer (this card's B1).
+    tx_offer: NotRequired[TxOfferState | None]
+    # `unrecognized_charge`'s priority-flag names, sorted (this card's B2,
+    # A6-A7): `amount_over_threshold`, `open_critical`, `repeat_complainer`.
+    # Read by `nodes/handoff.py` to append `priority_claim` to
+    # `escalation_rules_hit`, then cleared on handoff.
+    priority_flags: NotRequired[list[str]]

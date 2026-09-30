@@ -1,7 +1,11 @@
 provenance: team-generated-synthetic
-version: 1
+version: 2
 candidate_statuses: [Approved, Pending, Reversed]
 compromise: {min_picked: 2, fraud_score_gt: 30, block_reason: suspected_fraud}
 possession_question: card_in_possession      # asked first, only if count/score didn't trigger; "no" → compromise
 questions: [card_in_possession, contacted_merchant]   # asked in order on the single-charge path
 handoff: {queue: fraudes, priority: high, reason: suspected_fraud}
+priority:
+  amount_threshold: {USD: "5000", COP: "20000000", ARS: "1800000"}
+  open_statuses: [Open, In Process, Escalated]
+  handoff: {queue: reclamos, priority: high, reason: priority_claim}
