@@ -39,6 +39,7 @@ never deleted out from under that later turn.
 """
 
 import asyncio
+from collections.abc import Sequence
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -253,13 +254,15 @@ async def _run_turn(
         audit = registry.audit_recorder_for(ctx, turn_id)
         tools, write_tools = registry.turn_tools(ctx, session, audit)
 
-        async def _record(event_type: AuditType, payload: dict[str, JsonValue]) -> None:
+        async def _record(
+            event_type: AuditType, payload: dict[str, JsonValue], sources: Sequence[str] = ()
+        ) -> None:
             """Best effort (D15): a runner-level audit event's recording
             failure is logged and never fails the turn -- only a failed
             `tool_call` audit inside a read or write blocks that call itself
             (`registry.RecordingBankTools`, `ConfirmedWriteTools`)."""
             try:
-                await audit.record(event_type, payload)
+                await audit.record(event_type, payload, sources)
             except Exception:
                 _logger.warning(
                     "audit.write_failed",
@@ -290,6 +293,9 @@ async def _run_turn(
         handed_off = False
 
         grounding_outcome: str | None = None
+        # This turn's fact provenance (`Fact.source`), recorded on
+        # `reply_sent` so the staff timeline's "why" lists sources (D7-A D20).
+        fact_sources: list[str] = []
         with fact_values.collecting() as collected_values:
             async for update in host.graph.astream(
                 {
@@ -333,6 +339,7 @@ async def _run_turn(
                             )
                     elif route_taken is None and node_name in _BRANCH_NODES:
                         route_taken = node_name
+                    fact_sources.extend(fact.source for fact in values.get("facts") or [])
                     reply_value = values.get("reply")
                     if reply_value is not None:
                         reply = reply_value
@@ -380,6 +387,7 @@ async def _run_turn(
                 "fact_values": list(dict.fromkeys(collected_values)),
                 **({"grounding": {"outcome": grounding_outcome}} if grounding_outcome else {}),
             },
+            list(dict.fromkeys(fact_sources)),
         )
         await events.publish(
             conversation_id, "message", {"role": "bot", "text": reply, "sources": []}

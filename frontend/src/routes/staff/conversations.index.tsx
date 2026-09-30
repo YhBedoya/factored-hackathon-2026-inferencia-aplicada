@@ -6,12 +6,11 @@ import {
 	type ConversationSearchFilters,
 } from "@/components/staff/ConversationFilters";
 import { ConversationTable } from "@/components/staff/ConversationTable";
-import { staffMe } from "@/lib/api";
+import { listStaffConversations, staffMe } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import {
-	DEFAULT_CONVERSATION_FILTERS,
-	listConversations,
-} from "@/lib/traceability";
+
+// D7-A D19's default page; this screen has no pager yet.
+const PAGE_SIZE = 50;
 
 function parseSearch(
 	search: Record<string, unknown>,
@@ -21,7 +20,7 @@ function parseSearch(
 	return {
 		language: str("language") as ConversationSearchFilters["language"],
 		country: str("country") as ConversationSearchFilters["country"],
-		intent: str("intent") as ConversationSearchFilters["intent"],
+		intent: str("intent"),
 		outcome: str("outcome") as ConversationSearchFilters["outcome"],
 		escalation: str("escalation") as ConversationSearchFilters["escalation"],
 		date_from: str("date_from"),
@@ -49,8 +48,7 @@ function ConversationListPage() {
 
 	const { data } = useQuery({
 		queryKey: ["staff", "conversations", search],
-		queryFn: () =>
-			listConversations({ ...DEFAULT_CONVERSATION_FILTERS, ...search }),
+		queryFn: () => listStaffConversations({ ...search, limit: PAGE_SIZE }),
 	});
 
 	return (

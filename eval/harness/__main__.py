@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from eval.harness.runner import run
+from eval.harness.runner import HeldoutRefusedError, heldout_refusal, run
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,7 +28,25 @@ def main(argv: list[str] | None = None) -> int:
         choices=["scripted", "simulator"],
         help="scripted (default) or the goal-driven LLM simulator (D6-B)",
     )
+    ap.add_argument(
+        "--runs",
+        type=int,
+        default=1,
+        help="repeat the proposed system N times (baseline runs once)",
+    )
+    ap.add_argument(
+        "--nlu",
+        default="off",
+        choices=["off", "smoke", "suite"],
+        help="add the NLU model comparison on the smoke set or the suite's items",
+    )
     args = ap.parse_args(argv)
+    if (reason := heldout_refusal(args.suite)) is not None:
+        # One line and exit 2, before anything loads or clones (D3, R9).
+        print(reason, file=sys.stderr)
+        return 2
+    if args.runs < 1:
+        ap.error("--runs must be at least 1")
     prefixes = [p for p in (args.cases or "").split(",") if p] or None
     if args.cases is not None and prefixes is None:
         ap.error("--cases needs at least one non-empty prefix")
@@ -46,7 +64,12 @@ def main(argv: list[str] | None = None) -> int:
             driver=driver,
             driver_name=args.driver,
             cases_filter=prefixes,
+            runs=args.runs,
+            nlu=args.nlu,
         )
+    except HeldoutRefusedError as exc:
+        print(exc, file=sys.stderr)
+        return 2
     except ValueError as exc:
         # An empty selection is a usage error, reported before any clone exists.
         ap.error(str(exc))

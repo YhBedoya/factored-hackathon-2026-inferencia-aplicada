@@ -30,6 +30,18 @@ test("staff login, list, filter by intent, expand a turn's why", async ({
 	await page.getByTestId("filter-intent").selectOption("card_status");
 	await expect(rows).toHaveCount(1);
 	await expect(page).toHaveURL(/intent=card_status/);
+	// `handoff:reclamos` is labeled by its prefix, the queue by the dictionary
+	await expect(rows.first()).toContainText("Escalado");
+	await expect(rows.first()).toContainText("Reclamos");
+
+	// 3b. escalation takes `none` / `any` / a queue, not a handoff reason
+	await page.getByTestId("filter-intent").selectOption("");
+	await page.getByTestId("filter-escalation").selectOption("none");
+	await expect(rows).toHaveCount(2);
+	await expect(page).toHaveURL(/escalation=none/);
+	await page.getByTestId("filter-escalation").selectOption("");
+	await page.getByTestId("filter-intent").selectOption("card_status");
+	await expect(rows).toHaveCount(1);
 
 	// 4. open a conversation and expand a turn
 	await page.getByTestId("conversation-row-link").first().click();

@@ -2,9 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { TurnTimeline } from "@/components/staff/TurnTimeline";
-import { staffMe } from "@/lib/api";
+import { getStaffConversationTimeline, staffMe } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { getConversationTimeline } from "@/lib/traceability";
 
 // D5/D20-style guard, same as `staff/index.tsx` and `staff/handoffs.$handoffId.tsx`.
 export const Route = createFileRoute("/staff/conversations/$conversationId")({
@@ -23,7 +22,7 @@ function ConversationTimelinePage() {
 
 	const { data } = useQuery({
 		queryKey: ["staff", "conversations", conversationId, "timeline"],
-		queryFn: () => getConversationTimeline(conversationId),
+		queryFn: () => getStaffConversationTimeline(conversationId),
 	});
 
 	return (

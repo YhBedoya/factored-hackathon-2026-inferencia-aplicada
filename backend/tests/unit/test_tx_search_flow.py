@@ -15,7 +15,8 @@ from typing import Any
 
 import pytest
 
-from app.domains.conversation.graph import run_turn
+from app.domains.conversation.graph import TxSelection, run_turn
+from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.sandbox import _RecordingBankTools
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
@@ -94,6 +95,54 @@ def test_super_ahorro_last_tuesday_es(fakebank_dir: Path) -> None:
         event = state.values["ui"][0]
         assert event.payload.multi is False
         assert [option.tx_id for option in event.payload.options] == ["TRX-TFT7CRED0001TXN01"]
+
+    asyncio.run(run())
+
+
+class _CappedSearch(_FilterSpy):
+    """An unfiltered `search_transactions` misses the offered row, as the
+    real one does once the customer has 10+ newer rows."""
+
+    async def search_transactions(self, tx_filter: TxFilter) -> Any:
+        if tx_filter == TxFilter():
+            return []
+        return await super().search_transactions(tx_filter)
+
+
+def test_pick_rereads_the_row_by_id_es(fakebank_dir: Path) -> None:
+    """D2 pick: the picked row is re-read by id, so it is found even when it
+    is not among the newest rows an unfiltered search returns."""
+
+    async def run() -> None:
+        llm = ScriptedLLM(
+            {
+                "nlu": [
+                    NLUResult(
+                        language="es",
+                        intents=["transaction_search"],
+                        status="clear",
+                        slots=NLUSlots(merchant_text="Super Ahorro"),
+                    )
+                ],
+                "compose": [ComposeDraft(text="Tu movimiento en {merchant} por {amount}.")],
+            }
+        )
+        session = make_session(_CUSTOMER, fakebank_dir, llm)
+        session.config["configurable"]["now"] = _CLOCK
+        spy = _CappedSearch(_RecordingBankTools(session.config["configurable"]["bank_tools"]))
+        session.config["configurable"]["bank_tools"] = spy
+
+        await run_turn(session.graph, "el cargo de Super Ahorro", config=session.config)
+        reply, debug = await run_turn(
+            session.graph,
+            "",
+            config=session.config,
+            selection=TxSelection(tx_ids=["TRX-TFT7CRED0001TXN01"]),
+        )
+
+        assert "get_transactions_by_ids" in debug.tools_called
+        assert "Super Ahorro" in reply
+        assert reply != get_template("nothing_pending", "es")
 
     asyncio.run(run())
 

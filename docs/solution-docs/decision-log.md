@@ -192,6 +192,19 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 **Decision:** a pick is a suspected compromise when ≥ 2 transactions are picked, or any picked `fraud_score` > 30, or the customer answers "no" to the possession question. That question is asked right after the pick, and only if count and score haven't already triggered. Both thresholds live in `policies/disputes.yaml`. A compromise runs one ADR-027 plan (`block_card` then `create_claim`) and hands off to Fraudes. A refused block writes nothing, offers the claim alone, and still hands off to Fraudes.
 **Why:** resolves the deferred item "Suspected-compromise rule and threshold", decided while building the flow as planned. `fraud_score` > 30 covers about 0.07% of transactions, so the demo uses a picked persona. See spec `docs/specs/d4-b-disputes-handoff-screens.md` D8–D10.
 
+### D7 — Model per step (D7) · **Proposed**
+**Context:** `07` §8 D7 asks for the model per step, chosen from the dev-set benchmark. The first live run is `eval/reports/dev-c64dd67067/` (offline evaluation, `CASES=a-`, 5 cases, 3 proposed runs, Anthropic API; Bedrock serves the same models, ADR-028). The `nlu` step runs without a fixed temperature, so results can vary between runs (ADR-031).
+**Proposal:** `nlu` stays on `claude-sonnet-5-5` (ADR-031). `compose` and `handoff_summary` stay on `claude-haiku-4-5-20251001`. The smoke NLU comparison (offline evaluation, n=20, `failed_calls` 0 for both models):
+
+| System | F1 | Exact-set match | Status acc. | p50 / p95 ms | Mean cost/call |
+|---|---|---|---|---|---|
+| keyword_nlu | 0.635 | 60.0% (12/20) | 90.0% (18/20) | n/a | n/a |
+| claude-sonnet-5-5 | 1.000 | 100.0% (20/20) | 100.0% (20/20) | 1335 / 2904 | $0.01601 |
+| claude-haiku-4-5-20251001 | 1.000 | 100.0% (20/20) | 95.0% (19/20) | 1424 / 2032 | $0.00620 |
+
+**Why not decided yet:** both models tie on intent (F1 1.000). Haiku costs about 39% of Sonnet per call and misses one status on n=20, so the smoke set cannot separate them (the 95% intervals overlap widely). Proposed pass rate on the 5 `a-` cases was 100% (safe automated resolution 4/4) in every run, against 75% (3/4) for the baseline, which is also n-limited.
+**Status:** final after the held-out NLU comparison.
+
 ---
 
 ## Deferred to implementation

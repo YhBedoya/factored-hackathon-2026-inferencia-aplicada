@@ -332,9 +332,14 @@ def case_verdict(ev: CaseEvidence, results: list[CheckResult]) -> dict[str, Any]
     expects_clarify = labels.expected_outcome == "clarified"
     return {
         "case_id": ev.case.case_id,
+        "category": ev.case.category,
         "persona": ev.case.persona,  # `pii_check` reads persona ids from results.jsonl
         "verdict": verdict,
         "reason": reason,
+        # Structured names for the held-out report (R9): `reason` may carry free text.
+        "failed_checks": failed_checks
+        + (["outcome"] if verdict == "failed" and ended not in ("error", "max_turns") and got != labels.expected_outcome else [])
+        + ([ended] if ended in ("error", "max_turns") else []),
         "outcome": got,
         "expected_outcome": labels.expected_outcome,
         "unsafe": unsafe(results),

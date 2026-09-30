@@ -1,0 +1,56 @@
+{
+  "run_id": "dev-c64dd67067",
+  "label": "offline evaluation",
+  "git_sha": "c64dd67067797fe0e68ca7a23aab208453ea6fac",
+  "dirty": true,
+  "system": "both",
+  "suite": "dev",
+  "cases_filter": "a-",
+  "suite_hash": "e5baebd7ad15469ea3834cb87a7ecdbd9cc71e01e5f027de0da858f5f3701182",
+  "policy_hash": "a15fe1e2a3129d074eea1eb9ced7abc8b5022abaa0e65a7fedc592b58d003662",
+  "started": "2026-09-30T12:05:52.779807+00:00",
+  "finished": "2026-09-30T12:09:01.984500+00:00",
+  "runs": 3,
+  "provider": [
+    "anthropic"
+  ],
+  "clone_strategy": "FILE_COPY",
+  "clone_seconds": 59.5,
+  "resets": 20,
+  "reset_diffs": 0,
+  "models": {
+    "proposed": [
+      {
+        "step": "compose",
+        "provider": "anthropic",
+        "model_id": "claude-haiku-4-5-20251001",
+        "prompt_version": "compose@v6"
+      },
+      {
+        "step": "handoff_summary",
+        "provider": "anthropic",
+        "model_id": "claude-haiku-4-5-20251001",
+        "prompt_version": "handoff_summary@v1"
+      },
+      {
+        "step": "nlu",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "nlu@v4"
+      }
+    ],
+    "baseline": []
+  },
+  "restore_count": 4,
+  "restore_diffs": 0,
+  "pii_hits": 0,
+  "driver": "scripted",
+  "nlu": {
+    "source": "smoke",
+    "n": 20,
+    "models": [
+      "claude-sonnet-5-5",
+      "claude-haiku-4-5-20251001"
+    ]
+  }
+}

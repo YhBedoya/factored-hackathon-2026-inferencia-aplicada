@@ -25,6 +25,14 @@ Verdict = dict[str, Any]
 
 LABEL = "offline evaluation"
 
+# D7: the label follows the driver, so a simulator run never reads as an offline one.
+_LABELS = {"scripted": LABEL, "simulator": "simulation"}
+
+
+def label_for(driver: str | None) -> str:
+    """`scripted` -> "offline evaluation", `simulator` -> "simulation"."""
+    return _LABELS[driver or "scripted"]
+
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     """Wilson score interval for k successes in n trials; (0, 0) when n = 0."""
@@ -192,3 +200,70 @@ def compute_all(verdicts: Sequence[Verdict]) -> dict[str, Any]:
             if v.get("verdict") == "not_run"
         ],
     }
+
+
+def _rate_value(key: str) -> Callable[[dict[str, Any]], float | None]:
+    return lambda o: o[key]["value"]
+
+
+# name -> getter over one run's `compute()` output; one entry per 05 §6 metric.
+AGGREGATED: dict[str, Callable[[dict[str, Any]], float | None]] = {
+    "cases": lambda o: float(o["cases"]),
+    "safe_automated_resolution": _rate_value("safe_automated_resolution"),
+    "automation_attempted": _rate_value("automation_attempted"),
+    "containment": _rate_value("containment"),
+    "escalation_recall": lambda o: o["escalation"]["recall"]["value"],
+    "escalation_precision": lambda o: o["escalation"]["precision"]["value"],
+    "unsafe": _rate_value("unsafe"),
+    "clarification_accuracy": _rate_value("clarification_accuracy"),
+    "turn_latency_p50": lambda o: o["latency_ms"]["turn"]["p50"],
+    "turn_latency_p95": lambda o: o["latency_ms"]["turn"]["p95"],
+    "conversation_latency_p50": lambda o: o["latency_ms"]["conversation"]["p50"],
+    "conversation_latency_p95": lambda o: o["latency_ms"]["conversation"]["p95"],
+    "cost_per_case": lambda o: o["cost_usd"]["per_case"],
+    "cost_per_success": lambda o: o["cost_usd"]["per_success"],
+}
+
+
+def _spread(values: Sequence[float | None]) -> dict[str, Any]:
+    """Per-run values plus mean and min-max over the defined ones (None = not defined)."""
+    defined = [v for v in values if v is not None]
+    return {
+        "per_run": list(values),
+        "mean": sum(defined) / len(defined) if defined else None,
+        "min": min(defined) if defined else None,
+        "max": max(defined) if defined else None,
+    }
+
+
+def aggregate(runs: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Across-run spread of each metric, from a list of `compute_all` outputs.
+
+    Runs are never pooled into one CI: they are repeats of the same cases, so they
+    aren't independent samples (05 §5). Breakdown groups carry the safe automated
+    resolution spread and the per-run case count.
+    """
+    out: dict[str, Any] = {
+        "runs": len(runs),
+        "overall": {
+            name: _spread([get(r["overall"]) for r in runs])
+            for name, get in AGGREGATED.items()
+        },
+    }
+    for key in ("by_language_variant", "by_segment"):
+        groups = sorted({g for r in runs for g in r[key]})
+        out[key] = {
+            g: {
+                "cases": [r[key][g]["cases"] if g in r[key] else 0 for r in runs],
+                "safe_automated_resolution": _spread(
+                    [
+                        r[key][g]["safe_automated_resolution"]["value"]
+                        if g in r[key]
+                        else None
+                        for r in runs
+                    ]
+                ),
+            }
+            for g in groups
+        }
+    return out

@@ -1,6 +1,6 @@
+import type { TurnTimeline as TurnTimelineRow } from "@/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
-import type { TurnTimeline as TurnTimelineRow } from "@/lib/traceability";
 
 type TurnTimelineProps = {
 	turns: TurnTimelineRow[];
@@ -8,6 +8,20 @@ type TurnTimelineProps = {
 
 const SECTION_TITLE = "text-sm font-medium";
 const EMPTY_TEXT = "text-sm text-muted-foreground";
+
+// R4: numbers are formatted here, never shown as the raw float.
+function formatMs(ms: number | null): string {
+	return ms === null ? "—" : `${Math.round(ms)} ms`;
+}
+
+function formatUsd(usd: number | null): string {
+	return usd === null ? "—" : `US$ ${usd.toFixed(4)}`;
+}
+
+/** A `rule_hit` event's rule id (`{rule_id, ...}` payload), else its type. */
+function ruleName(payload: Record<string, unknown>): string {
+	return typeof payload.rule_id === "string" ? payload.rule_id : "rule_hit";
+}
 
 /**
  * One `<details>` per turn, in server order. Expanding a turn shows its full
@@ -38,7 +52,7 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 									data-testid="turn-summary"
 								>
 									{t("staff.timeline.turn", { index: String(index + 1) })} ·{" "}
-									{turn.at}
+									{new Date(turn.started_at).toLocaleString()}
 								</summary>
 
 								<div
@@ -50,8 +64,8 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 											{turn.customer_text_masked}
 										</p>
 									)}
-									{turn.reply_text && (
-										<p data-testid="turn-reply-text">{turn.reply_text}</p>
+									{turn.bot_text_masked && (
+										<p data-testid="turn-reply-text">{turn.bot_text_masked}</p>
 									)}
 
 									<section>
@@ -68,13 +82,17 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 										<h4 className={SECTION_TITLE}>
 											{t("staff.timeline.rules_hit")}
 										</h4>
-										{turn.rules_hit.length === 0 ? (
+										{turn.rules.length === 0 ? (
 											<p className={EMPTY_TEXT}>{none}</p>
 										) : (
 											<ul>
-												{turn.rules_hit.map((rule) => (
-													<li key={rule} data-testid="turn-rule">
-														{rule}
+												{turn.rules.map((rule, ruleIndex) => (
+													<li
+														// biome-ignore lint/suspicious/noArrayIndexKey: rule events carry no stable id
+														key={`${rule.at}-${ruleIndex}`}
+														data-testid="turn-rule"
+													>
+														{ruleName(rule.payload)}
 													</li>
 												))}
 											</ul>
@@ -120,7 +138,8 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 									</section>
 
 									<p data-testid="turn-policy-version">
-										{t("staff.timeline.policy_version")}: {turn.policy_version}
+										{t("staff.timeline.policy_version")}:{" "}
+										{turn.policy_version ?? none}
 									</p>
 
 									<section>
@@ -131,12 +150,16 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 											<p className={EMPTY_TEXT}>{none}</p>
 										) : (
 											<ul>
-												{turn.llm_calls.map((call) => (
-													<li key={call.step} data-testid="turn-llm-call">
+												{turn.llm_calls.map((call, callIndex) => (
+													<li
+														// biome-ignore lint/suspicious/noArrayIndexKey: a step can repeat across retries
+														key={`${call.step}-${call.attempt}-${callIndex}`}
+														data-testid="turn-llm-call"
+													>
 														{call.step} · {call.model_id} ·{" "}
-														{call.prompt_version} · {call.latency_ms}ms
+														{call.prompt_version} · {formatMs(call.latency_ms)}
 														{call.cost_usd !== null
-															? ` · $${call.cost_usd}`
+															? ` · ${formatUsd(call.cost_usd)}`
 															: ""}
 													</li>
 												))}
@@ -145,8 +168,9 @@ export function TurnTimeline({ turns }: TurnTimelineProps) {
 									</section>
 
 									<p data-testid="turn-latency-cost">
-										{t("staff.timeline.turn_latency")}: {turn.latency_ms ?? "—"}
-										ms · {t("staff.timeline.turn_cost")}: {turn.cost_usd ?? "—"}
+										{t("staff.timeline.turn_latency")}:{" "}
+										{formatMs(turn.latency_ms)} ·{" "}
+										{t("staff.timeline.turn_cost")}: {formatUsd(turn.cost_usd)}
 									</p>
 
 									{turn.langfuse_url && (

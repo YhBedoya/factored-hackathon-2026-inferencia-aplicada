@@ -43,7 +43,7 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_checked", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 7)
+_PROMPT = PromptRef("compose", 8)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Grounding = Literal["ok", "regenerated", "template"]

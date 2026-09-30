@@ -13,7 +13,8 @@ is no cookie yet to double-submit against.
 decision, not `conversation/deps.py`, which does not exist).
 
 D4-B D5 adds two role-shape checks beyond "every non-public route has a
-`RoleGuard`": every `/api/v1/staff/...` route is agent-only, and
+`RoleGuard`": every `/api/v1/staff/...` route is agent+admin (D22: the
+`/staff/personas...` routes are admin only), and
 `/auth/logout` (moved off `router` onto its own `logout_router`) accepts
 both roles, since it is the one route a staff session also reaches.
 
@@ -29,7 +30,7 @@ from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 
 from app.api.v1.conversations import get_owned_conversation
-from app.api.v1.staff import get_claimed_conversation
+from app.api.v1.staff import get_any_conversation, get_claimed_conversation
 from app.core.config import get_settings
 from app.domains.identity.deps import RoleGuard
 
@@ -123,7 +124,10 @@ def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch
         for ctx in contexts:
             if ctx.path is None:
                 continue
-            if ctx.path.startswith("/api/v1/staff/"):
+            if ctx.path.startswith("/api/v1/staff/personas"):
+                # D22: persona catalog and credentials are admin only.
+                assert _role_guard_roles(ctx) == [("admin",)], ctx.path
+            elif ctx.path.startswith("/api/v1/staff/"):
                 assert ("agent", "admin") in _role_guard_roles(ctx), ctx.path
             if ctx.path.startswith("/api/v1/admin/"):
                 assert ("admin",) in _role_guard_roles(ctx), ctx.path
@@ -132,10 +136,20 @@ def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch
             ctx for ctx in contexts if ctx.path is not None and ctx.path.startswith(claimed_prefix)
         ]
         assert len(claimed_contexts) >= 3
+        timeline_path = "/api/v1/staff/conversations/{conversation_id}/timeline"
         for ctx in claimed_contexts:
-            assert _calls_somewhere(ctx.dependant, get_claimed_conversation), (
-                f"{ctx.path} doesn't depend on get_claimed_conversation"
-            )
+            if ctx.path == timeline_path:
+                # D16: read-only, no claim needed; must not fall back to the claim scope.
+                assert _calls_somewhere(ctx.dependant, get_any_conversation), ctx.path
+                assert not _calls_somewhere(ctx.dependant, get_claimed_conversation), ctx.path
+            else:
+                assert _calls_somewhere(ctx.dependant, get_claimed_conversation), (
+                    f"{ctx.path} doesn't depend on get_claimed_conversation"
+                )
+        assert timeline_path in {ctx.path for ctx in claimed_contexts}
+        for ctx in contexts:
+            if ctx.path != timeline_path:
+                assert not _calls_somewhere(ctx.dependant, get_any_conversation), ctx.path
     finally:
         monkeypatch.undo()
         get_settings.cache_clear()

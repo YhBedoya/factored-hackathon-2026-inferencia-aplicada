@@ -22,7 +22,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
 
-__all__ = ["fetch_known_pii", "fetch_login_profile", "fetch_profile"]
+__all__ = ["fetch_document", "fetch_known_pii", "fetch_login_profile", "fetch_profile"]
 
 
 async def _fetch_one(sql: str, params: dict[str, Any]) -> RowMapping | None:
@@ -73,6 +73,20 @@ async def fetch_known_pii(customer_id: str) -> RowMapping | None:
     return await _fetch_one(
         """
         SELECT document_number, first_name, last_name
+        FROM bank.customers
+        WHERE customer_id = :customer_id
+        """,
+        {"customer_id": customer_id},
+    )
+
+
+async def fetch_document(customer_id: str) -> RowMapping | None:
+    """`document_type` and `document_number` for one customer, or `None` if
+    unknown. Feeds the admin persona credentials lookup (D22) only.
+    """
+    return await _fetch_one(
+        """
+        SELECT document_type, document_number
         FROM bank.customers
         WHERE customer_id = :customer_id
         """,

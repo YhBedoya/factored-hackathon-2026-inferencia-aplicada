@@ -15,6 +15,13 @@ RUN uv sync --frozen --no-install-project
 COPY . .
 RUN uv sync --frozen
 
+# Personas come from the `eval` named build context (compose
+# `additional_contexts`), since `eval/` sits outside the backend context.
+COPY --from=eval personas.yaml /app/eval/personas.yaml
+
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
+
 EXPOSE 8000
 
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

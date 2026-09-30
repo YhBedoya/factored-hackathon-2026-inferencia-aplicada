@@ -75,6 +75,16 @@ class PostgresBank:
                 raise
         return await transactions_service.search(self._ctx.customer_id, tx_filter)
 
+    async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
+        # The same own-row lookup `disputes.create_claim` runs (D4-B, R1). A
+        # pick re-reads its one row by id: `search` returns only the newest
+        # 10, so an older picked row would fall out of an unfiltered re-read.
+        try:
+            return await transactions_service.get_by_ids(self._ctx.customer_id, tx_ids)
+        except AccessDenied:
+            self._log_access_denied(tool="transactions.get_by_ids", requested_id=tx_ids[0])
+            raise
+
     async def explain_decline(self, tx_id: str) -> DeclineExplanation:
         # `get_declined` is already own-row-only with no AccessDenied path
         # (D4, R1), so there is nothing to catch and log here.

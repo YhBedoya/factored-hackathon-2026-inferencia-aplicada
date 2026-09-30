@@ -40,6 +40,7 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `cards.order_replacement(card_id, address_ref, token_id)` | ✓ | ✓ | ✓ if address changed | `ActionResult{tracking_id}` |
 | `transactions.search(filter: TxFilter)` | — | — | — | `[TxView{tx_id, card_id, occurred_at, amount, currency, amount_usd, type, category, merchant_name, merchant_category, channel, city, country, status, response_code, fraud_score}]`, max 10, newest first |
 | `transactions.get(tx_id)` | — | — | — | `TxView` |
+| `transactions.get_by_ids(tx_ids)` | — | — | — | `[TxView]` in `tx_ids`' order, customer-scoped (R1): own rows first, then an existence probe (`AccessDenied` for another customer's id, `NotFound` for none). Used by the tx_search / tx_explain pick resume, since `search` caps at 10 |
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, self_service, source}` (`self_service` is `true` for code 54, and drives the replacement quick-reply offer, D5-B D7) |
 | `disputes.create_claim(tx_ids, answers, priority_flags, token)` | ✓ | ✓ | — | `ActionResult{case_ids}`: one `bank.complaints` row per transaction (D4-B D14–D16); `answers` is a sorted `list[str]` of `"<question_id>=<yes\|no>"`. `priority_flags` is a sorted `list[str]`, built in code and bound by the confirmation token like `answers` (D7-B SA1); the row's `priority` is `'High'` when the list is non-empty, `NULL` otherwise |
 | `disputes.get_priority_signals()` | — | — | — | `PrioritySignals{repeat_complainer: bool, open_critical: bool}`, customer-scoped from `ToolContext` (R1, D7-B D5/D9) |
@@ -104,55 +105,49 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `POST /staff/conversations/{id}/messages` | agent, admin | `{text: 1..2000}` → `201 {message_id}`, relayed on `conv:<id>` |
 | `GET /staff/conversations/{id}/stream` | agent, admin | SSE on `conv:<id>`, same framing as the customer stream |
 | `POST /staff/actions/{tool}` | agent | One-click action through the policy engine (Stretch) |
-| `GET /staff/conversations` + `ConversationFilters` — **(proposed)**, D7-B D11 | agent, admin — exempt from `get_claimed_conversation` | `ConversationList`, newest first |
-| `GET /staff/conversations/{id}/timeline` — **(proposed)**, D7-B D11 | agent, admin — exempt from `get_claimed_conversation` | `ConversationTimeline`, `404 not_found` if the id is unknown |
-| `GET /staff/personas` · `GET /staff/personas/{customer_id}/credentials` | admin | Persona catalog and credential lookup |
+| `GET /staff/conversations?language=&country=&intent=&outcome=&escalation=&date_from=&date_to=&limit=&offset=` | agent, admin | Traceability console list: `ConversationPage{total, items: [ConversationSummary]}`, newest first, filters ANDed, `limit` 1-200 (default 50) and `offset`, `total` counts every match. `outcome=handoff` matches every `handoff:<queue>`; `escalation` is `none`, `any` or a queue name; `date_from`/`date_to` are inclusive UTC dates on `app.conversations.started_at`. An invalid filter value is `422` |
+| `GET /staff/conversations/{id}/timeline` | agent, admin | `ConversationTimeline{conversation: ConversationSummary, turns: [TurnTimeline]}`: per turn the masked customer and bot text, the NLU result, rule hits, tool calls, sources, policy version, LLM calls, latency, cost and a Langfuse link. Read-only, masked data only. `404 not_found` if the conversation doesn't exist |
+| `GET /staff/system` | agent, admin | `SystemInfo{git_sha, app_env, llm_provider, llm_disabled, steps: [{step, model_id, temperature, prompt_version}], policy_hash, policies: [{file, sha256}]}`, read from code and config |
+| `GET /staff/personas` · `GET /staff/personas/{persona_id}/credentials` | admin | Persona catalog `[PersonaEntry{customer_id, split, traits, notes}]` and credential lookup `PersonaCredentials{customer_id, document_type, document_number, password}`. `persona_id` is the catalog persona's id; the path doesn't use the name `customer_id` because of the R1 route guard (D7-A D22, amended). The credentials response carries `Cache-Control: no-store`; `404 not_found` when the id isn't in the catalog |
 | `POST /admin/demo/reset` | admin | Restore from the golden DB → `{status: "reset", duration_ms}` |
 | `POST /test-idp/sessions` | eval only (router included under `/api/v1` only when `APP_ENV=eval`) | Mint a session for any customer |
 
-**Traceability console shapes (proposed, D7-B D11; A adopts or amends in A1):**
+**Traceability console shapes (D7-A D23, supersedes the D7-B D11 proposal):** `app/domains/audit/schemas.py`, generated into the frontend client by `make client`.
 
 ```python
-class ConversationFilters(BaseModel):           # GET /staff/conversations query
+class ConversationSummary(BaseModel):
+    conversation_id: UUID; created_at: datetime          # from app.conversations.started_at
     language: Literal["es","pt"] | None; country: Literal["MX","CO","AR"] | None
-    intent: Intent | None; outcome: Literal["resolved","clarified","abstained","handoff"] | None
-    escalation: HandoffReason | None; date_from: date | None; date_to: date | None
-    limit: int = 50; offset: int = 0
+    intents: list[str]                                   # distinct, first-seen order
+    outcome: str | None                                  # resolved | clarified | abstained | handoff:<queue>
+    escalated: bool; queue: str | None; mode: str; status: str; turns: int
 
-class ConversationListItem(BaseModel):
-    conversation_id: UUID; started_at: datetime; language: Literal["es","pt"] | None
-    country: Literal["MX","CO","AR"]; intents: list[Intent]; outcome: str | None
-    escalation: HandoffReason | None; handoff_queue: Queue | None; turns: int; mode: Literal["bot","human"]
+class ConversationPage(BaseModel):  total: int; items: list[ConversationSummary]
 
-class ConversationList(BaseModel):  items: list[ConversationListItem]; total: int
-
-class TimelineLLMCall(BaseModel):
-    step: str; model_id: str; prompt_version: str; latency_ms: float
-    input_tokens: int | None; output_tokens: int | None; cost_usd: Decimal | None; status: str
+class LLMCallView(BaseModel):       # no input_text / output_json (D7-A D17)
+    step: str; model_id: str; prompt_version: str; temperature: float | None; attempt: int
+    status: str; latency_ms: float; input_tokens: int | None; output_tokens: int | None; cost_usd: float | None
 
 class TimelineEvent(BaseModel):     # one audit.audit_events row, payload already masked
-    at: datetime; type: str; actor: str; payload: dict; sources: list[str]
+    at: datetime; type: AuditType; actor: str; payload: dict; sources: list[str]
 
 class TurnTimeline(BaseModel):
-    turn_id: UUID; at: datetime; customer_text_masked: str | None; reply_text: str | None
-    nlu: dict | None                       # nlu_result payload
-    rules_hit: list[str]; tools: list[TimelineEvent]; sources: list[str]
-    policy_version: str; llm_calls: list[TimelineLLMCall]
-    latency_ms: float | None; cost_usd: Decimal | None; langfuse_url: str | None
-    events: list[TimelineEvent]
+    turn_id: UUID; started_at: datetime; customer_text_masked: str | None; bot_text_masked: str | None
+    nlu: dict | None                # the turn's nlu_result payload
+    rules: list[TimelineEvent]; tools: list[TimelineEvent]; events: list[TimelineEvent]
+    sources: list[str]; policy_version: str | None; llm_calls: list[LLMCallView]
+    latency_ms: float | None; cost_usd: float | None; langfuse_url: str | None
 
-class ConversationTimeline(BaseModel):
-    conversation_id: UUID; system: dict    # git sha, model ids per step, prompt versions, policy hash
-    turns: list[TurnTimeline]
+class ConversationTimeline(BaseModel):  conversation: ConversationSummary; turns: list[TurnTimeline]
 ```
 
-`GET /staff/conversations` and `GET /staff/conversations/{id}/timeline` are exempt from `get_claimed_conversation` (unlike every other `/staff/conversations/{id}/…` route, §"Auth" below): they check the agent or admin role only, and every payload is the masked audit data already used elsewhere in this console (no chain-of-thought, no raw PII).
+`GET /staff/conversations` has no `{id}` and checks the agent or admin role only; `GET /staff/conversations/{id}/timeline` uses `get_any_conversation` (§"Auth" below). Both return only the masked audit data already used elsewhere in this console (no chain-of-thought, no raw PII). The system metadata (git SHA, model per step, prompt versions, policy hash) comes from `GET /staff/system`, not from the timeline.
 
 `TurnInput` gains `resume: Literal["step_up"] | None` (D2-B D1, amends D2-K D17): `None` on every typed or button turn, and `"step_up"` for the one that follows a successful `/auth/otp/verify`. The graph checks it right after `load_session`, before `confirmation` or a fresh `understand` call would otherwise run, and resumes the flow paused at `pending.awaiting_slot == "otp"` only when that pause is actually open; with no matching pause, or the step-up gate still invalid, nothing executes and the turn replies with the `otp_required` template again (no LLM call either way). In the sandbox, `/otp <code>` calls the fake step-up gate's `verify(code)` directly and, on success, runs the resume turn the same way.
 
 **Auth (ADR-025):** the Role column is enforced by router-level dependencies (`Depends(require_role(...))`), not per route. Every `/conversations/{id}/…` route also depends on `get_owned_conversation`. Errors: `401 session_expired` (no or expired session), `403 forbidden_role`, `404 not_found` (the conversation doesn't exist *or* belongs to another customer). **Resume (D6-A D12):** a `401 session_expired` on `/messages` or `/confirmations` changes nothing server-side (checkpoint and `pending`, the plan in Redis, the turn lock, `app.messages`, `audit.*`). The client keeps the rejected request and re-sends it after re-login; the same customer proceeds, another customer gets `404` and the plan stays open. There is no resume endpoint. Only `/auth/login`, `/auth/refresh` and the health check are public.
 
-**Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff (D4-A, ADR-008 amended):** seeded staff accounts log in with `POST /auth/staff/login {username, password}` and get the same cookie + CSRF session with role `agent` or `admin` and no `customer_id`. The `/staff/*` routers require `agent` or `admin`, `/admin/*` requires `admin`. `/staff/*` routers require `agent` or `admin` plus CSRF; a customer session on `/staff/*` or `/admin/*`, or a staff session on `/conversations/*`, `/auth/me` or `/auth/refresh`, gets `403 forbidden_role` (the refresh rule is D4-B D5). Every `/staff/conversations/{id}/…` route depends on `get_claimed_conversation`: the conversation must have an open handoff claimed by the caller, otherwise `404 not_found`. Shapes (`app/domains/handoff/schemas.py`, frozen): `HandoffSummary{handoff_id, reference, conversation_id, queue, priority: high | normal, reason: HandoffReason, status: queued | claimed | returned, language: es | pt, created_at, claimed_by: str | null}` (`claimed_by` is the agent's `display_name`); `HandoffDetail{summary: HandoffSummary, packet: HandoffPacket}`. `reference` is `"HO-"` + the first 8 hex digits of `handoff_id`, uppercased.
+**Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff (D4-A, ADR-008 amended):** seeded staff accounts log in with `POST /auth/staff/login {username, password}` and get the same cookie + CSRF session with role `agent` or `admin` and no `customer_id`. The `/staff/*` routers require `agent` or `admin`, `/admin/*` requires `admin`. `/staff/*` routers require `agent` or `admin` plus CSRF; a customer session on `/staff/*` or `/admin/*`, or a staff session on `/conversations/*`, `/auth/me` or `/auth/refresh`, gets `403 forbidden_role` (the refresh rule is D4-B D5). Every `/staff/conversations/{id}/…` route depends on `get_claimed_conversation`: the conversation must have an open handoff claimed by the caller, otherwise `404 not_found`. **One exception (D7-A D16):** `GET /staff/conversations/{id}/timeline` depends on `get_any_conversation` instead. It needs no claim, is read-only and is open to `agent` and `admin`; the conversation must still exist, else `404 not_found`. Every other `/staff/conversations/{id}/…` route keeps `get_claimed_conversation`. The timeline's `created_at` is filled from `app.conversations.started_at` (the table has no `created_at`). Shapes (`app/domains/handoff/schemas.py`, frozen): `HandoffSummary{handoff_id, reference, conversation_id, queue, priority: high | normal, reason: HandoffReason, status: queued | claimed | returned, language: es | pt, created_at, claimed_by: str | null}` (`claimed_by` is the agent's `display_name`); `HandoffDetail{summary: HandoffSummary, packet: HandoffPacket}`. `reference` is `"HO-"` + the first 8 hex digits of `handoff_id`, uppercased.
 
 **SSE events:** `status {step}` · `message {role: bot | customer | agent | system, text, sources[], agent_display_name?}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
 

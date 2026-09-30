@@ -189,15 +189,16 @@ def _load_meta(run_id: str) -> dict[str, Any]:
 
 
 def _load_transcripts(run_id: str) -> list[dict[str, Any]]:
-    """Only `system == "proposed"` rows (R9: the judge scores the proposed
-    system's replies, never the baseline's)."""
+    """Only `system == "proposed"` rows of the first run (R9: the judge scores the
+    proposed system's replies, never the baseline's). With `RUNS=N` the other
+    proposed runs replay the same cases, so they are left out to keep items distinct."""
 
     rows: list[dict[str, Any]] = []
     with (REPORTS / run_id / "transcripts.jsonl").open(encoding="utf-8") as handle:
         for line in handle:
             if line.strip():
                 rows.append(json.loads(line))
-    return [row for row in rows if row.get("system") == "proposed"]
+    return [row for row in rows if row.get("system") == "proposed" and row.get("run", 1) == 1]
 
 
 def _persona_pii_map(persona_ids: list[str]) -> dict[str, dict[str, Any]]:

@@ -42,6 +42,12 @@ class BankReadTools(Protocol):
         # not the customer's), ToolUnavailable.
         ...
 
+    async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
+        # Registry name: transactions.get_by_ids. This customer's own rows, in
+        # `tx_ids`' order (R1): own-row first, then an existence probe.
+        # May raise: NotFound, AccessDenied, ToolUnavailable.
+        ...
+
     async def explain_decline(self, tx_id: str) -> DeclineExplanation:
         # Registry name: transactions.explain_decline. tx_id must be this
         # customer's own Declined transaction (R1): a missing, foreign or

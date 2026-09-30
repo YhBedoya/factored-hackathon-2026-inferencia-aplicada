@@ -43,7 +43,11 @@ def create(run_id: str) -> tuple[str, float]:
     # CREATE DATABASE ... TEMPLATE needs the template idle, so end its sessions first.
     with psycopg.connect(dsn("postgres"), autocommit=True) as conn:
         _terminate(conn, GOLDEN_DB)
-        conn.execute(f"CREATE DATABASE {dbname} TEMPLATE {GOLDEN_DB}")
+        # FILE_COPY (D10): a plain file copy of the 7.7 GB golden DB; the default WAL_LOG
+        # strategy measured 354-1030 s. One clone serves the whole invocation.
+        conn.execute(
+            f"CREATE DATABASE {dbname} TEMPLATE {GOLDEN_DB} STRATEGY FILE_COPY"
+        )
     return dbname, time.monotonic() - started
 
 

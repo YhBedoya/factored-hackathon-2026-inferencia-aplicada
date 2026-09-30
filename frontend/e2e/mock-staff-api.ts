@@ -6,106 +6,122 @@ const CSRF_COOKIE_VALUE = "e2e-fake-staff-csrf-token";
 const HANDOFF_ID = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
 const CONVERSATION_ID = "conv-e2e-staff-001";
 
-// D11/D12: the traceability list (`GET /staff/conversations`) and timeline
-// (`GET /staff/conversations/{id}/timeline`) fixtures, kept apart from the
-// handoff/packet ones above -- `traceability.es.spec.ts` never claims a
-// handoff, it only reads these two routes.
+// D7-A D23: the traceability list (`GET /staff/conversations`,
+// `ConversationPage`) and timeline (`GET /staff/conversations/{id}/timeline`,
+// `ConversationTimeline`) fixtures, in the generated client's shapes and kept
+// apart from the handoff/packet ones above -- `traceability.es.spec.ts` never
+// claims a handoff, it only reads these two routes.
 const TRACE_CONVERSATIONS = [
 	{
 		conversation_id: "conv-e2e-trace-001",
-		started_at: "2026-03-30T12:00:00Z",
+		created_at: "2026-03-30T12:00:00Z",
 		language: "es",
 		country: "MX",
 		intents: ["transaction_search"],
 		outcome: "resolved",
-		escalation: null,
-		handoff_queue: null,
-		turns: 3,
+		escalated: false,
+		queue: null,
 		mode: "bot",
+		status: "open",
+		turns: 3,
 	},
 	{
 		conversation_id: "conv-e2e-trace-002",
-		started_at: "2026-03-30T13:00:00Z",
+		created_at: "2026-03-30T13:00:00Z",
 		language: "pt",
 		country: "CO",
 		intents: ["transaction_search"],
 		outcome: "resolved",
-		escalation: null,
-		handoff_queue: null,
-		turns: 2,
+		escalated: false,
+		queue: null,
 		mode: "bot",
+		status: "open",
+		turns: 2,
 	},
 	{
 		conversation_id: "conv-e2e-trace-003",
-		started_at: "2026-03-30T14:00:00Z",
+		created_at: "2026-03-30T14:00:00Z",
 		language: "es",
 		country: "AR",
-		intents: ["card_status"],
-		outcome: "clarified",
-		escalation: null,
-		handoff_queue: null,
+		intents: ["card_status", "unrecognized_charge"],
+		outcome: "handoff:reclamos",
+		escalated: true,
+		queue: "reclamos",
+		mode: "human",
+		status: "open",
 		turns: 1,
-		mode: "bot",
 	},
 ];
+
+function timelineEvent(
+	type: string,
+	payload: Record<string, unknown>,
+	sources: string[] = [],
+) {
+	return {
+		at: "2026-03-30T12:00:06Z",
+		type,
+		actor: "system",
+		payload,
+		sources,
+	};
+}
 
 // One fixed timeline, served for whichever id the test opens: 2 turns, one
 // with a `langfuse_url` and one without (test 12 step 6).
 function timelineFixture() {
+	const nlu = { intents: ["transaction_search"], status: "clear" };
+	const rule = timelineEvent("rule_hit", { rule_id: "date_widened" });
+	const tool = timelineEvent("tool_call", { tool: "transactions.search" }, [
+		"bank.transactions",
+	]);
 	return {
-		conversation_id: TRACE_CONVERSATIONS[0].conversation_id,
-		system: { git_sha: "e2e-fixture", policy_hash: "policy-hash-e2e" },
+		conversation: TRACE_CONVERSATIONS[0],
 		turns: [
 			{
 				turn_id: "turn-e2e-001",
-				at: "2026-03-30T12:00:05Z",
+				started_at: "2026-03-30T12:00:05Z",
 				customer_text_masked: "el cargo de ⟨MERCHANT_1⟩ del martes pasado",
-				reply_text: "Encontré este cargo.",
-				nlu: { intent: "transaction_search", status: "clear" },
-				rules_hit: ["date_widened"],
-				tools: [
-					{
-						at: "2026-03-30T12:00:06Z",
-						type: "transactions.search",
-						actor: "system",
-						payload: { count: 1 },
-						sources: ["bank.transactions"],
-					},
-				],
+				bot_text_masked: "Encontré este cargo.",
+				nlu,
+				rules: [rule],
+				tools: [tool],
+				events: [timelineEvent("nlu_result", nlu), rule, tool],
 				sources: ["bank.transactions"],
-				policy_version: "transaction_states@1",
+				policy_version: "policy-hash-e2e",
 				llm_calls: [
 					{
 						step: "compose",
 						model_id: "claude-e2e",
-						prompt_version: "compose@7",
-						latency_ms: 420,
+						prompt_version: "compose@v7",
+						temperature: 0,
+						attempt: 1,
+						status: "ok",
+						latency_ms: 420.4,
 						input_tokens: 120,
 						output_tokens: 40,
-						cost_usd: "0.0021",
-						status: "ok",
+						cost_usd: 0.0021,
 					},
 				],
-				latency_ms: 650,
-				cost_usd: "0.0021",
+				latency_ms: 650.2,
+				cost_usd: 0.0021,
 				langfuse_url: "https://langfuse.e2e.invalid/trace/turn-e2e-001",
-				events: [],
 			},
 			{
 				turn_id: "turn-e2e-002",
-				at: "2026-03-30T12:01:05Z",
+				started_at: "2026-03-30T12:01:05Z",
 				customer_text_masked: "gracias",
-				reply_text: "Con gusto.",
-				nlu: { intent: "thanks_close", status: "clear" },
-				rules_hit: [],
+				bot_text_masked: "Con gusto.",
+				nlu: { intents: ["thanks_close"], status: "clear" },
+				rules: [],
 				tools: [],
+				events: [],
 				sources: [],
-				policy_version: "transaction_states@1",
+				policy_version: "policy-hash-e2e",
 				llm_calls: [],
 				latency_ms: 120,
 				cost_usd: null,
 				langfuse_url: null,
-				events: [],
 			},
 		],
 	};
@@ -286,11 +302,20 @@ export async function installMockStaffApi(
 			const intent = url.searchParams.get("intent");
 			const language = url.searchParams.get("language");
 			const outcome = url.searchParams.get("outcome");
+			const escalation = url.searchParams.get("escalation");
+			// Same meanings as the backend (D7-A D19): `outcome=handoff` matches
+			// every `handoff:<queue>`; `escalation` is `none`, `any` or a queue.
 			const items = TRACE_CONVERSATIONS.filter(
 				(conversation) =>
 					(!intent || conversation.intents.includes(intent)) &&
 					(!language || conversation.language === language) &&
-					(!outcome || conversation.outcome === outcome),
+					(!outcome ||
+						conversation.outcome === outcome ||
+						conversation.outcome.startsWith(`${outcome}:`)) &&
+					(!escalation ||
+						(escalation === "none" && !conversation.escalated) ||
+						(escalation === "any" && conversation.escalated) ||
+						conversation.queue === escalation),
 			);
 			await route.fulfill({
 				status: 200,

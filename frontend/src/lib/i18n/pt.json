@@ -130,6 +130,8 @@
 	"staff.conversations.outcome.clarified": "Esclarecido",
 	"staff.conversations.outcome.abstained": "Sem resposta",
 	"staff.conversations.outcome.handoff": "Escalado",
+	"staff.conversations.escalation.none": "Sem escalonamento",
+	"staff.conversations.escalation.any": "Escalonada",
 	"staff.conversations.mode.bot": "Bot",
 	"staff.conversations.mode.human": "Pessoa",
 

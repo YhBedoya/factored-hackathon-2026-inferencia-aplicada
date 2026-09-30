@@ -108,6 +108,10 @@ class _RecordingBankTools:
         self.calls.append("get_fx_rate")
         return await self._inner.get_fx_rate(source, target)
 
+    async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
+        self.calls.append("get_transactions_by_ids")
+        return await self._inner.get_transactions_by_ids(tx_ids)
+
     async def get_priority_signals(self) -> PrioritySignals:
         self.calls.append("get_priority_signals")
         return await self._inner.get_priority_signals()

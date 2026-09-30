@@ -16,6 +16,7 @@ services:
       # `policies/` is mounted at the container's `/policies`, not
       # `/app/policies` (T14).
       - ../policies:/policies:ro
+      - ../eval/personas.yaml:/app/eval/personas.yaml:ro
 
   redis:
     # Loopback-only, dev overlay only (never base/prod): lets

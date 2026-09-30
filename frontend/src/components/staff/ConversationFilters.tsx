@@ -1,24 +1,23 @@
 import { type TKey, useI18n } from "@/lib/i18n";
-import type {
-	ConversationFilters as ConversationFiltersShape,
-	ConversationOutcome,
-	HandoffReason,
-	Intent,
-} from "@/lib/traceability";
+
+export type Outcome = "resolved" | "clarified" | "abstained" | "handoff";
+export type Queue = "atencion" | "cobranza" | "fraudes" | "reclamos";
+/** `none` (no handoff), `any`, or one queue (D7-A D19). */
+export type Escalation = "none" | "any" | Queue;
 
 /**
- * The URL-held slice of `ConversationFilters` (D13). `limit`/`offset` stay
- * out of the URL: this screen has no pager yet, only the closed-enum and
- * date-range filters the spec lists. Every field is optional so the route's
- * `validateSearch` can drop an absent one from the URL instead of writing
- * `key=null`.
+ * The URL-held slice of `GET /staff/conversations`'s query (D7-A D19).
+ * `limit`/`offset` stay out of the URL: this screen has no pager yet, only
+ * the closed-enum and date-range filters. Every field is optional so the
+ * route's `validateSearch` can drop an absent one from the URL instead of
+ * writing `key=null`.
  */
 export type ConversationSearchFilters = {
-	language?: ConversationFiltersShape["language"];
-	country?: ConversationFiltersShape["country"];
-	intent?: Intent;
-	outcome?: ConversationOutcome;
-	escalation?: HandoffReason;
+	language?: "es" | "pt";
+	country?: "MX" | "CO" | "AR";
+	intent?: string;
+	outcome?: Outcome;
+	escalation?: Escalation;
 	date_from?: string;
 	date_to?: string;
 };
@@ -30,30 +29,16 @@ type ConversationFiltersProps = {
 
 const LANGUAGES = ["es", "pt"] as const;
 const COUNTRIES = ["MX", "CO", "AR"] as const;
-const OUTCOMES: ConversationOutcome[] = [
+export const OUTCOMES: Outcome[] = [
 	"resolved",
 	"clarified",
 	"abstained",
 	"handoff",
 ];
-// The full `HandoffReason` catalog (`staff.reason.<slug>`, same dictionary
-// `InboxList`/`PacketView` already read from).
-const ESCALATIONS: HandoffReason[] = [
-	"human_request",
-	"clarification_exhausted",
-	"legal_regulator",
-	"customer_not_active",
-	"bank_side_block",
-	"action_unverified",
-	"unauthorized_access",
-	"suspected_fraud",
-	"tool_failure",
-	"llm_unavailable",
-	"priority_claim",
-];
+export const QUEUES: Queue[] = ["atencion", "cobranza", "fraudes", "reclamos"];
 // Only the intents a case actually lands on today; the full 25-item NLU
 // catalog would swamp the picker with values no conversation ever has.
-const INTENTS: Intent[] = [
+export const INTENTS = [
 	"card_status",
 	"balance_due",
 	"decline_explain",
@@ -70,14 +55,13 @@ const SELECT_CLASSNAME =
 	"h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground";
 
 /**
- * D13's filter bar: language, country, intent, outcome, escalation and a
- * date range. Every value lives in the caller's URL search params (the
- * route's `validateSearch`), never local state, so a filter change is a
+ * The filter bar: language, country, intent, outcome, escalation and a date
+ * range. Every value lives in the caller's URL search params (the route's
+ * `validateSearch`), never local state, so a filter change is a
  * `navigate({ search })` and the list stays a plain, shareable `GET` of the
- * current URL. Options are the closed catalogs the backend contracts pin
- * (`Intent`, `HandoffReason`); showing a fixed enum's raw or dictionary form
- * is not the server-formatted text R4 is about (same call `InboxList` and
- * `PacketView` already make for `queue`/`reason`).
+ * current URL. Options are the closed catalogs the API accepts (D7-A D19);
+ * showing a fixed enum's raw or dictionary form is not the server-formatted
+ * text R4 is about (same call `InboxList` and `PacketView` make for `queue`).
  */
 export function ConversationFilters({
 	value,
@@ -135,10 +119,7 @@ export function ConversationFilters({
 				className={SELECT_CLASSNAME}
 				value={value.intent ?? ""}
 				onChange={(event) =>
-					onChange({
-						...value,
-						intent: (event.target.value || undefined) as Intent | undefined,
-					})
+					onChange({ ...value, intent: event.target.value || undefined })
 				}
 			>
 				<option value="">{all}</option>
@@ -156,9 +137,7 @@ export function ConversationFilters({
 				onChange={(event) =>
 					onChange({
 						...value,
-						outcome: (event.target.value || undefined) as
-							| ConversationOutcome
-							| undefined,
+						outcome: (event.target.value || undefined) as Outcome | undefined,
 					})
 				}
 			>
@@ -178,15 +157,17 @@ export function ConversationFilters({
 					onChange({
 						...value,
 						escalation: (event.target.value || undefined) as
-							| HandoffReason
+							| Escalation
 							| undefined,
 					})
 				}
 			>
 				<option value="">{all}</option>
-				{ESCALATIONS.map((reason) => (
-					<option key={reason} value={reason}>
-						{t(`staff.reason.${reason}` as TKey)}
+				<option value="none">{t("staff.conversations.escalation.none")}</option>
+				<option value="any">{t("staff.conversations.escalation.any")}</option>
+				{QUEUES.map((queue) => (
+					<option key={queue} value={queue}>
+						{t(`staff.queue.${queue}` as TKey)}
 					</option>
 				))}
 			</select>

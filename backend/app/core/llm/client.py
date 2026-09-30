@@ -10,7 +10,7 @@ output text (D5, R5).
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any, Protocol, TypeVar, cast
 
 import anthropic
@@ -111,10 +111,12 @@ class _ChatModel(Protocol):
     ) -> Any: ...
 
 
-ChatModelFactory = Callable[[LLMSettings, Step], _ChatModel]
+# Called with `(settings, step)`; only an overridden step adds a third `model_id` argument,
+# so a two-argument stub factory keeps working when no override is set.
+ChatModelFactory = Callable[..., _ChatModel]
 
 
-def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
+def build_chat_model(settings: LLMSettings, step: Step, model_id: str | None = None) -> _ChatModel:
     """Build the provider chat model for one step, pinned per D4/D5(b)/D6.
 
     The provider is `STEP_PROVIDER.get(step, settings.llm_provider)`: most
@@ -123,9 +125,11 @@ def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
     client's own transport loop owns the bound (R11, D3), so a retry is never
     hidden from the ledger. `timeout` applies per attempt. Bedrock expresses
     both as a botocore `Config` since `ChatBedrockConverse` has no such kwargs.
+    `model_id` replaces the registry ID for the eval NLU comparison (D15); the
+    provider, temperature and prompt stay the step's.
     """
     provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
-    model_id = MODEL_REGISTRY[step][provider]
+    model_id = model_id or MODEL_REGISTRY[step][provider]
     temperature = TEMPERATURE[step]
     # Omit the kwarg entirely for `None`; passing it would send a value the model rejects.
     extra: dict[str, Any] = {} if temperature is None else {"temperature": temperature}
@@ -176,18 +180,21 @@ class StructuredLLMClient:
         chat_model_factory: ChatModelFactory = build_chat_model,
         sink: LLMCallSink | None = None,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        model_overrides: Mapping[Step, str] | None = None,
     ) -> None:
         self._settings = settings
         self._chat_model_factory = chat_model_factory
         self._sink = sink
         self._sleep = sleep
+        self._model_overrides = dict(model_overrides or {})
 
     async def structured(
         self, *, step: Step, prompt: PromptRef, system: str, user: str, schema: type[T]
     ) -> T:
         settings = self._settings
         provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
-        model_id = MODEL_REGISTRY[step][provider]
+        override = self._model_overrides.get(step)
+        model_id = override or MODEL_REGISTRY[step][provider]
         temperature = TEMPERATURE[step]
 
         # R5: refuse before any provider object exists. The guard can't see the
@@ -208,7 +215,11 @@ class StructuredLLMClient:
             )
             raise LLMUnmaskedInput(f"unmasked PII in the prompt for step {step!r}")
 
-        chat_model = self._chat_model_factory(settings, step)
+        chat_model = (
+            self._chat_model_factory(settings, step, override)
+            if override
+            else self._chat_model_factory(settings, step)
+        )
         # Anthropic: API structured outputs (`output_config.format`), which never force
         # `tool_choice` (Sonnet 5.5 rejects it). Bedrock keeps function_calling until
         # K2 confirms structured-output support there (its default path), and so does OpenAI.
@@ -398,7 +409,16 @@ class StructuredLLMClient:
 
 
 def get_llm_client(
-    settings: LLMSettings | None = None, sink: LLMCallSink | None = None
+    settings: LLMSettings | None = None,
+    sink: LLMCallSink | None = None,
+    *,
+    model_overrides: Mapping[Step, str] | None = None,
 ) -> LLMClient:
-    """Build the default `LLMClient` for this process. See §"Contracts"."""
-    return StructuredLLMClient(settings or LLMSettings(), sink=sink)
+    """Build the default `LLMClient` for this process. See §"Contracts".
+
+    `model_overrides` swaps the model ID per step for the eval NLU comparison
+    (D15); the served graph never passes it.
+    """
+    return StructuredLLMClient(
+        settings or LLMSettings(), sink=sink, model_overrides=model_overrides
+    )
