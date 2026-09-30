@@ -130,9 +130,14 @@ class _StubRawWrites:
         return await self._call("order_replacement", (card_id, address_ref), idempotency_key)
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+        self,
+        tx_ids: list[str],
+        answers: list[str],
+        priority_flags: list[str],
+        *,
+        idempotency_key: str,
     ) -> ActionResult:
-        return await self._call("create_claim", (tx_ids, answers), idempotency_key)
+        return await self._call("create_claim", (tx_ids, answers, priority_flags), idempotency_key)
 
     async def _call(self, name: str, args: tuple[Any, ...], idempotency_key: str) -> ActionResult:
         self.calls.append((name, args))
@@ -375,25 +380,33 @@ def test_compromise_plan_order_and_allowlist() -> None:
                     tool="cards.block_card",
                     args={"card_id": "PRD-1", "reason": "suspected_fraud"},
                 ),
-                PlanStep(tool="disputes.create_claim", args={"tx_ids": ["TRX-1"], "answers": []}),
+                PlanStep(
+                    tool="disputes.create_claim",
+                    args={"tx_ids": ["TRX-1"], "answers": [], "priority_flags": []},
+                ),
             ],
             "unrecognized_charge",
         )
 
         with pytest.raises(ConfirmationRequired) as exc_info:
-            await executor.create_claim(["TRX-1"], [], plan.token_id)
+            await executor.create_claim(["TRX-1"], [], [], plan.token_id)
         assert exc_info.value.reason == "step_mismatch"
 
         await executor.block_card("PRD-1", "suspected_fraud", plan.token_id)
-        await executor.create_claim(["TRX-1"], [], plan.token_id)
+        await executor.create_claim(["TRX-1"], [], [], plan.token_id)
 
         with pytest.raises(ConfirmationRequired) as exc_info2:
-            await executor.create_claim(["TRX-1"], [], plan.token_id)
+            await executor.create_claim(["TRX-1"], [], [], plan.token_id)
         assert exc_info2.value.reason == "unknown_or_expired"
 
         with pytest.raises(PolicyDenied) as exc_info3:
             await executor.issue_plan(
-                [PlanStep(tool="disputes.create_claim", args={"tx_ids": ["TRX-1"], "answers": []})],
+                [
+                    PlanStep(
+                        tool="disputes.create_claim",
+                        args={"tx_ids": ["TRX-1"], "answers": [], "priority_flags": []},
+                    )
+                ],
                 "card_block",
             )
         assert exc_info3.value.reason_code == "tool_not_allowed"

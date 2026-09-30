@@ -48,6 +48,10 @@ _FALLBACK: dict[str, dict[Language, str]] = {
         "es": "El cliente mencionó una vía legal o regulatoria. Requiere atención prioritaria.",
         "pt": "O cliente mencionou uma via legal ou regulatória. Requer atenção prioritária.",
     },
+    "priority_claim": {
+        "es": "Reclamo registrado con marcas de prioridad. Revisa las marcas y el caso abierto.",
+        "pt": "Reclamação registrada com marcas de prioridade. Revise as marcas e o caso aberto.",
+    },
     "customer_not_active": {
         "es": "El cliente no está activo y no pude ayudarle con su solicitud.",
         "pt": "O cliente não está ativo e não consegui ajudá-lo com o pedido.",

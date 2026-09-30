@@ -2,10 +2,14 @@
 
 See `docs/specs/d1-k3-contracts.md` §"Test list" and
 `docs/specs/d2-k-write-contracts.md` §"Test list". T4 (D2-K) appends
-`test_no_customer_id_on_write_side` to this file.
+`test_no_customer_id_on_write_side` to this file. D7-B T3 appends
+`test_priority_signals_bound_to_session` (spec B2, Test 10).
 """
 
+import asyncio
 import inspect
+from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -14,9 +18,13 @@ from app.domains.conversation.graph import ConfirmationDecision
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.state import bind_once
 from app.domains.conversation.tools import BankReadTools, BankWriteTools, ConfirmedWriteTools
+from app.domains.conversation.tools.context import ToolContext
+from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.identity.step_up import StepUpGate
 from app.domains.policy.confirmation import ConfirmationStore, PlanStep
 from app.domains.transactions.schemas import TxFilter
+
+_FIXTURE_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "fakebank"
 
 
 def test_customer_id_is_write_once() -> None:
@@ -106,3 +114,34 @@ def test_staff_session_cannot_build_tool_context() -> None:
     broken = Session(account_id=uuid4(), role="customer", customer_id=None, step_up_at=None)
     with pytest.raises(PermissionError):
         build_tool_context(broken, uuid4(), "trace")
+
+
+def _bank(customer_id: str) -> FakeBank:
+    ctx = ToolContext(
+        customer_id=customer_id,
+        conversation_id=uuid4(),
+        actor="customer",
+        trace_id="trace-test",
+        policy_version="unversioned",
+    )
+    return FakeBank(ctx, _FIXTURE_DIR)
+
+
+def test_priority_signals_bound_to_session() -> None:
+    """B2 Test 10: `get_priority_signals()` takes no arguments (R1), and each
+    customer sees only their own `bank.complaints` rows -- `CLI-TFREPT00008`
+    is a repeat complainer with no open Critical claim, `CLI-TFCRIT00010` has
+    an open Critical claim (its second, `Resolved` one doesn't count) and no
+    repeat flag, and `CLI-TFSINGLE0002` (no complaints at all) is neither.
+    """
+    params = inspect.signature(BankReadTools.get_priority_signals).parameters
+    assert list(params) == ["self"]
+
+    repeat = asyncio.run(_bank("CLI-TFREPT00008").get_priority_signals())
+    assert (repeat.repeat_complainer, repeat.open_critical) == (True, False)
+
+    critical = asyncio.run(_bank("CLI-TFCRIT00010").get_priority_signals())
+    assert (critical.repeat_complainer, critical.open_critical) == (False, True)
+
+    neither = asyncio.run(_bank("CLI-TFSINGLE0002").get_priority_signals())
+    assert (neither.repeat_complainer, neither.open_critical) == (False, False)

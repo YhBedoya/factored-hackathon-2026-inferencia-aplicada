@@ -8,20 +8,26 @@ unknown `tx_id` raises `AccessDenied`/`NotFound` with no row written for any
 of them. `get_claims` is the **separate** re-read `postgres_writes.py` calls
 to compute `ActionResult.verified` (R3): a different query against a
 different connection, never the same round trip as the write.
+
+`priority_signals` is the B2 read behind `disputes.get_priority_signals`
+(R1, SA1): customer-scoped, no `open_statuses` default here -- the caller
+(`postgres.py`) reads that list from `policies/disputes.yaml` (R8), never
+this module.
 """
 
 import secrets
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import RowMapping
 from sqlalchemy.exc import IntegrityError
 
 from app.domains.disputes import repository
-from app.domains.disputes.schemas import ClaimRow
+from app.domains.disputes.schemas import ClaimRow, PrioritySignals
 from app.domains.transactions import service as transactions_service
 
-__all__ = ["create_claims", "get_claims"]
+__all__ = ["create_claims", "get_claims", "priority_signals"]
 
 _CASE_TYPE = "Claim"
 _CATEGORY = "Transactions"
@@ -42,6 +48,7 @@ def _to_claim_row(row: RowMapping) -> ClaimRow:
         affected_product_id=row["affected_product_id"],
         claimed_amount=row["claimed_amount"],
         currency=row["currency"],
+        priority=row["priority"],
         status=row["status"],
         origin=row["origin"],
         creation_date=row["creation_date"],
@@ -58,8 +65,10 @@ async def create_claims(
     conversation_id: UUID,
     tx_ids: list[str],
     answers: list[str],
+    priority_flags: list[str],
     idempotency_key: str,
 ) -> list[ClaimRow]:
+    priority: Literal["High"] | None = "High" if priority_flags else None
     row_keys = [_row_key(idempotency_key, tx_id) for tx_id in tx_ids]
     existing = await repository.fetch_claims_by_keys(row_keys)
     if len(existing) == len(tx_ids):  # D15 full replay: nothing mutated
@@ -86,7 +95,7 @@ async def create_claims(
             "affected_product_id": by_tx[tx_id].card_id,
             "claimed_amount": by_tx[tx_id].amount,
             "currency": by_tx[tx_id].currency,
-            "priority": None,
+            "priority": priority,
             "status": "Open",
             "origin": "app",
             "conversation_id": conversation_id,
@@ -118,6 +127,7 @@ async def create_claims(
             affected_product_id=row["affected_product_id"],
             claimed_amount=row["claimed_amount"],
             currency=row["currency"],
+            priority=row["priority"],
             status="Open",
             origin="app",
             creation_date=now,
@@ -135,3 +145,11 @@ async def get_claims(customer_id: str, ids: list[str]) -> list[ClaimRow]:
     """The separate re-read behind `ActionResult.verified` (R3)."""
     rows = await repository.fetch_claims_by_ids(customer_id, ids)
     return [_to_claim_row(row) for row in rows]
+
+
+async def priority_signals(customer_id: str, open_statuses: list[str]) -> PrioritySignals:
+    """`disputes.get_priority_signals()`'s read (R1, spec B2)."""
+    row = await repository.fetch_priority_signals(customer_id, open_statuses)
+    return PrioritySignals(
+        repeat_complainer=row["repeat_complainer"], open_critical=row["open_critical"]
+    )

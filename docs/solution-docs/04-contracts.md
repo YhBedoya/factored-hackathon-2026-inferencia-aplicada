@@ -41,7 +41,8 @@ Errors are a typed union: `NotFound`, `AccessDenied` (the resource belongs to an
 | `transactions.search(filter: TxFilter)` | — | — | — | `[TxView{tx_id, card_id, occurred_at, amount, currency, amount_usd, type, category, merchant_name, merchant_category, channel, city, country, status, response_code, fraud_score}]`, max 10, newest first |
 | `transactions.get(tx_id)` | — | — | — | `TxView` |
 | `transactions.explain_decline(tx_id)` | — | — | — | `DeclineExplanation{code, cause_key, next_step_key, self_service, source}` (`self_service` is `true` for code 54, and drives the replacement quick-reply offer, D5-B D7) |
-| `disputes.create_claim(tx_ids, answers, token)` | ✓ | ✓ | — | `ActionResult{case_ids}`: one `bank.complaints` row per transaction (D4-B D14–D16); `answers` is a sorted `list[str]` of `"<question_id>=<yes\|no>"`. `priority_flags` is deferred with the priority-flags feature |
+| `disputes.create_claim(tx_ids, answers, priority_flags, token)` | ✓ | ✓ | — | `ActionResult{case_ids}`: one `bank.complaints` row per transaction (D4-B D14–D16); `answers` is a sorted `list[str]` of `"<question_id>=<yes\|no>"`. `priority_flags` is a sorted `list[str]`, built in code and bound by the confirmation token like `answers` (D7-B SA1); the row's `priority` is `'High'` when the list is non-empty, `NULL` otherwise |
+| `disputes.get_priority_signals()` | — | — | — | `PrioritySignals{repeat_complainer: bool, open_critical: bool}`, customer-scoped from `ToolContext` (R1, D7-B D5/D9) |
 | `handoff.create(packet)` | ✓ (internal) | — | — | the **persisted** handoff id (`UUID`): the packet's own on insert, or the id of the handoff already open for the conversation, which the customer is attached to (D4-A D32). Implemented by `HandoffTools.create(packet) -> UUID` (`conversation/tools/handoff.py`), injected as `config["configurable"]["handoff_tools"]` |
 | `reference.get_fx_rate(source, target)` | — | — | — | `FxRate{source, target, rate, as_of}`: the latest `daily_exchange_rates` row for the pair (`exchange_rate` column); `NotFound` if the pair has none. Reference data, so there is no customer filter (D2-B D3) |
 
@@ -103,10 +104,49 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `POST /staff/conversations/{id}/messages` | agent, admin | `{text: 1..2000}` → `201 {message_id}`, relayed on `conv:<id>` |
 | `GET /staff/conversations/{id}/stream` | agent, admin | SSE on `conv:<id>`, same framing as the customer stream |
 | `POST /staff/actions/{tool}` | agent | One-click action through the policy engine (Stretch) |
-| `GET /staff/conversations?filters` · `GET /staff/conversations/{id}/timeline` | agent, admin | Traceability console (Stretch) |
+| `GET /staff/conversations` + `ConversationFilters` — **(proposed)**, D7-B D11 | agent, admin — exempt from `get_claimed_conversation` | `ConversationList`, newest first |
+| `GET /staff/conversations/{id}/timeline` — **(proposed)**, D7-B D11 | agent, admin — exempt from `get_claimed_conversation` | `ConversationTimeline`, `404 not_found` if the id is unknown |
 | `GET /staff/personas` · `GET /staff/personas/{customer_id}/credentials` | admin | Persona catalog and credential lookup |
 | `POST /admin/demo/reset` | admin | Restore from the golden DB → `{status: "reset", duration_ms}` |
 | `POST /test-idp/sessions` | eval only (router included under `/api/v1` only when `APP_ENV=eval`) | Mint a session for any customer |
+
+**Traceability console shapes (proposed, D7-B D11; A adopts or amends in A1):**
+
+```python
+class ConversationFilters(BaseModel):           # GET /staff/conversations query
+    language: Literal["es","pt"] | None; country: Literal["MX","CO","AR"] | None
+    intent: Intent | None; outcome: Literal["resolved","clarified","abstained","handoff"] | None
+    escalation: HandoffReason | None; date_from: date | None; date_to: date | None
+    limit: int = 50; offset: int = 0
+
+class ConversationListItem(BaseModel):
+    conversation_id: UUID; started_at: datetime; language: Literal["es","pt"] | None
+    country: Literal["MX","CO","AR"]; intents: list[Intent]; outcome: str | None
+    escalation: HandoffReason | None; handoff_queue: Queue | None; turns: int; mode: Literal["bot","human"]
+
+class ConversationList(BaseModel):  items: list[ConversationListItem]; total: int
+
+class TimelineLLMCall(BaseModel):
+    step: str; model_id: str; prompt_version: str; latency_ms: float
+    input_tokens: int | None; output_tokens: int | None; cost_usd: Decimal | None; status: str
+
+class TimelineEvent(BaseModel):     # one audit.audit_events row, payload already masked
+    at: datetime; type: str; actor: str; payload: dict; sources: list[str]
+
+class TurnTimeline(BaseModel):
+    turn_id: UUID; at: datetime; customer_text_masked: str | None; reply_text: str | None
+    nlu: dict | None                       # nlu_result payload
+    rules_hit: list[str]; tools: list[TimelineEvent]; sources: list[str]
+    policy_version: str; llm_calls: list[TimelineLLMCall]
+    latency_ms: float | None; cost_usd: Decimal | None; langfuse_url: str | None
+    events: list[TimelineEvent]
+
+class ConversationTimeline(BaseModel):
+    conversation_id: UUID; system: dict    # git sha, model ids per step, prompt versions, policy hash
+    turns: list[TurnTimeline]
+```
+
+`GET /staff/conversations` and `GET /staff/conversations/{id}/timeline` are exempt from `get_claimed_conversation` (unlike every other `/staff/conversations/{id}/…` route, §"Auth" below): they check the agent or admin role only, and every payload is the masked audit data already used elsewhere in this console (no chain-of-thought, no raw PII).
 
 `TurnInput` gains `resume: Literal["step_up"] | None` (D2-B D1, amends D2-K D17): `None` on every typed or button turn, and `"step_up"` for the one that follows a successful `/auth/otp/verify`. The graph checks it right after `load_session`, before `confirmation` or a fresh `understand` call would otherwise run, and resumes the flow paused at `pending.awaiting_slot == "otp"` only when that pause is actually open; with no matching pause, or the step-up gate still invalid, nothing executes and the turn replies with the `otp_required` template again (no LLM call either way). In the sandbox, `/otp <code>` calls the fake step-up gate's `verify(code)` directly and, on success, runs the resume turn the same way.
 
@@ -116,7 +156,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 
 **SSE events:** `status {step}` · `message {role: bot | customer | agent | system, text, sources[], agent_display_name?}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
 
-The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up. `ui.transaction_list` is `{options: [{tx_id, label}], multi: bool}`, each label `merchant · money · day-first date · •••• last4`, built in code (R4); `multi` is `true` for `unrecognized_charge`'s multi-select and `false` for `decline_explain`'s single-pick offer (D5-B D3) -- the frontend renders radio inputs instead of checkboxes when it is `false`, and the selection gate (above) accepts exactly one id. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}` (D4-A D12, D4-B D13).
+The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up. `ui.transaction_list` is `{options: [{tx_id, label}], multi: bool}`, each label `merchant · money · day-first date · •••• last4`, built in code (R4). The `•••• last4` part is left out when the row's product is not a card, for example a savings account (D7-B D19); `multi` is `true` for `unrecognized_charge`'s multi-select and `false` for `decline_explain`'s single-pick offer (D5-B D3) -- the frontend renders radio inputs instead of checkboxes when it is `false`, and the selection gate (above) accepts exactly one id. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}` (D4-A D12, D4-B D13).
 
 **Handoff deltas (D4-A):** `mode` is emitted at handoff (`human`, `null`), at claim (`human`, the agent's `display_name`) and at return (`bot`, `null`). `message.role = customer` is published only in human mode, as the relay for the agent, and the customer UI ignores its own echo; `agent` carries `agent_display_name`; `system` is the fixed `back_with_cardy` text at return. In human mode a customer turn emits `status`, the `customer` echo and `done`, with no bot `message` and no LLM call. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}`, with `queue_label` localized to the conversation language, all built in code; `case_ids` lists the claims the bot opened in the conversation before the handoff (empty otherwise). `ui.quick_replies.slot` is `block_kind | abstain | next_step`; for `abstain` the options are the closest action's label and the human offer, and clicking one sends its label as text. `next_step` (D5-B D7) is `decline_explain`'s own self-service offer (code 54 only): one option, the localized replacement action; tapping it sends that label as text, so NLU routes it as `replacement_request` on its own turn.
 
@@ -148,7 +188,7 @@ The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`
 }
 ```
 
-`sentiment` is always `null` (no sentiment model). `reason` is `human_request | clarification_exhausted | legal_regulator | customer_not_active | bank_side_block | action_unverified | unauthorized_access | suspected_fraud | tool_failure | llm_unavailable` (the last two D6-A D8). `verified_facts[].fact` is `card_locked | card_unlocked | card_status | replacement_ordered | claim_filed`, one per verified `ActionResult`, with `source` `"audit:<audit_event_id>"` (or `"<tool> read-back"`). `open_questions` are rendered in code from `rules.<reason>.open_questions` keys. The customer-facing case `reference` (`HO-XXXXXXXX`) is derived from `handoff_id` and is not a packet field; it appears in `HandoffSummary` and the banner. `request` is the only LLM-written field. It is generated from masked facts and length-capped. Every other field is assembled in code. Raw transcripts are never included; the agent opens the conversation separately (role-gated).
+`sentiment` is always `null` (no sentiment model). `reason` is `human_request | clarification_exhausted | legal_regulator | customer_not_active | bank_side_block | action_unverified | unauthorized_access | suspected_fraud | tool_failure | llm_unavailable | priority_claim` (`tool_failure`/`llm_unavailable` D6-A D8; `priority_claim` D7-B D5-D9). `verified_facts[].fact` is `card_locked | card_unlocked | card_status | replacement_ordered | claim_filed`, one per verified `ActionResult`, with `source` `"audit:<audit_event_id>"` (or `"<tool> read-back"`). `open_questions` are rendered in code from `rules.<reason>.open_questions` keys. The customer-facing case `reference` (`HO-XXXXXXXX`) is derived from `handoff_id` and is not a packet field; it appears in `HandoffSummary` and the banner. `request` is the only LLM-written field. It is generated from masked facts and length-capped. Every other field is assembled in code. Raw transcripts are never included; the agent opens the conversation separately (role-gated).
 
 Pydantic models live in `app/domains/handoff/schemas.py` (frozen, `extra="forbid"`). The `handoff` node builds the packet in code from the verified `ActionResult`s (D4-A D10); a flow that hands off (the fraud path, D4-B D9/D10) only sets `escalation_reason`, `handoff_queue`, `handoff_evidence` (`HandoffEvidence{type: "transaction", ref, fraud_score: Decimal | null}`) and `handoff_open_questions` (code-filled texts in the packet `language`, appended after the rule's own) in its state update, and the graph routes through `handoff_summary → handoff`. `actions_taken[].case_ids` is set only for `disputes.create_claim`; `claim_filed`'s `value` is that case-id list.
 
@@ -177,18 +217,28 @@ tools:
   cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_unlock, replacement_request]}
   disputes.create_claim:   {requires_confirmation: true,  step_up: never,                allowed_intents: [unrecognized_charge]}   # D4-B D18
 
-# policies/disputes.yaml (D4-B D8, D12): compromise rule, candidates, questions, handoff target
+# policies/transaction_states.yaml (D7-B D4): pending/reversed cause, next step and hold days
+provenance: team-generated-synthetic
+version: 1
+pending:  {hold_days: 3, cause_key: pending_hold, next_step_key: wait_until_date, overdue_next_step_key: offer_human}
+reversed: {cause_key: reversed_charge, next_step_key: no_action_needed}
+
+# policies/disputes.yaml (v2, D4-B D8, D12; priority block D7-B D5/D9): compromise rule, candidates, questions, handoff target
 candidate_statuses: [Approved, Pending, Reversed]
 compromise: {min_picked: 2, fraud_score_gt: 30, block_reason: suspected_fraud}
 possession_question: card_in_possession
 questions: [card_in_possession, contacted_merchant]
 handoff: {queue: fraudes, priority: high, reason: suspected_fraud}
+priority:
+  amount_threshold: {USD: "5000", COP: "20000000", ARS: "1800000"}
+  open_statuses: [Open, In Process, Escalated]
+  handoff: {queue: reclamos, priority: high, reason: priority_claim}
 
 # policies/min_payment.yaml (D2-B D5): synthetic formula, no overdue term
 min_payment: {percent_of_balance: "0.05", floors: {USD: "10", COP: "40000", ARS: "5000"}}
 due_date:    {due_day_of_month: 10}
 
-# policies/escalation.yaml v3 (D4-A D3-D6; D6-A D8 adds tool_failure, llm_unavailable)
+# policies/escalation.yaml v4 (D4-A D3-D6; D6-A D8 adds tool_failure, llm_unavailable; D7-B D5-D9 adds priority_claim)
 customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card]}
 bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
 rules:               # queue null = resolved from context (bank_side_queues, human_request_queues)
@@ -202,6 +252,7 @@ rules:               # queue null = resolved from context (bank_side_queues, hum
   suspected_fraud:         {queue: fraudes,  priority: high, open_questions: [card_in_possession]}
   tool_failure:            {queue: null,     priority: normal}   # D6-A D8, queue resolved as human_request
   llm_unavailable:         {queue: null,     priority: normal}   # D6-A D8
+  priority_claim:          {queue: reclamos, priority: high}     # D7-B D5-D9
 human_request_queues: {default: atencion, by_flow: {unrecognized_charge: fraudes}}
 unauthorized_access:  {attempts_before_handoff: 2}
 legal_keywords:      {es: [demanda, abogado, condusef, superfinanciera, bcra, ...], pt: [processo, advogado, procon, "banco central", ...]}
@@ -211,7 +262,7 @@ topics:
   <Topic>: {kind: out_of_market | out_of_scope, reason_key, closest_intents: [Intent], human_queue: Queue}
 ```
 
-Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml` and `min_payment.yaml` are shown above. `disputes.yaml` (shown above; amount thresholds per currency arrive with priority flags), `transaction_states.yaml`, `scope.yaml` (shown above; out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
+Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml`, `disputes.yaml`, `min_payment.yaml` and `transaction_states.yaml` (D7-B D4) are shown above. `scope.yaml` (shown above; out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).
 
 ## 6. Audit event
 

@@ -131,6 +131,11 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         for key in rule(policy, reason).open_questions
         if key in _OPEN_QUESTIONS
     ] + list(state.get("handoff_open_questions", []))
+    # B2: a flag that did not itself pick the reason (Fraudes via compromise)
+    # is still recorded as a rule hit.
+    hit: list[HandoffReason] = [reason]
+    if state.get("priority_flags") and reason != "priority_claim":
+        hit.append("priority_claim")
     packet = HandoffPacket(
         handoff_id=candidate_id,
         conversation_id=session.conversation_id,
@@ -144,7 +149,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         actions_taken=taken,
         evidence=list(state.get("handoff_evidence", [])),
         open_questions=questions,
-        escalation_rules_hit=[reason],
+        escalation_rules_hit=hit,
         policy_version=session.policy_version,
         created_at=now,
     )
@@ -174,6 +179,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "intent_queue": [],
         "handoff_evidence": [],
         "handoff_open_questions": [],
+        "priority_flags": [],
         "ui": [
             HandoffBannerEvent(
                 kind="handoff_banner",

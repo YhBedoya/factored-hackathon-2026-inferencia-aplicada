@@ -59,6 +59,7 @@ from app.domains.conversation.tools.fakebank import make_fakebank_factory
 from app.domains.conversation.tools.handoff import InMemoryHandoffTools
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.disputes.schemas import PrioritySignals
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
@@ -107,6 +108,10 @@ class _RecordingBankTools:
         self.calls.append("get_fx_rate")
         return await self._inner.get_fx_rate(source, target)
 
+    async def get_priority_signals(self) -> PrioritySignals:
+        self.calls.append("get_priority_signals")
+        return await self._inner.get_priority_signals()
+
     async def get_pii_profile(self) -> KnownPii:
         # Not recorded: the masking step reads it, not an LLM node (D34).
         return await self._inner.get_pii_profile()
@@ -150,10 +155,17 @@ class _RecordingWriteTools:
         )
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+        self,
+        tx_ids: list[str],
+        answers: list[str],
+        priority_flags: list[str],
+        *,
+        idempotency_key: str,
     ) -> ActionResult:
         self._calls.append("create_claim")
-        return await self._inner.create_claim(tx_ids, answers, idempotency_key=idempotency_key)
+        return await self._inner.create_claim(
+            tx_ids, answers, priority_flags, idempotency_key=idempotency_key
+        )
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

@@ -247,18 +247,37 @@ async def _play(
     golden_conn: psycopg.Connection[Any],
     driver: Driver,
     system: str,
+    run_id: str,
     faults: frozenset[str] = frozenset(),
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]]:
     write_tools = load_write_tools()
     otp = os.environ.get("DEMO_OTP_CODE", "")
     verdicts: list[dict[str, Any]] = []
     llm_rows: list[dict[str, Any]] = []
+    transcripts: list[dict[str, Any]] = []
     restores = 0
     for played, case in enumerate(cases, start=1):
         db_patches = case.setup.db_patches
         if db_patches:
             patches.apply(clone_conn, db_patches)
         transcript = await driver(case, base_url=base_url, otp_code=otp)
+        # SA2: the played `Transcript` beside `results.jsonl`/`llm_calls.jsonl`
+        # (pinned row shape), so `python -m eval.judges sample` can read it
+        # without replaying the run. Written for every system, but `sample`
+        # only ever reads the `proposed` rows (R9).
+        transcripts.append(
+            {
+                "run_id": run_id,
+                "system": system,
+                "case_id": case.case_id,
+                "seed_id": case.seed_id,
+                "persona": case.persona,
+                "intent": case.intent,
+                "language_variant": case.language_variant,
+                "expected_language": case.expected_language,
+                "transcript": transcript.model_dump(mode="json"),
+            }
+        )
         evidence = collect(clone_conn, case, transcript)
         if db_patches:
             # A diff raises `PatchDiffError`, which aborts the run like `RestoreDiffError`.
@@ -286,7 +305,7 @@ async def _play(
             raise LLMUnreachableError(
                 first.get("model_id"), first.get("step"), len(llm_rows)
             )
-    return verdicts, llm_rows, restores
+    return verdicts, llm_rows, restores, transcripts
 
 
 async def _run_system(
@@ -317,9 +336,9 @@ async def _run_system(
             handle: tuple[subprocess.Popen[bytes], str],
             faults: frozenset[str],
             group: list[Case],
-        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]]:
             return await _play(
-                group, handle[1], clone_conn, golden_conn, driver, system, faults
+                group, handle[1], clone_conn, golden_conn, driver, system, run_id, faults
             )
 
         group_results = await _play_groups(
@@ -328,6 +347,7 @@ async def _run_system(
         verdicts = [v for r in group_results for v in r[0]]
         llm_rows = [row for r in group_results for row in r[1]]
         restores = sum(r[2] for r in group_results)
+        transcripts = [t for r in group_results for t in r[3]]
     finally:
         # Golden connections close before any clone is dropped.
         for conn in conns:
@@ -345,6 +365,7 @@ async def _run_system(
         "system": system,
         "verdicts": verdicts,
         "llm_rows": llm_rows,
+        "transcripts": transcripts,
         "restores": restores,
         "clone_seconds": round(clone_seconds, 1),
         "providers": sorted({row[1] for row in ledger}),
@@ -410,6 +431,11 @@ def run(
     _write_jsonl(out / "results.jsonl", verdicts)
     _write_jsonl(
         out / "llm_calls.jsonl", [row for r in results for row in r["llm_rows"]]
+    )
+    # SA2: one row per played case, both systems, so `python -m eval.judges sample`
+    # can read it without replaying the run. Gitignored like `results.jsonl`.
+    _write_jsonl(
+        out / "transcripts.jsonl", [t for r in results for t in r["transcripts"]]
     )
     pii_hits = _pii_scan(run_id)
 

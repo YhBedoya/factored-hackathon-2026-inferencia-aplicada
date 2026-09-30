@@ -67,6 +67,7 @@ ignore_imports=
     app.domains.conversation.tools.postgres -> app.domains.cards.service
     app.domains.conversation.tools.postgres -> app.domains.transactions.service
     app.domains.conversation.tools.postgres -> app.domains.localization.service
+    app.domains.conversation.tools.postgres -> app.domains.disputes.service
     app.domains.conversation.tools.postgres_writes -> app.domains.cards.service
     app.domains.conversation.tools.postgres_writes -> app.domains.disputes.service
     app.domains.conversation.tools.registry -> app.domains.audit.service

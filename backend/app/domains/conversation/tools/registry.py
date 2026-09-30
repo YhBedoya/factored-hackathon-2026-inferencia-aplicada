@@ -44,6 +44,7 @@ from app.domains.conversation.tools.postgres import PostgresBank
 from app.domains.conversation.tools.postgres_writes import PostgresBankWrites
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.disputes.schemas import PrioritySignals
 from app.domains.identity.models import Session
 from app.domains.identity.step_up_session import SessionStepUpGate
 from app.domains.localization.schemas import FxRate
@@ -173,6 +174,12 @@ class RecordingBankTools:
         self.calls.append("get_fx_rate")
         return await self._read(
             "reference.get_fx_rate", {}, lambda: self._inner.get_fx_rate(source, target)
+        )
+
+    async def get_priority_signals(self) -> PrioritySignals:
+        self.calls.append("get_priority_signals")
+        return await self._read(
+            "disputes.get_priority_signals", {}, self._inner.get_priority_signals
         )
 
     async def _read[T](

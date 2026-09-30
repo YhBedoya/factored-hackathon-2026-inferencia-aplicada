@@ -21,8 +21,8 @@ join `PostgresBank.get_card_details` already did, D3-A3) for the overlay's
 own-row check on every `tx_id` through `transactions.service`, R1), then a
 **separate** `disputes.service.get_claims` re-read: `verified` is `True`
 only when every re-read row matches the value `create_claims` just wrote
-(amount, currency, product, `transaction_id`, `origin`) for every case id
-(D16, R3).
+(amount, currency, product, `transaction_id`, `origin`, `priority`) for
+every case id (D16, R3, SA1).
 
 Imports `cards.service` and `disputes.service` only, never a `repository`
 directly (import-linter's `conversation-no-repository` contract -- see the
@@ -144,13 +144,19 @@ class PostgresBankWrites:
         )
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+        self,
+        tx_ids: list[str],
+        answers: list[str],
+        priority_flags: list[str],
+        *,
+        idempotency_key: str,
     ) -> ActionResult:
         written = await disputes_service.create_claims(
             self._ctx.customer_id,
             self._ctx.conversation_id,
             tx_ids,
             answers,
+            priority_flags,
             idempotency_key,
         )
         case_ids = [row.complaint_id for row in written]
@@ -166,10 +172,13 @@ class PostgresBankWrites:
 
 def _claims_match(written: list[ClaimRow], reread: list[ClaimRow]) -> bool:
     """`True` only when every `written` row's amount, currency, product,
-    transaction id and `origin` reappear in `reread`, keyed by `complaint_id`
-    (D16, R3). `disputes.service.get_claims` already scopes `reread` to the
-    session's customer (R1), so a row that came back for someone else, or
-    didn't come back at all, fails the match here.
+    transaction id, `origin` and `priority` reappear in `reread`, keyed by
+    `complaint_id` (D16, R3, SA1). `disputes.service.get_claims` already
+    scopes `reread` to the session's customer (R1), so a row that came back
+    for someone else, or didn't come back at all, fails the match here.
+    `written`'s `priority` is already the one `create_claims` requested
+    (`'High'` or `None`), so comparing it to the re-read row is enough --
+    no separate "requested priority" argument is needed.
     """
     if len(written) != len(reread):
         return False
@@ -184,6 +193,7 @@ def _claims_match(written: list[ClaimRow], reread: list[ClaimRow]) -> bool:
             or match.affected_product_id != row.affected_product_id
             or match.transaction_id != row.transaction_id
             or match.origin != "app"
+            or match.priority != row.priority
         ):
             return False
     return True

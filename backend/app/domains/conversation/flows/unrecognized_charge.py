@@ -340,6 +340,7 @@ async def _start_compromise_plan(
     policy = load_disputes_policy()
     try:
         details = await bank_tools.get_card_details(dispute["card_id"])
+        flags = await _priority_flags(bank_tools, dispute)
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}
 
@@ -364,7 +365,11 @@ async def _start_compromise_plan(
             ),
             StepSpec(
                 tool="disputes.create_claim",
-                args={"tx_ids": dispute["picked_tx_ids"], "answers": sorted(dispute["answers"])},
+                args={
+                    "tx_ids": dispute["picked_tx_ids"],
+                    "answers": sorted(dispute["answers"]),
+                    "priority_flags": flags,
+                },
                 summary_key="create_claim",
                 view_facts=claim_facts,
             ),
@@ -373,14 +378,21 @@ async def _start_compromise_plan(
         intent="unrecognized_charge",
     )
     update["dispute"] = dispute
+    update["priority_flags"] = flags
     return update
 
 
 async def _start_claim_plan(
     state: GraphState, config: RunnableConfig, dispute: DisputeState
 ) -> dict[str, Any]:
-    """D11's one-step plan: no block, no handoff on success."""
+    """D11's one-step plan: no block; a handoff on success only when a B2
+    priority flag is set."""
+    bank_tools: BankReadTools = config["configurable"]["bank_tools"]
     language = state["language"]
+    try:
+        flags = await _priority_flags(bank_tools, dispute)
+    except ToolUnavailable:
+        return {"escalation_reason": "tool_failure"}
     tx_count = len(dispute["picked_tx_ids"])
     claim_facts = [Fact(key="tx_count", value=tx_count, source="conversation")]
     text = fill(get_template("dispute_confirm_claim", language), tx_count=str(tx_count))
@@ -391,7 +403,11 @@ async def _start_claim_plan(
         steps=[
             StepSpec(
                 tool="disputes.create_claim",
-                args={"tx_ids": dispute["picked_tx_ids"], "answers": sorted(dispute["answers"])},
+                args={
+                    "tx_ids": dispute["picked_tx_ids"],
+                    "answers": sorted(dispute["answers"]),
+                    "priority_flags": flags,
+                },
                 summary_key="create_claim",
                 view_facts=claim_facts,
             )
@@ -400,6 +416,7 @@ async def _start_claim_plan(
         intent="unrecognized_charge",
     )
     update["dispute"] = dispute
+    update["priority_flags"] = flags
     return update
 
 
@@ -408,7 +425,12 @@ async def _offer_claim_only(
 ) -> dict[str, Any]:
     """D10: the block was refused; offers the claim alone as a new one-step
     plan, in the same turn as the refusal."""
+    bank_tools: BankReadTools = config["configurable"]["bank_tools"]
     language = state["language"]
+    try:
+        flags = await _priority_flags(bank_tools, dispute)
+    except ToolUnavailable:
+        return {"escalation_reason": "tool_failure"}
     tx_count = len(dispute["picked_tx_ids"])
     claim_facts = [Fact(key="tx_count", value=tx_count, source="conversation")]
     text = fill(get_template("dispute_block_refused_offer_claim", language), tx_count=str(tx_count))
@@ -419,7 +441,11 @@ async def _offer_claim_only(
         steps=[
             StepSpec(
                 tool="disputes.create_claim",
-                args={"tx_ids": dispute["picked_tx_ids"], "answers": sorted(dispute["answers"])},
+                args={
+                    "tx_ids": dispute["picked_tx_ids"],
+                    "answers": sorted(dispute["answers"]),
+                    "priority_flags": flags,
+                },
                 summary_key="create_claim",
                 view_facts=claim_facts,
             )
@@ -428,6 +454,7 @@ async def _offer_claim_only(
         intent="unrecognized_charge",
     )
     update["dispute"] = dispute
+    update["priority_flags"] = flags
     return update
 
 
@@ -490,13 +517,14 @@ async def _confirm_compromise_plan(
     details = await bank_tools.get_card_details(dispute["card_id"])
     tx_ids = dispute["picked_tx_ids"]
     answers = sorted(dispute["answers"])
+    flags = sorted(state.get("priority_flags", []))
     block_reason = cast(BlockReason, policy.compromise.block_reason)
 
     async def block_call() -> ActionResult:
         return await bank_write_tools.block_card(details.card_id, block_reason, token_id)
 
     async def claim_call() -> ActionResult:
-        return await bank_write_tools.create_claim(tx_ids, answers, token_id)
+        return await bank_write_tools.create_claim(tx_ids, answers, flags, token_id)
 
     outcome = await execute_plan(state, config, [block_call, claim_call])
     if isinstance(outcome, dict):
@@ -533,7 +561,7 @@ def _compromise_success(
         "confirmation_token_id": None,
         "dispute": None,
         "segments": [text],
-        **_fraud_handoff(dispute, []),
+        **_fraud_handoff(state, dispute, []),
     }
 
 
@@ -545,9 +573,10 @@ async def _confirm_claim_plan(
     bank_write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
     tx_ids = dispute["picked_tx_ids"]
     answers = sorted(dispute["answers"])
+    flags = sorted(state.get("priority_flags", []))
 
     async def claim_call() -> ActionResult:
-        return await bank_write_tools.create_claim(tx_ids, answers, token_id)
+        return await bank_write_tools.create_claim(tx_ids, answers, flags, token_id)
 
     outcome = await execute_plan(state, config, [claim_call])
     if isinstance(outcome, dict):
@@ -557,7 +586,7 @@ async def _confirm_claim_plan(
     (claim_result,) = outcome
     if dispute["block_refused"]:
         return _claim_only_success(state, dispute, claim_result)
-    return _single_charge_success(state, claim_result)
+    return _single_charge_success(state, dispute, claim_result)
 
 
 def _claim_only_success(
@@ -574,19 +603,32 @@ def _claim_only_success(
         "confirmation_token_id": None,
         "dispute": None,
         "segments": [text],
-        **_fraud_handoff(dispute, [get_template("dispute_open_question_card_active", language)]),
+        **_fraud_handoff(
+            state, dispute, [get_template("dispute_open_question_card_active", language)]
+        ),
     }
 
 
-def _single_charge_success(state: GraphState, claim_result: ActionResult) -> dict[str, Any]:
-    """D11: the case id, and nothing else -- no handoff."""
-    return {
+def _single_charge_success(
+    state: GraphState, dispute: DisputeState, claim_result: ActionResult
+) -> dict[str, Any]:
+    """D11: the case id, and nothing else -- no handoff. With a B2 priority
+    flag (D6) the verified claim is followed by a Reclamos handoff; the reply
+    keeps the claim's own segment."""
+    update: dict[str, Any] = {
         "actions": [claim_result],
         "pending": None,
         "confirmation_token_id": None,
         "dispute": None,
         "segments": [_claim_reply_text(state, claim_result)],
     }
+    if state.get("priority_flags"):
+        handoff = load_disputes_policy().priority.handoff
+        update["escalation_reason"] = handoff.reason
+        update["handoff_queue"] = handoff.queue
+        update["handoff_evidence"] = _evidence(dispute)
+        update["handoff_open_questions"] = _flag_lines(state)
+    return update
 
 
 def _handoff_no_claim(state: GraphState, dispute: DisputeState) -> dict[str, Any]:
@@ -599,6 +641,7 @@ def _handoff_no_claim(state: GraphState, dispute: DisputeState) -> dict[str, Any
         "dispute": None,
         "segments": [get_template("dispute_handoff_no_claim", language)],
         **_fraud_handoff(
+            state,
             dispute,
             [
                 get_template("dispute_open_question_card_active", language),
@@ -608,18 +651,56 @@ def _handoff_no_claim(state: GraphState, dispute: DisputeState) -> dict[str, Any
     }
 
 
-def _fraud_handoff(dispute: DisputeState, open_questions: list[str]) -> dict[str, Any]:
+def _fraud_handoff(
+    state: GraphState, dispute: DisputeState, open_questions: list[str]
+) -> dict[str, Any]:
     """The state keys that send this turn to D4-A's handoff nodes (D9, D10):
     `disputes.yaml`'s reason and queue, the picked transactions as evidence
-    and the code-filled open questions. The packet, `mode = human` and the
-    banner are the `handoff` node's job."""
+    and the code-filled open questions, plus one line per B2 priority flag
+    (D7: the queue stays Fraudes, the flags only annotate the packet). The
+    packet, `mode = human` and the banner are the `handoff` node's job."""
     policy = load_disputes_policy()
     return {
         "escalation_reason": policy.handoff.reason,
         "handoff_queue": policy.handoff.queue,
         "handoff_evidence": _evidence(dispute),
-        "handoff_open_questions": open_questions,
+        "handoff_open_questions": [*open_questions, *_flag_lines(state)],
     }
+
+
+async def _priority_flags(bank_tools: BankReadTools, dispute: DisputeState) -> list[str]:
+    """B2's sorted `priority_flags`, built in code before any claim plan is
+    issued (R2: the signed plan carries them, the LLM never does). The two
+    complaint signals come from one customer-scoped read; the amount flag from
+    the picked rows' own `amount`/`currency` through the policy's method (R8).
+    Raises `ToolUnavailable`; the caller takes the `tool_failure` path."""
+    policy = load_disputes_policy()
+    signals = await bank_tools.get_priority_signals()
+    flags: list[str] = []
+    if signals.repeat_complainer:
+        flags.append("repeat_complainer")
+    if signals.open_critical:
+        flags.append("open_critical")
+    # The picked ids are a subset of the offered ones, so the same search the
+    # offer ran returns their rows (at most 10, `transactions.search`).
+    rows = await bank_tools.search_transactions(
+        TxFilter(card_id=dispute["card_id"], status=cast(list[TxStatus], policy.candidate_statuses))
+    )
+    picked = set(dispute["picked_tx_ids"])
+    if any(
+        policy.amount_over_threshold(tx.amount, tx.currency) for tx in rows if tx.tx_id in picked
+    ):
+        flags.append("amount_over_threshold")
+    return sorted(flags)
+
+
+def _flag_lines(state: GraphState) -> list[str]:
+    """One fixed agent-facing line per priority flag, for `open_questions`."""
+    language = state["language"]
+    return [
+        get_template(cast(TemplateKind, f"priority_flag_{flag}"), language)
+        for flag in sorted(state.get("priority_flags", []))
+    ]
 
 
 def _claim_reply_text(state: GraphState, claim_result: ActionResult) -> str:

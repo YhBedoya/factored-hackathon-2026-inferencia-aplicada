@@ -1,0 +1,32 @@
+seed_id: d-transaction_search-normal_resolution-es-co-01
+intent: transaction_search
+category: normal_resolution
+persona: CLI-M9B56QX9KMBU
+goal: Encontrar una compra reciente dando comercio, día y monto aproximado
+fact_sheet:
+  merchant: Super Ahorro
+  weekday: jueves
+  approx_amount_cop: '790000'
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - transaction_search
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-transaction_search-normal_resolution-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: Busca una compra en Super Ahorro que hice un jueves, fue de unos 790 mil pesos.
+  reviewer: null
+  reviewed_at: null
