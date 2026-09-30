@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic
-version: 2
+version: 3
 customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card]}
 bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
 rules:
@@ -10,6 +10,8 @@ rules:
   bank_side_block:         {queue: null,     priority: high}
   action_unverified:       {queue: atencion, priority: high}
   unauthorized_access:     {queue: atencion, priority: high}
+  tool_failure:            {queue: null,     priority: normal}
+  llm_unavailable:         {queue: null,     priority: normal}
   suspected_fraud:         {queue: fraudes,  priority: high, open_questions: [card_in_possession]}
 human_request_queues: {default: atencion, by_flow: {unrecognized_charge: fraudes}}
 unauthorized_access:  {attempts_before_handoff: 2}

@@ -92,7 +92,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     try:
         cards = await bank_tools.list_cards()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
     outcome = select_card(cards, hint, failures, policy, language)
@@ -140,7 +140,7 @@ async def _resolve_declines(
             TxFilter(card_id=card_id, status=["Declined"])
         )
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     if not declines:
         return {
@@ -247,7 +247,7 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
             TxFilter(card_id=decline["card_id"], status=["Declined"])
         )
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     tx_id = selection.tx_ids[0]
     tx = next((row for row in declines if row.tx_id == tx_id), None)
@@ -283,7 +283,7 @@ async def _explain(
             "segments": [get_template("decline_unknown", language)],
         }
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     source = f"bank.transactions:{tx.tx_id}"
     merchant = tx.merchant_name or _MERCHANT_FALLBACK[language]

@@ -13,7 +13,7 @@ __all__ = ["LLMSettings"]
 
 
 class LLMSettings(BaseSettings):
-    """Provider choice, credentials and the R11/R7 call-shape knobs.
+    """Provider choice, credentials and the per-attempt timeout (retries: `Settings.retry_max`).
 
     Field names double as env var names (pydantic-settings matches case-
     insensitively), so `llm_provider` reads `LLM_PROVIDER`, and so on.
@@ -31,4 +31,3 @@ class LLMSettings(BaseSettings):
     langfuse_public_key: SecretStr | None = None
     langfuse_secret_key: SecretStr | None = None
     timeout_s: float = 20.0
-    max_retries: int = 2

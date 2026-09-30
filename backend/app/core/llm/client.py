@@ -8,21 +8,30 @@ see a LangChain type, a provider exception, the prompt text or the model
 output text (D5, R5).
 """
 
+import asyncio
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any, Protocol, TypeVar, cast
 
 import anthropic
 import openai
 import structlog
 from botocore.config import Config  # type: ignore[import-untyped]
-from botocore.exceptions import BotoCoreError, ClientError  # type: ignore[import-untyped]
+from botocore.exceptions import (  # type: ignore[import-untyped]
+    BotoCoreError,
+    ClientError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 from langchain_anthropic import ChatAnthropic
 from langchain_aws import ChatBedrockConverse
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel
 
+from app.core.config import get_settings
+from app.core.faults import fault_active
 from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable, LLMUnmaskedInput
 from app.core.llm.pricing import cost_usd
 from app.core.llm.registry import (
@@ -37,6 +46,7 @@ from app.core.llm.settings import LLMSettings
 from app.core.llm.sink import LLMCallRecord, LLMCallSink, LLMCallStatus
 from app.core.llm.tracing import trace_llm_call
 from app.core.pii import find_pii, redact
+from app.core.retry import backoff_delay
 
 __all__ = ["LLMClient", "StructuredLLMClient", "build_chat_model", "get_llm_client"]
 
@@ -45,6 +55,30 @@ T = TypeVar("T", bound=BaseModel)
 _logger = structlog.get_logger()
 
 _ERROR_MESSAGE_MAX = 300
+
+_TRANSPORT_ERRORS = (anthropic.APIError, openai.APIError, BotoCoreError, ClientError)
+_BEDROCK_THROTTLING = frozenset(
+    {"ThrottlingException", "TooManyRequestsException", "ProvisionedThroughputExceededException"}
+)
+
+
+class _SyntheticTimeout(Exception):
+    """Raised by the `bedrock_timeout` fault in place of the provider call."""
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Timeout, connection, 429 or 5xx are worth a retry (R11); any other error is not."""
+    if isinstance(
+        exc, _SyntheticTimeout | anthropic.APIConnectionError | openai.APIConnectionError
+    ):
+        return True  # APITimeoutError is an APIConnectionError
+    if isinstance(exc, anthropic.APIStatusError | openai.APIStatusError):
+        return exc.status_code == 429 or exc.status_code >= 500
+    if isinstance(exc, ClientError):
+        error = exc.response.get("Error", {})
+        status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
+        return error.get("Code") in _BEDROCK_THROTTLING or status >= 500
+    return isinstance(exc, ReadTimeoutError | ConnectTimeoutError | EndpointConnectionError)
 
 
 def _error_message(exc: BaseException) -> str:
@@ -85,10 +119,10 @@ def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
 
     The provider is `STEP_PROVIDER.get(step, settings.llm_provider)`: most
     steps follow `LLM_PROVIDER`, but `paraphrase` is pinned to `openai`
-    regardless (ADR-030). Anthropic and OpenAI: `max_retries`/`timeout` come
-    straight from `settings` (R11, `01` §7). Bedrock: the same bound is
-    expressed as a botocore `Config` since `ChatBedrockConverse` has no
-    `max_retries`/`timeout` kwargs.
+    regardless (ADR-030). Every SDK is built with no internal retries: the
+    client's own transport loop owns the bound (R11, D3), so a retry is never
+    hidden from the ledger. `timeout` applies per attempt. Bedrock expresses
+    both as a botocore `Config` since `ChatBedrockConverse` has no such kwargs.
     """
     provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
     model_id = MODEL_REGISTRY[step][provider]
@@ -99,7 +133,7 @@ def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
         return ChatAnthropic(
             model=model_id,
             **extra,
-            max_retries=settings.max_retries,
+            max_retries=0,
             timeout=settings.timeout_s,
             api_key=settings.anthropic_api_key,
         )
@@ -107,12 +141,13 @@ def build_chat_model(settings: LLMSettings, step: Step) -> _ChatModel:
         return ChatOpenAI(
             model=model_id,
             **extra,
-            max_retries=settings.max_retries,
+            max_retries=0,
             timeout=settings.timeout_s,
             api_key=settings.openai_api_key,
         )
     config = Config(
-        retries={"max_attempts": settings.max_retries},
+        # `max_attempts` counts retries in botocore; `total_max_attempts` is the real total.
+        retries={"total_max_attempts": 1, "mode": "standard"},
         read_timeout=int(settings.timeout_s),
     )
     return ChatBedrockConverse(
@@ -140,10 +175,12 @@ class StructuredLLMClient:
         settings: LLMSettings,
         chat_model_factory: ChatModelFactory = build_chat_model,
         sink: LLMCallSink | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         self._settings = settings
         self._chat_model_factory = chat_model_factory
         self._sink = sink
+        self._sleep = sleep
 
     async def structured(
         self, *, step: Step, prompt: PromptRef, system: str, user: str, schema: type[T]
@@ -184,10 +221,15 @@ class StructuredLLMClient:
 
         messages: list[BaseMessage] = [SystemMessage(content=system), HumanMessage(content=user)]
         last_error = ""
-        for attempt in (1, 2):
+        # One counter for both retry kinds, so ledger attempts read 1, 2, 3... in call order.
+        attempt = 0
+        transport_failures = 0
+        invalid_seen = False
+        while True:
+            attempt += 1
             request = (
                 messages
-                if attempt == 1
+                if not invalid_seen
                 else [
                     *messages,
                     HumanMessage(
@@ -210,10 +252,12 @@ class StructuredLLMClient:
                     input_text=user,
                 ) as span:
                     langfuse_trace_id = span.id
+                    if fault_active("bedrock_timeout"):
+                        raise _SyntheticTimeout("bedrock_timeout fault")
                     raw_result = cast(dict[str, Any], await structured_model.ainvoke(request))
                     usage = getattr(raw_result.get("raw"), "usage_metadata", None) or {}
                     span.set_usage(usage.get("input_tokens"), usage.get("output_tokens"))
-            except (anthropic.APIError, openai.APIError, BotoCoreError, ClientError) as exc:
+            except (*_TRANSPORT_ERRORS, _SyntheticTimeout) as exc:
                 await self._finish(
                     provider,
                     model_id,
@@ -229,7 +273,11 @@ class StructuredLLMClient:
                     langfuse_trace_id=langfuse_trace_id,
                     error=exc,
                 )
-                raise LLMUnavailable(f"{provider} transport failed on step {step!r}") from exc
+                transport_failures += 1
+                if not _is_retryable(exc) or transport_failures > get_settings().retry_max:
+                    raise LLMUnavailable(f"{provider} transport failed on step {step!r}") from exc
+                await self._sleep(backoff_delay(transport_failures))
+                continue
 
             raw = raw_result.get("raw")
             parsed = raw_result.get("parsed")
@@ -249,11 +297,12 @@ class StructuredLLMClient:
                     raw=raw,
                     langfuse_trace_id=langfuse_trace_id,
                 )
-                if attempt == 2:
+                if invalid_seen:
                     cause = parsing_error if isinstance(parsing_error, BaseException) else None
                     raise LLMInvalidOutput(
-                        f"invalid structured output for step {step!r} after 2 attempts"
+                        f"invalid structured output for step {step!r} after 2 invalid attempts"
                     ) from cause
+                invalid_seen = True
                 last_error = (
                     str(parsing_error)
                     if parsing_error is not None
@@ -276,9 +325,6 @@ class StructuredLLMClient:
                 langfuse_trace_id=langfuse_trace_id,
             )
             return parsed
-
-        # Unreachable: the loop above always returns or raises within 2 attempts.
-        raise LLMInvalidOutput(f"invalid structured output for step {step!r}")
 
     async def _finish(
         self,

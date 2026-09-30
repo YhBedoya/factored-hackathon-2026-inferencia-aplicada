@@ -19,6 +19,7 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, ConfigDict
 
+from app.core.config import get_settings
 from app.core.llm import LLMClient, LLMError, PromptRef
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.prompts import load_prompt
@@ -67,6 +68,14 @@ _FALLBACK: dict[str, dict[Language, str]] = {
         "es": "El cliente reporta un posible fraude. Revisa la evidencia adjunta.",
         "pt": "O cliente relata uma possível fraude. Revise a evidência anexada.",
     },
+    "tool_failure": {
+        "es": "Una herramienta falló tras varios intentos. Revisa el estado real de la solicitud.",
+        "pt": "Uma ferramenta falhou após várias tentativas. Revise o estado real do pedido.",
+    },
+    "llm_unavailable": {
+        "es": "El modelo no estuvo disponible tras varios intentos. Necesita atención directa.",
+        "pt": "O modelo ficou indisponível após várias tentativas. Precisa de atenção direta.",
+    },
 }
 _DEFAULT_REASON = "human_request"
 
@@ -104,6 +113,10 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
         return {"handoff_request": _fallback(None, language)}
     reason, queue = resolution.reason, resolution.queue
     fallback = _fallback(reason, language)
+    # Under LLM_DISABLED there is no model to ask; `llm_unavailable` with the LLM
+    # enabled still tries it (retries included) and falls back on `LLMError`.
+    if get_settings().llm_disabled:
+        return {"handoff_request": fallback}
 
     # `card_mask` is offered only when the selected card's last4 can be read.
     values: dict[str, str] = {

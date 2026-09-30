@@ -38,6 +38,7 @@ decision for D2-K, only `except Exception` cancels the plan; an
 `asyncio.CancelledError` does not, and is deferred to D3-A3.
 """
 
+import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from typing import cast
 
@@ -45,6 +46,7 @@ import structlog
 from pydantic import JsonValue
 
 from app.core.actions import ActionResult
+from app.core.config import get_settings
 from app.core.errors import (
     AccessDenied,
     ConfirmationRequired,
@@ -52,6 +54,8 @@ from app.core.errors import (
     StepUpRequired,
     ToolUnavailable,
 )
+from app.core.faults import fault_active
+from app.core.retry import backoff_delay
 from app.domains.audit.schemas import AuditType, Recorder
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.schemas import Intent
@@ -65,7 +69,7 @@ from app.domains.policy.confirmation import (
     args_hash,
 )
 
-__all__ = ["ConfirmedWriteTools", "IntentAllowlist", "StepUpRule"]
+__all__ = ["ConfirmedWriteTools", "IntentAllowlist", "StepUpRule", "call_with_timeout"]
 
 _logger = structlog.get_logger()
 
@@ -83,6 +87,24 @@ from `policies/tools.yaml` (D3). No default, for the same reason as
 
 _GET_BLOCK_ORIGIN_TOOL = "cards.get_block_origin"
 
+# The writes `cards_write_error` fails (D6): every `cards.*` write, not claims.
+_CARDS_WRITES = frozenset(
+    {"cards.lock_card", "cards.unlock_card", "cards.block_card", "cards.order_replacement"}
+)
+
+
+async def call_with_timeout[T](call: Callable[[], Awaitable[T]], timeout_s: float | None) -> T:
+    """Run one tool attempt under the per-attempt timeout (D4). A timeout
+    surfaces as `ToolUnavailable("timeout")`, so it takes the retry path.
+    `timeout_s=None` reads `Settings.tool_timeout_s` at call time.
+    """
+    limit = get_settings().tool_timeout_s if timeout_s is None else timeout_s
+    try:
+        async with asyncio.timeout(limit):
+            return await call()
+    except TimeoutError as exc:
+        raise ToolUnavailable("timeout") from exc
+
 
 class ConfirmedWriteTools:
     """What `config["configurable"]["bank_write_tools"]` holds (D2-K D5)."""
@@ -95,7 +117,12 @@ class ConfirmedWriteTools:
         requires_step_up: StepUpRule,
         allowed: IntentAllowlist,
         audit: Recorder,
+        *,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        timeout_s: float | None = None,
     ) -> None:
+        self._sleep = sleep
+        self._timeout_s = timeout_s
         self._raw = raw
         self._confirmations = confirmations
         self._step_up = step_up
@@ -227,21 +254,38 @@ class ConfirmedWriteTools:
             raise
         await self._record("confirmation_used", {"tool": tool, "step_index": step_index})
 
-        try:
-            result = await call(f"{token_id}:{step_index}")
-        except AccessDenied:
-            # D4-B: a `create_claim` tx id that isn't the customer's own
-            # (R1) -- audited the same way `get_block_origin`'s does, then
-            # falls into the same cancel-and-reraise path every other raised
-            # exception below takes.
-            await self._record("access_denied", {"tool": tool})
-            await self._record("tool_result", {"tool": tool, "error": "AccessDenied"})
-            await self._confirmations.cancel(token_id)
-            raise
-        except Exception as exc:
-            await self._record("tool_result", {"tool": tool, "error": type(exc).__name__})
-            await self._confirmations.cancel(token_id)
-            raise
+        # D5: retries reuse the one key and the one consumed step (R2). Only
+        # `ToolUnavailable` (timeout included) is retried; every other error,
+        # and an unverified result (D7), takes the single-shot path.
+        key = f"{token_id}:{step_index}"
+        max_attempts = get_settings().retry_max + 1
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                result = await call_with_timeout(
+                    lambda: self._attempt(tool, key, call), self._timeout_s
+                )
+                break
+            except AccessDenied:
+                # D4-B: a `create_claim` tx id that isn't the customer's own
+                # (R1) -- audited the same way `get_block_origin`'s does, then
+                # falls into the same cancel-and-reraise path below.
+                await self._record("access_denied", {"tool": tool})
+                await self._record(
+                    "tool_result", {"tool": tool, "error": "AccessDenied", "attempt": attempt}
+                )
+                await self._confirmations.cancel(token_id)
+                raise
+            except Exception as exc:
+                await self._record(
+                    "tool_result", {"tool": tool, "error": type(exc).__name__, "attempt": attempt}
+                )
+                if isinstance(exc, ToolUnavailable) and attempt < max_attempts:
+                    await self._sleep(backoff_delay(attempt))
+                    continue
+                await self._confirmations.cancel(token_id)
+                raise
 
         if not result.verified:
             await self._record("tool_result", {"tool": tool, "verified": False})
@@ -249,6 +293,18 @@ class ConfirmedWriteTools:
             return result
 
         return await self._record_readback(tool, token_id, step_index, result)
+
+    async def _attempt(
+        self, tool: str, key: str, call: Callable[[str], Awaitable[ActionResult]]
+    ) -> ActionResult:
+        """One raw attempt, with the D6 faults applied here so `BANK=fake` and
+        `BANK=postgres` behave the same."""
+        if tool in _CARDS_WRITES and fault_active("cards_write_error"):
+            raise ToolUnavailable("fault:cards_write_error")
+        result = await call(key)
+        if fault_active("readback_mismatch"):
+            return result.model_copy(update={"verified": False})
+        return result
 
     async def _record_readback(
         self, tool: str, token_id: str, step_index: int, result: ActionResult

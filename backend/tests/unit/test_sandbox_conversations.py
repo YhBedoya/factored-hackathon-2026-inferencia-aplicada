@@ -18,11 +18,13 @@ from app.core.errors import ToolUnavailable
 from app.domains.cards.schemas import CardSummary
 from app.domains.conversation.graph import build_graph, run_turn
 from app.domains.conversation.nodes.compose import ComposeDraft
+from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
-from tests.conftest import ScriptedLLM
+from app.domains.conversation.tools.handoff import InMemoryHandoffTools
+from tests.conftest import RecordingAudit, ScriptedLLM
 
 
 def _config(ctx: ToolContext, bank_tools: FakeBank, llm: ScriptedLLM, thread_id: str) -> Any:
@@ -155,8 +157,8 @@ class _DownBank(FakeBank):
         raise ToolUnavailable("down")
 
 
-def test_pt_tool_unavailable_gets_tool_error_template(fakebank_dir: Path) -> None:
-    """Brand/D15: a failed card read says so and that nothing changed, in PT."""
+def test_pt_tool_failure_hands_off(fakebank_dir: Path) -> None:
+    """D5/D8: a card read that fails after retries hands off in PT (`tool_failure`)."""
     ctx = ToolContext(
         customer_id="CLI-TFSINGLE0002",
         conversation_id=uuid4(),
@@ -166,13 +168,24 @@ def test_pt_tool_unavailable_gets_tool_error_template(fakebank_dir: Path) -> Non
     )
     bank_tools = _DownBank(ctx, fakebank_dir)
     nlu = NLUResult(language="pt", intents=["card_status"], status="clear", slots=NLUSlots())
-    llm = ScriptedLLM({"nlu": [nlu]})
+    llm = ScriptedLLM(
+        {
+            "nlu": [nlu],
+            "handoff_summary": [HandoffSummaryDraft(request="Falha ao consultar cartoes.")],
+        }
+    )
     graph = build_graph(MemorySaver())
     config = _config(ctx, bank_tools, llm, "t-tool-down")
+    handoff_tools = InMemoryHandoffTools()
+    config["configurable"]["handoff_tools"] = handoff_tools
+    config["configurable"]["audit"] = RecordingAudit()
 
     reply, debug = asyncio.run(run_turn(graph, "qual e o status do meu cartao?", config=config))
     assert debug.route == "card_info"
-    assert reply == get_template("tool_error", "pt")
+    assert reply.startswith(get_template("failure_handoff", "pt"))
+    # `handoff_transfer` carries {queue_label}/{reference}; compare its fixed tail.
+    assert get_template("handoff_transfer", "pt").split("{reference}. ")[1] in reply
+    assert [p.reason for p in handoff_tools.created] == ["tool_failure"]
 
 
 def test_pt_compose_uses_customer_name_only_as_placeholder(fakebank_dir: Path) -> None:

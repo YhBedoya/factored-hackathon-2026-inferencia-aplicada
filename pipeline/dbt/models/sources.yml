@@ -13,7 +13,7 @@ sources:
       from a source, so no hive column reaches a staging model either way.
     meta:
       external_location: >-
-        read_parquet('../../data/raw/{name}/**/*.parquet',
+        read_parquet('{{ var("raw_root") }}/{name}/**/*.parquet',
         hive_partitioning = false, union_by_name = true)
     tables:
       - name: branches

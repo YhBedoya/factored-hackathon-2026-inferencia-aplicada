@@ -20,7 +20,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 | `greeting`, `thanks_close`, `affirm`, `deny` | Conversation management | router | — | Core |
 | `travel_notice`, `spending_limits`, `card_doctor`, `expiry_renewal`, `benefits_info`, `card_activation`, `pin_reset`, `card_cancel`, `limit_increase`, `card_finder`, `prequalification` | Stretch features | flows added later | various | Stretch |
 
-`status` values: `clear`, `ambiguous`, `out_of_scope`, `out_of_market`, `injection_suspected` **(proposed)**.
+`status` values: `clear`, `ambiguous`, `out_of_scope`, `out_of_market`, `injection_suspected` (built in D4-A, `nlu@v4`).
 
 ## 2. NLU (understand node)
 
@@ -136,7 +136,7 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Claim priority flags | See 4.8 | Handoff to Reclamos |
 | Customer not active | Customer status is Closed, Suspended or Inactive (it takes precedence over card status, ADR-021) | Card info read-only, block still allowed, no unlock or replacement; handoff (Atención) |
 | Unauthorized access | An `injection_suspected` turn (another person's data) or a tool raising `AccessDenied` | Refuse with the `injection_suspected` template and audit `access_denied{source: nlu\|tool, attempt}` every time; the 2nd attempt in a conversation (`attempts_before_handoff`) → handoff (Atención, `unauthorized_access`) |
-| Tool / LLM failure | Retries exhausted | Safe fallback template + handoff |
+| Tool / LLM failure | Retries exhausted (2 retries, `01` §7), any `LLMError`, or `LLM_DISABLED` | `failure_handoff` template (no LLM; `failure_handoff_after_action` when the turn already has a verified action or a write failed after its retries, the graph-local `write_failed` flag; with no language in state yet, `load_session` picks ES/PT with the in-code `_guess_language` check, since the country can't tell PT) + handoff (`tool_failure` / `llm_unavailable`, queue as `human_request`, priority normal; D6-A D8-D10) |
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |
 
 Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `retencion` and `creditos` are Stretch **(proposed)**.

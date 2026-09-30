@@ -7,15 +7,17 @@ has no async test runner (only sync pytest).
 """
 
 import asyncio
+from collections.abc import Iterator
 from typing import Any
 
 import httpx
 import pytest
-from anthropic import APIConnectionError
+from anthropic import APIConnectionError, BadRequestError
 from langchain_aws import ChatBedrockConverse
 from pydantic import BaseModel, ConfigDict
 from structlog.testing import capture_logs
 
+from app.core.config import get_settings
 from app.core.llm.client import StructuredLLMClient, build_chat_model
 from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable
 from app.core.llm.registry import MODEL_REGISTRY, PromptRef
@@ -61,6 +63,17 @@ class _StubChatModel:
         return self.runnable
 
 
+async def _no_sleep(_: float) -> None:
+    return None
+
+
+@pytest.fixture
+def reset_settings() -> Iterator[None]:
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 def _settings() -> LLMSettings:
     return LLMSettings(_env_file=None)
 
@@ -102,14 +115,20 @@ def test_transport_failure_is_bounded_and_logged() -> None:
     """R11, R7, step 5: a provider exception -> `LLMUnavailable`, logged, no prompt text."""
     settings = _settings()
     chat_model = build_chat_model(settings, "nlu")
-    assert chat_model.max_retries == settings.max_retries  # type: ignore[attr-defined]
+    assert chat_model.max_retries == 0  # type: ignore[attr-defined]
+    # botocore: one total attempt, else a hidden retry escapes the ledger (D3).
+    bedrock = build_chat_model(
+        LLMSettings(_env_file=None, llm_provider="bedrock", aws_region="us-east-1"), "nlu"
+    )
+    retries = bedrock.client.meta.config.retries  # type: ignore[attr-defined]
+    assert retries["total_max_attempts"] == 1
     assert chat_model.default_request_timeout == settings.timeout_s  # type: ignore[attr-defined]
 
     request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
     raw_pii = ("4111111111111111", "ana.perez@example.com", "+52 55 1234 5678")
     error = APIConnectionError(message="echoed input: " + " ".join(raw_pii), request=request)
-    stub = _StubChatModel([error])
-    client = StructuredLLMClient(settings, chat_model_factory=lambda s, step: stub)
+    stub = _StubChatModel([error, error, error])
+    client = StructuredLLMClient(settings, chat_model_factory=lambda s, step: stub, sleep=_no_sleep)
 
     user_text = "mi tarjeta es ⟨CARD_1⟩ y quiero bloquearla"
     with capture_logs() as logs:
@@ -124,7 +143,8 @@ def test_transport_failure_is_bounded_and_logged() -> None:
                 )
             )
 
-    assert len(logs) == 1
+    assert len(logs) == 3
+    assert [log["attempt"] for log in logs] == [1, 2, 3]
     event = logs[0]
     assert event["event"] == "llm.call"
     assert event["provider"] == "anthropic"
@@ -132,17 +152,16 @@ def test_transport_failure_is_bounded_and_logged() -> None:
     assert event["prompt_version"] == "nlu@v1"
     assert event["temperature"] == 0.0
     assert event["outcome"] == "unavailable"
-    assert event["attempt"] == 1
     assert event["error_type"] == "APIConnectionError"
     assert len(event["error_message"]) <= 300
     # R5: an error body can echo the input, so the logged text is masked.
-    for value in raw_pii:
-        assert value not in event["error_message"]
-    for kind in ("CARD", "EMAIL", "PHONE"):
-        assert f"⟨{kind}⟩" in event["error_message"]
-
-    for value in logs[0].values():
-        assert user_text not in str(value)
+    for log in logs:
+        for value in raw_pii:
+            assert value not in log["error_message"]
+        for kind in ("CARD", "EMAIL", "PHONE"):
+            assert f"⟨{kind}⟩" in log["error_message"]
+        for value in log.values():
+            assert user_text not in str(value)
 
 
 class _RecordingSink:
@@ -151,6 +170,60 @@ class _RecordingSink:
 
     async def record(self, record: LLMCallRecord) -> None:
         self.records.append(record)
+
+
+def test_timeout_retried_twice_then_unavailable(
+    monkeypatch: pytest.MonkeyPatch, reset_settings: None
+) -> None:
+    """R11, D3: bedrock_timeout -> 1 call + 2 retries, one row each, no provider call."""
+    monkeypatch.setenv("FAULTS", "bedrock_timeout")
+    get_settings.cache_clear()
+    sleeps: list[float] = []
+
+    async def record_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    sink = _RecordingSink()
+    stub = _StubChatModel([])
+    client = StructuredLLMClient(
+        _settings(), chat_model_factory=lambda s, step: stub, sink=sink, sleep=record_sleep
+    )
+    with pytest.raises(LLMUnavailable):
+        asyncio.run(
+            client.structured(
+                step="nlu", prompt=PromptRef("nlu", 1), system="sys", user="hola", schema=_Echo
+            )
+        )
+    assert [(r.attempt, r.status) for r in sink.records] == [
+        (1, "unavailable"),
+        (2, "unavailable"),
+        (3, "unavailable"),
+    ]
+    assert len(sleeps) == 2
+    assert stub.runnable is not None
+    assert stub.runnable.calls == []
+
+    # A non-retryable 4xx is not retried: one row, no sleep.
+    monkeypatch.delenv("FAULTS")
+    get_settings.cache_clear()
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    bad = BadRequestError("bad", response=httpx.Response(400, request=request), body=None)
+    sink = _RecordingSink()
+    sleeps.clear()
+    client = StructuredLLMClient(
+        _settings(),
+        chat_model_factory=lambda s, step: _StubChatModel([bad]),
+        sink=sink,
+        sleep=record_sleep,
+    )
+    with pytest.raises(LLMUnavailable):
+        asyncio.run(
+            client.structured(
+                step="nlu", prompt=PromptRef("nlu", 1), system="sys", user="hola", schema=_Echo
+            )
+        )
+    assert len(sink.records) == 1
+    assert sleeps == []
 
 
 def test_nlu_sends_no_temperature() -> None:

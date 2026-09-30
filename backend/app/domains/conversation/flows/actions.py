@@ -20,7 +20,7 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from app.core.actions import ActionResult
-from app.core.errors import ConfirmationRequired
+from app.core.errors import ConfirmationRequired, ToolUnavailable
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
@@ -193,6 +193,12 @@ async def execute(
         result = await call()
     except ConfirmationRequired:
         return await cancel(state, config)
+    except ToolUnavailable:
+        # Retries are spent (R11): hand off without touching `pending`, so the
+        # graph's failure path owns the reply (A4).
+        # `write_failed`: the bank may have applied it anyway, so the reply
+        # must not claim "no change" (`fallback`).
+        return {"escalation_reason": "tool_failure", "handoff_queue": None, "write_failed": True}
     except Exception:
         return _action_unverified_handoff(language)
 
@@ -227,7 +233,8 @@ async def execute_plan(
     a plain "nothing happened yet" cancel: an earlier step in the same plan
     may already have written something, so any exception -- or a returned
     but unverified result -- stops the plan exactly where it is and goes
-    through the same `action_unverified` handoff a one-step failure does,
+    through the same `action_unverified` handoff a one-step failure does
+    (a `ToolUnavailable` after retries is a `tool_failure` handoff instead),
     never a later step over one that didn't verify. On full success, returns
     every step's verified `ActionResult` in order for the caller to build its
     own reply -- the compromise, refused-block and single-charge replies
@@ -238,6 +245,14 @@ async def execute_plan(
     for call in calls:
         try:
             result = await call()
+        except ToolUnavailable:
+            # Keep the steps already verified so the failure reply can say what did happen.
+            return {
+                "escalation_reason": "tool_failure",
+                "handoff_queue": None,
+                "actions": results,
+                "write_failed": True,
+            }
         except Exception:
             return _action_unverified_handoff(language)
         if not result.verified:

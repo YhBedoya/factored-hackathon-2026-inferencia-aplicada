@@ -62,7 +62,12 @@ def copy_all(warehouse_path: str, dsn: str) -> dict[str, int]:
     counts: dict[str, int] = {}
     try:
         with psycopg.connect(dsn) as pg, pg.cursor() as cur:
-            truncate_targets = [f"bank.{t}" for t in TABLES] + ["identity.accounts"]
+            # app.handoffs has an FK to identity.accounts; Postgres refuses to
+            # truncate the referenced table unless the referencing one is listed.
+            truncate_targets = [f"bank.{t}" for t in TABLES] + [
+                "identity.accounts",
+                "app.handoffs",
+            ]
             cur.execute("TRUNCATE TABLE " + ", ".join(truncate_targets))
             for table in TABLES:
                 columns = _srv_columns(con, table)

@@ -45,6 +45,7 @@ D6, D7, "Contracts" -> `/messages`, `/confirmations`;
 import asyncio
 import json
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
@@ -53,6 +54,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core import events
+from app.core.config import get_settings
+from app.core.redis import get_redis
 from app.core.telemetry import get_trace_id
 from app.domains.conversation import store
 from app.domains.conversation.graph import ConfirmationDecision, TxSelection
@@ -106,6 +109,45 @@ router = APIRouter(
 _DEFAULT_LANGUAGE: Literal["es"] = "es"
 
 _PING_INTERVAL_SECONDS = 15
+
+# D11 key TTLs: the account key only has to outlive its UTC day, the
+# conversation key outlives any realistic chat.
+_CONV_TURNS_TTL_SECONDS = 7 * 24 * 3600
+_ACCT_TURNS_TTL_SECONDS = 2 * 24 * 3600
+
+
+def _turn_cap_keys(session: Session, conversation: ConversationRow) -> tuple[str, str]:
+    day = datetime.now(UTC).strftime("%Y-%m-%d")
+    return f"turns:conv:{conversation.id}", f"turns:acct:{session.account_id}:{day}"
+
+
+async def _check_turn_caps(session: Session, conversation: ConversationRow) -> None:
+    """D11: `429 turn_cap_reached` at or over either cap. Bot mode only:
+    human-mode posts are the customer talking to a person, not LLM spend.
+    """
+    if conversation.mode != "bot":
+        return
+    settings = get_settings()
+    conv_key, acct_key = _turn_cap_keys(session, conversation)
+    conv_count, acct_count = await get_redis().mget(conv_key, acct_key)
+    if (
+        int(conv_count or 0) >= settings.turn_cap_per_conversation
+        or int(acct_count or 0) >= settings.turn_cap_per_account_day
+    ):
+        raise HTTPException(status_code=429, detail="turn_cap_reached")
+
+
+async def _count_turn(session: Session, conversation: ConversationRow) -> None:
+    """D11: count a scheduled bot-mode turn, only after `start_turn` returned."""
+    if conversation.mode != "bot":
+        return
+    conv_key, acct_key = _turn_cap_keys(session, conversation)
+    async with get_redis().pipeline(transaction=True) as pipe:
+        pipe.incr(conv_key)
+        pipe.expire(conv_key, _CONV_TURNS_TTL_SECONDS)
+        pipe.incr(acct_key)
+        pipe.expire(acct_key, _ACCT_TURNS_TTL_SECONDS)
+        await pipe.execute()
 
 
 class CreateConversationRequest(BaseModel):
@@ -208,6 +250,7 @@ async def post_message(
         if not selection_open:
             raise HTTPException(status_code=409, detail="selection_invalid")
 
+    await _check_turn_caps(session, conversation)
     try:
         turn_id = await start_turn(
             host,
@@ -220,6 +263,7 @@ async def post_message(
         )
     except TurnInProgress as exc:
         raise HTTPException(status_code=409, detail="turn_in_progress") from exc
+    await _count_turn(session, conversation)
     return PostMessageResponse(turn_id=turn_id)
 
 
@@ -251,6 +295,7 @@ async def post_confirmation(
     if not is_open or checkpointed_token != token_id:
         raise HTTPException(status_code=409, detail="confirmation_invalid")
 
+    await _check_turn_caps(session, conversation)
     try:
         turn_id = await start_turn(
             host,
@@ -261,6 +306,7 @@ async def post_confirmation(
         )
     except TurnInProgress as exc:
         raise HTTPException(status_code=409, detail="turn_in_progress") from exc
+    await _count_turn(session, conversation)
     return PostMessageResponse(turn_id=turn_id)
 
 

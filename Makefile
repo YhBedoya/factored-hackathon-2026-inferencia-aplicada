@@ -60,16 +60,16 @@ check: ## Lint + types + import-linter + unit tests.
 	uv run mypy app && \
 	uv run lint-imports && \
 	uv run pytest tests/unit -q
-	cd pipeline && uv run ruff check ingest load tests && \
-	uv run ruff format --check ingest load tests && \
+	cd pipeline && uv run ruff check ingest load contracts tests && \
+	uv run ruff format --check ingest load contracts tests && \
 	uv run pytest tests -q
 	cd frontend && npx biome ci .
 
 client: ## Regenerate the OpenAPI client from the running backend (D19).
 	cd frontend && npx @hey-api/openapi-ts
 
-data: ## Ingest (S3 by default, or SOURCE=local:<path>) -> dbt -> golden DB -> demo reset.
-	cd pipeline && uv run python -m ingest && uv run python -m load
+data: ## Ingest (S3 or SOURCE=local:<path>) -> contracts -> dbt -> golden DB -> reports -> demo reset (one RUN_ID).
+	cd pipeline && export RUN_ID=$${RUN_ID:-$$(date -u +%Y%m%dt%H%M%S)} && uv run python -m ingest && uv run python -m contracts && uv run python -m load
 	$(MAKE) seed-identity
 
 demo-reset: ## Reset latam_app from latam_golden (03 §7).

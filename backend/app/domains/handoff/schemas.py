@@ -38,6 +38,8 @@ HandoffReason = Literal[
     "action_unverified",
     "unauthorized_access",
     "suspected_fraud",
+    "tool_failure",
+    "llm_unavailable",
 ]
 Priority = Literal["high", "normal"]
 HandoffStatus = Literal["queued", "claimed", "returned"]

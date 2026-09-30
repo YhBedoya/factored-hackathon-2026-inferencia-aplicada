@@ -22,7 +22,7 @@ typed as (
         cast(nullif(trim(amount_usd), '') as numeric) as amount_usd,
         cast(nullif(trim(channel), '') as text) as channel,
         cast(nullif(trim(branch_id), '') as text) as branch_id,
-        cast(nullif(trim(merchant_name), '') as text) as merchant_name,
+        cast(nullif(trim({{ column_alias_expr('transactions', 'merchant_name') }}), '') as text) as merchant_name,
         cast(nullif(trim(merchant_category), '') as text) as merchant_category,
         cast(nullif(trim(transaction_country), '') as text) as transaction_country,
         cast(nullif(trim(transaction_city), '') as text) as transaction_city,

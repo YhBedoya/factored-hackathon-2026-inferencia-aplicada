@@ -81,6 +81,12 @@ def _require_eval_for_baseline(*, agent_system: str, app_env: str) -> None:
         )
 
 
+def _refuse_faults_in_prod(*, faults: frozenset[str], app_env: str) -> None:
+    """Refuse to start with fault injection (`FAULTS`) enabled under `APP_ENV=prod`."""
+    if faults and app_env == "prod":
+        raise RuntimeError("refusing to start: FAULTS is set under APP_ENV=prod")
+
+
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """FastAPI's usual `422 {"detail": [...]}` shape, but every error item
     keeps only `type`/`loc`/`msg` (D2): a request body that fails validation
@@ -104,6 +110,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         pii_vault_key=settings.pii_vault_key,
     )
     _require_eval_for_baseline(agent_system=settings.agent_system, app_env=settings.app_env)
+    _refuse_faults_in_prod(faults=settings.faults, app_env=settings.app_env)
     # Fails the whole startup on a header-less or malformed policy file (D1);
     # the combined hash below is what every audit event's `policy_version`
     # carries for the rest of the process's life (D2).
