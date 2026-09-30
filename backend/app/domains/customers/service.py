@@ -17,9 +17,17 @@ from app.core.pii import KnownPii
 from app.domains.customers import repository
 from app.domains.customers.schemas import CustomerProfile
 
-__all__ = ["LoginProfile", "build_known_pii", "get_known_pii", "get_login_profile", "get_profile"]
+__all__ = [
+    "COUNTRY_LABELS",
+    "LoginProfile",
+    "build_known_pii",
+    "get_document",
+    "get_known_pii",
+    "get_login_profile",
+    "get_profile",
+]
 
-_COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
+COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
     "México": "MX",
     "Colombia": "CO",
     "Argentina": "AR",
@@ -54,7 +62,7 @@ def build_known_pii(
 
 
 def _map_country(raw: str) -> Literal["MX", "CO", "AR"]:
-    country = _COUNTRY_LABELS.get(raw)
+    country = COUNTRY_LABELS.get(raw)
     if country is None:
         raise ToolUnavailable(f"unknown country {raw!r}")
     return country
@@ -90,3 +98,13 @@ async def get_known_pii(customer_id: str) -> KnownPii:
     if row is None:
         raise ToolUnavailable(f"no profile for customer {customer_id!r}")
     return build_known_pii(row["document_number"], row["first_name"], row["last_name"])
+
+
+async def get_document(customer_id: str) -> tuple[str, str]:
+    """`(document_type, document_number)` as stored, for the admin persona
+    credentials lookup (D22). Neither value is logged.
+    """
+    row = await repository.fetch_document(customer_id)
+    if row is None:
+        raise ToolUnavailable(f"no profile for customer {customer_id!r}")
+    return row["document_type"], row["document_number"]

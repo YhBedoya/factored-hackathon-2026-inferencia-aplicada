@@ -8,6 +8,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.health import router as health_router
 from app.api.v1.staff import router as staff_router
+from app.api.v1.staff_admin import router as staff_admin_router
 from app.api.v1.staff_auth import public_router as staff_auth_public_router
 from app.api.v1.staff_auth import router as staff_auth_router
 
@@ -21,4 +22,5 @@ v1_router.include_router(conversations_router)
 v1_router.include_router(staff_auth_public_router)
 v1_router.include_router(staff_auth_router)
 v1_router.include_router(staff_router)
+v1_router.include_router(staff_admin_router)
 v1_router.include_router(admin_router)

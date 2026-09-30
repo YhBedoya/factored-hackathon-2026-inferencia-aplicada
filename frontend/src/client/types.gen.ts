@@ -53,6 +53,84 @@ export type ConfirmationRequest = {
 };
 
 /**
+ * ConversationPage
+ */
+export type ConversationPage = {
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Items
+     */
+    items: Array<ConversationSummary>;
+};
+
+/**
+ * ConversationSummary
+ *
+ * One row of the staff conversation list; `created_at` is `started_at`
+ * (`app.conversations` has no `created_at`, human decision Q1).
+ */
+export type ConversationSummary = {
+    /**
+     * Conversation Id
+     */
+    conversation_id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Language
+     */
+    language: 'es' | 'pt' | null;
+    /**
+     * Country
+     */
+    country: 'MX' | 'CO' | 'AR' | null;
+    /**
+     * Intents
+     */
+    intents: Array<string>;
+    /**
+     * Outcome
+     */
+    outcome: string | null;
+    /**
+     * Escalated
+     */
+    escalated: boolean;
+    /**
+     * Queue
+     */
+    queue: string | null;
+    /**
+     * Mode
+     */
+    mode: string;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Turns
+     */
+    turns: number;
+};
+
+/**
+ * ConversationTimeline
+ */
+export type ConversationTimeline = {
+    conversation: ConversationSummary;
+    /**
+     * Turns
+     */
+    turns: Array<TurnTimeline>;
+};
+
+/**
  * CreateConversationRequest
  */
 export type CreateConversationRequest = {
@@ -245,6 +323,54 @@ export type HandoffSummary = {
 export type JsonValue = unknown;
 
 /**
+ * LLMCallView
+ *
+ * An `audit.llm_calls` row without `input_text` or `output_json` (D17).
+ */
+export type LlmCallView = {
+    /**
+     * Step
+     */
+    step: string;
+    /**
+     * Model Id
+     */
+    model_id: string;
+    /**
+     * Prompt Version
+     */
+    prompt_version: string;
+    /**
+     * Temperature
+     */
+    temperature: number | null;
+    /**
+     * Attempt
+     */
+    attempt: number;
+    /**
+     * Status
+     */
+    status: string;
+    /**
+     * Latency Ms
+     */
+    latency_ms: number;
+    /**
+     * Input Tokens
+     */
+    input_tokens: number | null;
+    /**
+     * Output Tokens
+     */
+    output_tokens: number | null;
+    /**
+     * Cost Usd
+     */
+    cost_usd: number | null;
+};
+
+/**
  * LoginRequest
  *
  * `POST /auth/login` body (D1). `document_number` has deliberately no
@@ -309,6 +435,66 @@ export type OtpVerifyRequest = {
      * Code
      */
     code: string;
+};
+
+/**
+ * PersonaCredentials
+ */
+export type PersonaCredentials = {
+    /**
+     * Customer Id
+     */
+    customer_id: string;
+    /**
+     * Document Type
+     */
+    document_type: string;
+    /**
+     * Document Number
+     */
+    document_number: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
+ * PersonaEntry
+ */
+export type PersonaEntry = {
+    /**
+     * Customer Id
+     */
+    customer_id: string;
+    /**
+     * Split
+     */
+    split: 'dev' | 'heldout' | null;
+    /**
+     * Traits
+     */
+    traits: {
+        [key: string]: JsonValue;
+    };
+    /**
+     * Notes
+     */
+    notes: string | null;
+};
+
+/**
+ * PolicyFileInfo
+ */
+export type PolicyFileInfo = {
+    /**
+     * File
+     */
+    file: string;
+    /**
+     * Sha256
+     */
+    sha256: string;
 };
 
 /**
@@ -403,6 +589,90 @@ export type StaffMeResponse = {
 };
 
 /**
+ * StepInfo
+ */
+export type StepInfo = {
+    /**
+     * Step
+     */
+    step: string;
+    /**
+     * Model Id
+     */
+    model_id: string;
+    /**
+     * Temperature
+     */
+    temperature: number | null;
+    /**
+     * Prompt Version
+     */
+    prompt_version: string;
+};
+
+/**
+ * SystemInfo
+ */
+export type SystemInfo = {
+    /**
+     * Git Sha
+     */
+    git_sha: string;
+    /**
+     * App Env
+     */
+    app_env: string;
+    /**
+     * Llm Provider
+     */
+    llm_provider: string;
+    /**
+     * Llm Disabled
+     */
+    llm_disabled: boolean;
+    /**
+     * Steps
+     */
+    steps: Array<StepInfo>;
+    /**
+     * Policy Hash
+     */
+    policy_hash: string;
+    /**
+     * Policies
+     */
+    policies: Array<PolicyFileInfo>;
+};
+
+/**
+ * TimelineEvent
+ */
+export type TimelineEvent = {
+    /**
+     * At
+     */
+    at: string;
+    /**
+     * Type
+     */
+    type: 'nlu_result' | 'rule_hit' | 'tool_call' | 'tool_result' | 'confirmation_issued' | 'confirmation_used' | 'readback' | 'access_denied' | 'handoff' | 'reply_sent' | 'error';
+    /**
+     * Actor
+     */
+    actor: string;
+    /**
+     * Payload
+     */
+    payload: {
+        [key: string]: JsonValue;
+    };
+    /**
+     * Sources
+     */
+    sources: Array<string>;
+};
+
+/**
  * TranscriptMessage
  *
  * One message of a claimed conversation's transcript.
@@ -420,6 +690,70 @@ export type TranscriptMessage = {
      * Created At
      */
     created_at: string;
+};
+
+/**
+ * TurnTimeline
+ */
+export type TurnTimeline = {
+    /**
+     * Turn Id
+     */
+    turn_id: string;
+    /**
+     * Started At
+     */
+    started_at: string;
+    /**
+     * Customer Text Masked
+     */
+    customer_text_masked: string | null;
+    /**
+     * Bot Text Masked
+     */
+    bot_text_masked: string | null;
+    /**
+     * Nlu
+     */
+    nlu: {
+        [key: string]: JsonValue;
+    } | null;
+    /**
+     * Rules
+     */
+    rules: Array<TimelineEvent>;
+    /**
+     * Tools
+     */
+    tools: Array<TimelineEvent>;
+    /**
+     * Events
+     */
+    events: Array<TimelineEvent>;
+    /**
+     * Sources
+     */
+    sources: Array<string>;
+    /**
+     * Policy Version
+     */
+    policy_version: string | null;
+    /**
+     * Llm Calls
+     */
+    llm_calls: Array<LlmCallView>;
+    /**
+     * Latency Ms
+     */
+    latency_ms: number | null;
+    /**
+     * Cost Usd
+     */
+    cost_usd: number | null;
+    /**
+     * Langfuse Url
+     */
+    langfuse_url: string | null;
 };
 
 /**
@@ -1013,6 +1347,162 @@ export type StreamConversationApiV1StaffConversationsConversationIdStreamGetResp
      */
     200: unknown;
 };
+
+export type ListConversationsApiV1StaffConversationsGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Language
+         */
+        language?: 'es' | 'pt' | null;
+        /**
+         * Country
+         */
+        country?: 'MX' | 'CO' | 'AR' | null;
+        /**
+         * Intent
+         */
+        intent?: string | null;
+        /**
+         * Outcome
+         */
+        outcome?: string | null;
+        /**
+         * Escalation
+         */
+        escalation?: string | null;
+        /**
+         * Date From
+         */
+        date_from?: string | null;
+        /**
+         * Date To
+         */
+        date_to?: string | null;
+        /**
+         * Limit
+         */
+        limit?: number;
+        /**
+         * Offset
+         */
+        offset?: number;
+    };
+    url: '/api/v1/staff/conversations';
+};
+
+export type ListConversationsApiV1StaffConversationsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListConversationsApiV1StaffConversationsGetError = ListConversationsApiV1StaffConversationsGetErrors[keyof ListConversationsApiV1StaffConversationsGetErrors];
+
+export type ListConversationsApiV1StaffConversationsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConversationPage;
+};
+
+export type ListConversationsApiV1StaffConversationsGetResponse = ListConversationsApiV1StaffConversationsGetResponses[keyof ListConversationsApiV1StaffConversationsGetResponses];
+
+export type GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetData = {
+    body?: never;
+    path: {
+        /**
+         * Conversation Id
+         */
+        conversation_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/conversations/{conversation_id}/timeline';
+};
+
+export type GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetError = GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetErrors[keyof GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetErrors];
+
+export type GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConversationTimeline;
+};
+
+export type GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponse = GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponses[keyof GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponses];
+
+export type GetSystemApiV1StaffSystemGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/staff/system';
+};
+
+export type GetSystemApiV1StaffSystemGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SystemInfo;
+};
+
+export type GetSystemApiV1StaffSystemGetResponse = GetSystemApiV1StaffSystemGetResponses[keyof GetSystemApiV1StaffSystemGetResponses];
+
+export type ListPersonasApiV1StaffPersonasGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/staff/personas';
+};
+
+export type ListPersonasApiV1StaffPersonasGetResponses = {
+    /**
+     * Response List Personas Api V1 Staff Personas Get
+     *
+     * Successful Response
+     */
+    200: Array<PersonaEntry>;
+};
+
+export type ListPersonasApiV1StaffPersonasGetResponse = ListPersonasApiV1StaffPersonasGetResponses[keyof ListPersonasApiV1StaffPersonasGetResponses];
+
+export type GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Persona Id
+         */
+        persona_id: string;
+    };
+    query?: never;
+    url: '/api/v1/staff/personas/{persona_id}/credentials';
+};
+
+export type GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetError = GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetErrors[keyof GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetErrors];
+
+export type GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: PersonaCredentials;
+};
+
+export type GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponse = GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponses[keyof GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponses];
 
 export type DemoResetApiV1AdminDemoResetPostData = {
     body?: never;

@@ -8,6 +8,11 @@ T23 adds `GET /staff/me` and `POST /staff/logout`. T24 adds the handoff queue
 `GET /staff/conversations/{id}/stream`), each of the latter depending on
 `get_claimed_conversation`.
 
+D7-A adds the read-only oversight routes: `GET /staff/conversations` (filtered
+list), `GET /staff/conversations/{id}/timeline` (the one route on
+`get_any_conversation`: no claim needed, still agent/admin) and
+`GET /staff/system`.
+
 The router declares `require_role("agent", "admin")` and `require_csrf` at
 the router level (R13, ADR-025), so a route added here can't forget either.
 
@@ -15,8 +20,10 @@ See `docs/specs/d4-a-escalation-handoff-deploy.md` D16 and "Contracts" ->
 "Staff API".
 """
 
+import hashlib
 from collections.abc import AsyncIterator
-from typing import Annotated, Any, NoReturn
+from datetime import date
+from typing import Annotated, Any, Literal, NoReturn
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -25,10 +32,24 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.v1.conversations import _sse_stream
 from app.core import events
+from app.core.config import get_settings
 from app.core.errors import NotFound
+from app.core.llm.registry import MODEL_REGISTRY, STEP_PROVIDER, TEMPERATURE, Step
+from app.core.llm.settings import LLMSettings
 from app.core.telemetry import get_trace_id
+from app.domains.audit import timeline
+from app.domains.audit.schemas import (
+    ConversationPage,
+    ConversationTimeline,
+    PolicyFileInfo,
+    StepInfo,
+    SystemInfo,
+)
 from app.domains.audit.service import AuditRecorder
 from app.domains.conversation import store
+from app.domains.conversation.nodes.compose import _PROMPT as _COMPOSE_PROMPT
+from app.domains.conversation.nodes.handoff_summary import _PROMPT as _HANDOFF_SUMMARY_PROMPT
+from app.domains.conversation.nodes.understand import _PROMPT as _NLU_PROMPT
 from app.domains.conversation.store import ConversationRow
 from app.domains.conversation.takeover import (
     TurnBusy,
@@ -46,8 +67,9 @@ from app.domains.handoff.schemas import (
 from app.domains.identity import service as identity_service
 from app.domains.identity.deps import get_session, require_csrf, require_role
 from app.domains.identity.models import Session
+from app.domains.policy import registry as policy_registry
 
-__all__ = ["get_claimed_conversation", "router"]
+__all__ = ["get_any_conversation", "get_claimed_conversation", "router"]
 
 router = APIRouter(
     prefix="/staff",
@@ -80,6 +102,18 @@ async def get_claimed_conversation(
     if conversation is None or not await handoff_service.is_claimed_by(
         conversation_id, session.account_id
     ):
+        raise HTTPException(status_code=404, detail="not_found")
+    return conversation
+
+
+async def get_any_conversation(conversation_id: UUID) -> ConversationRow:
+    """The `{conversation_id}` path's conversation, claimed or not (D16). Used
+    only by the read-only timeline route (R13 exception, checked by
+    `test_r13_routes`); role is still agent/admin from the router.
+    `404 not_found` for a missing conversation.
+    """
+    conversation = await store.get_conversation(conversation_id)
+    if conversation is None:
         raise HTTPException(status_code=404, detail="not_found")
     return conversation
 
@@ -238,3 +272,73 @@ async def stream_conversation(
     conversation: Annotated[ConversationRow, Depends(get_claimed_conversation)],
 ) -> StreamingResponse:
     return await _sse_response(events.subscribe(conversation.id))
+
+
+@router.get("/conversations")
+async def list_conversations(
+    language: Literal["es", "pt"] | None = None,
+    country: Literal["MX", "CO", "AR"] | None = None,
+    intent: str | None = None,
+    outcome: Annotated[
+        str | None, Query(pattern=r"^(resolved|clarified|abstained|handoff(:.+)?)$")
+    ] = None,
+    escalation: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> ConversationPage:
+    return await timeline.list_conversations(
+        language=language,
+        country=country,
+        intent=intent,
+        outcome=outcome,
+        escalation=escalation,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get("/conversations/{conversation_id}/timeline")
+async def get_conversation_timeline(
+    conversation: Annotated[ConversationRow, Depends(get_any_conversation)],
+) -> ConversationTimeline:
+    try:
+        return await timeline.get_timeline(conversation.id)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail="not_found") from exc
+
+
+@router.get("/system")
+async def get_system() -> SystemInfo:
+    settings = get_settings()
+    llm_provider = LLMSettings().llm_provider
+    prompts: dict[Step, str] = {
+        "nlu": _NLU_PROMPT.label,
+        "compose": _COMPOSE_PROMPT.label,
+        "handoff_summary": _HANDOFF_SUMMARY_PROMPT.label,
+    }
+    steps = [
+        StepInfo(
+            step=step,
+            model_id=MODEL_REGISTRY[step][STEP_PROVIDER.get(step, llm_provider)],
+            temperature=TEMPERATURE[step],
+            prompt_version=label,
+        )
+        for step, label in prompts.items()
+    ]
+    policy_files = sorted(policy_registry._DEFAULT_POLICIES_DIR.glob("*.yaml"))
+    return SystemInfo(
+        git_sha=settings.git_sha,
+        app_env=settings.app_env,
+        llm_provider=llm_provider,
+        llm_disabled=settings.llm_disabled,
+        steps=steps,
+        policy_hash=policy_registry.get_policies().hash,
+        policies=[
+            PolicyFileInfo(file=path.name, sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+            for path in policy_files
+        ],
+    )

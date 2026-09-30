@@ -440,4 +440,4 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D5 | D1.5 numeric targets | **Moved 2026-09-29** to a later card, after the first full dev run; still recorded before any held-out run |
 | D5 | Deploy of main after D5-A merge | **Decided 2026-09-29:** postponed to the end of D6 unless strictly required earlier. The human deploys `main` with the D5-A runbook (T27), and `/wave-run D5-A-deploy` records the results then |
 | D5–D6 | Paraphrase, simulator and judge model family | Paraphrase and simulator: OpenAI `gpt-6-luna` (ADR-030). Judge model still open |
-| D7 | Final model per step | From the held-out model comparison |
+| D7 | Final model per step | From the held-out model comparison. Proposed in `decision-log.md` "Model per step (D7)" (smoke result, final after the held-out NLU comparison) |

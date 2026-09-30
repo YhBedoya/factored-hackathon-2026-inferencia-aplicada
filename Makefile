@@ -4,6 +4,11 @@
 -include .env
 export
 
+# Baked into the backend image (Settings.git_sha, /staff/system). `?=` so a value
+# from .env or the environment wins.
+GIT_SHA ?= $(shell git rev-parse --short=10 HEAD 2>/dev/null || echo unknown)
+export GIT_SHA
+
 COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.dev.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.devtools.yml
 
 COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
@@ -94,10 +99,10 @@ chat-ui: ## Streamlit sandbox page on http://localhost:8501.
 nlu-smoke: ## Live NLU smoke set (needs ANTHROPIC_API_KEY).
 	cd backend && uv run python scripts/nlu_smoke.py
 
-eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] [DRIVER=scripted|simulator].
-	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES)) --driver $(or $(DRIVER),scripted)
+eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] [DRIVER=scripted|simulator] [RUNS=1] [NLU=off|smoke|suite].
+	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES)) --driver $(or $(DRIVER),scripted) --runs $(or $(RUNS),1) --nlu $(or $(NLU),off)
 
-eval-pii-check: ## PII scan of a run's LLM-call export (RUN=<run_id>).
+eval-pii-check: ## PII scan of a run's LLM-call export (RUN=<folder>).
 	@test -n "$(RUN)" || { echo "usage: make eval-pii-check RUN=<run_id>"; exit 2; }
 	uv run --project backend python -m eval.harness.pii_check --run $(RUN)
 

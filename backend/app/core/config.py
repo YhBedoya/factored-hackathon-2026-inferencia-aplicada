@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     login_max_failures: int = 5
     login_window_seconds: int = 900
 
+    # D7-A: personas file for the simulator route, and the build's git SHA for
+    # the timeline/report provenance ("unknown" outside an image build).
+    personas_path: Path = Path("/app/eval/personas.yaml")
+    git_sha: str = "unknown"
+
     # Reliability (D6-A). `FAULTS` is comma-separated and set on the command
     # line only; the guard in `main.py` refuses it under APP_ENV=prod.
     faults: Annotated[frozenset[Fault], NoDecode] = frozenset()

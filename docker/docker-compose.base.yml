@@ -33,6 +33,10 @@ services:
   backend:
     build:
       context: ../backend
+      additional_contexts:
+        eval: ../eval
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
     env_file:
       - ../.env
     environment:

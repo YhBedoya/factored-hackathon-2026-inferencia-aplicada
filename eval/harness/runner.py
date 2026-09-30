@@ -1,7 +1,8 @@
 """The eval run lifecycle (D13): clone, backend subprocess, play, collect, check, report.
 
-`run(suite, system)` runs one system after the other (`both` = proposed, then baseline),
-each on its own fresh clone of the golden DB, and writes a single side-by-side report.
+`run(suite, system, runs=N)` plays proposed N times, then baseline once (D4), all on one
+FILE_COPY clone of the golden DB (D10); the suite personas are reset and verified before
+each run. One side-by-side report per invocation.
 The driver is injectable so tests can replay canned transcripts; the default is B's
 `run_case`. Nothing here imports `app` (D25).
 """
@@ -32,11 +33,21 @@ from eval.harness import clone, patches, pii_check
 from eval.harness.checks import case_verdict, run_checks
 from eval.harness.evidence import collect
 from eval.harness.lint import lint_suite, load_write_tools, writing_case
+from eval.harness.metrics import label_for
 from eval.harness.report import write_report
 from eval.harness.restore import restore_persona, verify_persona
+from eval.scenarios import freeze
 from eval.scenarios.schema import Case, load_dir
 
-__all__ = ["SYSTEMS", "Driver", "LLMUnreachableError", "llm_unreachable", "run"]
+__all__ = [
+    "SYSTEMS",
+    "Driver",
+    "HeldoutRefusedError",
+    "LLMUnreachableError",
+    "heldout_refusal",
+    "llm_unreachable",
+    "run",
+]
 
 ROOT = Path(__file__).resolve().parents[2]
 REPORTS = ROOT / "eval" / "reports"
@@ -65,6 +76,24 @@ class LLMUnreachableError(Exception):
         self.model_id = model_id
         self.step = step
         self.rows_seen = rows_seen
+
+
+class HeldoutRefusedError(Exception):
+    """`--suite heldout` without the freeze preconditions (D3, R9). The CLI exits 2."""
+
+
+def heldout_refusal(suite: str) -> str | None:
+    """One-line reason when `suite` is `heldout` and it isn't frozen, else None (D3)."""
+    if suite != "heldout":
+        return None
+    reason = (
+        "refusing --suite heldout: it needs eval/scenarios/heldout.lock and a passing "
+        "freeze check, i.e. (1) both humans reviewed _staging/heldout/, "
+        "(2) a human ran `make eval-freeze`, (3) the D1.5 targets are in 05 section 6"
+    )
+    if not (SCENARIOS / "heldout.lock").is_file() or freeze.check(SCENARIOS):
+        return reason
+    return None
 
 
 def llm_unreachable(cases_played: int, statuses: list[str]) -> bool:
@@ -126,6 +155,38 @@ def _git_sha() -> str:
         check=False,
     )
     return out.stdout.strip() or "unknown"
+
+
+def _short_sha() -> str:
+    out = subprocess.run(
+        ["git", "rev-parse", "--short=10", "HEAD"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return out.stdout.strip() or "unknown"
+
+
+def _dirty() -> bool:
+    out = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return bool(out.stdout.strip())
+
+
+def _folder_name(suite: str) -> str:
+    """`<suite>-<sha10>`, then `-2`, `-3` when the folder exists (D6)."""
+    base = f"{suite}-{_short_sha()}"
+    name, k = base, 1
+    while (REPORTS / name).exists():
+        k += 1
+        name = f"{base}-{k}"
+    return name
 
 
 def _wait_healthy(base_url: str, proc: subprocess.Popen[bytes]) -> None:
@@ -289,17 +350,39 @@ async def _play(
     return verdicts, llm_rows, restores
 
 
+def _reset_personas(
+    clone_conn: psycopg.Connection[Any],
+    golden_conn: psycopg.Connection[Any],
+    cases: list[Case],
+    system: str,
+) -> int:
+    """Before a run (D10): every distinct suite persona back to golden, then clear `turns:*`.
+
+    A diff raises `RestoreDiffError` and aborts the invocation. Returns the persona count."""
+    personas = sorted({c.persona for c in cases})
+    for persona in personas:
+        restore_persona(clone_conn, golden_conn, persona)
+        verify_persona(clone_conn, golden_conn, persona)
+    # `verify_persona` only reads, which leaves both connections idle in a transaction
+    # holding table locks. The backend's checkpointer `setup()` runs DDL on the clone and
+    # would wait on them until the health timeout; end the transactions before it starts.
+    clone_conn.rollback()
+    golden_conn.rollback()
+    _clear_turn_keys(system)
+    return len(personas)
+
+
 async def _run_system(
-    system: str, run_id: str, cases: list[Case], driver: Driver
+    system: str, dbname: str, cases: list[Case], driver: Driver
 ) -> dict[str, Any]:
-    dbname, clone_seconds = clone.create(f"{run_id}_{system}")
+    """One run of `system` on the shared clone `dbname` (created and dropped by `run`)."""
     conns: list[psycopg.Connection[Any]] = []
     try:
-        # Golden connections open after the clone exists: `clone.create` ends golden sessions.
         golden_conn = psycopg.connect(clone.dsn(clone.GOLDEN_DB))
         conns.append(golden_conn)
         clone_conn = psycopg.connect(clone.dsn(dbname))
         conns.append(clone_conn)
+        resets = _reset_personas(clone_conn, golden_conn, cases, system)
 
         def start(faults: frozenset[str]) -> tuple[subprocess.Popen[bytes], str]:
             _clear_turn_keys(system)
@@ -329,30 +412,45 @@ async def _run_system(
         llm_rows = [row for r in group_results for row in r[1]]
         restores = sum(r[2] for r in group_results)
     finally:
-        # Golden connections close before any clone is dropped.
         for conn in conns:
             with contextlib.suppress(Exception):
                 conn.close()
-        clone.drop(dbname)
-    ledger = sorted(
-        {
-            (r["step"], r["provider"], r["model_id"], r["prompt_version"])
-            for r in llm_rows
-            if r.get("step")
-        }
-    )
     return {
         "system": system,
         "verdicts": verdicts,
         "llm_rows": llm_rows,
         "restores": restores,
-        "clone_seconds": round(clone_seconds, 1),
-        "providers": sorted({row[1] for row in ledger}),
-        "models": [
-            {"step": s, "provider": p, "model_id": m, "prompt_version": v}
-            for s, p, m, v in ledger
-        ],
+        "resets": resets,
     }
+
+
+def _model_ledger(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ledger = sorted(
+        {
+            (r["step"], r["provider"], r["model_id"], r["prompt_version"])
+            for r in rows
+            if r.get("step")
+        }
+    )
+    return [
+        {"step": s, "provider": p, "model_id": m, "prompt_version": v}
+        for s, p, m, v in ledger
+    ]
+
+
+async def _run_all(
+    systems: list[str],
+    runs: int,
+    dbname: str,
+    cases: list[Case],
+    driver: Driver,
+) -> list[dict[str, Any]]:
+    """Proposed x`runs`, baseline x1 (D4), sequentially on the one clone."""
+    results: list[dict[str, Any]] = []
+    for system in systems:
+        for _ in range(runs if system == "proposed" else 1):
+            results.append(await _run_system(system, dbname, cases, driver))
+    return results
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -378,16 +476,26 @@ def run(
     driver_name: str = "scripted",
     run_id: str | None = None,
     cases_filter: list[str] | None = None,
+    runs: int = 1,
+    nlu: str = "off",
 ) -> str:
-    """Play `suite` on `system` (`proposed`, `baseline` or `both`); returns the run id.
+    """Play `suite` on `system` (`proposed`, `baseline` or `both`); returns the folder name.
 
+    `runs` repeats only the proposed system (D4). `nlu` is `off`, `smoke` or `suite` (D12).
     `cases_filter` keeps only cases whose `seed_id` starts with one of the prefixes.
     `driver_name` is recorded in `meta.json` (D15); it does not select the driver itself,
     `driver` does — `__main__` keeps the two in sync.
     """
+    # First, before loading, linting or cloning: held-out stays frozen (R9, D3).
+    if (reason := heldout_refusal(suite)) is not None:
+        raise HeldoutRefusedError(reason)
     systems = list(SYSTEMS) if system == "both" else [system]
     if any(s not in SYSTEMS for s in systems):
         raise ValueError(f"system must be one of {SYSTEMS} or 'both': {system!r}")
+    if runs < 1:
+        raise ValueError(f"runs must be >= 1: {runs}")
+    if nlu not in ("off", "smoke", "suite"):
+        raise ValueError(f"nlu must be off, smoke or suite: {nlu!r}")
     suite_dir = SCENARIOS / suite
     cases = load_dir(suite_dir)
     if not cases:
@@ -400,23 +508,43 @@ def run(
             raise ValueError(f"no case matches --cases {','.join(cases_filter)}")
     lint_suite(cases)
     started = datetime.now(UTC)
-    run_id = run_id or f"{suite}_{system}_{started:%Y%m%dt%H%M%S}"
+    run_id = run_id or _folder_name(suite)
     play = driver or run_case
-    results = [asyncio.run(_run_system(s, run_id, cases, play)) for s in systems]
+
+    # One clone per invocation (D10); the name is the folder name with `-` -> `_`.
+    dbname, clone_seconds = clone.create(run_id.replace("-", "_").lower())
+    try:
+        results = asyncio.run(_run_all(systems, runs, dbname, cases, play))
+    finally:
+        clone.drop(dbname)
+
+    nlu_result: dict[str, Any] | None = None
+    nlu_ledger: list[dict[str, Any]] = []
+    nlu_section: list[str] | None = None
+    if nlu != "off":
+        # Lazy: it imports `app`, which the runner itself never does.
+        from eval.harness import nlu_eval
+
+        nlu_result, nlu_ledger = asyncio.run(nlu_eval.compare(nlu, cases))
+        nlu_section = nlu_eval.render(nlu_result)
 
     out = REPORTS / run_id
     out.mkdir(parents=True, exist_ok=True)
     verdicts = [v for r in results for v in r["verdicts"]]
     _write_jsonl(out / "results.jsonl", verdicts)
-    _write_jsonl(
-        out / "llm_calls.jsonl", [row for r in results for row in r["llm_rows"]]
-    )
+    # The NLU rows go in before the PII scan reads the file (D20).
+    llm_rows = [row for r in results for row in r["llm_rows"]] + nlu_ledger
+    _write_jsonl(out / "llm_calls.jsonl", llm_rows)
     pii_hits = _pii_scan(run_id)
 
+    by_system: dict[str, list[list[dict[str, Any]]]] = {}
+    for r in results:
+        by_system.setdefault(r["system"], []).append(r["verdicts"])
     meta = {
         "run_id": run_id,
-        "label": "offline evaluation",
+        "label": label_for(driver_name),
         "git_sha": _git_sha(),
+        "dirty": _dirty(),
         "system": system,
         "suite": suite,
         "cases_filter": ",".join(cases_filter) if cases_filter else None,
@@ -424,14 +552,37 @@ def run(
         "policy_hash": _sha256_files(list(POLICIES.glob("*.yaml"))),
         "started": started.isoformat(),
         "finished": datetime.now(UTC).isoformat(),
-        "provider": sorted({p for r in results for p in r["providers"]}),
-        "clone_seconds": {r["system"]: r["clone_seconds"] for r in results},
-        "models": {r["system"]: r["models"] for r in results},
-        "restore_count": sum(r["restores"] for r in results),
+        "runs": runs,
+        "provider": sorted({m["provider"] for m in _model_ledger(llm_rows)}),
+        "clone_strategy": "FILE_COPY",
+        "clone_seconds": round(clone_seconds, 1),
+        "resets": sum(r["resets"] for r in results),
         # Any diff aborts the run, so a finished run has none.
+        "reset_diffs": 0,
+        "models": {
+            s: _model_ledger([row for r in results if r["system"] == s for row in r["llm_rows"]])
+            for s in by_system
+        },
+        "restore_count": sum(r["restores"] for r in results),
         "restore_diffs": 0,
         "pii_hits": pii_hits,
         "driver": driver_name,
+        "nlu": (
+            {
+                "source": nlu,
+                "n": nlu_result["n"],
+                "models": [m for m in nlu_result["systems"] if m != "keyword_nlu"],
+            }
+            if nlu_result
+            else None
+        ),
     }
-    write_report(out, {r["system"]: r["verdicts"] for r in results}, meta)
+    write_report(
+        out,
+        by_system,
+        meta,
+        nlu=nlu_result,
+        nlu_section=nlu_section,
+    )
     return run_id
+

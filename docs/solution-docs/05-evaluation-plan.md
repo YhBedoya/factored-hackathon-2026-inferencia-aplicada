@@ -47,7 +47,7 @@ The dataset can't provide intent labels. `call_transcripts.customer_text` has 42
 | Operational reference | Call-center figures from the data (FCR `was_resolved`, handle time, `was_escalated`, `sla_breached`) for card-related contact reasons. Labeled as **historical synthetic data, not comparable 1:1** |
 | Learned component | The pretrained LLM NLU vs the keyword router on `eval/nlu/` held-out (ADR-005), plus a model-selection comparison between Bedrock models |
 
-Each run starts from a fresh clone of the golden DB. Runs record the git SHA, model IDs, prompt versions, policy hash and suite hash (E2).
+Each run starts from a clone whose suite personas are verified equal to golden. One `FILE_COPY` clone of the golden DB is created per `make eval` invocation and reused by every run of every system; before each run the runner restores and verifies every persona in the selected cases, and any diff aborts the run. Runs record the git SHA, model IDs, prompt versions, policy hash and suite hash (E2).
 
 ## 5. Driving and judging
 
@@ -75,4 +75,12 @@ All rates carry n and a Wilson 95% CI. Breakdowns are **by language** (ES-MX, ES
 
 ## 7. Reports
 
-`make eval SUITE=heldout SYSTEM=proposed RUNS=3` writes `eval/reports/<run_id>/` containing `results.jsonl`, `metrics.json`, `report.md` (tables above, failures with examples, error analysis by category) and links to the Langfuse traces. The staff console scorecard (Stretch) reads the same metrics.
+The held-out run is one command a human triggers: `make eval SUITE=heldout SYSTEM=both RUNS=3 NLU=suite`. `RUNS=N` repeats only the proposed system; the baseline runs once because it is deterministic. It has three human preconditions:
+
+1. Both humans review 100% of `_staging/heldout/`.
+2. A human runs `make eval-freeze`.
+3. The D1.5 targets are recorded in §6.
+
+The harness refuses `--suite heldout` unless `eval/scenarios/heldout.lock` exists and the freeze check passes.
+
+Each invocation writes one folder, `eval/reports/<suite>-<sha10>/` (`sha10` is HEAD's short SHA; a repeat gets `-2`, `-3`, and so on), containing `results.jsonl`, `llm_calls.jsonl`, `metrics.json`, `meta.json` and `report.md` (tables above, failures, error analysis by category, links to the Langfuse traces). Only `report.md`, `metrics.json` and `meta.json` may be committed; `results.jsonl` and `llm_calls.jsonl` stay git-ignored. For the held-out suite, failure lines show only the `case_id` and the failed check names, never transcript text (R9). The staff console scorecard (Stretch) reads the same metrics.
