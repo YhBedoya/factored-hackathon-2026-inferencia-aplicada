@@ -1,0 +1,379 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { MeResponse } from "@/client";
+import { Composer } from "@/components/chat/Composer";
+import {
+	MessageList,
+	type TranscriptMessage,
+} from "@/components/chat/MessageList";
+import { ModeIndicator } from "@/components/chat/ModeIndicator";
+import { OtpModal } from "@/components/chat/OtpModal";
+import { SessionExpiredModal } from "@/components/chat/SessionExpiredModal";
+import { Button } from "@/components/ui/button";
+import {
+	ApiError,
+	type ConfirmationDecision,
+	conversationStore,
+	createConversation,
+	me,
+	postConfirmation,
+	postMessage,
+	postSelection,
+	sessionExpired,
+} from "@/lib/api";
+import { type TKey, useI18n } from "@/lib/i18n";
+import { type ModePayload, openConversationStream } from "@/lib/sse";
+import { newId } from "@/lib/uuid";
+
+// Every error/otp code this card knows a dictionary string for. Anything
+// else falls back to `errors.generic` rather than showing a raw code (R4
+// spirit: no server string reaches the customer unformatted).
+const KNOWN_ERROR_CODES = new Set([
+	"invalid_credentials",
+	"too_many_attempts",
+	"turn_failed",
+	"turn_in_progress",
+	"conversation_closed",
+	"otp_invalid",
+	"confirmation_invalid",
+]);
+
+// D12: 429 and 5xx are mapped by HTTP status, ahead of the `code` (detail)
+// lookup -- a 5xx body isn't guaranteed to carry a JSON `detail` at all (a
+// gateway error, for one), so the status is the only reliable signal.
+function errorKey(code: string, status: number | null): TKey {
+	if (status === 429) {
+		return "errors.rate_limited";
+	}
+	if (status !== null && status >= 500) {
+		return "errors.server_error";
+	}
+	return (
+		KNOWN_ERROR_CODES.has(code) ? `errors.${code}` : "errors.generic"
+	) as TKey;
+}
+
+type ChatViewProps = {
+	/** Text dropped into the composer (never auto-sent), e.g. from a home shortcut. */
+	prefill?: string;
+	/** Sizing for the host; defaults to the full-page `h-dvh` column. */
+	className?: string;
+};
+
+export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
+	const { t, lang } = useI18n();
+	const conversationIdRef = useRef<string | null>(conversationStore.get());
+	const streamCleanupRef = useRef<(() => void) | null>(null);
+	const pendingUiRef = useRef<TranscriptMessage["ui"]>([]);
+
+	const [conversationId, setConversationId] = useState(
+		conversationIdRef.current,
+	);
+	const [messages, setMessages] = useState<TranscriptMessage[]>([]);
+	const [typing, setTyping] = useState(false);
+	const [reconnecting, setReconnecting] = useState(false);
+	const [composerDisabled, setComposerDisabled] = useState(false);
+	const [errorCode, setErrorCode] = useState<string | null>(null);
+	const [errorStatus, setErrorStatus] = useState<number | null>(null);
+	const [closed, setClosed] = useState(false);
+	const [otpTool, setOtpTool] = useState<string | null>(null);
+	const [mode, setMode] = useState<ModePayload>({
+		mode: "bot",
+		agent_display_name: null,
+	});
+	const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
+	// D8: captured once, on mount, so a later re-login is checked against who
+	// the chat started as, not against a display name that could since change.
+	const [identity, setIdentity] = useState<MeResponse | null>(null);
+
+	const connectStream = useCallback((id: string) => {
+		streamCleanupRef.current?.();
+		streamCleanupRef.current = openConversationStream(id, {
+			onStatus: () => setTyping(true),
+			onMessage: (payload) => {
+				setTyping(false);
+				// In human mode the server relays the customer's own text back
+				// for the agent (`04` §3); it is already in the list.
+				if (payload.role === "customer") {
+					return;
+				}
+				if (payload.role !== "bot") {
+					// An agent reply, or the fixed system line on return to bot.
+					setMessages((prev) => [
+						...prev,
+						{
+							id: newId(),
+							role: payload.role,
+							text: payload.text,
+							author: payload.agent_display_name ?? null,
+							ui: [],
+						},
+					]);
+					return;
+				}
+				const ui = pendingUiRef.current;
+				pendingUiRef.current = [];
+				setMessages((prev) => [
+					...prev,
+					{ id: newId(), role: "bot", text: payload.text, ui },
+				]);
+			},
+			onUi: (event) => {
+				pendingUiRef.current = [...pendingUiRef.current, event];
+				if (event.kind === "otp_required") {
+					setOtpTool(event.payload.tool);
+				} else if (event.kind === "conversation_closed") {
+					setClosed(true);
+				}
+			},
+			onMode: (payload) => setMode(payload),
+			onError: (payload) => {
+				setTyping(false);
+				// SSE `error {code}` carries no HTTP status (`04` §3); only
+				// `turn_failed` reaches here today, already in `KNOWN_ERROR_CODES`.
+				setErrorCode(payload.code);
+				setErrorStatus(null);
+			},
+			onDone: () => {
+				setTyping(false);
+				setComposerDisabled(false);
+			},
+			onReconnecting: () => setReconnecting(true),
+			onOpen: () => setReconnecting(false),
+		});
+	}, []);
+
+	const createRef = useRef<Promise<string> | null>(null);
+
+	// D2: one create (with the welcome) per empty conversation. The promise is
+	// kept in a ref so StrictMode's double mount, a fast click and the lazy
+	// `ensureConversation` below all reuse the same in-flight call.
+	const startConversation = useCallback(
+		(withWelcome: boolean): Promise<string> => {
+			if (createRef.current) {
+				return createRef.current;
+			}
+			const pendingCreate = createConversation(lang, {
+				welcome: withWelcome,
+			})
+				.then(({ conversationId: id, welcome }) => {
+					conversationStore.set(id);
+					conversationIdRef.current = id;
+					setConversationId(id);
+					// D12: the stream opens before the first `postMessage`.
+					connectStream(id);
+					if (welcome) {
+						setMessages((prev) => [
+							...prev,
+							{ id: newId(), role: "bot", text: welcome, ui: [] },
+						]);
+					}
+					return id;
+				})
+				.finally(() => {
+					createRef.current = null;
+				});
+			createRef.current = pendingCreate;
+			return pendingCreate;
+		},
+		[lang, connectStream],
+	);
+
+	// A reload keeps the stored conversation id (no history route, D12), so it
+	// only re-opens the stream: no create, no welcome (D2).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: mount-only; a `lang` change must not re-create.
+	useEffect(() => {
+		if (conversationIdRef.current) {
+			connectStream(conversationIdRef.current);
+		} else {
+			startConversation(true).catch(() => {
+				// The lazy `ensureConversation` retries on the first send.
+			});
+		}
+		return () => streamCleanupRef.current?.();
+	}, []);
+
+	useEffect(() => {
+		me().then(setIdentity);
+	}, []);
+
+	// D8: the chat is the only caller that holds a `401 session_expired`
+	// instead of letting `withAuthRetry` redirect to `/login`.
+	useEffect(() => {
+		sessionExpired.register(() => setSessionExpiredOpen(true));
+		return () => sessionExpired.unregister();
+	}, []);
+
+	async function ensureConversation(): Promise<string> {
+		if (conversationIdRef.current) {
+			return conversationIdRef.current;
+		}
+		return startConversation(false);
+	}
+
+	function clearError() {
+		setErrorCode(null);
+		setErrorStatus(null);
+	}
+
+	function handleTurnError(err: unknown) {
+		if (err instanceof ApiError && err.code === "session_replay_dropped") {
+			// D8: `SessionExpiredModal`'s mismatch branch already reset the chat.
+			return;
+		}
+		if (
+			err instanceof ApiError &&
+			err.status === 409 &&
+			err.code === "conversation_closed"
+		) {
+			setClosed(true);
+			return;
+		}
+		setErrorCode(err instanceof ApiError ? err.code : "generic");
+		setErrorStatus(err instanceof ApiError ? err.status : null);
+		setComposerDisabled(false);
+	}
+
+	async function handleSend(text: string) {
+		setMessages((prev) => [
+			...prev,
+			{ id: newId(), role: "customer", text, ui: [] },
+		]);
+		setComposerDisabled(true);
+		clearError();
+		try {
+			const id = await ensureConversation();
+			await postMessage(id, text);
+		} catch (err) {
+			handleTurnError(err);
+		}
+	}
+
+	async function handleConfirmDecision(
+		tokenId: string,
+		decision: ConfirmationDecision,
+	) {
+		clearError();
+		try {
+			const id = await ensureConversation();
+			setComposerDisabled(true);
+			await postConfirmation(id, tokenId, decision);
+		} catch (err) {
+			handleTurnError(err);
+		}
+	}
+
+	// D7: the pick is never shown as a customer bubble, only posted.
+	async function handleTransactionSelect(txIds: string[]) {
+		clearError();
+		try {
+			const id = await ensureConversation();
+			setComposerDisabled(true);
+			await postSelection(id, txIds);
+		} catch (err) {
+			handleTurnError(err);
+		}
+	}
+
+	function handleOtpVerified() {
+		setOtpTool(null);
+		setComposerDisabled(true);
+	}
+
+	function handleNewConversation() {
+		streamCleanupRef.current?.();
+		streamCleanupRef.current = null;
+		conversationStore.clear();
+		conversationIdRef.current = null;
+		pendingUiRef.current = [];
+		setConversationId(null);
+		setMessages([]);
+		setClosed(false);
+		clearError();
+		setComposerDisabled(false);
+		setTyping(false);
+		setOtpTool(null);
+		setMode({ mode: "bot", agent_display_name: null });
+		startConversation(true).catch(() => {
+			// The lazy `ensureConversation` retries on the first send.
+		});
+	}
+
+	// D8: a same-customer re-login just resumes the stream; the replay itself
+	// already went through `sessionExpired.replay()` before this runs.
+	function handleSessionResume() {
+		setSessionExpiredOpen(false);
+		if (conversationIdRef.current) {
+			connectStream(conversationIdRef.current);
+		}
+	}
+
+	function handleSessionMismatch() {
+		setSessionExpiredOpen(false);
+		handleNewConversation();
+	}
+
+	return (
+		// `chat-shell` scopes the mobile touch-target and overflow rules in
+		// `index.css` (D13) to this page, without touching the shared
+		// `ui/button`/`ui/input` primitives or the picker/confirm/list widgets.
+		<div
+			className={`chat-shell flex flex-col overflow-x-hidden bg-bg ${className}`}
+		>
+			<ModeIndicator
+				mode={mode.mode}
+				agentDisplayName={mode.agent_display_name}
+			/>
+			<MessageList
+				messages={messages}
+				typing={typing}
+				onWidgetSelect={handleSend}
+				onConfirmDecision={handleConfirmDecision}
+				onTransactionSelect={handleTransactionSelect}
+			/>
+			{reconnecting && (
+				<div
+					data-testid="reconnecting"
+					className="px-4 py-1 text-sm text-muted-foreground"
+				>
+					{t("chat.reconnecting")}
+				</div>
+			)}
+			{errorCode && (
+				<div role="alert" className="px-4 py-1 text-sm text-alert">
+					{t(errorKey(errorCode, errorStatus))}
+				</div>
+			)}
+			{closed && (
+				<div className="flex items-center justify-between gap-2 px-4 py-2">
+					<p className="text-sm text-muted-foreground">
+						{t("chat.closed_notice")}
+					</p>
+					<Button
+						data-testid="new-conversation"
+						onClick={handleNewConversation}
+					>
+						{t("chat.new_conversation")}
+					</Button>
+				</div>
+			)}
+			{otpTool && conversationId && (
+				<OtpModal
+					conversationId={conversationId}
+					onVerified={handleOtpVerified}
+				/>
+			)}
+			<SessionExpiredModal
+				open={sessionExpiredOpen}
+				identity={identity}
+				onResume={handleSessionResume}
+				onMismatch={handleSessionMismatch}
+			/>
+			<Composer
+				disabled={composerDisabled || closed}
+				onSend={handleSend}
+				prefill={prefill}
+			/>
+		</div>
+	);
+}

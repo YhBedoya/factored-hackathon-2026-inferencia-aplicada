@@ -42,7 +42,8 @@ test("expiry -> modal -> re-login -> confirmation resumes", async ({
 
 	await page.goto("/login");
 	await login(page, PASSWORD, "12345678");
-	await page.waitForURL("**/chat");
+	await page.waitForURL("**/home");
+	await page.goto("/chat");
 
 	await page.getByTestId("composer-input").fill("quiero bloquear mi tarjeta");
 	await page.getByTestId("composer-send").click();
@@ -77,7 +78,8 @@ test("different customer drops the held request", async ({ page }) => {
 
 	await page.goto("/login");
 	await login(page, PASSWORD, "12345678");
-	await page.waitForURL("**/chat");
+	await page.waitForURL("**/home");
+	await page.goto("/chat");
 
 	await page.getByTestId("composer-input").fill("quiero bloquear mi tarjeta");
 	await page.getByTestId("composer-send").click();
@@ -92,8 +94,8 @@ test("different customer drops the held request", async ({ page }) => {
 	await login(page, ALT_PASSWORD, "87654321");
 	await expect(modal).toBeHidden();
 
-	// D8: dropped, not replayed -- a fresh chat, no leftover transcript.
-	await expect(page.getByTestId("message-bot")).toHaveCount(0);
+	// D8: dropped, not replayed -- a fresh chat: only the new welcome (D2).
+	await expect(page.getByTestId("message-bot")).toHaveCount(1);
 	await expect(page.getByTestId("message-customer")).toHaveCount(0);
 	await expect(page.getByTestId("composer-input")).toBeEnabled();
 

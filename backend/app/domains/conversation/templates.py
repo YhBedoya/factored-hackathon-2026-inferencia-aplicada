@@ -16,9 +16,17 @@ The PT texts are team-generated and pending review by a native speaker.
 
 from typing import Literal
 
-__all__ = ["Language", "TemplateKind", "get_template"]
+__all__ = [
+    "WELCOME_BODIES",
+    "WELCOME_SALUTATIONS",
+    "DayPart",
+    "Language",
+    "TemplateKind",
+    "get_template",
+]
 
 Language = Literal["es", "pt"]
+DayPart = Literal["morning", "afternoon", "evening"]
 TemplateKind = Literal[
     "greeting",
     "greeting_named",
@@ -755,6 +763,51 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "goal_decline_explain": {
         "es": "Tu compra fue rechazada: {decline_cause} {decline_next_step}",
         "pt": "Sua compra foi recusada: {decline_cause} {decline_next_step}",
+    },
+}
+
+
+# Cardy's proactive welcome (landing-home-bienvenida D3, D4). `welcome.py` picks
+# one body and prefixes a day-part salutation. The stored "last used" index is
+# language-agnostic, so ES and PT MUST keep the same number of bodies. No text
+# carries a digit. The PT texts are team-generated and pending review by a
+# native Brazilian speaker.
+WELCOME_BODIES: dict[Language, tuple[str, ...]] = {
+    "es": (
+        "Soy Cardy, de Swip, y estoy aquí para lo que necesites con tus tarjetas. "
+        "¿En qué te puedo ayudar hoy?",
+        "Soy Cardy, tu asistente de tarjetas en Swip. Cuéntame qué necesitas y lo vemos juntas.",
+        "Qué gusto tenerte por aquí. Dime qué necesitas con tu tarjeta y me pongo manos a la obra.",
+        "Soy Cardy, de Swip, y puedo ayudarte con tus tarjetas y tus movimientos. ¿Qué necesitas?",
+        "Estoy lista para ayudarte con tus tarjetas. ¿Qué necesitas hoy?",
+        "Soy Cardy y cuido de tus tarjetas en Swip. Cuéntame con qué te puedo ayudar.",
+        "Me alegra verte. Dime qué quieres resolver con tu tarjeta y empezamos.",
+        "Soy Cardy, de Swip. Cuando quieras, cuéntame qué necesitas con tus tarjetas.",
+    ),
+    "pt": (
+        "Sou a Cardy, da Swip, e estou aqui para o que você precisar com seus cartões. "
+        "Em que posso ajudar hoje?",
+        "Sou a Cardy, sua assistente de cartões na Swip. Conte o que você precisa e vemos juntas.",
+        "Que bom ter você por aqui. Diga o que precisa com seu cartão e eu começo já.",
+        "Sou a Cardy, da Swip, e posso ajudar com seus cartões e suas transações. "
+        "O que você precisa?",
+        "Estou pronta para ajudar com seus cartões. O que você precisa hoje?",
+        "Sou a Cardy e cuido dos seus cartões na Swip. Conte o que posso fazer por você.",
+        "Fico feliz em ver você. Diga o que quer resolver com seu cartão e começamos.",
+        "Sou a Cardy, da Swip. Quando quiser, conte o que você precisa com seus cartões.",
+    ),
+}
+
+WELCOME_SALUTATIONS: dict[Language, dict[DayPart, dict[Literal["named", "plain"], str]]] = {
+    "es": {
+        "morning": {"named": "Buenos días, {customer_name}.", "plain": "Buenos días."},
+        "afternoon": {"named": "Buenas tardes, {customer_name}.", "plain": "Buenas tardes."},
+        "evening": {"named": "Buenas noches, {customer_name}.", "plain": "Buenas noches."},
+    },
+    "pt": {
+        "morning": {"named": "Bom dia, {customer_name}.", "plain": "Bom dia."},
+        "afternoon": {"named": "Boa tarde, {customer_name}.", "plain": "Boa tarde."},
+        "evening": {"named": "Boa noite, {customer_name}.", "plain": "Boa noite."},
     },
 }
 

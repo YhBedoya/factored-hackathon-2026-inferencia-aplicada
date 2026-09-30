@@ -28,7 +28,8 @@ test("checkboxes pick, confirm plan, handoff banner, mode switch", async ({
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();
-	await page.waitForURL("**/chat");
+	await page.waitForURL("**/home");
+	await page.goto("/chat");
 
 	await expect(page.getByTestId("mode-indicator")).toHaveText("Cardy");
 

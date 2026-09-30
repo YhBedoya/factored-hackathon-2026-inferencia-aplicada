@@ -58,6 +58,7 @@ __all__ = [
     "audit_recorder_for",
     "build_tool_context",
     "known_pii",
+    "session_profile",
     "turn_tools",
 ]
 
@@ -260,6 +261,12 @@ async def known_pii(ctx: ToolContext) -> KnownPii:
     masking step (D3, D4). Built from `ctx` (R1), never audited, and not
     reachable from any LLM node."""
     return await _bank_reads(ctx).get_pii_profile()
+
+
+async def session_profile(ctx: ToolContext) -> CustomerProfile:
+    """The session customer's masked profile (country, first name), for the
+    welcome (D5). Built from `ctx` (R1), never audited, same as `known_pii`."""
+    return await _bank_reads(ctx).get_profile()
 
 
 def turn_tools(

@@ -1,17 +1,22 @@
 import {
+	type CardDetailsView,
+	type CardView,
 	type ConversationPage,
 	type ConversationTimeline,
 	claimHandoffApiV1StaffHandoffsHandoffIdClaimPost,
 	createConversationApiV1ConversationsPost,
+	getCardApiV1MeCardsCardIdGet,
 	getConversationTimelineApiV1StaffConversationsConversationIdTimelineGet,
 	getHandoffApiV1StaffHandoffsHandoffIdGet,
 	type HandoffDetail,
 	type HandoffSummary,
 	type ListConversationsApiV1StaffConversationsGetData,
 	type LoginRequest,
+	listCardsApiV1MeCardsGet,
 	listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet,
 	listConversationsApiV1StaffConversationsGet,
 	listHandoffsApiV1StaffHandoffsGet,
+	listTransactionsApiV1MeTransactionsGet,
 	loginApiV1AuthLoginPost,
 	logoutApiV1AuthLogoutPost,
 	type MeResponse,
@@ -25,6 +30,7 @@ import {
 	staffLoginApiV1AuthStaffLoginPost,
 	staffMeApiV1StaffMeGet,
 	type TranscriptMessage,
+	type TxPage,
 } from "@/client";
 import { client } from "@/client/client.gen";
 import type { Lang } from "@/lib/i18n";
@@ -206,11 +212,53 @@ export async function me(): Promise<MeResponse | null> {
 	return unwrap(result);
 }
 
-export async function createConversation(lang: Lang): Promise<string> {
+export async function createConversation(
+	lang: Lang,
+	opts?: { welcome?: boolean },
+): Promise<{ conversationId: string; welcome: string | null }> {
 	const result = await withAuthRetry(() =>
-		createConversationApiV1ConversationsPost({ body: { language: lang } }),
+		createConversationApiV1ConversationsPost({
+			body: { language: lang, welcome: opts?.welcome ?? false },
+		}),
 	);
-	return unwrap(result).conversation_id;
+	const data = unwrap(result);
+	return {
+		conversationId: data.conversation_id,
+		welcome: data.welcome?.text ?? null,
+	};
+}
+
+// D6/D7: the banking home's read-only views. Display strings (money, dates,
+// masks) come from the server; nothing here ever sends a `customer_id`.
+export async function listMyCards(): Promise<CardView[]> {
+	const result = await withAuthRetry(() => listCardsApiV1MeCardsGet());
+	return unwrap(result);
+}
+
+export async function getMyCard(cardId: string): Promise<CardDetailsView> {
+	const result = await withAuthRetry(() =>
+		getCardApiV1MeCardsCardIdGet({ path: { card_id: cardId } }),
+	);
+	return unwrap(result);
+}
+
+export async function listMyTransactions(opts?: {
+	cardId?: string;
+	dateFrom?: string;
+	dateTo?: string;
+	cursor?: string;
+}): Promise<TxPage> {
+	const result = await withAuthRetry(() =>
+		listTransactionsApiV1MeTransactionsGet({
+			query: {
+				card_id: opts?.cardId || undefined,
+				date_from: opts?.dateFrom || undefined,
+				date_to: opts?.dateTo || undefined,
+				cursor: opts?.cursor || undefined,
+			},
+		}),
+	);
+	return unwrap(result);
 }
 
 export async function postMessage(
