@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
 import { InboxList } from "@/components/staff/InboxList";
 import { listStaffHandoffs, staffMe } from "@/lib/api";
@@ -34,6 +34,10 @@ function StaffInboxPage() {
 			<h1 className="font-heading text-2xl text-foreground">
 				{t("staff.inbox.title")}
 			</h1>
+			{/* D13: traceability screens, built against the spec's proposed shapes (D12). */}
+			<Link to="/staff/conversations" className="self-start text-sm underline">
+				{t("staff.conversations.nav_link")}
+			</Link>
 			<InboxList items={data ?? []} />
 		</div>
 	);

@@ -55,7 +55,7 @@ from app.domains.conversation import fact_values, store
 from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TxSelection
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
-from app.domains.conversation.state import DeclineState, DisputeState, Pending
+from app.domains.conversation.state import DeclineState, DisputeState, Pending, TxOfferState
 from app.domains.conversation.tools import registry
 from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
@@ -83,6 +83,8 @@ _BRANCH_NODES = (
     "replacement",
     "unrecognized_charge",
     "decline_explain",
+    "tx_search",
+    "tx_explain",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -194,16 +196,22 @@ async def checkpointed_offer(
     `checkpointed_confirmation_token` does, for the pick's own three facts --
     "is a transaction list actually open", "what ids did it offer" and "how
     many can be picked". Reads `decline` (multi `False`) when
-    `pending["flow"] == "decline_explain"`, else `dispute` (multi `True`,
-    D4-B's shape) -- the two flows never share a checkpoint slot
-    (`state.py`'s `DeclineState`/`DisputeState`). `(None, set(), True)` on a
-    conversation with no checkpoint yet, or with nothing pending.
+    `pending["flow"] == "decline_explain"`, `tx_offer` (multi `False`, this
+    card's B1) when the flow is `tx_search` or `tx_explain`, else `dispute`
+    (multi `True`, D4-B's shape) -- none of these flows ever share a
+    checkpoint slot (`state.py`'s `DeclineState`/`DisputeState`/
+    `TxOfferState`). `(None, set(), True)` on a conversation with no
+    checkpoint yet, or with nothing pending.
     """
     state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
     pending: Pending | None = state.values.get("pending")
     if pending is not None and pending["flow"] == "decline_explain":
         decline: DeclineState | None = state.values.get("decline")
         offered = set(decline["offered_tx_ids"]) if decline is not None else set()
+        return pending, offered, False
+    if pending is not None and pending["flow"] in {"tx_search", "tx_explain"}:
+        tx_offer: TxOfferState | None = state.values.get("tx_offer")
+        offered = set(tx_offer["offered_tx_ids"]) if tx_offer is not None else set()
         return pending, offered, False
     dispute: DisputeState | None = state.values.get("dispute")
     offered = set(dispute["offered_tx_ids"]) if dispute is not None else set()
@@ -383,7 +391,8 @@ async def _run_turn(
             final_state = await host.graph.aget_state(config)
             pending = final_state.values.get("pending")
             debug = DebugInfo(
-                language=language,
+                # A pick turn skips NLU; the checkpointed language is the truth.
+                language=final_state.values.get("language", language),
                 status=nlu.status if nlu is not None else None,
                 intents=nlu.intents if nlu is not None else [],
                 slots=nlu.slots if nlu is not None else NLUSlots(),

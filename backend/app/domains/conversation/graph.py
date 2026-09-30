@@ -213,6 +213,8 @@ _BRANCH_NODES = (
     "replacement",
     "unrecognized_charge",
     "decline_explain",
+    "tx_search",
+    "tx_explain",
     "unsupported",
     "fallback",
     "smalltalk",
@@ -235,6 +237,8 @@ _INTENT_NODES: dict[Intent, str] = {
     "replacement_request": "replacement",
     "unrecognized_charge": "unrecognized_charge",
     "decline_explain": "decline_explain",
+    "transaction_search": "tx_search",
+    "pending_reversal_explain": "tx_explain",
 }
 """Intent -> flow node, read by `_dispatch` (D20, P3). An intent with no
 entry here (every Stretch intent, and every card-action intent this card
@@ -249,6 +253,8 @@ _FLOW_NODES: dict[str, str] = {
     "replacement": "replacement",
     "unrecognized_charge": "unrecognized_charge",
     "decline_explain": "decline_explain",
+    "tx_search": "tx_search",
+    "tx_explain": "tx_explain",
 }
 """`Pending.flow` -> flow node, read by `_entry` and `route` (D15, D17,
 D20). An unregistered flow name falls through to `unsupported`/`smalltalk`
@@ -419,6 +425,8 @@ def build_graph(
     from app.domains.conversation.flows.card_unlock import card_unlock
     from app.domains.conversation.flows.decline_explain import decline_explain
     from app.domains.conversation.flows.replacement import replacement
+    from app.domains.conversation.flows.tx_explain import tx_explain
+    from app.domains.conversation.flows.tx_search import tx_search
     from app.domains.conversation.flows.unrecognized_charge import unrecognized_charge
     from app.domains.conversation.nodes import (
         abstain,
@@ -449,6 +457,8 @@ def build_graph(
     graph.add_node("replacement", _guard_access(replacement))
     graph.add_node("unrecognized_charge", _guard_access(unrecognized_charge))
     graph.add_node("decline_explain", _guard_access(decline_explain))
+    graph.add_node("tx_search", _guard_access(tx_search))
+    graph.add_node("tx_explain", _guard_access(tx_explain))
     graph.add_node("unsupported", unsupported)
     graph.add_node("fallback", fallback)
     graph.add_node("compose", baseline_compose if baseline else compose)
@@ -474,6 +484,8 @@ def build_graph(
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
             "decline_explain": "decline_explain",
+            "tx_search": "tx_search",
+            "tx_explain": "tx_explain",
         },
     )
     graph.add_conditional_edges(
@@ -492,6 +504,8 @@ def build_graph(
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
             "decline_explain": "decline_explain",
+            "tx_search": "tx_search",
+            "tx_explain": "tx_explain",
         },
     )
     graph.add_conditional_edges(
@@ -504,6 +518,8 @@ def build_graph(
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
             "decline_explain": "decline_explain",
+            "tx_search": "tx_search",
+            "tx_explain": "tx_explain",
             "unsupported": "unsupported",
             "finish": "finish",
         },
@@ -575,6 +591,28 @@ def build_graph(
         },
     )
     graph.add_conditional_edges(
+        "tx_search",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
+        "tx_explain",
+        _after_flow,
+        {
+            "compose": "compose",
+            "fallback": "fallback",
+            "handoff_summary": "handoff_summary",
+            "finish": "finish",
+            "next_intent": "next_intent",
+        },
+    )
+    graph.add_conditional_edges(
         "compose",
         _after_compose,
         {"fallback": "fallback", "finish": "finish", "next_intent": "next_intent"},
@@ -606,6 +644,8 @@ def build_graph(
             "replacement": "replacement",
             "unrecognized_charge": "unrecognized_charge",
             "decline_explain": "decline_explain",
+            "tx_search": "tx_search",
+            "tx_explain": "tx_explain",
             "unsupported": "unsupported",
             "finish": "finish",
         },

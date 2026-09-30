@@ -15,6 +15,8 @@ graph TD;
 	replacement(replacement)
 	unrecognized_charge(unrecognized_charge)
 	decline_explain(decline_explain)
+	tx_search(tx_search)
+	tx_explain(tx_explain)
 	unsupported(unsupported)
 	fallback(fallback)
 	compose(compose)
@@ -57,6 +59,8 @@ graph TD;
 	enqueue -.-> decline_explain;
 	enqueue -.-> finish;
 	enqueue -.-> replacement;
+	enqueue -.-> tx_explain;
+	enqueue -.-> tx_search;
 	enqueue -.-> unrecognized_charge;
 	enqueue -.-> unsupported;
 	fallback -.-> finish;
@@ -72,6 +76,8 @@ graph TD;
 	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
+	load_session -.-> tx_explain;
+	load_session -.-> tx_search;
 	load_session -.-> understand;
 	load_session -.-> unrecognized_charge;
 	next_intent -.-> card_block;
@@ -80,6 +86,8 @@ graph TD;
 	next_intent -.-> decline_explain;
 	next_intent -.-> finish;
 	next_intent -.-> replacement;
+	next_intent -.-> tx_explain;
+	next_intent -.-> tx_search;
 	next_intent -.-> unrecognized_charge;
 	next_intent -.-> unsupported;
 	relay_to_agent --> finish;
@@ -89,6 +97,16 @@ graph TD;
 	replacement -.-> handoff_summary;
 	replacement -.-> next_intent;
 	smalltalk --> finish;
+	tx_explain -.-> compose;
+	tx_explain -.-> fallback;
+	tx_explain -.-> finish;
+	tx_explain -.-> handoff_summary;
+	tx_explain -.-> next_intent;
+	tx_search -.-> compose;
+	tx_search -.-> fallback;
+	tx_search -.-> finish;
+	tx_search -.-> handoff_summary;
+	tx_search -.-> next_intent;
 	understand -.-> abstain;
 	understand -.-> card_block;
 	understand -.-> card_info;
@@ -99,6 +117,8 @@ graph TD;
 	understand -.-> handoff_summary;
 	understand -.-> replacement;
 	understand -.-> smalltalk;
+	understand -.-> tx_explain;
+	understand -.-> tx_search;
 	understand -.-> unrecognized_charge;
 	understand -.-> unsupported;
 	unrecognized_charge -.-> compose;

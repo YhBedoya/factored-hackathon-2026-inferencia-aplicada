@@ -92,6 +92,22 @@ TemplateKind = Literal[
     "decline_next_check_card_number",
     "decline_next_contact_or_retry",
     "decline_next_offer_replacement",
+    "tx_search_ask_criterion",
+    "tx_search_pick_ask",
+    "tx_search_none",
+    "tx_explain_pick_ask",
+    "tx_explain_none",
+    "tx_human_option",
+    "goal_tx_explain",
+    "goal_tx_details",
+    "tx_cause_pending_hold",
+    "tx_cause_reversed_charge",
+    "tx_next_wait_until_date",
+    "tx_next_offer_human",
+    "tx_next_no_action_needed",
+    "priority_flag_repeat_complainer",
+    "priority_flag_open_critical",
+    "priority_flag_amount_over_threshold",
 ]
 
 _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
@@ -565,6 +581,105 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     "decline_next_offer_replacement": {
         "es": "Puedo pedirte una tarjeta nueva para reemplazar la que venció.",
         "pt": "Posso pedir um cartão novo para substituir o que venceu.",
+    },
+    # This card's B1 (`tx_search`, D1, A1): no merchant, amount or resolvable
+    # date at all -- one fixed question, no search runs.
+    "tx_search_ask_criterion": {
+        "es": "Cuéntame el comercio, el monto aproximado o la fecha del movimiento que buscas.",
+        "pt": (
+            "Me conte o estabelecimento, o valor aproximado ou a data da "
+            "movimentação que você procura."
+        ),
+    },
+    # D1: accompanies the single-pick `ui.transaction_list` a search offers.
+    "tx_search_pick_ask": {
+        "es": "Encontré {count} movimiento(s) que podrían coincidir. ¿Cuál es?",
+        "pt": "Encontrei {count} movimentação(ões) que podem corresponder. Qual é?",
+    },
+    # D1, A2: two searches came back empty; `{filters}` is code-formatted (R4).
+    "tx_search_none": {
+        "es": "No encontré movimientos con estos datos: {filters}.",
+        "pt": "Não encontrei movimentações com estes dados: {filters}.",
+    },
+    # D3: two or more Pending/Reversed matches, or the "zero with a slot"
+    # broadened offer -- the same single-pick list `tx_search_pick_ask` uses.
+    "tx_explain_pick_ask": {
+        "es": (
+            "Tienes {count} movimiento(s) pendiente(s) o revertido(s). "
+            "¿Cuál quieres que te explique?"
+        ),
+        "pt": (
+            "Você tem {count} movimentação(ões) pendente(s) ou revertida(s). "
+            "Qual quer que eu explique?"
+        ),
+    },
+    # D3: no Pending/Reversed row at all, with or without a criterion.
+    "tx_explain_none": {
+        "es": "No encontré movimientos pendientes ni revertidos en tus tarjetas.",
+        "pt": "Não encontrei movimentações pendentes nem revertidas nos seus cartões.",
+    },
+    # A5: the overdue-Pending quick reply, `slot="next_step"` (reused from
+    # `decline_explain`'s self-service offer). Tapping it sends this text, so
+    # NLU routes it as `human_request`.
+    "tx_human_option": {
+        "es": "Hablar con una persona",
+        "pt": "Falar com uma pessoa",
+    },
+    # D3, D6: `compose`'s fact template for the `tx_explain` goal, used only
+    # when the LLM's own draft fails grounding twice.
+    "goal_tx_explain": {
+        "es": "{tx_state_cause} {tx_state_next_step}",
+        "pt": "{tx_state_cause} {tx_state_next_step}",
+    },
+    # D2: same, for the `tx_details` goal (an Approved/other-status pick).
+    "goal_tx_details": {
+        "es": (
+            "Tu movimiento en {merchant} por {amount} el {tx_date} con la "
+            "tarjeta {card_mask} fue por el canal {channel}."
+        ),
+        "pt": (
+            "Sua movimentação em {merchant} de {amount} no dia {tx_date} com "
+            "o cartão {card_mask} foi pelo canal {channel}."
+        ),
+    },
+    # `policies/transaction_states.yaml`'s `cause_key` values, one fixed
+    # ES/PT label each -- `compose` places these as `{tx_state_cause}`, never
+    # the LLM's own wording of what the status means (A5, R8).
+    "tx_cause_pending_hold": {
+        "es": "Tu pago está en proceso de confirmación por el banco.",
+        "pt": "Seu pagamento está em processo de confirmação pelo banco.",
+    },
+    "tx_cause_reversed_charge": {
+        "es": "Ese movimiento fue revertido y no llegó a cobrarse.",
+        "pt": "Essa movimentação foi revertida e não chegou a ser cobrada.",
+    },
+    # `next_step_key`/`overdue_next_step_key` values, same pattern as the
+    # cause labels above -- placed as `{tx_state_next_step}`.
+    "tx_next_wait_until_date": {
+        "es": "Debería quedar confirmado antes de la fecha estimada.",
+        "pt": "Deve ficar confirmado antes da data estimada.",
+    },
+    "tx_next_offer_human": {
+        "es": "Como ya pasó el plazo habitual, una persona del equipo puede revisarlo contigo.",
+        "pt": "Como o prazo habitual já passou, uma pessoa da equipe pode revisar isso com você.",
+    },
+    "tx_next_no_action_needed": {
+        "es": "No necesitas hacer nada más por este movimiento.",
+        "pt": "Você não precisa fazer mais nada quanto a essa movimentação.",
+    },
+    # B2 priority flags (`unrecognized_charge`): one agent-facing line each,
+    # appended to the handoff's `open_questions`.
+    "priority_flag_repeat_complainer": {
+        "es": "El cliente tiene reclamos previos recientes (cliente reincidente).",
+        "pt": "O cliente tem reclamações recentes anteriores (cliente reincidente).",
+    },
+    "priority_flag_open_critical": {
+        "es": "El cliente tiene un reclamo crítico abierto.",
+        "pt": "O cliente tem uma reclamação crítica em aberto.",
+    },
+    "priority_flag_amount_over_threshold": {
+        "es": "El monto reclamado supera el umbral de prioridad.",
+        "pt": "O valor contestado supera o limite de prioridade.",
     },
     # D12: the handoff happened (row, mode=human, event). `reference` is the
     # already-formatted case reference.

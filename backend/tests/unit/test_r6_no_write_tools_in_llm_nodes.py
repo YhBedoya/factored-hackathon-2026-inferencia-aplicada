@@ -111,3 +111,25 @@ def test_scan_flags_added_write_tool(tmp_path: Path) -> None:
 
     assert "bank_write_tools" in found[evil]
     assert list(found) == [evil]
+
+
+def test_read_only_llm_surfaces_have_no_write_tools() -> None:
+    """D7-B: the transaction flows and the eval judge read tool output and call
+    an LLM, so none of them may reference a write tool (R6); and `"judge"` is a
+    step name only `app/core/llm/registry.py` may define (R7)."""
+    backend = Path(__file__).resolve().parents[2]
+    repo_root = Path(__file__).resolve().parents[3]
+    flows = backend / "app" / "domains" / "conversation" / "flows"
+    for path in (
+        flows / "tx_search.py",
+        flows / "tx_explain.py",
+        repo_root / "eval/judges/judge.py",
+    ):
+        source = path.read_text(encoding="utf-8")
+        assert not _write_tool_references(source, ast.parse(source)), path
+
+    registry = backend / "app" / "core" / "llm" / "registry.py"
+    for path in sorted((backend / "app").rglob("*.py")):
+        if path == registry:
+            continue
+        assert '"judge"' not in path.read_text(encoding="utf-8"), path

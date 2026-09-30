@@ -2,13 +2,14 @@
 each one and combines them into a single hash that reaches every downstream
 decision (spec D1, D2, R8).
 
-`tools`, `escalation`, `min_payment`, `scope`, `disputes` and `decline_codes`
-are validated against their own domain models -- the same ones their
-existing per-file loaders (`tools_policy.py`, `escalation.py`,
-`min_payment.py`, `scope.py`, `disputes.py`, `decline_codes.py`) use. This
-module doesn't replace those loaders; it adds the combined view the
-lifespan logs and every `ToolContext.policy_version` carries. `disputes`
-and `decline_codes` have no required field on `PolicyBundle` (unlike the
+`tools`, `escalation`, `min_payment`, `scope`, `disputes`, `decline_codes`
+and `transaction_states` are validated against their own domain models --
+the same ones their existing per-file loaders (`tools_policy.py`,
+`escalation.py`, `min_payment.py`, `scope.py`, `disputes.py`,
+`decline_codes.py`, `transaction_states.py`) use. This module doesn't
+replace those loaders; it adds the combined view the lifespan logs and
+every `ToolContext.policy_version` carries. `disputes`, `decline_codes` and
+`transaction_states` have no required field on `PolicyBundle` (unlike the
 other four), so those files stay optional for the bundle even though each
 is validated when present. Any other stem (`card_select` today) is
 validated here against a header-only model only:
@@ -31,6 +32,7 @@ from app.domains.policy.escalation import EscalationPolicy
 from app.domains.policy.min_payment import MinPaymentPolicy
 from app.domains.policy.scope import ScopePolicy
 from app.domains.policy.tools_policy import ToolsPolicy
+from app.domains.policy.transaction_states import TransactionStatesPolicy
 
 __all__ = [
     "PolicyBundle",
@@ -51,6 +53,7 @@ _MODELS_BY_STEM: dict[str, type[BaseModel]] = {
     "scope": ScopePolicy,
     "disputes": DisputesPolicy,
     "decline_codes": DeclineCodesPolicy,
+    "transaction_states": TransactionStatesPolicy,
 }
 
 

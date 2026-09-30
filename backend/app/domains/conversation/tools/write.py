@@ -54,9 +54,16 @@ class BankWriteTools(Protocol):
         ...
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+        self,
+        tx_ids: list[str],
+        answers: list[str],
+        priority_flags: list[str],
+        *,
+        idempotency_key: str,
     ) -> ActionResult:
-        # Registry name: disputes.create_claim.
+        # Registry name: disputes.create_claim. `priority_flags` is a sorted
+        # list built in code by the flow (SA1): the row's `priority` is
+        # `'High'` when it's non-empty, `NULL` otherwise.
         # May raise: NotFound, AccessDenied (any tx not the customer's), ToolUnavailable.
         ...
 

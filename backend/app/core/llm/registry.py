@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 Provider = Literal["anthropic", "bedrock", "openai"]
-Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate"]
+Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate", "judge"]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
 # The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
@@ -43,6 +43,10 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     # Same eval-only tooling and model as `paraphrase` (ADR-030 "Simulator note",
     # D6-B): the goal-driven customer simulator, `eval/simulator/simulator.py`.
     "simulate": {"openai": "gpt-6-luna"},
+    # Same eval-only tooling and model, ADR-030 pattern (D7-B D14): the offline
+    # reply-quality judge, `eval/judges/judge.py`. Scores dev-suite transcripts
+    # only, never the served graph.
+    "judge": {"openai": "gpt-6-luna"},
 }
 
 # `None` means "send no temperature" (the model default). claude-sonnet-5-5 answers
@@ -59,11 +63,19 @@ TEMPERATURE: dict[Step, float | None] = {
     # Same gpt-6-luna constraint as `paraphrase`; the card and `05` §5 say
     # "temperature 0" for the simulator, but it runs at 1.0 (D6-B D2).
     "simulate": 1.0,
+    # Same gpt-6-luna constraint again; D14 pins 1.0 as "the only value the
+    # model accepts", so `agreement.md` carries a non-repeatable caveat instead
+    # of relying on a low temperature for reproducibility.
+    "judge": 1.0,
 }
 
 # Steps whose provider is pinned regardless of `LLM_PROVIDER` (ADR-030). Every
 # other step falls back to `settings.llm_provider`.
-STEP_PROVIDER: dict[Step, Provider] = {"paraphrase": "openai", "simulate": "openai"}
+STEP_PROVIDER: dict[Step, Provider] = {
+    "paraphrase": "openai",
+    "simulate": "openai",
+    "judge": "openai",
+}
 
 
 @dataclass(frozen=True)

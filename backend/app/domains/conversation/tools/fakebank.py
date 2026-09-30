@@ -51,8 +51,10 @@ from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.write import BankWriteTools, BankWriteToolsFactory
 from app.domains.customers.schemas import CustomerProfile
+from app.domains.disputes.schemas import PrioritySignals
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.decline_codes import lookup_decline_code
+from app.domains.policy.disputes import load_disputes_policy
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["FakeBank", "FakeBankOverlay", "FakeBankWrites", "make_fakebank_factory"]
@@ -72,6 +74,10 @@ class FakeBankOverlay:
     blocked: set[str] = field(default_factory=set)
     replacements: dict[str, str] = field(default_factory=dict)
     results: dict[str, ActionResult] = field(default_factory=dict)
+    claim_priorities: dict[str, Literal["High"] | None] = field(default_factory=dict)
+    """Each `create_claim` case id's priority (SA1): `"High"` when that call's
+    `priority_flags` was non-empty, `None` otherwise. The fake dataset has no
+    `bank.complaints` row to write it into."""
 
 
 _COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
@@ -133,6 +139,8 @@ class FakeBank:
         self._customers_csv = data_dir / "customers.csv"
         self._products_csv = data_dir / "products.csv"
         self._transactions_glob = data_dir / "transactions" / "**" / "*.csv"
+        self._complaints_dir = data_dir / "complaints"
+        self._complaints_glob = self._complaints_dir / "**" / "*.csv"
         self._fx_rates_csv = data_dir / "daily_exchange_rates.csv"
         # A caller with no session-wide overlay (a one-off read) gets its own,
         # empty one rather than a required argument every read-only call site
@@ -435,6 +443,29 @@ class FakeBank:
             as_of=date.fromisoformat(row["date"]),
         )
 
+    async def get_priority_signals(self) -> PrioritySignals:
+        """B2's two priority signals over the complaints partitions (R1): no
+        complaints files at all -- no customer has ever filed one in this
+        fixture/sandbox -- means both flags are `False`, never a DuckDB glob
+        error."""
+        if not list(self._complaints_dir.rglob("*.csv")):
+            return PrioritySignals(repeat_complainer=False, open_critical=False)
+        open_statuses = load_disputes_policy().priority.open_statuses
+        rows = await self._query(
+            f"""
+            SELECT is_repeat_complainer, priority, status
+            FROM read_csv({_sql_literal(self._complaints_glob)},
+                          hive_partitioning=true, union_by_name=true, all_varchar=true)
+            WHERE customer_id = ?
+            """,
+            [self._ctx.customer_id],
+        )
+        repeat_complainer = any(row["is_repeat_complainer"] == "true" for row in rows)
+        open_critical = any(
+            row["priority"] == "Critical" and row["status"] in open_statuses for row in rows
+        )
+        return PrioritySignals(repeat_complainer=repeat_complainer, open_critical=open_critical)
+
     @staticmethod
     def _to_tx_view(row: dict[str, Any]) -> TxView:
         # DuckDB's `CAST(... AS TIMESTAMP)` returns a naive datetime; every
@@ -568,7 +599,12 @@ class FakeBankWrites:
         return result
 
     async def create_claim(
-        self, tx_ids: list[str], answers: list[str], *, idempotency_key: str
+        self,
+        tx_ids: list[str],
+        answers: list[str],
+        priority_flags: list[str],
+        *,
+        idempotency_key: str,
     ) -> ActionResult:
         # `answers` is only the code-built `bank.complaints.description`
         # (D14) the Postgres path writes; the fake dataset has no complaints
@@ -577,6 +613,9 @@ class FakeBankWrites:
             return self._overlay.results[idempotency_key]
         transactions = await self._reads.get_transactions_by_ids(tx_ids)  # ownership probe (R1)
         case_ids = ["CLM-" + secrets.token_hex(4).upper() for _ in transactions]
+        priority: Literal["High"] | None = "High" if priority_flags else None
+        for case_id in case_ids:
+            self._overlay.claim_priorities[case_id] = priority
         result = ActionResult(
             tool="disputes.create_claim",
             status="applied",

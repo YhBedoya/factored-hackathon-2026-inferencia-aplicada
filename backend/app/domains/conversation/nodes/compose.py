@@ -43,7 +43,7 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_checked", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 6)
+_PROMPT = PromptRef("compose", 7)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Grounding = Literal["ok", "regenerated", "template"]
@@ -51,6 +51,8 @@ _GOAL_TEMPLATES: dict[str, TemplateKind] = {
     "card_status": "goal_card_status",
     "balance_due": "goal_balance_due",
     "decline_explain": "goal_decline_explain",
+    "tx_explain": "goal_tx_explain",
+    "tx_details": "goal_tx_details",
 }
 
 # Words that belong to one language only (shared ones like `para`, `que`, `esta` are left out).
@@ -63,7 +65,9 @@ _PT_WORDS = frozenset(
     "saldo pagamento mínimo atual há".split()
 )
 
-Goal = Literal["card_status", "balance_due", "abstain", "decline_explain"]
+Goal = Literal[
+    "card_status", "balance_due", "abstain", "decline_explain", "tx_explain", "tx_details"
+]
 Country = Literal["MX", "CO", "AR"]
 
 # Facts a flow writes for code's own use (formatting, footnotes) but that
@@ -89,6 +93,19 @@ _DECLINE_NEXT_TEMPLATES: dict[str, TemplateKind] = {
     "check_card_number": "decline_next_check_card_number",
     "contact_or_retry": "decline_next_contact_or_retry",
     "offer_replacement": "decline_next_offer_replacement",
+}
+
+# This card's B1: `policies/transaction_states.yaml`'s `cause_key`/
+# `next_step_key` values, same "code picks the fixed label" shape as the
+# decline maps above (A5, R8).
+_TX_CAUSE_TEMPLATES: dict[str, TemplateKind] = {
+    "pending_hold": "tx_cause_pending_hold",
+    "reversed_charge": "tx_cause_reversed_charge",
+}
+_TX_NEXT_TEMPLATES: dict[str, TemplateKind] = {
+    "wait_until_date": "tx_next_wait_until_date",
+    "offer_human": "tx_next_offer_human",
+    "no_action_needed": "tx_next_no_action_needed",
 }
 
 
@@ -256,7 +273,7 @@ def _format_fact(
     if key == "status":
         status = cast(Literal["Active", "Blocked", "Suspended", "Closed"], value)
         return status_label(status, language)
-    if key in ("expiry", "due_date", "tx_date"):
+    if key in ("expiry", "due_date", "tx_date", "clear_by_date"):
         return format_date(cast(date, value))
     if key == "payment_overdue":
         return format_days(cast(int, value), language)
@@ -268,8 +285,15 @@ def _format_fact(
         return get_template(_DECLINE_CAUSE_TEMPLATES[cast(str, value)], language)
     if key == "decline_next_step":
         return get_template(_DECLINE_NEXT_TEMPLATES[cast(str, value)], language)
-    # `abstain` facts (ADR-026) and `merchant` (D5-B) arrive already
-    # localized from the flow that wrote them.
+    # This card's B1: `policies/transaction_states.yaml`'s own key, same
+    # "the LLM never picks what a status means" shape as the decline pair.
+    if key == "tx_state_cause":
+        return get_template(_TX_CAUSE_TEMPLATES[cast(str, value)], language)
+    if key == "tx_state_next_step":
+        return get_template(_TX_NEXT_TEMPLATES[cast(str, value)], language)
+    # `abstain` facts (ADR-026), `merchant` (D5-B) and this card's own
+    # `category`/`channel`/`city` arrive already localized from the flow
+    # that wrote them.
     if key in (
         "card_options",
         "customer_name",
@@ -278,6 +302,9 @@ def _format_fact(
         "closest_action",
         "human_offer",
         "merchant",
+        "category",
+        "channel",
+        "city",
     ):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")
@@ -353,6 +380,12 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     goal: Goal
     if intent == "decline_explain":
         goal = "decline_explain"
+    elif intent in ("transaction_search", "pending_reversal_explain"):
+        # This card's B1, D2/D3: a Pending/Reversed pick always carries
+        # `tx_state_cause` (`tx_explain.explain_tx` writes it, `tx_explain`'s
+        # own flow never reaches `compose` without it); anything else picked
+        # from a `tx_search` list is `tx_details` instead.
+        goal = "tx_explain" if "tx_state_cause" in facts_by_key else "tx_details"
     else:
         goal = "balance_due" if intent == "balance_due" and not is_debit else "card_status"
 
