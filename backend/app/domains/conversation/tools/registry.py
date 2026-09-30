@@ -161,6 +161,14 @@ class RecordingBankTools:
             ok_ident=False,
         )
 
+    async def get_transactions_by_ids(self, tx_ids: list[str]) -> list[TxView]:
+        self.calls.append("get_transactions_by_ids")
+        return await self._read(
+            "transactions.get_by_ids",
+            {"tx_ids": list(tx_ids)},
+            lambda: self._inner.get_transactions_by_ids(tx_ids),
+        )
+
     async def explain_decline(self, tx_id: str) -> DeclineExplanation:
         self.calls.append("explain_decline")
         return await self._read(

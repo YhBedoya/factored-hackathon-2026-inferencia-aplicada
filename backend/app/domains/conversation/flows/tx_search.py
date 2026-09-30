@@ -43,7 +43,7 @@ from zoneinfo import ZoneInfo
 
 from langchain_core.runnables import RunnableConfig
 
-from app.core.errors import NotFound, ToolUnavailable
+from app.core.errors import AccessDenied, NotFound, ToolUnavailable
 from app.domains.cards.schemas import CardSummary
 from app.domains.conversation.flows.actions import fill
 from app.domains.conversation.graph import GraphState
@@ -124,10 +124,10 @@ async def _run_search(state: GraphState, config: RunnableConfig) -> dict[str, An
 async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """The single pick itself (D2). Re-checks the same rule `decline_explain`
     does -- exactly one id, and it must be one this flow offered (R1) --
-    then re-reads fresh, unfiltered data rather than trust the stale offer
-    (R1, R11): `TxOfferState` carries no filter to replay, and a search over
-    every status is a safe, deterministic re-fetch for the small candidate
-    counts this fixture (and this card's synthetic data) ever produces.
+    then re-reads that one row fresh by id rather than trust the stale offer
+    (R1, R11). `TxOfferState` carries no filter to replay, and an unfiltered
+    `search` returns only the newest 10 rows, so an older picked row would
+    drop out of it; `get_transactions_by_ids` is own-row-only.
     """
     language = state["language"]
     offer = state.get("tx_offer")
@@ -144,13 +144,15 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"segments": [get_template("pending_reminder", language)]}
 
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]
+    tx_id = selection.tx_ids[0]
     try:
-        rows = await bank_tools.search_transactions(TxFilter())
+        rows = await bank_tools.get_transactions_by_ids([tx_id])
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}
+    except (NotFound, AccessDenied):
+        rows = []
 
-    tx_id = selection.tx_ids[0]
-    tx = next((row for row in rows if row.tx_id == tx_id), None)
+    tx = rows[0] if rows else None
     if tx is None:
         return {
             "pending": None,

@@ -29,7 +29,7 @@ from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
-from app.core.errors import ToolUnavailable
+from app.core.errors import AccessDenied, NotFound, ToolUnavailable
 from app.domains.conversation.flows.tx_search import build_tx_filter, card_mask_fact, offer_tx_pick
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import NLUSlots
@@ -120,9 +120,9 @@ async def _run_search(state: GraphState, config: RunnableConfig) -> dict[str, An
 
 async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """The single pick itself (D3). Same re-check as `tx_search`'s own pick
-    (R1, R11): exactly one offered id, then a fresh, unfiltered-but-for-
-    status re-read -- Pending/Reversed rows are a naturally small set
-    (A5), the same reasoning `decline_explain` applies to Declined rows."""
+    (R1, R11): exactly one offered id, then a fresh own-row re-read of that
+    id (`get_transactions_by_ids`), which must still be Pending/Reversed. A
+    status-filtered `search` would cap at the newest 10 rows."""
     language = state["language"]
     offer = state.get("tx_offer")
     selection = state.get("selection")
@@ -138,13 +138,15 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"segments": [get_template("pending_reminder", language)]}
 
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]
+    tx_id = selection.tx_ids[0]
     try:
-        rows = await bank_tools.search_transactions(TxFilter(status=["Pending", "Reversed"]))
+        rows = await bank_tools.get_transactions_by_ids([tx_id])
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}
+    except (NotFound, AccessDenied):
+        rows = []
 
-    tx_id = selection.tx_ids[0]
-    tx = next((row for row in rows if row.tx_id == tx_id), None)
+    tx = next((row for row in rows if row.status in ("Pending", "Reversed")), None)
     if tx is None:
         return {
             "pending": None,

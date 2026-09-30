@@ -133,7 +133,8 @@ def test_turn_writes_masked_ledger_and_encrypted_messages(
     # digits of the customer's own card, not the typed PAN) and the turn's grounding outcome.
     with psycopg.connect(dsn, row_factory=dict_row) as conn:
         sent = conn.execute(
-            "SELECT payload FROM audit.audit_events WHERE type = 'reply_sent' AND turn_id = %s",
+            "SELECT payload, sources FROM audit.audit_events"
+            " WHERE type = 'reply_sent' AND turn_id = %s",
             (uuid.UUID(turn_id),),
         ).fetchone()
     assert sent is not None
@@ -141,6 +142,9 @@ def test_turn_writes_masked_ledger_and_encrypted_messages(
     assert any(re.fullmatch(r"•+ ?\d{4}", value) for value in payload["fact_values"]), payload
     assert _PAN not in payload["fact_values"]
     assert payload["grounding"]["outcome"] in {"ok", "regenerated", "template"}
+    # ...and the facts' provenance, the staff timeline's "why" sources (D7-A D20).
+    assert sent["sources"], sent
+    assert all(_PAN not in source for source in sent["sources"])
 
     # The stored customer message is encrypted; the masked copy holds the token.
     with psycopg.connect(dsn, row_factory=dict_row) as conn:
