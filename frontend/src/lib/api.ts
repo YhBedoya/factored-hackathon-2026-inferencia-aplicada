@@ -85,9 +85,11 @@ function unwrap<T>(result: FetchResult<T>): T {
 	return result.data as T;
 }
 
-// D11: a 401 on anything but login/refresh gets one refresh-and-retry. A
-// second 401 means the session is gone, so the customer goes to `/login`.
-// `login` and `refresh` never call this (they are the exempt paths).
+// D8/D11: a 401 on anything but login/refresh gets one refresh-and-retry.
+// When that still fails, the chat (if mounted) holds the request instead of
+// redirecting -- see `sessionExpired` below. Every other route has nothing
+// registered, so it keeps the old redirect. `login` and `refresh` never call
+// this (they are the exempt paths).
 async function withAuthRetry<T>(
 	exec: () => Promise<FetchResult<T>>,
 ): Promise<FetchResult<T>> {
@@ -97,15 +99,87 @@ async function withAuthRetry<T>(
 	}
 	const refresh = await refreshApiV1AuthRefreshPost();
 	if (!refresh.response?.ok) {
-		window.location.assign("/login");
-		return first;
+		return sessionExpired.hold(exec) ?? redirectToLogin(first);
 	}
 	const second = await exec();
 	if (statusOf(second) === 401) {
-		window.location.assign("/login");
+		return sessionExpired.hold(exec) ?? redirectToLogin(second);
 	}
 	return second;
 }
+
+function redirectToLogin<T>(result: FetchResult<T>): FetchResult<T> {
+	window.location.assign("/login");
+	return result;
+}
+
+type Replay<T> = () => Promise<FetchResult<T>>;
+
+type PendingExpiry = {
+	replay: Replay<unknown>;
+	resolve: (result: FetchResult<unknown>) => void;
+	reject: (error: unknown) => void;
+};
+
+// D8: the chat is the only caller that ever holds a session-expired request.
+// It registers a listener on mount (opens the modal) and unregisters on
+// unmount, so `hold` below falls back to the redirect everywhere else. Only
+// one request is ever held at a time, matching R11's bounded-retry spirit --
+// there is exactly one replay, never a queue of them.
+let expiredListener: (() => void) | null = null;
+let pending: PendingExpiry | null = null;
+
+export const sessionExpired = {
+	register(listener: () => void): void {
+		expiredListener = listener;
+	},
+	unregister(): void {
+		expiredListener = null;
+		pending = null;
+	},
+	/**
+	 * Called by `withAuthRetry` in place of the redirect. Returns `null` when
+	 * nothing is registered, so the caller falls back to `redirectToLogin`.
+	 */
+	hold<T>(retry: Replay<T>): Promise<FetchResult<T>> | null {
+		if (!expiredListener) {
+			return null;
+		}
+		const notify = expiredListener;
+		return new Promise<FetchResult<T>>((resolve, reject) => {
+			pending = {
+				replay: retry as Replay<unknown>,
+				resolve: resolve as (result: FetchResult<unknown>) => void,
+				reject,
+			};
+			notify();
+		});
+	},
+	/** `SessionExpiredModal` calls this after a same-customer re-login (D8). */
+	async replay(): Promise<void> {
+		const held = pending;
+		pending = null;
+		if (!held) {
+			return;
+		}
+		try {
+			held.resolve(await held.replay());
+		} catch (error) {
+			held.reject(error);
+		}
+	},
+	/**
+	 * `SessionExpiredModal` calls this on a different-customer re-login (D8):
+	 * the held request is dropped, so its caller's `await` rejects and never
+	 * retries -- `chat.tsx` recognizes this code and starts a fresh
+	 * conversation instead of showing it as a turn error.
+	 */
+	drop(): void {
+		const held = pending;
+		pending = null;
+		held?.reject(new ApiError(0, "session_replay_dropped"));
+	},
+};
 
 export async function login(body: LoginRequest): Promise<MeResponse> {
 	const result = await loginApiV1AuthLoginPost({ body });

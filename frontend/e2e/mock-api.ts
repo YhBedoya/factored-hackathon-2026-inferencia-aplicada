@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Page } from "@playwright/test";
+import type { Page, Route } from "@playwright/test";
 
 const FIXTURES_DIR = path.join(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -32,14 +32,26 @@ export type RecordedRequest = {
 	pathname: string;
 	method: string;
 	body: unknown;
+	/** The status this call actually answered with, so a replay is countable (D8/D11). */
+	status: number;
 };
 
 export type InstallMockApiOptions = {
 	/** The only password `/auth/login` accepts; anything else answers `401 invalid_credentials`. */
 	password: string;
-	/** Ordered `e2e/fixtures/*.sse` file names, one consumed per `/messages` or `/confirmations/*` call. */
+	/** Ordered `e2e/fixtures/*.sse` file names, one consumed per `/messages` or `/confirmations/*` call that actually succeeds. */
 	fixtures: string[];
 	customer?: MockCustomer;
+	/**
+	 * D8/D11: 1-based index, counting across every `/messages` and
+	 * `/confirmations/*` POST, of the one call that answers
+	 * `401 session_expired` instead of succeeding. No fixture is consumed for
+	 * it, so the replay gets the fixture that call would otherwise have taken.
+	 */
+	expireOnRequest?: number;
+	/** D8: a second persona. Logging in with `altPassword` returns `altCustomer` instead of `customer`, for the "different customer" re-login path. */
+	altCustomer?: MockCustomer;
+	altPassword?: string;
 };
 
 export type MockApi = {
@@ -65,7 +77,9 @@ export async function installMockApi(
 	const fixtureQueue = [...options.fixtures];
 	const pendingFrames: string[] = [];
 	let loggedIn = false;
+	let activeCustomer = customer;
 	let turnCounter = 0;
+	let writeCount = 0;
 
 	function nextTurnId(): string {
 		turnCounter += 1;
@@ -80,6 +94,26 @@ export async function installMockApi(
 		pendingFrames.push(readFileSync(path.join(FIXTURES_DIR, name), "utf-8"));
 	}
 
+	// D8/D11: shared by `/messages` and `/confirmations/*`. The
+	// `expireOnRequest`th call across both gets a `401` and no fixture; every
+	// other call (including its replay) succeeds and consumes the next one.
+	async function handleWrite(
+		route: Route,
+		pathname: string,
+		method: string,
+	): Promise<void> {
+		writeCount += 1;
+		const body = route.request().postDataJSON();
+		if (writeCount === options.expireOnRequest) {
+			requests.push({ pathname, method, body, status: 401 });
+			await route.fulfill({ status: 401, json: { detail: "session_expired" } });
+			return;
+		}
+		requests.push({ pathname, method, body, status: 202 });
+		enqueueNextFixture();
+		await route.fulfill({ status: 202, json: { turn_id: nextTurnId() } });
+	}
+
 	await page.route("**/api/v1/**", async (route) => {
 		const request = route.request();
 		const { pathname } = new URL(request.url());
@@ -88,15 +122,26 @@ export async function installMockApi(
 		if (pathname.endsWith("/auth/me") && method === "GET") {
 			await route.fulfill(
 				loggedIn
-					? { status: 200, json: customer }
+					? { status: 200, json: activeCustomer }
 					: { status: 401, json: { detail: "session_expired" } },
 			);
 			return;
 		}
 
+		if (pathname.endsWith("/auth/refresh") && method === "POST") {
+			// D8: this mock only ever exercises the expired-session path, so
+			// there is no silent-refresh success to model here.
+			await route.fulfill({ status: 401, json: { detail: "session_expired" } });
+			return;
+		}
+
 		if (pathname.endsWith("/auth/login") && method === "POST") {
 			const body = request.postDataJSON() as { password?: string };
-			if (body.password !== options.password) {
+			if (body.password === options.password) {
+				activeCustomer = customer;
+			} else if (options.altCustomer && body.password === options.altPassword) {
+				activeCustomer = options.altCustomer;
+			} else {
 				await route.fulfill({
 					status: 401,
 					json: { detail: "invalid_credentials" },
@@ -112,7 +157,7 @@ export async function installMockApi(
 					httpOnly: false,
 				},
 			]);
-			await route.fulfill({ status: 200, json: customer });
+			await route.fulfill({ status: 200, json: activeCustomer });
 			return;
 		}
 
@@ -131,16 +176,12 @@ export async function installMockApi(
 		}
 
 		if (/\/messages$/.test(pathname) && method === "POST") {
-			requests.push({ pathname, method, body: request.postDataJSON() });
-			enqueueNextFixture();
-			await route.fulfill({ status: 202, json: { turn_id: nextTurnId() } });
+			await handleWrite(route, pathname, method);
 			return;
 		}
 
 		if (/\/confirmations\/[^/]+$/.test(pathname) && method === "POST") {
-			requests.push({ pathname, method, body: request.postDataJSON() });
-			enqueueNextFixture();
-			await route.fulfill({ status: 202, json: { turn_id: nextTurnId() } });
+			await handleWrite(route, pathname, method);
 			return;
 		}
 

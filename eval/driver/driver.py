@@ -20,6 +20,20 @@ offered at some point. Neither replays server-side validation (R1/R2 are the
 API's job, not this script's) -- an unmet precondition just ends the
 transcript with `error`, the same way a real client with stale UI state
 would get a `409` and give up.
+
+D8/D9 session-expiry replay: for `setup.expire_session_before_turn: N` (the
+same 0-based index as `enumerate(case.turns)`), `play_turn` drops the
+`session`/`csrf_token` cookies right before turn N is attempted, so its
+first request -- the stream GET or the POST, whichever the turn sends first
+-- gets `401`. The driver then re-mints a session for the same persona
+(`POST /test-idp/sessions`) and calls `GET /auth/me`; if `login_hint` and
+`display_name` match the identity captured when the run's session first
+opened, the turn is replayed exactly once (stream reopened, then POST). A
+mismatch ends the transcript `error` (`identity_mismatch`) with nothing
+resent; a second `401` on the replay ends it `error` (`session_expired`).
+This module's own `RunnerState`, `open_session`, `play_turn`,
+`ended_by_from_events` and `is_not_runnable` are public so a second driver
+(the simulator, B3) can reuse them by import rather than by copy.
 """
 
 import asyncio
@@ -32,7 +46,18 @@ from pydantic import BaseModel, ConfigDict
 
 from eval.scenarios.schema import Case, Turn
 
-__all__ = ["EventRecord", "Transcript", "TurnInput", "TurnRecord", "run_case"]
+__all__ = [
+    "EventRecord",
+    "RunnerState",
+    "Transcript",
+    "TurnInput",
+    "TurnRecord",
+    "ended_by_from_events",
+    "is_not_runnable",
+    "open_session",
+    "play_turn",
+    "run_case",
+]
 
 _API_PREFIX = "/api/v1"
 _CONNECTED_LINE = ": connected"
@@ -47,6 +72,23 @@ class _TurnTimeout(Exception):
     whether the 60 s watchdog (`asyncio.wait_for`) fired first or httpx's own
     per-request timeout did (`httpx.TimeoutException`, e.g. `ReadTimeout`
     while waiting on the SSE stream between events)."""
+
+
+class _Unauthorized(Exception):
+    """One attempt at a turn got `401` on its stream GET or its POST
+    (D8/D9). `play_turn` catches this to drive the re-login/compare/replay
+    sequence; it never reaches `run_case`."""
+
+
+class _IdentityMismatch(Exception):
+    """The re-login's `GET /auth/me` doesn't match the identity captured
+    when the session first opened (D8): the held request is dropped, and
+    `run_case` ends the transcript `error` (`identity_mismatch`)."""
+
+
+class _SessionExpiredAgain(Exception):
+    """The one D8/D9 replay attempt also got `401`: `run_case` ends the
+    transcript `error` (`session_expired`)."""
 
 
 class EventRecord(BaseModel):
@@ -88,7 +130,9 @@ class TurnRecord(BaseModel):
 class Transcript(BaseModel):
     """The whole run of one `Case`: every `TurnRecord` played, and why it
     stopped. `conversation_id` is `None` only for `not_runnable` (D10),
-    since that case never reaches `POST /conversations`."""
+    since that case never reaches `POST /conversations`. `stop_reason`
+    is set only by the simulator driver (B3, D6): `"goal"`/`"abstention"`
+    when its model calls `stop`; this driver never sets it."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -97,18 +141,21 @@ class Transcript(BaseModel):
     turns: list[TurnRecord]
     ended_by: EndedBy
     error: str | None = None
+    stop_reason: str | None = None
 
 
-class _RunnerState:
+class RunnerState:
     """Cross-turn bookkeeping this run needs to resolve `confirm`/`cancel`/
     `select` against the last matching `ui.*` event seen (mirrors
-    `chat_api.py`'s `_ChatState`). Never cleared on use: the server, not
+    `chat_api.py`'s `_ChatState`), plus the tx ids the simulator (B3) needs
+    to build a `select` value from. Never cleared on use: the server, not
     this driver, is the single-use/offer-membership enforcement point
     (R2/R1)."""
 
     def __init__(self) -> None:
         self.last_confirm_token: str | None = None
         self.tx_list_open = False
+        self.last_tx_ids: list[str] = []
 
 
 def _csrf_headers(client: httpx.AsyncClient) -> dict[str, str]:
@@ -136,14 +183,15 @@ def _turn_input(turn: Turn) -> tuple[TurnKind, Any]:
     raise AssertionError("Turn has no populated action field; schema validation prevents this")
 
 
-def _update_state(state: _RunnerState, event: str, data: dict[str, Any]) -> None:
+def _update_state(state: RunnerState, event: str, data: dict[str, Any]) -> None:
     if event == "ui" and data.get("kind") == "confirm":
         state.last_confirm_token = data["payload"]["token_id"]
     elif event == "ui" and data.get("kind") == "transaction_list":
         state.tx_list_open = True
+        state.last_tx_ids = [option["tx_id"] for option in data["payload"]["options"]]
 
 
-def _ended_by_from_events(events: list[EventRecord]) -> Literal["handoff", "closed"] | None:
+def ended_by_from_events(events: list[EventRecord]) -> Literal["handoff", "closed"] | None:
     """A `mode{human}` or `ui.conversation_closed` frame anywhere in a
     turn's events ends the whole transcript, not just that turn."""
 
@@ -158,7 +206,7 @@ def _ended_by_from_events(events: list[EventRecord]) -> Literal["handoff", "clos
 async def _post_and_collect_inner(
     client: httpx.AsyncClient,
     conversation_id: str,
-    state: _RunnerState,
+    state: RunnerState,
     *,
     post_url: str,
     post_json: dict[str, Any],
@@ -167,12 +215,19 @@ async def _post_and_collect_inner(
     events: list[EventRecord] = []
 
     async with client.stream("GET", stream_url) as response:
+        if response.status_code == 401:
+            # D8/D9: the stream open itself is the first request this turn
+            # sends when the cookies were dropped before it -- caught here,
+            # never a `done`-less transcript.
+            raise _Unauthorized
         lines = response.aiter_lines()
         async for line in lines:
             if line == _CONNECTED_LINE:
                 break
 
         post_response = await client.post(post_url, json=post_json, headers=_csrf_headers(client))
+        if post_response.status_code == 401:
+            raise _Unauthorized
 
         current_event: str | None = None
         async for line in lines:
@@ -196,7 +251,7 @@ async def _post_and_collect_inner(
 async def _post_and_collect(
     client: httpx.AsyncClient,
     conversation_id: str,
-    state: _RunnerState,
+    state: RunnerState,
     *,
     post_url: str,
     post_json: dict[str, Any],
@@ -212,15 +267,31 @@ async def _post_and_collect(
         raise _TurnTimeout from exc
 
 
-async def _play_turn(
+async def open_session(client: httpx.AsyncClient, persona: str) -> dict[str, Any]:
+    """Test-IdP login for `persona` (D8's "logs in again", and the run's
+    initial login): `POST /test-idp/sessions` sets the fresh
+    `session`/`csrf_token` cookies on `client` (`test_idp.py`) and returns
+    the `MeResponse` JSON body -- the same shape `GET /auth/me` returns, so
+    it doubles as the identity captured when a session first opens."""
+
+    response = await client.post(f"{_API_PREFIX}/test-idp/sessions", json={"customer_id": persona})
+    response.raise_for_status()
+    return dict(response.json())
+
+
+async def _attempt_turn(
     client: httpx.AsyncClient,
     conversation_id: str,
     kind: TurnKind,
     value: Any,
-    state: _RunnerState,
+    state: RunnerState,
     *,
     otp_code: str,
 ) -> tuple[int, list[EventRecord]]:
+    """One try at playing the turn, with no session-expiry handling: raises
+    `_Unauthorized` the moment either its stream GET or its POST gets
+    `401`. `play_turn` is the D8/D9-aware wrapper around this."""
+
     messages_url = f"{_API_PREFIX}/conversations/{conversation_id}/messages"
 
     if kind == "say":
@@ -241,6 +312,8 @@ async def _play_turn(
             json={"code": otp_code},
             headers=_csrf_headers(client),
         )
+        if verify_response.status_code == 401:
+            raise _Unauthorized
         if verify_response.status_code != 200:
             return verify_response.status_code, []
         return await _post_and_collect(
@@ -262,15 +335,63 @@ async def _play_turn(
     )
 
 
+async def play_turn(
+    client: httpx.AsyncClient,
+    conversation_id: str,
+    kind: TurnKind,
+    value: Any,
+    state: RunnerState,
+    *,
+    otp_code: str,
+    persona: str,
+    identity: dict[str, Any],
+    expire_first: bool,
+) -> tuple[int, list[EventRecord]]:
+    """Play one turn, replaying once per D8/D9 after a session-expiry
+    `401`.
+
+    `expire_first` is `setup.expire_session_before_turn == index` (the
+    caller's job to compute): when set, the `session`/`csrf_token` cookies
+    are dropped before this turn is attempted at all, so its first request
+    gets `401`. Either way -- expired on purpose or hit some other way --
+    a `401` from `_attempt_turn` triggers the D8 sequence: re-mint a
+    session for `persona`, call `GET /auth/me`, and compare its
+    `login_hint`/`display_name` against `identity` (the identity captured
+    when the run's session first opened). A match replays the turn exactly
+    once (raises `_SessionExpiredAgain` on a second `401`); a mismatch
+    raises `_IdentityMismatch` with nothing resent. Both exceptions are
+    `run_case`'s to turn into the transcript's terminal `error`.
+    """
+
+    if expire_first:
+        client.cookies.delete("session")
+        client.cookies.delete("csrf_token")
+
+    try:
+        return await _attempt_turn(client, conversation_id, kind, value, state, otp_code=otp_code)
+    except _Unauthorized:
+        pass
+
+    await open_session(client, persona)
+    me_response = await client.get(f"{_API_PREFIX}/auth/me")
+    me_response.raise_for_status()
+    me = me_response.json()
+    if me.get("login_hint") != identity.get("login_hint") or me.get("display_name") != identity.get(
+        "display_name"
+    ):
+        raise _IdentityMismatch
+
+    try:
+        return await _attempt_turn(client, conversation_id, kind, value, state, otp_code=otp_code)
+    except _Unauthorized as exc:
+        raise _SessionExpiredAgain from exc
+
+
 async def _run_case(
     case: Case, client: httpx.AsyncClient, *, otp_code: str, max_turns: int
 ) -> Transcript:
-    state = _RunnerState()
-
-    login_response = await client.post(
-        f"{_API_PREFIX}/test-idp/sessions", json={"customer_id": case.persona}
-    )
-    login_response.raise_for_status()
+    state = RunnerState()
+    identity = await open_session(client, case.persona)
 
     create_response = await client.post(
         f"{_API_PREFIX}/conversations", json={}, headers=_csrf_headers(client)
@@ -309,8 +430,16 @@ async def _run_case(
 
         started = time.monotonic()
         try:
-            http_status, events = await _play_turn(
-                client, conversation_id, kind, value, state, otp_code=otp_code
+            http_status, events = await play_turn(
+                client,
+                conversation_id,
+                kind,
+                value,
+                state,
+                otp_code=otp_code,
+                persona=case.persona,
+                identity=identity,
+                expire_first=index == case.setup.expire_session_before_turn,
             )
         except _TurnTimeout:
             return Transcript(
@@ -319,6 +448,22 @@ async def _run_case(
                 turns=records,
                 ended_by="error",
                 error="timeout",
+            )
+        except _IdentityMismatch:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="error",
+                error="identity_mismatch",
+            )
+        except _SessionExpiredAgain:
+            return Transcript(
+                case_id=case.case_id,
+                conversation_id=conversation_id,
+                turns=records,
+                ended_by="error",
+                error="session_expired",
             )
         latency_ms = int((time.monotonic() - started) * 1000)
 
@@ -332,7 +477,7 @@ async def _run_case(
             )
         )
 
-        ended_by = _ended_by_from_events(events)
+        ended_by = ended_by_from_events(events)
         if ended_by is not None:
             return Transcript(
                 case_id=case.case_id,
@@ -346,6 +491,15 @@ async def _run_case(
     )
 
 
+def is_not_runnable(case: Case) -> bool:
+    """`True` only for a non-empty `case.setup.faults` (D10): those
+    fault-injection hooks aren't implemented by any driver yet, so the case
+    never reaches the API. `expire_session_before_turn` is not one of these
+    any more -- both drivers play it, per D8/D9."""
+
+    return bool(case.setup.faults)
+
+
 async def run_case(
     case: Case,
     *,
@@ -356,10 +510,11 @@ async def run_case(
 ) -> Transcript:
     """Play `case` against `base_url` and return its `Transcript`.
 
-    A non-empty `case.setup.faults` or a set
-    `case.setup.expire_session_before_turn` returns `not_runnable` before
-    any HTTP call is made (D10) -- both are D6-B3 fault-injection hooks this
-    driver doesn't implement yet.
+    A non-empty `case.setup.faults` (`is_not_runnable`) returns
+    `not_runnable` before any HTTP call is made (D10) -- a fault-injection
+    hook no driver implements yet. A set `case.setup.expire_session_before_turn`
+    is played, not skipped: `_run_case` drops the session cookies before
+    that turn and replays per D8/D9.
 
     `client` lets a caller (a test, or a future runner amortizing
     connections across cases) supply its own `httpx.AsyncClient`; this
@@ -369,7 +524,7 @@ async def run_case(
     between frames without that being a failure.
     """
 
-    if case.setup.faults or case.setup.expire_session_before_turn is not None:
+    if is_not_runnable(case):
         return Transcript(
             case_id=case.case_id, conversation_id=None, turns=[], ended_by="not_runnable"
         )

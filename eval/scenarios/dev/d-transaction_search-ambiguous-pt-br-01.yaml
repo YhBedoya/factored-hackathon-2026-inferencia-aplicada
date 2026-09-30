@@ -3,7 +3,8 @@ intent: transaction_search
 category: ambiguous
 persona: CLI-1EOUF8Y7UJ5M
 goal: Encontrar uma compra antiga sem lembrar quando foi
-fact_sheet: {}
+fact_sheet:
+  note: Fecha demasiado vaga para resolver en código
 setup:
   faults: []
   expire_session_before_turn: null

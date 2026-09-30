@@ -3,7 +3,8 @@ intent: card_status
 category: ambiguous
 persona: CLI-1BQ0JRB6CMK7
 goal: Saber el estado de una tarjeta sin decir cuál, entre varias
-fact_sheet: {}
+fact_sheet:
+  note: 4 tarjetas de crédito activas, sin pista clara de cuál
 setup:
   faults: []
   expire_session_before_turn: null

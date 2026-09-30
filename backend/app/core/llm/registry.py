@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 Provider = Literal["anthropic", "bedrock", "openai"]
-Step = Literal["nlu", "compose", "handoff_summary", "paraphrase"]
+Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate"]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
 # The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
@@ -40,6 +40,9 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
         "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
     },
     "paraphrase": {"openai": "gpt-6-luna"},
+    # Same eval-only tooling and model as `paraphrase` (ADR-030 "Simulator note",
+    # D6-B): the goal-driven customer simulator, `eval/simulator/simulator.py`.
+    "simulate": {"openai": "gpt-6-luna"},
 }
 
 # `None` means "send no temperature" (the model default). claude-sonnet-5-5 answers
@@ -53,11 +56,14 @@ TEMPERATURE: dict[Step, float | None] = {
     # value is supported"), so `paraphrase` pins 1.0 instead of 0.0; variety
     # still comes from the request (N distinct items), not from sampling.
     "paraphrase": 1.0,
+    # Same gpt-6-luna constraint as `paraphrase`; the card and `05` §5 say
+    # "temperature 0" for the simulator, but it runs at 1.0 (D6-B D2).
+    "simulate": 1.0,
 }
 
 # Steps whose provider is pinned regardless of `LLM_PROVIDER` (ADR-030). Every
 # other step falls back to `settings.llm_provider`.
-STEP_PROVIDER: dict[Step, Provider] = {"paraphrase": "openai"}
+STEP_PROVIDER: dict[Step, Provider] = {"paraphrase": "openai", "simulate": "openai"}
 
 
 @dataclass(frozen=True)

@@ -10,7 +10,7 @@ from collections.abc import Callable
 
 import httpx
 
-from eval.driver import Transcript, run_case
+from eval.driver import Transcript, is_not_runnable, run_case
 from eval.scenarios.schema import Case, LabelsBlock, SetupBlock, Turn
 
 _PERSONA = "CLI-TESTDRIVER01"
@@ -54,9 +54,7 @@ def _frame(event: str, data: str) -> str:
 def _run(case: Case, transport: httpx.MockTransport) -> Transcript:
     async def _go() -> Transcript:
         async with httpx.AsyncClient(transport=transport, base_url=_BASE_URL) as client:
-            return await run_case(
-                case, base_url=_BASE_URL, otp_code="0000", client=client
-            )
+            return await run_case(case, base_url=_BASE_URL, otp_code="0000", client=client)
 
     return asyncio.run(_go())
 
@@ -115,9 +113,7 @@ def _scripted_handler(call_log: list[str]) -> Callable[[httpx.Request], httpx.Re
         if path == "/api/v1/auth/otp/verify":
             return httpx.Response(200, json={"customer_id": _PERSONA})
         if path.endswith(("/confirmations/tok-1", "/messages")):
-            return httpx.Response(
-                202, json={"turn_id": "22222222-2222-2222-2222-222222222222"}
-            )
+            return httpx.Response(202, json={"turn_id": "22222222-2222-2222-2222-222222222222"})
         raise AssertionError(f"unexpected request: {request.method} {request.url}")
 
     return handler
@@ -199,3 +195,171 @@ def test_stream_read_timeout_ends_transcript_with_error() -> None:
     transcript = _run(case, httpx.MockTransport(handler))
 
     assert transcript.ended_by == "error"
+
+
+def test_is_not_runnable_only_for_faults() -> None:
+    faults_case = _case(turns=[Turn(say="hola")], setup=SetupBlock(faults=["bedrock_timeout"]))
+    expiry_case = _case(turns=[Turn(say="hola")], setup=SetupBlock(expire_session_before_turn=0))
+
+    assert is_not_runnable(faults_case) is True
+    assert is_not_runnable(expiry_case) is False
+
+
+def _identity_json(login_hint: str, display_name: str) -> dict[str, str]:
+    return {
+        "role": "customer",
+        "login_hint": login_hint,
+        "display_name": display_name,
+        "country": "MX",
+        "customer_status": "Active",
+    }
+
+
+def test_expire_session_before_turn_replays_matching_identity() -> None:
+    """D8/D9: a matching re-login identity replays the held turn exactly
+    once, and the transcript finishes `done`."""
+
+    stream_calls = {"n": 0}
+    done_frame = _frame("done", '{"turn_id": "11111111-1111-1111-1111-111111111111"}')
+    call_log: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        call_log.append(f"{request.method} {request.url.path}")
+        path = request.url.path
+        if path == "/api/v1/test-idp/sessions":
+            return httpx.Response(
+                200,
+                json=_identity_json("5511", "Ana"),
+                headers=[("set-cookie", "csrf_token=csrf-abc; Path=/")],
+            )
+        if path == "/api/v1/auth/me":
+            return httpx.Response(200, json=_identity_json("5511", "Ana"))
+        if path == "/api/v1/conversations":
+            return httpx.Response(201, json={"conversation_id": "conv-1"})
+        if path.endswith("/stream"):
+            stream_calls["n"] += 1
+            if stream_calls["n"] == 2:
+                return httpx.Response(401, json={"code": "session_expired"})
+            return httpx.Response(
+                200,
+                content=_sse(
+                    _frame("message", '{"role": "bot", "text": "hola", "sources": []}'),
+                    done_frame,
+                ),
+                headers=[("content-type", "text/event-stream")],
+            )
+        if path.endswith("/messages"):
+            return httpx.Response(202, json={"turn_id": "22222222-2222-2222-2222-222222222222"})
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    case = _case(
+        turns=[Turn(say="hola"), Turn(say="sigo aqui")],
+        setup=SetupBlock(expire_session_before_turn=1),
+    )
+
+    transcript = _run(case, httpx.MockTransport(handler))
+
+    assert transcript.ended_by == "done"
+    assert len(transcript.turns) == 2
+    assert call_log.count("POST /api/v1/test-idp/sessions") == 2
+    assert call_log.count("GET /api/v1/auth/me") == 1
+    # turn 2's POST is sent exactly once, after the replay's stream reopens.
+    assert call_log.count("POST /api/v1/conversations/conv-1/messages") == 2
+
+
+def test_expire_session_before_turn_identity_mismatch_ends_error() -> None:
+    """D8: a re-login that comes back as a different identity ends the
+    transcript `error` (`identity_mismatch`) with the held turn never
+    resent."""
+
+    stream_calls = {"n": 0}
+    done_frame = _frame("done", '{"turn_id": "11111111-1111-1111-1111-111111111111"}')
+    call_log: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        call_log.append(f"{request.method} {request.url.path}")
+        path = request.url.path
+        if path == "/api/v1/test-idp/sessions":
+            return httpx.Response(
+                200,
+                json=_identity_json("5511", "Ana"),
+                headers=[("set-cookie", "csrf_token=csrf-abc; Path=/")],
+            )
+        if path == "/api/v1/auth/me":
+            return httpx.Response(200, json=_identity_json("9922", "Otro"))
+        if path == "/api/v1/conversations":
+            return httpx.Response(201, json={"conversation_id": "conv-1"})
+        if path.endswith("/stream"):
+            stream_calls["n"] += 1
+            if stream_calls["n"] == 2:
+                return httpx.Response(401, json={"code": "session_expired"})
+            return httpx.Response(
+                200,
+                content=_sse(
+                    _frame("message", '{"role": "bot", "text": "hola", "sources": []}'),
+                    done_frame,
+                ),
+                headers=[("content-type", "text/event-stream")],
+            )
+        if path.endswith("/messages"):
+            return httpx.Response(202, json={"turn_id": "22222222-2222-2222-2222-222222222222"})
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    case = _case(
+        turns=[Turn(say="hola"), Turn(say="sigo aqui")],
+        setup=SetupBlock(expire_session_before_turn=1),
+    )
+
+    transcript = _run(case, httpx.MockTransport(handler))
+
+    assert transcript.ended_by == "error"
+    assert transcript.error == "identity_mismatch"
+    assert len(transcript.turns) == 1
+    assert call_log.count("POST /api/v1/conversations/conv-1/messages") == 1
+
+
+def test_expire_session_before_turn_second_401_ends_session_expired() -> None:
+    """D8/D9: a matching identity but a second `401` on the replay ends the
+    transcript `error` (`session_expired`)."""
+
+    stream_calls = {"n": 0}
+    done_frame = _frame("done", '{"turn_id": "11111111-1111-1111-1111-111111111111"}')
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/api/v1/test-idp/sessions":
+            return httpx.Response(
+                200,
+                json=_identity_json("5511", "Ana"),
+                headers=[("set-cookie", "csrf_token=csrf-abc; Path=/")],
+            )
+        if path == "/api/v1/auth/me":
+            return httpx.Response(200, json=_identity_json("5511", "Ana"))
+        if path == "/api/v1/conversations":
+            return httpx.Response(201, json={"conversation_id": "conv-1"})
+        if path.endswith("/stream"):
+            stream_calls["n"] += 1
+            if stream_calls["n"] >= 2:
+                return httpx.Response(401, json={"code": "session_expired"})
+            return httpx.Response(
+                200,
+                content=_sse(
+                    _frame("message", '{"role": "bot", "text": "hola", "sources": []}'),
+                    done_frame,
+                ),
+                headers=[("content-type", "text/event-stream")],
+            )
+        if path.endswith("/messages"):
+            return httpx.Response(202, json={"turn_id": "22222222-2222-2222-2222-222222222222"})
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    case = _case(
+        turns=[Turn(say="hola"), Turn(say="sigo aqui")],
+        setup=SetupBlock(expire_session_before_turn=1),
+    )
+
+    transcript = _run(case, httpx.MockTransport(handler))
+
+    assert transcript.ended_by == "error"
+    assert transcript.error == "session_expired"
+    assert len(transcript.turns) == 1

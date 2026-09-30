@@ -3,7 +3,8 @@ intent: card_block
 category: ambiguous
 persona: CLI-H24P25YVOAJY
 goal: Bloquear la tarjeta sin decir si es temporal o permanente
-fact_sheet: {}
+fact_sheet:
+  note: No especifica si el bloqueo debe ser temporal o permanente
 setup:
   faults: []
   expire_session_before_turn: null

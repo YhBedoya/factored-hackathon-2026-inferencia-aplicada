@@ -3,7 +3,8 @@ intent: card_block
 category: normal_resolution
 persona: CLI-5RJITZ5VLJGY
 goal: Bloquear temporalmente la tarjeta y confirmar
-fact_sheet: {}
+fact_sheet:
+  card_last4: '5772'
 setup:
   faults: []
   expire_session_before_turn: null
@@ -31,7 +32,7 @@ cases:
   source: seed
   turns:
   - say: Quiero bloquear mi tarjeta de forma temporal, por favor.
-  - say: La que termina en 5772, solo un bloqueo temporal, por favor.
+  - say: La que termina en 5772.
   - confirm: true
   reviewer: null
   reviewed_at: null

@@ -26,7 +26,9 @@ export function Composer({ disabled, onSend }: ComposerProps) {
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="flex gap-2 border-t p-3">
+		// `shrink-0` (D13): the composer stays pinned at the bottom of the
+		// `h-dvh` column instead of a tall transcript squeezing it out.
+		<form onSubmit={handleSubmit} className="flex shrink-0 gap-2 border-t p-3">
 			<Input
 				data-testid="composer-input"
 				value={value}
