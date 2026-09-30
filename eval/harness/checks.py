@@ -313,9 +313,9 @@ def case_verdict(ev: CaseEvidence, results: list[CheckResult]) -> dict[str, Any]
     got = outcome(ev)
     failed_checks = [r.name for r in results if not r.ok]
     reason: str | None = None
-    if ended == "not_runnable" or ev.case.setup.db_patches:
+    if ended == "not_runnable":
         verdict = "not_run"
-        reason = "not_runnable" if ended == "not_runnable" else "db_patches"
+        reason = "not_runnable"
     elif ended in ("error", "max_turns"):
         verdict = "failed"
         reason = f"{ended}: {ev.transcript.error}" if ev.transcript.error else ended

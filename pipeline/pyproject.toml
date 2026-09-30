@@ -9,6 +9,7 @@ dependencies = [
     "dbt-core>=1.8",
     "dbt-duckdb>=1.8",
     "psycopg[binary]>=3.2",
+    "pandera[pandas]>=0.33.1",
 ]
 
 [dependency-groups]

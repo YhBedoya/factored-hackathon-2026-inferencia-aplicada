@@ -151,7 +151,7 @@ export type HandoffPacket = {
     /**
      * Reason
      */
-    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud';
+    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud' | 'tool_failure' | 'llm_unavailable';
     /**
      * Language
      */
@@ -183,7 +183,7 @@ export type HandoffPacket = {
     /**
      * Escalation Rules Hit
      */
-    escalation_rules_hit: Array<'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud'>;
+    escalation_rules_hit: Array<'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud' | 'tool_failure' | 'llm_unavailable'>;
     /**
      * Policy Version
      */
@@ -223,7 +223,7 @@ export type HandoffSummary = {
     /**
      * Reason
      */
-    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud';
+    reason: 'human_request' | 'clarification_exhausted' | 'legal_regulator' | 'customer_not_active' | 'bank_side_block' | 'action_unverified' | 'unauthorized_access' | 'suspected_fraud' | 'tool_failure' | 'llm_unavailable';
     /**
      * Status
      */

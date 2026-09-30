@@ -21,7 +21,7 @@
   `pending`/`clarification_failures` so the next turn doesn't start already
   at the limit (orchestrator repair round 1).
 * A `ToolUnavailable` from either tool call -- `escalation_reason =
-  "tool_unavailable"` only, `pending` left alone: a transient tool error
+  "tool_failure"` only, `pending` left alone: a transient tool error
   shouldn't discard a clarification in progress. `route`/`compose` never run
   for any of these three; `fallback` (the node) picks the reply template
   (D15).
@@ -96,7 +96,7 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
         try:
             cards = await bank_tools.list_cards()
         except ToolUnavailable:
-            return {"escalation_reason": "tool_unavailable"}
+            return {"escalation_reason": "tool_failure"}
 
         policy = load_card_select_policy()
         outcome = select_card(cards, hint, failures, policy, state["language"])
@@ -125,7 +125,7 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
             # (D12, D15). Clear `pending`/`clarification_failures` too, or the
             # next turn starts already at the limit and falls back forever
             # regardless of its hint (orchestrator repair round 1).
-            # `tool_unavailable` above is left alone: a transient tool error
+            # `tool_failure` above is left alone: a transient tool error
             # shouldn't discard a clarification in progress.
             return {
                 "escalation_reason": "clarification_exhausted",
@@ -137,7 +137,7 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
     try:
         details = await bank_tools.get_card_details(card_id)
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     facts, segments = await _facts_and_segments(intent, details, bank_tools, state)
     update: dict[str, Any] = {

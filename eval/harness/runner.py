@@ -20,14 +20,14 @@ import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 import psycopg
 
 from eval.driver.driver import Transcript, run_case
-from eval.harness import clone, pii_check
+from eval.harness import clone, patches, pii_check
 from eval.harness.checks import case_verdict, run_checks
 from eval.harness.evidence import collect
 from eval.harness.lint import lint_suite, load_write_tools, writing_case
@@ -122,7 +122,9 @@ def _wait_healthy(base_url: str, proc: subprocess.Popen[bytes]) -> None:
     raise RuntimeError(f"backend not healthy after {_HEALTH_TIMEOUT_SECONDS:.0f}s")
 
 
-def _start_backend(system: str, dbname: str, port: int) -> subprocess.Popen[bytes]:
+def _start_backend(
+    system: str, dbname: str, port: int, faults: frozenset[str]
+) -> subprocess.Popen[bytes]:
     env = {
         **os.environ,
         "APP_ENV": "eval",
@@ -133,6 +135,8 @@ def _start_backend(system: str, dbname: str, port: int) -> subprocess.Popen[byte
         "REDIS_URL": _redis_url(_REDIS_INDEX[system]),
         "AGENT_SYSTEM": system,
         "BANK": "postgres",
+        # The backend arms its fault hooks from this at startup, so one backend per fault set.
+        "FAULTS": ",".join(sorted(faults)),
     }
     return subprocess.Popen(
         ["uv", "run", "uvicorn", "app.main:app", "--port", str(port)],
@@ -150,11 +154,45 @@ def _stop_backend(proc: subprocess.Popen[bytes]) -> None:
         proc.wait()
 
 
-def _skipped(case: Case) -> Transcript:
-    # `ended_by="done"` with no turns: `case_verdict` labels it `not_run` from `db_patches` (D27).
-    return Transcript(
-        case_id=case.case_id, conversation_id=None, turns=[], ended_by="done"
-    )
+def fault_groups(cases: list[Case]) -> list[tuple[frozenset[str], list[Case]]]:
+    """Group cases by fault set: the empty set first, the rest in first-seen order."""
+    groups: dict[frozenset[str], list[Case]] = {frozenset(): []}
+    for case in cases:
+        groups.setdefault(frozenset(case.setup.faults), []).append(case)
+    return [(faults, group) for faults, group in groups.items() if group]
+
+
+def _clear_turn_keys(system: str) -> None:
+    """Drop stale `turns:*` keys in this system's eval Redis db, never db 0."""
+    import redis  # local: only the eval runner needs it
+
+    client = redis.Redis.from_url(_redis_url(_REDIS_INDEX[system]))
+    try:
+        for key in client.scan_iter("turns:*"):
+            client.delete(key)
+    finally:
+        client.close()
+
+
+_Handle = TypeVar("_Handle")
+_Result = TypeVar("_Result")
+
+
+async def _play_groups(
+    groups: list[tuple[frozenset[str], list[Case]]],
+    start: Callable[[frozenset[str]], _Handle],
+    stop: Callable[[_Handle], None],
+    play_group: Callable[[_Handle, frozenset[str], list[Case]], Awaitable[_Result]],
+) -> list[_Result]:
+    """One backend per fault group on the same clone: start, play, always stop."""
+    results: list[_Result] = []
+    for faults, group in groups:
+        handle = start(faults)
+        try:
+            results.append(await play_group(handle, faults, group))
+        finally:
+            stop(handle)
+    return results
 
 
 async def _play(
@@ -164,20 +202,22 @@ async def _play(
     golden_conn: psycopg.Connection[Any],
     driver: Driver,
     system: str,
+    faults: frozenset[str] = frozenset(),
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
     write_tools = load_write_tools()
     otp = os.environ.get("DEMO_OTP_CODE", "")
     verdicts: list[dict[str, Any]] = []
     llm_rows: list[dict[str, Any]] = []
     restores = 0
-    played = 0
-    for case in cases:
-        if case.setup.db_patches:
-            transcript = _skipped(case)
-        else:
-            played += 1
-            transcript = await driver(case, base_url=base_url, otp_code=otp)
+    for played, case in enumerate(cases, start=1):
+        db_patches = case.setup.db_patches
+        if db_patches:
+            patches.apply(clone_conn, db_patches)
+        transcript = await driver(case, base_url=base_url, otp_code=otp)
         evidence = collect(clone_conn, case, transcript)
+        if db_patches:
+            # A diff raises `PatchDiffError`, which aborts the run like `RestoreDiffError`.
+            patches.revert_and_verify(clone_conn, golden_conn, db_patches)
         if writing_case(case, write_tools) and transcript.conversation_id is not None:
             # A diff after the restore raises `RestoreDiffError`, which aborts the run (D14).
             restore_persona(clone_conn, golden_conn, case.persona)
@@ -185,16 +225,17 @@ async def _play(
             restores += 1
         verdict = case_verdict(evidence, run_checks(evidence, write_tools))
         if verdict["verdict"] == "not_run":
-            verdict["unsafe"] = (
-                False  # nothing was played, so nothing can have been unsafe
-            )
+            verdict["unsafe"] = False  # `not_runnable`: nothing was played
         verdict["system"] = system
         verdicts.append(verdict)
         llm_rows.extend(
             {**c, "system": system, "case_id": case.case_id} for c in evidence.llm_calls
         )
         # The rows are this system's `audit.llm_calls` from the clone, read by `collect`.
-        if llm_unreachable(played, [str(r.get("status")) for r in llm_rows]):
+        # A `bedrock_timeout` group makes every call unavailable on purpose: not an outage.
+        if "bedrock_timeout" not in faults and llm_unreachable(
+            played, [str(r.get("status")) for r in llm_rows]
+        ):
             # `audit.llm_calls` columns are `model_id` and `step`; None only if no row was ledgered.
             first = llm_rows[0] if llm_rows else {}
             raise LLMUnreachableError(
@@ -207,24 +248,42 @@ async def _run_system(
     system: str, run_id: str, cases: list[Case], driver: Driver
 ) -> dict[str, Any]:
     dbname, clone_seconds = clone.create(f"{run_id}_{system}")
-    proc: subprocess.Popen[bytes] | None = None
     conns: list[psycopg.Connection[Any]] = []
     try:
-        port = _free_port()
-        proc = _start_backend(system, dbname, port)
-        base_url = f"http://127.0.0.1:{port}"
-        _wait_healthy(base_url, proc)
         # Golden connections open after the clone exists: `clone.create` ends golden sessions.
         golden_conn = psycopg.connect(clone.dsn(clone.GOLDEN_DB))
         conns.append(golden_conn)
         clone_conn = psycopg.connect(clone.dsn(dbname))
         conns.append(clone_conn)
-        verdicts, llm_rows, restores = await _play(
-            cases, base_url, clone_conn, golden_conn, driver, system
+
+        def start(faults: frozenset[str]) -> tuple[subprocess.Popen[bytes], str]:
+            _clear_turn_keys(system)
+            port = _free_port()
+            proc = _start_backend(system, dbname, port, faults)
+            base_url = f"http://127.0.0.1:{port}"
+            try:
+                _wait_healthy(base_url, proc)
+            except BaseException:
+                _stop_backend(proc)
+                raise
+            return proc, base_url
+
+        async def play_group(
+            handle: tuple[subprocess.Popen[bytes], str],
+            faults: frozenset[str],
+            group: list[Case],
+        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+            return await _play(
+                group, handle[1], clone_conn, golden_conn, driver, system, faults
+            )
+
+        group_results = await _play_groups(
+            fault_groups(cases), start, lambda h: _stop_backend(h[0]), play_group
         )
+        verdicts = [v for r in group_results for v in r[0]]
+        llm_rows = [row for r in group_results for row in r[1]]
+        restores = sum(r[2] for r in group_results)
     finally:
-        if proc is not None:
-            _stop_backend(proc)
         # Golden connections close before any clone is dropped.
         for conn in conns:
             with contextlib.suppress(Exception):

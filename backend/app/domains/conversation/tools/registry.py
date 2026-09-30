@@ -21,6 +21,8 @@ in `ConfirmedWriteTools` (D16's order), both bound to that one recorder.
 (`PostgresBank` + `PostgresBankWrites`, D10, D11).
 """
 
+import asyncio
+from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from pathlib import Path
 from uuid import UUID
@@ -30,12 +32,13 @@ from pydantic import JsonValue
 from app.core.config import get_settings
 from app.core.errors import AccessDenied, ToolUnavailable
 from app.core.pii import KnownPii
+from app.core.retry import backoff_delay
 from app.domains.audit.schemas import AuditType, Recorder
 from app.domains.audit.service import AuditRecorder
 from app.domains.cards.schemas import CardDetails, CardSummary
 from app.domains.conversation.tools.bank import BankReadTools
 from app.domains.conversation.tools.context import ToolContext
-from app.domains.conversation.tools.executor import ConfirmedWriteTools
+from app.domains.conversation.tools.executor import ConfirmedWriteTools, call_with_timeout
 from app.domains.conversation.tools.fakebank import make_fakebank_factory
 from app.domains.conversation.tools.postgres import PostgresBank
 from app.domains.conversation.tools.postgres_writes import PostgresBankWrites
@@ -112,112 +115,114 @@ class RecordingBankTools:
     audit, D15) still shows up in the debug trail.
     """
 
-    def __init__(self, inner: BankReadTools, audit: Recorder) -> None:
+    def __init__(
+        self,
+        inner: BankReadTools,
+        audit: Recorder,
+        *,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        timeout_s: float | None = None,
+    ) -> None:
         self._inner = inner
         self._audit = audit
+        self._sleep = sleep
+        self._timeout_s = timeout_s
         self.calls: list[str] = []
 
     async def get_profile(self) -> CustomerProfile:
         self.calls.append("get_profile")
-        tool = "customers.get_profile"
-        await self._record_tool_call(tool, None)
-        try:
-            result = await self._inner.get_profile()
-        except Exception as exc:
-            await self._record_error(tool, None, exc)
-            raise
-        await self._record("tool_result", {"tool": tool})
-        return result
+        return await self._read("customers.get_profile", {}, self._inner.get_profile)
 
     async def list_cards(self) -> list[CardSummary]:
         self.calls.append("list_cards")
-        tool = "cards.list_cards"
-        await self._record_tool_call(tool, None)
-        try:
-            result = await self._inner.list_cards()
-        except Exception as exc:
-            await self._record_error(tool, None, exc)
-            raise
-        await self._record("tool_result", {"tool": tool, "count": len(result)})
-        return result
+        return await self._read(
+            "cards.list_cards", {}, self._inner.list_cards, lambda r: {"count": len(r)}
+        )
 
     async def get_card_details(self, card_id: str) -> CardDetails:
         self.calls.append("get_card_details")
-        tool = "cards.get_card_details"
-        await self._record_tool_call(tool, card_id)
-        try:
-            result = await self._inner.get_card_details(card_id)
-        except Exception as exc:
-            await self._record_error(tool, card_id, exc)
-            raise
-        await self._record("tool_result", {"tool": tool, "card_id": card_id})
-        return result
+        return await self._read(
+            "cards.get_card_details",
+            {"card_id": card_id},
+            lambda: self._inner.get_card_details(card_id),
+        )
 
     async def search_transactions(self, tx_filter: TxFilter) -> list[TxView]:
         self.calls.append("search_transactions")
-        tool = "transactions.search"
-        await self._record_tool_call(tool, tx_filter.card_id)
-        try:
-            result = await self._inner.search_transactions(tx_filter)
-        except Exception as exc:
-            await self._record_error(tool, tx_filter.card_id, exc)
-            raise
-        await self._record("tool_result", {"tool": tool, "count": len(result)})
-        return result
+        ident: dict[str, JsonValue] = {}
+        if tx_filter.card_id is not None:
+            ident["card_id"] = tx_filter.card_id
+        return await self._read(
+            "transactions.search",
+            ident,
+            lambda: self._inner.search_transactions(tx_filter),
+            lambda r: {"count": len(r)},
+            ok_ident=False,
+        )
 
     async def explain_decline(self, tx_id: str) -> DeclineExplanation:
         self.calls.append("explain_decline")
-        tool = "transactions.explain_decline"
-        payload: dict[str, JsonValue] = {"tool": tool, "tx_id": tx_id}
-        try:
-            await self._audit.record("tool_call", payload)
-        except Exception as exc:
-            raise ToolUnavailable("audit_unavailable") from exc
-        try:
-            result = await self._inner.explain_decline(tx_id)
-        except Exception as exc:
-            await self._record(
-                "tool_result", {"tool": tool, "tx_id": tx_id, "error": type(exc).__name__}
-            )
-            raise
-        await self._record("tool_result", {"tool": tool, "tx_id": tx_id})
-        return result
+        return await self._read(
+            "transactions.explain_decline",
+            {"tx_id": tx_id},
+            lambda: self._inner.explain_decline(tx_id),
+            deny_event=False,
+        )
 
     async def get_fx_rate(self, source: str, target: str) -> FxRate:
         self.calls.append("get_fx_rate")
-        tool = "reference.get_fx_rate"
-        await self._record_tool_call(tool, None)
+        return await self._read(
+            "reference.get_fx_rate", {}, lambda: self._inner.get_fx_rate(source, target)
+        )
+
+    async def _read[T](
+        self,
+        tool: str,
+        ident: dict[str, JsonValue],
+        call: Callable[[], Awaitable[T]],
+        summary: Callable[[T], dict[str, JsonValue]] | None = None,
+        *,
+        deny_event: bool = True,
+        ok_ident: bool = True,
+    ) -> T:
+        """One audited read: `tool_call` once (fail closed, D15), then the
+        inner call under the per-attempt timeout, retrying `ToolUnavailable`
+        (D5). Each failed attempt records `tool_result {error, attempt}`.
+        `ident` is the `card_id`/`tx_id` the events carry; `ok_ident` keeps
+        the success `tool_result` as it was before (search never carried it).
+        """
         try:
-            result = await self._inner.get_fx_rate(source, target)
+            await self._audit.record("tool_call", {"tool": tool, **ident})
         except Exception as exc:
-            await self._record_error(tool, None, exc)
-            raise
-        await self._record("tool_result", {"tool": tool})
+            raise ToolUnavailable("audit_unavailable") from exc
+        max_attempts = get_settings().retry_max + 1
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                result = await call_with_timeout(call, self._timeout_s)
+                break
+            except Exception as exc:
+                if isinstance(exc, AccessDenied) and deny_event:
+                    await self._record("access_denied", {"tool": tool, **ident})
+                await self._record(
+                    "tool_result",
+                    {"tool": tool, **ident, "error": type(exc).__name__, "attempt": attempt},
+                )
+                if isinstance(exc, ToolUnavailable) and attempt < max_attempts:
+                    await self._sleep(backoff_delay(attempt))
+                    continue
+                raise
+        ok: dict[str, JsonValue] = {"tool": tool, **(ident if ok_ident else {})}
+        if summary is not None:
+            ok.update(summary(result))
+        await self._record("tool_result", ok)
         return result
 
     async def get_pii_profile(self) -> KnownPii:
         # Pass-through (A5, D34): the runner's masking step, not an LLM-driven
         # read, so no `tool_call` audit event and no `.calls` entry.
         return await self._inner.get_pii_profile()
-
-    async def _record_tool_call(self, tool: str, card_id: str | None) -> None:
-        """Fail closed (D15): a `tool_call` that can't be recorded means the
-        read never runs."""
-        payload: dict[str, JsonValue] = {"tool": tool}
-        if card_id is not None:
-            payload["card_id"] = card_id
-        try:
-            await self._audit.record("tool_call", payload)
-        except Exception as exc:
-            raise ToolUnavailable("audit_unavailable") from exc
-
-    async def _record_error(self, tool: str, card_id: str | None, exc: Exception) -> None:
-        if isinstance(exc, AccessDenied):
-            payload: dict[str, JsonValue] = {"tool": tool}
-            if card_id is not None:
-                payload["card_id"] = card_id
-            await self._record("access_denied", payload)
-        await self._record("tool_result", {"tool": tool, "error": type(exc).__name__})
 
     async def _record(self, event_type: AuditType, payload: dict[str, JsonValue]) -> None:
         """Best effort past the `tool_call` gate: never turns a read that

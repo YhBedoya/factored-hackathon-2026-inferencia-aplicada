@@ -110,7 +110,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     try:
         cards = await bank_tools.list_cards()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
     outcome = select_card(cards, hint, failures, policy, language)
@@ -161,7 +161,7 @@ async def _offer_candidates(
             TxFilter(card_id=card_id, status=cast(list[TxStatus], policy.candidate_statuses))
         )
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     if not candidates:
         return {
@@ -341,7 +341,7 @@ async def _start_compromise_plan(
     try:
         details = await bank_tools.get_card_details(dispute["card_id"])
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     tx_count = len(dispute["picked_tx_ids"])
     view_facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]

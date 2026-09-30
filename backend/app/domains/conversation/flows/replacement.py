@@ -107,7 +107,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     try:
         cards = await bank_tools.list_cards()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
     outcome = select_card(cards, hint, failures, policy, language)
@@ -161,7 +161,7 @@ async def _check_active_and_eligibility(
     try:
         profile = await bank_tools.get_profile()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     not_active = escalation.customer_not_active
     if (
@@ -176,7 +176,7 @@ async def _check_active_and_eligibility(
         origin = await bank_write_tools.get_block_origin(card_id, "replacement_request")
         details = await bank_tools.get_card_details(card_id)
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     expired = details.expiration_date is not None and details.expiration_date < local_today(country)
     if origin.kind != "customer_block" and not expired:

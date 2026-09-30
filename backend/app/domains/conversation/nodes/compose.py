@@ -118,6 +118,17 @@ async def compose_checked(
     that fails `_draft_problem` gets one more call with the reason; a second
     failure fills the goal's fact template (D12). `LLMError` gives `fallback`.
     """
+    try:
+        return await _compose_draft(llm, language=language, country=country, goal=goal, facts=facts)
+    except LLMError:
+        return get_template("fallback", language), "template"
+
+
+async def _compose_draft(
+    llm: LLMClient, *, language: Language, country: Country, goal: Goal, facts: list[Fact]
+) -> tuple[str, Grounding]:
+    """`compose_checked` without the `LLMError` catch: the graph node turns it
+    into a failure handoff (D8), `compose_checked`'s callers into `fallback`."""
     facts_by_key = {fact.key: fact for fact in facts}
     offered_keys = [key for key in facts_by_key if key not in _HIDDEN_KEYS]
 
@@ -126,12 +137,9 @@ async def compose_checked(
     problem: str | None = None
     for attempt in range(2):
         message = user if problem is None else f"{user}\n\nCorrige: {problem}"
-        try:
-            draft = await llm.structured(
-                step="compose", prompt=_PROMPT, system=system, user=message, schema=ComposeDraft
-            )
-        except LLMError:
-            return get_template("fallback", language), "template"
+        draft = await llm.structured(
+            step="compose", prompt=_PROMPT, system=system, user=message, schema=ComposeDraft
+        )
         problem = _draft_problem(draft.text, offered_keys, language)
         if problem is None:
             text = _fill(draft.text, offered_keys, facts_by_key, language, country)
@@ -351,13 +359,17 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     customer_name = state.get("customer_name")
     if customer_name:
         facts.append(Fact(key="customer_name", value=customer_name, source="customers.get_profile"))
-    text, grounding = await compose_checked(
-        llm,
-        language=state["language"],
-        country=state["country"],
-        goal=goal,
-        facts=facts,
-    )
+    try:
+        text, grounding = await _compose_draft(
+            llm,
+            language=state["language"],
+            country=state["country"],
+            goal=goal,
+            facts=facts,
+        )
+    except LLMError:
+        # D8, A5: no segment; `fallback` speaks and the turn hands off.
+        return {"escalation_reason": "llm_unavailable", "grounding": "template"}
     segments = [text]
     language = state["language"]
     if "min_payment" in facts_by_key:

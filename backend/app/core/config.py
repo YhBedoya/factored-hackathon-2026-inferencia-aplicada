@@ -9,11 +9,16 @@ boot before secrets exist.
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal, get_args
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
-__all__ = ["Settings", "get_settings"]
+__all__ = ["Fault", "Settings", "get_settings"]
+
+# Defined here (re-exported by `core/faults.py`) because `Settings` parses it and
+# `faults.py` imports this module, not the other way round.
+Fault = Literal["bedrock_timeout", "cards_write_error", "readback_mismatch"]
 
 # `backend/app/core/config.py` -> repo root is three parents up.
 _REPO_ROOT_ENV = Path(__file__).resolve().parents[3] / ".env"
@@ -48,6 +53,28 @@ class Settings(BaseSettings):
     session_ttl_minutes: int = 60
     login_max_failures: int = 5
     login_window_seconds: int = 900
+
+    # Reliability (D6-A). `FAULTS` is comma-separated and set on the command
+    # line only; the guard in `main.py` refuses it under APP_ENV=prod.
+    faults: Annotated[frozenset[Fault], NoDecode] = frozenset()
+    llm_disabled: bool = False
+    tool_timeout_s: float = 3.0
+    turn_cap_per_conversation: int = 40
+    turn_cap_per_account_day: int = 150
+    retry_max: int = 2
+    retry_backoff_base_s: float = 0.5
+    retry_backoff_cap_s: float = 2.0
+
+    @field_validator("faults", mode="before")
+    @classmethod
+    def _parse_faults(cls, value: object) -> object:
+        if isinstance(value, str):
+            names = [part.strip() for part in value.split(",") if part.strip()]
+            unknown = [n for n in names if n not in get_args(Fault)]
+            if unknown:
+                raise ValueError(f"unknown fault(s): {', '.join(unknown)}")
+            return frozenset(names)
+        return value
 
 
 @lru_cache

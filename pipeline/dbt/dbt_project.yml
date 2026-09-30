@@ -29,3 +29,7 @@ models:
       # two connections with different `TimeZone` settings). Materializing
       # as a table freezes the correct instant once, at dbt build time.
       +materialized: table
+
+vars:
+  raw_root: "../../data/raw"
+  column_aliases: {}
