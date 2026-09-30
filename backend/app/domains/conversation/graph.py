@@ -187,6 +187,8 @@ class GraphState(TurnState):
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
     handoff_request: NotRequired[str]
     grounding: NotRequired[str]
+    actions_at_turn_start: NotRequired[int]
+    write_failed: NotRequired[bool]
 
 
 class DebugInfo(BaseModel):
@@ -254,6 +256,10 @@ rather than crashing (P3). Flow tasks add their own entry here.
 """
 
 
+_FAILURE_REASONS = frozenset({"tool_failure", "llm_unavailable"})
+"""`escalation_reason` values that end in `fallback` -> `handoff_summary` -> `handoff` (D8)."""
+
+
 def _entry(state: GraphState) -> str:
     """Conditional edge right after `load_session` (D8, D15, D17, `02` §3, D4-B D7).
 
@@ -274,6 +280,10 @@ def _entry(state: GraphState) -> str:
     """
     if state.get("mode") == "human":
         return "relay_to_agent"
+    # D10: the kill switch (or a failure `load_session` already saw) beats
+    # steps 0-3, so typed, button, step-up and pick turns all fall back.
+    if state.get("escalation_reason") == "llm_unavailable":
+        return "fallback"
     pending = state.get("pending")
     selection = state.get("selection")
     if selection is not None:
@@ -315,10 +325,12 @@ def _after_flow(state: GraphState) -> str:
     redundant node.
     """
     reason = state.get("escalation_reason")
+    # D8: a failure reason is not a HandoffReason by itself here -- it first
+    # gets its fixed failure text from `fallback`, which then hands off.
+    if reason in _FAILURE_REASONS or reason == "no_cards":
+        return "fallback"
     if reason in get_args(HandoffReason) or state.get("handoff_queue") is not None:
         return "handoff_summary"
-    if reason in {"tool_unavailable", "no_cards"}:
-        return "fallback"
     if state.get("facts"):
         return "compose"
     return _after_segment(state)
@@ -332,6 +344,22 @@ def _after_segment(state: GraphState) -> str:
     put for the resume that answers it.
     """
     return "finish" if state.get("pending") is not None else "next_intent"
+
+
+def _after_compose(state: GraphState) -> str:
+    """Conditional edge after `compose` (D8): an `LLMError` from its own call
+    wrote no segment and set a failure reason, so `fallback` speaks instead.
+    """
+    if state.get("escalation_reason") in _FAILURE_REASONS:
+        return "fallback"
+    return _after_segment(state)
+
+
+def _after_fallback(state: GraphState) -> str:
+    """Conditional edge after `fallback` (D8): the two failure reasons hand off."""
+    if state.get("escalation_reason") in _FAILURE_REASONS:
+        return "handoff_summary"
+    return _after_segment(state)
 
 
 def _after_unsupported(state: GraphState) -> str:
@@ -438,6 +466,7 @@ def build_graph(
         {
             "understand": "understand",
             "relay_to_agent": "relay_to_agent",
+            "fallback": "fallback",
             "smalltalk": "smalltalk",
             "card_info": "card_info",
             "card_block": "card_block",
@@ -546,7 +575,9 @@ def build_graph(
         },
     )
     graph.add_conditional_edges(
-        "compose", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+        "compose",
+        _after_compose,
+        {"fallback": "fallback", "finish": "finish", "next_intent": "next_intent"},
     )
     graph.add_conditional_edges(
         "unsupported",
@@ -560,7 +591,9 @@ def build_graph(
     graph.add_edge("handoff", "finish")
     graph.add_edge("relay_to_agent", "finish")
     graph.add_conditional_edges(
-        "fallback", _after_segment, {"finish": "finish", "next_intent": "next_intent"}
+        "fallback",
+        _after_fallback,
+        {"handoff_summary": "handoff_summary", "finish": "finish", "next_intent": "next_intent"},
     )
     graph.add_edge("smalltalk", "finish")
     graph.add_conditional_edges(

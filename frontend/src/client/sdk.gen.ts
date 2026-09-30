@@ -107,12 +107,15 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
  * instead).
  *
  * D7's pick gate: a `selection` body is checked against this
- * conversation's own last-checkpointed `pending`/`dispute`
- * (`runner.checkpointed_dispute`) *before* anything is scheduled --
- * paused at `awaiting_slot == "transactions"` and every picked id present
- * in `dispute.offered_tx_ids` -- else `409 selection_invalid` and no turn
- * runs (R1: a customer can't claim a transaction that was never offered).
- * The flow re-checks the same rule once a turn does run, as a second gate.
+ * conversation's own last-checkpointed `pending` and offer
+ * (`runner.checkpointed_offer`, T7 -- generalized from D4-B's
+ * `checkpointed_dispute` to also cover `decline_explain`'s single-pick,
+ * D3) *before* anything is scheduled -- paused at
+ * `awaiting_slot == "transactions"`, every picked id actually offered,
+ * and exactly one id when the offer was single-pick (`multi = False`) --
+ * else `409 selection_invalid` and no turn runs (R1: a customer can't
+ * claim a transaction that was never offered). The flow re-checks the
+ * same rule once a turn does run, as a second gate.
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',

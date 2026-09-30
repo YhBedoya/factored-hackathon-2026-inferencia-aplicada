@@ -96,7 +96,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     try:
         cards = await bank_tools.list_cards()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
     outcome = select_card(cards, hint, failures, policy, language)
@@ -135,7 +135,7 @@ async def _check_status_and_origin(
     try:
         profile = await bank_tools.get_profile()
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     not_active = escalation.customer_not_active
     if profile.customer_status in not_active.statuses and "unlock_card" not in not_active.allowed:
@@ -146,7 +146,7 @@ async def _check_status_and_origin(
     try:
         origin = await bank_write_tools.get_block_origin(card_id, "card_unlock")
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     if origin.kind == "customer_lock":
         if await bank_write_tools.is_step_up_valid():
@@ -157,7 +157,7 @@ async def _check_status_and_origin(
         try:
             details = await bank_tools.get_card_details(card_id)
         except ToolUnavailable:
-            return {"escalation_reason": "tool_unavailable"}
+            return {"escalation_reason": "tool_failure"}
         no_undo = fill(get_template("block_permanent_no_undo", language), card_last4=details.last4)
         offer = fill(get_template("offer_replacement", language), card_last4=details.last4)
         return {
@@ -204,7 +204,7 @@ async def _start_unlock_plan(
     try:
         details = await bank_tools.get_card_details(card_id)
     except ToolUnavailable:
-        return {"escalation_reason": "tool_unavailable"}
+        return {"escalation_reason": "tool_failure"}
 
     view_facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]
     confirm_values = {

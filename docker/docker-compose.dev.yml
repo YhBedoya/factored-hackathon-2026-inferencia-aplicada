@@ -2,6 +2,11 @@
 # frontend, and the dev Nginx config that fronts both.
 services:
   backend:
+    environment:
+      # Fault injection and the LLM kill switch (D6-A). Dev overlay only,
+      # set on the command line (`FAULTS=bedrock_timeout make up`), never prod.
+      FAULTS: ${FAULTS:-}
+      LLM_DISABLED: ${LLM_DISABLED:-false}
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ../backend/app:/app/app

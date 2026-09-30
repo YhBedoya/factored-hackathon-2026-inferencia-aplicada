@@ -59,6 +59,8 @@ TemplateKind = Literal[
     "synthetic_footnote",
     "read_only_note",
     "handoff_transfer",
+    "failure_handoff",
+    "failure_handoff_after_action",
     "back_with_cardy",
     "abstain_fallback",
     "goal_card_status",
@@ -576,6 +578,30 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "Estou transferindo você para uma pessoa da equipe de {queue_label}. "
             "Seu caso é {reference}. Ela já tem o contexto do que você me contou "
             "e, daqui em diante, eu paro de responder para que ela atenda você."
+        ),
+    },
+    # D9: a failure forced a handoff (tool or LLM down after bounded retries).
+    # No retry offer: a person takes over. Dev B reviews this copy.
+    "failure_handoff": {
+        "es": (
+            "Tuve un problema y no puedo seguir con esto ahora. No hice ningún cambio. "
+            "Una persona del equipo va a tomar tu caso."
+        ),
+        "pt": (
+            "Tive um problema e não consigo continuar com isso agora. Não fiz nenhuma alteração. "
+            "Uma pessoa da equipe vai assumir o seu caso."
+        ),
+    },
+    # D9: same, but an action already ran, so it never claims nothing changed.
+    # Dev B reviews this copy.
+    "failure_handoff_after_action": {
+        "es": (
+            "Tuve un problema y no puedo seguir con esto ahora. "
+            "Una persona del equipo va a tomar tu caso."
+        ),
+        "pt": (
+            "Tive um problema e não consigo continuar com isso agora. "
+            "Uma pessoa da equipe vai assumir o seu caso."
         ),
     },
     # D14: system message when the agent returns the conversation to the bot.

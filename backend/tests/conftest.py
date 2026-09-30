@@ -13,7 +13,7 @@ over an `InMemoryConfirmationStore` and a `FakeStepUpGate`, `InMemoryAddressVaul
 -- once, so a flow test doesn't hand-roll that wiring itself.
 """
 
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -133,6 +133,8 @@ def make_session(
     otp_code: str = "0000",
     raw_writes: BankWriteTools | None = None,
     clock: Callable[[], datetime] | None = None,
+    write_audit: bool = False,
+    sleep: Callable[[float], Awaitable[None]] | None = None,
 ) -> Session:
     """Build one write-flow session over the test fixture (T10).
 
@@ -140,6 +142,10 @@ def make_session(
     of the real `FakeBankWrites`; either way the read side (`bank_tools`)
     shares one `FakeBankOverlay` with it, so a write this session made is
     visible to its own reads (D7), same as `make_fakebank_factory`.
+
+    `write_audit=True` hands the session's `RecordingAudit` to `ConfirmedWriteTools`
+    (default: `NullAuditRecorder`), so a test can read its `tool_result` rows;
+    `sleep` replaces the retry backoff sleep.
     """
     conversation_id = uuid4()
     ctx = ToolContext(
@@ -157,12 +163,17 @@ def make_session(
     )
     gate = FakeStepUpGate(otp_code)
     policy = load_tools_policy()
-    write_tools = ConfirmedWriteTools(
-        raw, store, gate, step_up_rule(policy), tool_allowed(policy), NullAuditRecorder()
-    )
-
     handoff_tools = InMemoryHandoffTools()
     audit = RecordingAudit()
+    write_tools = ConfirmedWriteTools(
+        raw,
+        store,
+        gate,
+        step_up_rule(policy),
+        tool_allowed(policy),
+        audit if write_audit else NullAuditRecorder(),
+        **({} if sleep is None else {"sleep": sleep}),
+    )
 
     config: RunnableConfig = {
         "configurable": {

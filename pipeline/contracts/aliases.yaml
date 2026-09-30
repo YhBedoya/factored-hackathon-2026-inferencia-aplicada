@@ -1,0 +1,6 @@
+# Raw column aliases: {table: {raw_name: canonical_name}}.
+# Read by the contracts package (renames before validating, reports the column as
+# `aliased`) and by dbt through the `column_aliases` var, so both agree on which raw
+# header maps to which staging column. Applies to any source, not to one test fixture.
+transactions:
+  merchant: merchant_name

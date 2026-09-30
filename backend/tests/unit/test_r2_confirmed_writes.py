@@ -29,6 +29,10 @@ from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.tools_policy import load_tools_policy, tool_allowed
 
 
+async def _no_sleep(delay: float) -> None:
+    return None
+
+
 def _allow_all(intent: str, tool: str) -> bool:
     return True
 
@@ -183,6 +187,7 @@ def test_raw_write_runs_only_after_its_step_is_consumed(
             requires_step_up=lambda t, a: False,
             allowed=_allow_all,
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         out = await getattr(executor, method)(*call_args, "tok-1")
@@ -203,6 +208,7 @@ def test_raw_write_runs_only_after_its_step_is_consumed(
             requires_step_up=lambda t, a: False,
             allowed=_allow_all,
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         with pytest.raises(ConfirmationRequired):
@@ -232,6 +238,7 @@ def test_step_up_checked_before_token_is_consumed() -> None:
             requires_step_up=lambda t, a: True,
             allowed=_allow_all,
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         with pytest.raises(StepUpRequired):
@@ -265,6 +272,7 @@ def test_failed_or_unverified_step_cancels_the_plan() -> None:
             requires_step_up=lambda t, a: False,
             allowed=_allow_all,
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         with pytest.raises(ToolUnavailable):
@@ -284,6 +292,7 @@ def test_failed_or_unverified_step_cancels_the_plan() -> None:
             requires_step_up=lambda t, a: False,
             allowed=_allow_all,
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         out = await executor2.lock_card("PRD-1", "tok-2")
@@ -313,6 +322,7 @@ def test_intent_not_allowed_is_refused() -> None:
             requires_step_up=lambda t, a: False,
             allowed=tool_allowed(load_tools_policy()),
             audit=recorder,
+            sleep=_no_sleep,
         )
 
         with pytest.raises(PolicyDenied) as exc_info:
@@ -356,6 +366,7 @@ def test_compromise_plan_order_and_allowlist() -> None:
             requires_step_up=lambda t, a: False,
             allowed=tool_allowed(policy),
             audit=_ListRecorder(),
+            sleep=_no_sleep,
         )
 
         plan = await executor.issue_plan(

@@ -39,6 +39,13 @@ models:
     columns:
       - name: product_id
         tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
       - name: product_type
         tests:
           - accepted_values:
@@ -82,6 +89,13 @@ models:
     columns:
       - name: complaint_id
         tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
 
   - name: srv_digital_events
     columns:
@@ -97,6 +111,20 @@ models:
     columns:
       - name: transaction_id
         tests: [unique, not_null]
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_products')
+                field: product_id
+              config: {severity: warn}
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
       - name: transaction_status
         tests:
           - accepted_values:

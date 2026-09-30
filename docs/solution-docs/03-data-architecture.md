@@ -25,7 +25,7 @@ S3 data/ ──(1) ingest──► data/raw/<table>/year=…/month=…/day=…/*
                intermediate/ int_*: joins and derived fields (card_type, masked number, available credit, fx rates)
                serving/   srv_<table>: final column set per Postgres table, DATE SHIFT applied (var date_offset_days)
                tests: unique, not_null, accepted_values, relationships (FKs, orphans reported, not dropped), freshness
-         ──(4) load: DuckDB postgres extension → COPY into bank.* (DDL owned by Alembic)
+         ──(4) load: TRUNCATE bank.* + identity.accounts + app.handoffs (every table referencing identity.accounts, named explicitly, no CASCADE; D6-A D25) → COPY into bank.* (DDL owned by Alembic)
          ──(5) provision identity: credentials for all customers → identity.accounts; export to data/secrets/credentials.csv (git-ignored)
          ──(6) snapshot: golden database `latam_golden` (CREATE DATABASE … TEMPLATE)
 ```
@@ -36,19 +36,19 @@ S3 data/ ──(1) ingest──► data/raw/<table>/year=…/month=…/day=…/*
 ## 3. Contracts and quality (D4.2, D4.3)
 
 - Contracts are defined from the **observed** schema, with deviations from the dictionary documented: Spanish enum values ("Tarjeta Crédito", "Transaccional"…), missing transcript columns (`full_text`, `agent_text`), row counts 84–156% of documented.
-- Pandera checks per raw partition: column presence and types, nullability, enum domains, ranges (`fraud_score` 0–100, `credit_score` 300–850), PK uniqueness.
-- dbt tests on staging and serving: PK uniqueness, FK relationships (orphans are counted and flagged, never silently dropped), accepted values, semantic checks from the EDA (transactions before card opening or after expiry, future `last_updated`, the `process_date` UTC/local shift).
+- Pandera checks per raw partition: column presence and types, nullability, enum domains, ranges (`fraud_score` 0–100, `credit_score` 300–850), PK uniqueness. Only a **structural break** (an unreadable file, a missing PK column) stops `make data`; every other failure, and column drift, is counted in the report and the rows flow on. Only manifest entries not yet in `data/quality/contract_cache.json` (by key + ETag/SHA-256) are validated (D6-A D17).
+- dbt tests on staging and serving: PK uniqueness, FK relationships (orphans are counted and flagged, never silently dropped), accepted values, semantic checks from the EDA (transactions before card opening or after expiry, future `last_updated`, the `process_date` UTC/local shift). The relationship and semantic tests run at `severity: warn`; the PK and accepted-values tests on serving stay `error` (D6-A D18).
 - D1.3 finding: `process_date` follows UTC−6 in all three countries (MX, CO, AR); rows stamped 00:00–05:59 carry the previous day (D1-A D1).
-- Output: a quality report per run (counts, rates, failing rows sample) that feeds the D1.3 analysis.
+- Output: a quality report per run (counts, rates, failing rows sample) that feeds the D1.3 analysis: `data/quality/<run_id>/{contract_report.json, quality_report.json, quality_report.md}`, with samples limited to the PK and the failing column (≤5 rows per check). Lineage: `dbt docs generate` → `data/lineage/<run_id>/`, plus the committed `pipeline/lineage.md` (D6-A D21).
 
 ## 4. Freshness and update policy (D4.5)
 
-- The delivery is a single static snapshot. The **policy**: ingest is incremental by daily partition. A partition is (re)processed when its manifest entry (size/ETag) changes. Serving tables are rebuilt with dbt incremental models on `process_date`.
-- **Labeled test fixtures** (`pipeline/fixtures/`, clearly marked TEST FIXTURE):
+- The delivery is a single static snapshot. The **policy**: ingest is incremental by daily partition. A partition is (re)processed when its manifest entry (size/ETag) changes. dbt then rebuilds staging and serving in full on every run, which is deterministic for a given manifest (amended D6-A D19: no dbt incremental models).
+- **Labeled test fixtures** (`pipeline/fixtures/test_fixture_{late_partition,schema_change,duplicate_batch}/`, clearly marked TEST FIXTURE):
   1. A late-arriving partition for an already-processed day, with corrected rows.
   2. A schema-evolved partition with an added column and a renamed column.
   3. A duplicate batch, re-delivering an already-loaded partition.
-  Expected results are asserted in `pipeline/tests/` (idempotent row counts, the new column mapped, dups rejected).
+  Expected results are asserted in `pipeline/tests/` (idempotent row counts, the new column mapped, dups rejected). Semantics (D6-A D20): (1) is the same key with a new ETag, re-ingested over the old file, so the corrected values win and the count is unchanged; (2) renames `merchant_name` → `merchant` (mapped back through one alias map read by Pandera and dbt) and adds `installments` (reported as drift, not loaded into Postgres); (3) is the same rows under a new key in the same partition, which land in `stg_<t>__rejects`. The fixture tests run `dbt build --select stg_transactions+ stg_transactions__rejects --indirect-selection cautious --exclude test_name:relationships test_type:singular` on a tmp DuckDB (the other parents of those tests aren't there; dbt 1.12 rejects `test_type:relationships`).
 
 ## 5. Date shift (simulated "now")
 

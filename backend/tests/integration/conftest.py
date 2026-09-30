@@ -52,7 +52,7 @@ _DB_PREFIX = "latam_it_"
 # rl:login:<key>, turn:<id>, conv:<id>, conf:<token_id>, rl:otp:<account_id>
 # (D19, D14, D7, D8, D4): no product-code prefix, so cleanup targets exactly
 # the key shapes the app itself writes.
-_REDIS_KEY_PATTERNS = ("rl:login:*", "turn:*", "conv:*", "conf:*", "rl:otp:*")
+_REDIS_KEY_PATTERNS = ("rl:login:*", "turn:*", "conv:*", "conf:*", "rl:otp:*", "turns:*")
 
 # The three fixture customers loaded by `_load_fixtures` (D19): `document_type`
 # and `document_number` as `customers.csv` has them, not yet normalized.

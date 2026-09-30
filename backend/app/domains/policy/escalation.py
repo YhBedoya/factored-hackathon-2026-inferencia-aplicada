@@ -1,5 +1,5 @@
 """ADR-021 handoff queues and escalation rules, loaded from
-`policies/escalation.yaml` v2 (spec D2-D7, R8).
+`policies/escalation.yaml` v3 (spec D2-D7, R8).
 
 `rules.<reason>` is the single source of each handoff reason's queue and
 priority (`queue: null` means the caller picks it: bank-side origin, human
@@ -106,7 +106,12 @@ _REQUIRED_REASONS = (
     "action_unverified",
     "unauthorized_access",
     "suspected_fraud",
+    "tool_failure",
+    "llm_unavailable",
 )
+
+# Reasons whose null-queue rule resolves by the paused flow, like `human_request`.
+_FLOW_ROUTED_REASONS = ("tool_failure", "llm_unavailable")
 
 
 class EscalationPolicy(BaseModel):
@@ -202,6 +207,11 @@ def resolve_escalation(
     if reason is not None:
         resolved_reason = reason
         resolved_queue: str | None = queue if queue is not None else policy.rules[reason].queue
+        if resolved_queue is None and reason in _FLOW_ROUTED_REASONS:
+            # Failure handoffs have no fixed queue: route like a human request.
+            hrq = policy.human_request_queues
+            by_flow = hrq.by_flow.get(pending_flow, hrq.default) if pending_flow else None
+            resolved_queue = by_flow or hrq.default
     elif legal_hit(text, policy):
         resolved_reason = "legal_regulator"
         resolved_queue = policy.rules[resolved_reason].queue

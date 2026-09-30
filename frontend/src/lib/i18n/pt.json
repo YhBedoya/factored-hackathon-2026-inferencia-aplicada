@@ -87,6 +87,8 @@
 	"staff.reason.action_unverified": "Ação não verificada",
 	"staff.reason.unauthorized_access": "Tentativa de acesso a dados de terceiros",
 	"staff.reason.suspected_fraud": "Suspeita de fraude",
+	"staff.reason.tool_failure": "Falha técnica",
+	"staff.reason.llm_unavailable": "Assistente indisponível",
 	"staff.priority.high": "Prioridade alta",
 	"staff.priority.normal": "Prioridade normal",
 

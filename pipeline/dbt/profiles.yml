@@ -13,7 +13,7 @@ card_support_pipeline:
   outputs:
     dev:
       type: duckdb
-      path: "../../data/pipeline.duckdb"
+      path: "{{ env_var('PIPELINE_DUCKDB_PATH', '../../data/pipeline.duckdb') }}"
       threads: 4
       # Every TIMESTAMP in bank.* is interpreted as UTC end to end (D1). Fixing
       # the session time zone here means a bare CAST(... AS TIMESTAMPTZ) never

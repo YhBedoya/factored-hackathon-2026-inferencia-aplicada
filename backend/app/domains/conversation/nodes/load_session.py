@@ -20,15 +20,28 @@ channel, so a turn only ever reports the events an emitting node appended
 this turn, never a stale one from an earlier turn.
 """
 
-from typing import Any
+import re
+from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
 
+from app.core.config import get_settings
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.state import RESET_FACTS, RESET_SEGMENTS
 from app.domains.conversation.tools import BankReadTools, ToolContext
 
 __all__ = ["load_session"]
+
+_PT_MARKERS = re.compile(
+    r"[ãõç]|\b(?:não|nao|você|voce|cartão|cartao|obrigad[oa]|olá|quero|meu|minha|"
+    r"fatura|pagamento)\b",
+    re.IGNORECASE,
+)
+
+
+def _guess_language(text: str) -> Literal["es", "pt"]:
+    """`pt` when the text carries a Portuguese-only marker, else `es` (pure, no LLM)."""
+    return "pt" if _PT_MARKERS.search(text) else "es"
 
 
 async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -38,13 +51,25 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
     bank_tools: BankReadTools = configurable["bank_tools"]
 
     profile = await bank_tools.get_profile()
+    # D10: the kill switch. Human mode is checked first by `_entry`, so a
+    # human-owned conversation never sees the reason. `actions_at_turn_start`
+    # lets `fallback` tell an action verified this turn from an older one.
+    reason = (
+        "llm_unavailable" if get_settings().llm_disabled and state.get("mode") != "human" else None
+    )
     return {
+        "actions_at_turn_start": len(state.get("actions", [])),
+        "write_failed": False,
         "customer_id": session.customer_id,
         "country": profile.country,
         "customer_name": profile.first_name,
         "facts": RESET_FACTS,
         "segments": RESET_SEGMENTS,
         "nlu": None,
-        "escalation_reason": None,
+        "escalation_reason": reason,
+        # `understand` never runs under the kill switch, and `handoff_summary`
+        # reads `language`: keep the previous one; on a first turn detect it
+        # in code from the customer's own text (no LLM).
+        "language": state.get("language") or _guess_language(state.get("user_text", "")),
         "ui": [],
     }

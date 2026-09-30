@@ -75,7 +75,7 @@ async def understand(state: GraphState, config: RunnableConfig) -> dict[str, Any
             llm, state["user_text"], pending=state.get("pending"), country=state.get("country")
         )
     except LLMError:
-        return {"nlu": None, "language": previous_language}
+        return {"nlu": None, "language": previous_language, "escalation_reason": "llm_unavailable"}
 
     language = nlu.language if nlu.language in ("es", "pt") else previous_language
     return {"nlu": nlu, "language": language}
