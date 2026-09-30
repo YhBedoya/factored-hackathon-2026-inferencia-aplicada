@@ -22,12 +22,31 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PREFIX[,PREFIX...]",
         help="keep only cases whose seed_id starts with a prefix, e.g. a-",
     )
+    ap.add_argument(
+        "--driver",
+        default="scripted",
+        choices=["scripted", "simulator"],
+        help="scripted (default) or the goal-driven LLM simulator (D6-B)",
+    )
     args = ap.parse_args(argv)
     prefixes = [p for p in (args.cases or "").split(",") if p] or None
     if args.cases is not None and prefixes is None:
         ap.error("--cases needs at least one non-empty prefix")
+    driver = None
+    if args.driver == "simulator":
+        # Imported only on this branch: scripted runs never need the simulator's
+        # LLM dependency, and it does not exist yet on every branch that builds this CLI.
+        from eval.simulator import run_case_simulated
+
+        driver = run_case_simulated
     try:
-        run_id = run(args.suite, args.system, cases_filter=prefixes)
+        run_id = run(
+            args.suite,
+            args.system,
+            driver=driver,
+            driver_name=args.driver,
+            cases_filter=prefixes,
+        )
     except ValueError as exc:
         # An empty selection is a usage error, reported before any clone exists.
         ap.error(str(exc))

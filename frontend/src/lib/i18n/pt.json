@@ -46,6 +46,9 @@
 	"otp.code": "Código de verificação",
 	"otp.submit": "Verificar",
 
+	"session_expired.title": "Sua sessão expirou",
+	"session_expired.description": "Confirme sua identidade de novo para continuar de onde paramos.",
+
 	"errors.invalid_credentials": "O documento ou a senha não estão corretos.",
 	"errors.too_many_attempts": "Muitas tentativas. Espere alguns minutos antes de tentar novamente.",
 	"errors.generic": "Algo não deu certo. Tente novamente em instantes.",
@@ -55,6 +58,8 @@
 	"errors.conversation_closed": "Esta conversa foi encerrada.",
 	"errors.otp_invalid": "O código não está correto. Tente novamente.",
 	"errors.confirmation_invalid": "Essa confirmação não é mais válida. Peça a ação de novo.",
+	"errors.rate_limited": "Recebi muitas mensagens muito rápido. Espere um momento e tente de novo.",
+	"errors.server_error": "Tivemos um problema técnico. Não fiz nenhuma mudança; tente novamente em instantes.",
 
 	"staff.login.title": "Acesso da equipe",
 	"staff.login.username": "Usuário",

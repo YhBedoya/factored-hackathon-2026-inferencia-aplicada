@@ -193,7 +193,9 @@ def write_report(
             {"label": LABEL, "systems": all_metrics}, indent=2, ensure_ascii=False
         )
     )
-    (out / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    (out / "meta.json").write_text(
+        json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
     clone_line = ", ".join(
         f"{s} {sec:.0f}s" for s, sec in meta["clone_seconds"].items()
@@ -212,6 +214,17 @@ def write_report(
                 "",
             ]
             if _has_null_temperature(out)
+            else []
+        ),
+        *(
+            [
+                (
+                    "Driver: simulator (`gpt-6-luna`, temperature 1.0) — "
+                    "transcripts are not repeatable run to run"
+                ),
+                "",
+            ]
+            if meta.get("driver") == "simulator"
             else []
         ),
         f"- Suite `{meta['suite']}` (hash `{meta['suite_hash'][:12]}`), git `{meta['git_sha'][:10]}`"
@@ -234,4 +247,4 @@ def write_report(
         *_breakdown("Segment", "by_segment", all_metrics, systems),
         *_not_run(all_metrics),
     ]
-    (out / "report.md").write_text("\n".join(lines) + "\n")
+    (out / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

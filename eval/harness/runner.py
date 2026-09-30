@@ -16,6 +16,7 @@ import json
 import os
 import socket
 import subprocess
+import sys
 import time
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
@@ -89,6 +90,25 @@ def _redis_url(index: int) -> str:
     )
 
 
+def _prefer_loopback(url: str) -> str:
+    """`localhost` -> `127.0.0.1` in `url`'s host, everything else unchanged (T9 addendum).
+
+    win32-only caller: on this class of host, `getaddrinfo("localhost", ...)` takes
+    ~2s, longer than `ping_redis`'s fixed 2s budget, so `/api/v1/health` never
+    reports `redis: up` even though Redis is reachable. A literal `127.0.0.1`
+    skips that lookup. A non-`localhost` host (e.g. a real DB host) is untouched.
+    """
+    parts = urlsplit(url)
+    if parts.hostname != "localhost":
+        return url
+    userinfo = ""
+    if parts.username:
+        userinfo = parts.username + (f":{parts.password}" if parts.password else "")
+        userinfo += "@"
+    netloc = f"{userinfo}127.0.0.1" + (f":{parts.port}" if parts.port else "")
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 def _sha256_files(paths: list[Path]) -> str:
     digest = hashlib.sha256()
     for path in sorted(paths):
@@ -125,28 +145,53 @@ def _wait_healthy(base_url: str, proc: subprocess.Popen[bytes]) -> None:
 def _start_backend(
     system: str, dbname: str, port: int, faults: frozenset[str]
 ) -> subprocess.Popen[bytes]:
+    # The backend reads the async SQLAlchemy form; `clone.dsn` returns a bare psycopg one.
+    database_url = clone.dsn(dbname).replace(
+        "postgresql://", "postgresql+asyncpg://", 1
+    )
+    redis_url = _redis_url(_REDIS_INDEX[system])
+    cmd = ["uv", "run", "uvicorn", "app.main:app", "--port", str(port)]
+    if sys.platform == "win32":
+        # uvicorn's default `--loop auto` resolves to `ProactorEventLoop` on win32
+        # (`uvicorn.loops.asyncio.asyncio_loop_factory`), which psycopg async and
+        # the checkpointer pool refuse (T9, `Psycopg cannot use the
+        # 'ProactorEventLoop'` -> `PoolTimeout`). `--loop` also accepts any
+        # `module:attribute` import string resolving to a zero-arg callable
+        # (`Config.get_loop_factory`, uvicorn 0.37); `asyncio.SelectorEventLoop`
+        # itself qualifies, so no new module or `sys.path` change is needed.
+        cmd += ["--loop", "asyncio:SelectorEventLoop"]
+        # `localhost` -> `127.0.0.1` (T9 addendum): see `_prefer_loopback`.
+        database_url = _prefer_loopback(database_url)
+        redis_url = _prefer_loopback(redis_url)
     env = {
         **os.environ,
         "APP_ENV": "eval",
-        # The backend reads the async SQLAlchemy form; `clone.dsn` returns a bare psycopg one.
-        "DATABASE_URL": clone.dsn(dbname).replace(
-            "postgresql://", "postgresql+asyncpg://", 1
-        ),
-        "REDIS_URL": _redis_url(_REDIS_INDEX[system]),
+        "DATABASE_URL": database_url,
+        "REDIS_URL": redis_url,
         "AGENT_SYSTEM": system,
         "BANK": "postgres",
         # The backend arms its fault hooks from this at startup, so one backend per fault set.
         "FAULTS": ",".join(sorted(faults)),
     }
     return subprocess.Popen(
-        ["uv", "run", "uvicorn", "app.main:app", "--port", str(port)],
+        cmd,
         cwd=ROOT / "backend",
         env=env,
     )
 
 
 def _stop_backend(proc: subprocess.Popen[bytes]) -> None:
-    proc.terminate()
+    if sys.platform == "win32":
+        # `uv run` doesn't forward termination to the uvicorn/python descendants
+        # it spawns on Windows (T9 addendum): `proc.terminate()` alone leaves them
+        # running, leaking the clone DB behind. `taskkill /T` kills the whole tree.
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+            capture_output=True,
+            check=False,
+        )
+    else:
+        proc.terminate()
     try:
         proc.wait(timeout=15)
     except subprocess.TimeoutExpired:
@@ -330,12 +375,15 @@ def run(
     system: str = "both",
     *,
     driver: Driver | None = None,
+    driver_name: str = "scripted",
     run_id: str | None = None,
     cases_filter: list[str] | None = None,
 ) -> str:
     """Play `suite` on `system` (`proposed`, `baseline` or `both`); returns the run id.
 
     `cases_filter` keeps only cases whose `seed_id` starts with one of the prefixes.
+    `driver_name` is recorded in `meta.json` (D15); it does not select the driver itself,
+    `driver` does — `__main__` keeps the two in sync.
     """
     systems = list(SYSTEMS) if system == "both" else [system]
     if any(s not in SYSTEMS for s in systems):
@@ -383,6 +431,7 @@ def run(
         # Any diff aborts the run, so a finished run has none.
         "restore_diffs": 0,
         "pii_hits": pii_hits,
+        "driver": driver_name,
     }
     write_report(out, {r["system"]: r["verdicts"] for r in results}, meta)
     return run_id

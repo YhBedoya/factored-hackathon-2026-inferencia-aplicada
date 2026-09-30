@@ -108,11 +108,24 @@ async def card_block(state: GraphState, config: RunnableConfig) -> dict[str, Any
 
 async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Fresh turn, or a `card_hint` resume: same `card_select` sub-flow
-    `card_info` runs (D12), then the block-kind check below."""
+    `card_info` runs (D12), then the block-kind check below.
+
+    A fresh turn's `block_kind` can arrive before the card is resolved (e.g.
+    "block my credit card, just a temporary lock" with several credit cards).
+    When the card is still ambiguous that `block_kind` has to survive into the
+    `card_hint` resume turn, whose own NLU only ever carries the card hint
+    (B4 fix) -- so it is remembered in `state["slots"]` the same way
+    `_check_state_and_plan` remembers it once the card is picked. A fresh
+    NLU `block_kind` always wins over the remembered one.
+    """
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]
     language = state["language"]
     nlu = state.get("nlu")
     hint = nlu.slots.card_hint if nlu is not None else None
+    nlu_block_kind: BlockKind | None = nlu.slots.block_kind if nlu is not None else None
+    remembered_slots = state.get("slots")
+    remembered_block_kind = remembered_slots.block_kind if remembered_slots is not None else None
+    block_kind = nlu_block_kind if nlu_block_kind is not None else remembered_block_kind
     failures = state.get("clarification_failures", 0)
 
     try:
@@ -124,12 +137,15 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     outcome = select_card(cards, hint, failures, policy, language)
 
     if isinstance(outcome, Ask):
-        return {
+        update: dict[str, Any] = {
             "pending": {"flow": "card_block", "node": "card_select", "awaiting_slot": "card_hint"},
             "clarification_failures": outcome.failures,
             "segments": [ask_which_card_text("block", outcome, language)],
             "ui": [card_picker_event(outcome)],
         }
+        if block_kind is not None:
+            update["slots"] = NLUSlots(block_kind=block_kind)
+        return update
     if isinstance(outcome, NoCards):
         return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
     if isinstance(outcome, Fallback):
@@ -139,9 +155,9 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
             "clarification_failures": 0,
         }
 
-    # Selected: the same message may already carry `block_kind` too.
-    block_kind: BlockKind | None = nlu.slots.block_kind if nlu is not None else None
-    update: dict[str, Any] = {"selected_card_id": outcome.card_id, "clarification_failures": 0}
+    # Selected: `block_kind` is either this turn's own or the one remembered
+    # across the ask-which-card question above.
+    update = {"selected_card_id": outcome.card_id, "clarification_failures": 0}
     if block_kind is None:
         update.update(_ask_block_kind(state, failures=0))
         return update

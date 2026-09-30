@@ -3,7 +3,8 @@ intent: card_status
 category: expired_session
 persona: CLI-1BQ0JRB6CMK7
 goal: Ver o status de um cartão depois de uma pausa longa na sessão
-fact_sheet: {}
+fact_sheet:
+  card_last4: '4051'
 setup:
   faults: []
   expire_session_before_turn: 1
@@ -26,7 +27,7 @@ cases:
   source: seed
   turns:
   - say: Quero ver o status de um dos meus cartões.
-  - say: Ainda estou aqui, é o cartão de crédito.
+  - say: Ainda estou aqui, é o cartão que termina em 4051.
   reviewer: null
   reviewed_at: null
 - case_id: d-card_status-expired_session-pt-br-01.p1
@@ -35,7 +36,7 @@ cases:
   source: paraphrase:gpt-6-luna:paraphrase@v1
   turns:
   - say: Quero consultar a situação de um dos meus cartões.
-  - say: Continuo aqui, é o cartão de crédito.
+  - say: Continuo aqui, é o cartão que termina em 4051.
   reviewer: null
   reviewed_at: null
 - case_id: d-card_status-expired_session-pt-br-01.p2
@@ -44,6 +45,6 @@ cases:
   source: paraphrase:gpt-6-luna:paraphrase@v1
   turns:
   - say: Gostaria de saber como está um dos meus cartões.
-  - say: Ainda tô por aqui, é o cartão de crédito.
+  - say: Ainda tô por aqui, é o cartão que termina em 4051.
   reviewer: null
   reviewed_at: null

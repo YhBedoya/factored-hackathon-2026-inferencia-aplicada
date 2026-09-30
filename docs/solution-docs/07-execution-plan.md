@@ -439,5 +439,5 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D4 | Suspected-compromise rule | ≥ 2 transactions picked, or card not in hand, or `fraud_score` > 30 |
 | D5 | D1.5 numeric targets | **Moved 2026-09-29** to a later card, after the first full dev run; still recorded before any held-out run |
 | D5 | Deploy of main after D5-A merge | **Decided 2026-09-29:** postponed to the end of D6 unless strictly required earlier. The human deploys `main` with the D5-A runbook (T27), and `/wave-run D5-A-deploy` records the results then |
-| D5–D6 | Paraphrase, simulator and judge model family | Non-Claude Bedrock family, picked on D5 |
+| D5–D6 | Paraphrase, simulator and judge model family | Paraphrase and simulator: OpenAI `gpt-6-luna` (ADR-030). Judge model still open |
 | D7 | Final model per step | From the held-out model comparison |

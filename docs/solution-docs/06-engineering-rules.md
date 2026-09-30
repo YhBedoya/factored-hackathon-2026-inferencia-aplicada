@@ -24,7 +24,7 @@ Contracts in `backend/.importlinter`, run in pre-commit and CI:
 - **Layers:** `app.api` → `app.domains` → `app.core`. Core never imports domains.
 - **Independence:** bank domains (`cards`, `transactions`, `disputes`, `customers`) don't import each other's repositories. They can only call each other through their `service` modules.
 - `app.domains.conversation` may reach bank data **only** through `app.domains.conversation.tools` (the registry). It may not import any bank `repository`.
-- Only `app.core.llm` may import LLM SDKs: `anthropic` / `langchain_anthropic` (during the build, ADR-028), `boto3` / `aioboto3` Bedrock clients, `langchain_aws`, and `openai` / `langchain_openai` (eval paraphrase only, ADR-030).
+- Only `app.core.llm` may import LLM SDKs: `anthropic` / `langchain_anthropic` (during the build, ADR-028), `boto3` / `aioboto3` Bedrock clients, `langchain_aws`, and `openai` / `langchain_openai` (eval paraphrase and simulator only, ADR-030).
 - `langfuse` is importable only from `app.core.llm` (the tracing hook, ADR-006).
 - `app.core.llm` does not import `app.domains.*.repository` (LLM code can't touch the DB).
 

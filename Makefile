@@ -94,8 +94,8 @@ chat-ui: ## Streamlit sandbox page on http://localhost:8501.
 nlu-smoke: ## Live NLU smoke set (needs ANTHROPIC_API_KEY).
 	cd backend && uv run python scripts/nlu_smoke.py
 
-eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] (proposed|baseline|both).
-	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES))
+eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] [DRIVER=scripted|simulator].
+	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES)) --driver $(or $(DRIVER),scripted)
 
 eval-pii-check: ## PII scan of a run's LLM-call export (RUN=<run_id>).
 	@test -n "$(RUN)" || { echo "usage: make eval-pii-check RUN=<run_id>"; exit 2; }

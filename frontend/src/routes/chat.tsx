@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { MeResponse } from "@/client";
 import { Composer } from "@/components/chat/Composer";
 import {
 	MessageList,
@@ -8,6 +9,7 @@ import {
 } from "@/components/chat/MessageList";
 import { ModeIndicator } from "@/components/chat/ModeIndicator";
 import { OtpModal } from "@/components/chat/OtpModal";
+import { SessionExpiredModal } from "@/components/chat/SessionExpiredModal";
 import { Button } from "@/components/ui/button";
 import {
 	ApiError,
@@ -18,6 +20,7 @@ import {
 	postConfirmation,
 	postMessage,
 	postSelection,
+	sessionExpired,
 } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
 import { type ModePayload, openConversationStream } from "@/lib/sse";
@@ -48,7 +51,16 @@ const KNOWN_ERROR_CODES = new Set([
 	"confirmation_invalid",
 ]);
 
-function errorKey(code: string): TKey {
+// D12: 429 and 5xx are mapped by HTTP status, ahead of the `code` (detail)
+// lookup -- a 5xx body isn't guaranteed to carry a JSON `detail` at all (a
+// gateway error, for one), so the status is the only reliable signal.
+function errorKey(code: string, status: number | null): TKey {
+	if (status === 429) {
+		return "errors.rate_limited";
+	}
+	if (status !== null && status >= 500) {
+		return "errors.server_error";
+	}
 	return (
 		KNOWN_ERROR_CODES.has(code) ? `errors.${code}` : "errors.generic"
 	) as TKey;
@@ -68,12 +80,17 @@ function ChatPage() {
 	const [reconnecting, setReconnecting] = useState(false);
 	const [composerDisabled, setComposerDisabled] = useState(false);
 	const [errorCode, setErrorCode] = useState<string | null>(null);
+	const [errorStatus, setErrorStatus] = useState<number | null>(null);
 	const [closed, setClosed] = useState(false);
 	const [otpTool, setOtpTool] = useState<string | null>(null);
 	const [mode, setMode] = useState<ModePayload>({
 		mode: "bot",
 		agent_display_name: null,
 	});
+	const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
+	// D8: captured once, on mount, so a later re-login is checked against who
+	// the chat started as, not against a display name that could since change.
+	const [identity, setIdentity] = useState<MeResponse | null>(null);
 
 	const connectStream = useCallback((id: string) => {
 		streamCleanupRef.current?.();
@@ -118,7 +135,10 @@ function ChatPage() {
 			onMode: (payload) => setMode(payload),
 			onError: (payload) => {
 				setTyping(false);
+				// SSE `error {code}` carries no HTTP status (`04` §3); only
+				// `turn_failed` reaches here today, already in `KNOWN_ERROR_CODES`.
 				setErrorCode(payload.code);
+				setErrorStatus(null);
 			},
 			onDone: () => {
 				setTyping(false);
@@ -139,6 +159,17 @@ function ChatPage() {
 		return () => streamCleanupRef.current?.();
 	}, [connectStream]);
 
+	useEffect(() => {
+		me().then(setIdentity);
+	}, []);
+
+	// D8: the chat is the only caller that holds a `401 session_expired`
+	// instead of letting `withAuthRetry` redirect to `/login`.
+	useEffect(() => {
+		sessionExpired.register(() => setSessionExpiredOpen(true));
+		return () => sessionExpired.unregister();
+	}, []);
+
 	async function ensureConversation(): Promise<string> {
 		if (conversationIdRef.current) {
 			return conversationIdRef.current;
@@ -152,7 +183,16 @@ function ChatPage() {
 		return id;
 	}
 
+	function clearError() {
+		setErrorCode(null);
+		setErrorStatus(null);
+	}
+
 	function handleTurnError(err: unknown) {
+		if (err instanceof ApiError && err.code === "session_replay_dropped") {
+			// D8: `SessionExpiredModal`'s mismatch branch already reset the chat.
+			return;
+		}
 		if (
 			err instanceof ApiError &&
 			err.status === 409 &&
@@ -162,6 +202,7 @@ function ChatPage() {
 			return;
 		}
 		setErrorCode(err instanceof ApiError ? err.code : "generic");
+		setErrorStatus(err instanceof ApiError ? err.status : null);
 		setComposerDisabled(false);
 	}
 
@@ -171,7 +212,7 @@ function ChatPage() {
 			{ id: crypto.randomUUID(), role: "customer", text, ui: [] },
 		]);
 		setComposerDisabled(true);
-		setErrorCode(null);
+		clearError();
 		try {
 			const id = await ensureConversation();
 			await postMessage(id, text);
@@ -184,7 +225,7 @@ function ChatPage() {
 		tokenId: string,
 		decision: ConfirmationDecision,
 	) {
-		setErrorCode(null);
+		clearError();
 		try {
 			const id = await ensureConversation();
 			setComposerDisabled(true);
@@ -196,7 +237,7 @@ function ChatPage() {
 
 	// D7: the pick is never shown as a customer bubble, only posted.
 	async function handleTransactionSelect(txIds: string[]) {
-		setErrorCode(null);
+		clearError();
 		try {
 			const id = await ensureConversation();
 			setComposerDisabled(true);
@@ -220,15 +261,32 @@ function ChatPage() {
 		setConversationId(null);
 		setMessages([]);
 		setClosed(false);
-		setErrorCode(null);
+		clearError();
 		setComposerDisabled(false);
 		setTyping(false);
 		setOtpTool(null);
 		setMode({ mode: "bot", agent_display_name: null });
 	}
 
+	// D8: a same-customer re-login just resumes the stream; the replay itself
+	// already went through `sessionExpired.replay()` before this runs.
+	function handleSessionResume() {
+		setSessionExpiredOpen(false);
+		if (conversationIdRef.current) {
+			connectStream(conversationIdRef.current);
+		}
+	}
+
+	function handleSessionMismatch() {
+		setSessionExpiredOpen(false);
+		handleNewConversation();
+	}
+
 	return (
-		<div className="flex h-dvh flex-col bg-bg">
+		// `chat-shell` scopes the mobile touch-target and overflow rules in
+		// `index.css` (D13) to this page, without touching the shared
+		// `ui/button`/`ui/input` primitives or the picker/confirm/list widgets.
+		<div className="chat-shell flex h-dvh flex-col overflow-x-hidden bg-bg">
 			<ModeIndicator
 				mode={mode.mode}
 				agentDisplayName={mode.agent_display_name}
@@ -250,7 +308,7 @@ function ChatPage() {
 			)}
 			{errorCode && (
 				<div role="alert" className="px-4 py-1 text-sm text-alert">
-					{t(errorKey(errorCode))}
+					{t(errorKey(errorCode, errorStatus))}
 				</div>
 			)}
 			{closed && (
@@ -272,6 +330,12 @@ function ChatPage() {
 					onVerified={handleOtpVerified}
 				/>
 			)}
+			<SessionExpiredModal
+				open={sessionExpiredOpen}
+				identity={identity}
+				onResume={handleSessionResume}
+				onMismatch={handleSessionMismatch}
+			/>
 			<Composer disabled={composerDisabled || closed} onSend={handleSend} />
 		</div>
 	);

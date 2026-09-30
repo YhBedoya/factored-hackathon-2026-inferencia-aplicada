@@ -110,3 +110,50 @@
 		@apply font-heading;
 	}
 }
+
+/* B2 mobile layout (D13). Scoped to `.chat-shell` (`routes/chat.tsx`'s root)
+ * rather than the shared `ui/button`/`ui/input` primitives or the
+ * picker/confirm/transaction-list widgets in `components/chat`, none of
+ * which this task touches directly. */
+/* A long unbreakable token (a reference code, a masked account number) never
+ * forces the page to scroll sideways at a 375px width. */
+.chat-shell * {
+	overflow-wrap: anywhere;
+}
+
+@media (max-width: 480px) {
+	/* Every button and text input in the chat gets a >=44px touch target,
+	 * shadcn's own sizes (`h-7`/`h-8`/`h-9`) stay under that on mobile. */
+	.chat-shell [data-slot="button"] {
+		min-height: 44px;
+		min-width: 44px;
+	}
+	.chat-shell [data-slot="input"] {
+		min-height: 44px;
+	}
+	/* `TransactionList`'s native checkbox/radio rows: the whole label is the
+	 * tap target, the same way a browser already treats `<label><input/></label>`. */
+	.chat-shell label:has(> input[type="checkbox"], > input[type="radio"]) {
+		min-height: 44px;
+	}
+
+	/* `AppShell`'s header chrome sits above `.chat-shell` on every route, so
+	 * it needs its own rule: the language toggle (`LanguageToggle.tsx`) and
+	 * the logout button (`data-testid="logout"`), by stable test id rather
+	 * than editing `AppShell.tsx`. */
+	[data-testid="lang-toggle"] [data-slot="button"],
+	[data-testid="logout"] {
+		min-height: 44px;
+		min-width: 44px;
+	}
+
+	/* `SessionExpiredModal`'s `DialogContent` renders through a Radix portal,
+	 * outside `.chat-shell`'s DOM subtree, so its own login form
+	 * (`LoginForm.tsx`, shared with `/login`) needs the same rule scoped by
+	 * its own test id instead of `.chat-shell` ancestry. */
+	[data-testid="session-expired-modal"] [data-slot="button"],
+	[data-testid="session-expired-modal"] [data-slot="input"],
+	[data-testid="session-expired-modal"] [data-slot="select-trigger"] {
+		min-height: 44px;
+	}
+}

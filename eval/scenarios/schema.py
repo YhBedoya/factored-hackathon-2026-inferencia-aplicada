@@ -103,9 +103,12 @@ class DbPatch(BaseModel):
 
 
 class SetupBlock(BaseModel):
-    """`setup:` block (D10). `faults`/`expire_session_before_turn` non-empty
-    or set makes the driver return `ended_by: not_runnable` with zero HTTP
-    calls; `db_patches` is A3-only."""
+    """`setup:` block (D10). Only a non-empty `faults` makes the driver
+    return `ended_by: not_runnable` with zero HTTP calls -- `db_patches` is
+    A3-only. `expire_session_before_turn` is a 0-based index, the same one
+    `enumerate(case.turns)`/`TurnRecord.index` use: the driver drops the
+    session cookies right before that turn and replays it per D8/D9 (a set
+    value is played, not skipped)."""
 
     model_config = ConfigDict(extra="forbid")
 
