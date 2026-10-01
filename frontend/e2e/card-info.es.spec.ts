@@ -22,7 +22,8 @@ test("ES chrome, card picker, language toggle and logout", async ({ page }) => {
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();
-	await page.waitForURL("**/chat");
+	await page.waitForURL("**/home");
+	await page.goto("/chat");
 
 	await page
 		.getByTestId("composer-input")

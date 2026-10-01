@@ -66,6 +66,7 @@ from app.domains.conversation.runner import (
     start_turn,
 )
 from app.domains.conversation.store import ConversationRow
+from app.domains.conversation.welcome import post_welcome
 from app.domains.identity.deps import get_session, require_csrf, require_role
 from app.domains.identity.models import Session
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
@@ -154,12 +155,20 @@ class CreateConversationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     language: Literal["es", "pt"] | None = None
+    welcome: bool = False
+
+
+class WelcomeMessage(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    text: str
 
 
 class CreateConversationResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     conversation_id: UUID
+    welcome: WelcomeMessage | None = None
 
 
 class PostMessageRequest(BaseModel):
@@ -207,7 +216,14 @@ async def create_conversation(
     conversation_id = await store.create_conversation(
         _customer_id(session), body.language or _DEFAULT_LANGUAGE
     )
-    return CreateConversationResponse(conversation_id=conversation_id)
+    if not body.welcome:
+        return CreateConversationResponse(conversation_id=conversation_id)
+    text = await post_welcome(
+        conversation_id, session=session, language=body.language or _DEFAULT_LANGUAGE
+    )
+    return CreateConversationResponse(
+        conversation_id=conversation_id, welcome=WelcomeMessage(text=text)
+    )
 
 
 @router.post("/{conversation_id}/messages", response_model=PostMessageResponse, status_code=202)

@@ -17,7 +17,7 @@ function LoginPage() {
 
 	async function handleSuccess() {
 		await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
-		await navigate({ to: "/chat" });
+		await navigate({ to: "/home" });
 	}
 
 	return (

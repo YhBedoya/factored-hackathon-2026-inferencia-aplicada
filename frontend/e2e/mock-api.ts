@@ -11,6 +11,103 @@ const FIXTURES_DIR = path.join(
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_COOKIE_VALUE = "e2e-fake-csrf-token";
 
+/** Fixed, language-neutral welcome the mock returns when the create asks for one (D2). */
+export const WELCOME_TEXT = "Welcome from Cardy (e2e)";
+
+/** Fake `/me/*` data for the default MX customer (home spec). Display strings are what the backend would format (R4). */
+const ME_CARDS = [
+	{
+		card_id: "card-credit",
+		kind: "credit",
+		last4: "6475",
+		mask: "•••• 6475",
+		status: "Active",
+		locked: false,
+	},
+	{
+		card_id: "card-debit",
+		kind: "debit",
+		last4: "1122",
+		mask: "•••• 1122",
+		status: "Active",
+		locked: false,
+	},
+	{
+		card_id: "card-blocked",
+		kind: "credit",
+		last4: "9001",
+		mask: "•••• 9001",
+		status: "Blocked",
+		locked: true,
+	},
+] as const;
+
+const ME_CARD_DETAILS: Record<string, Record<string, unknown>> = {
+	"card-credit": {
+		...ME_CARDS[0],
+		currency: "MXN",
+		expiration_date: "2028-09-30",
+		expiration_date_display: "09/2028",
+		credit_limit: "5000.00",
+		credit_limit_display: "$5,000.00",
+		current_balance: "1250.00",
+		current_balance_display: "$1,250.00",
+		available_credit: "3750.00",
+		available_credit_display: "$3,750.00",
+		days_past_due: 0,
+	},
+	"card-debit": {
+		...ME_CARDS[1],
+		currency: "MXN",
+		expiration_date: "2028-09-30",
+		expiration_date_display: "09/2028",
+		credit_limit: null,
+		credit_limit_display: null,
+		current_balance: null,
+		current_balance_display: null,
+		available_credit: null,
+		available_credit_display: null,
+		days_past_due: null,
+	},
+	"card-blocked": {
+		...ME_CARDS[2],
+		currency: "MXN",
+		expiration_date: "2027-01-31",
+		expiration_date_display: "01/2027",
+		credit_limit: "2000.00",
+		credit_limit_display: "$2,000.00",
+		current_balance: "0.00",
+		current_balance_display: "$0.00",
+		available_credit: "2000.00",
+		available_credit_display: "$2,000.00",
+		days_past_due: 0,
+	},
+};
+
+/** One page of fake transactions; dates are computed at request time so the 7-day decline alert stays true. */
+function txPage(cursor: string | null) {
+	const second = cursor !== null;
+	const base = Date.now() - 24 * 60 * 60 * 1000;
+	const rows = [0, 1, 2].map((i) => {
+		const at = new Date(base - (second ? 10 + i : i) * 60 * 60 * 1000);
+		const declined = !second && i === 0;
+		return {
+			tx_id: `tx-${second ? "b" : "a"}${i}`,
+			card_id: "card-credit",
+			card_mask: "•••• 6475",
+			occurred_at: at.toISOString(),
+			date_display: at.toISOString().slice(0, 10),
+			amount: "100.00",
+			currency: "MXN",
+			amount_display: "$100.00",
+			merchant_name: `Comercio ${second ? "B" : "A"}${i}`,
+			type: "Purchase",
+			status: declined ? "Declined" : "Approved",
+		};
+	});
+	return { items: rows, next_cursor: second ? null : "page-2" };
+}
+
 export type MockCustomer = {
 	role: "customer";
 	login_hint: string;
@@ -168,10 +265,36 @@ export async function installMockApi(
 		}
 
 		if (pathname.endsWith("/conversations") && method === "POST") {
+			const body = request.postDataJSON() as { welcome?: boolean } | null;
 			await route.fulfill({
 				status: 201,
-				json: { conversation_id: "conv-e2e-001" },
+				json: {
+					conversation_id: "conv-e2e-001",
+					welcome: body?.welcome ? { text: WELCOME_TEXT } : null,
+				},
 			});
+			return;
+		}
+
+		if (method === "GET" && pathname.endsWith("/me/cards")) {
+			await route.fulfill({ status: 200, json: ME_CARDS });
+			return;
+		}
+
+		const cardMatch = /\/me\/cards\/([^/]+)$/.exec(pathname);
+		if (method === "GET" && cardMatch) {
+			const details = ME_CARD_DETAILS[cardMatch[1] ?? ""];
+			await route.fulfill(
+				details
+					? { status: 200, json: details }
+					: { status: 404, json: { detail: "not_found" } },
+			);
+			return;
+		}
+
+		if (method === "GET" && pathname.endsWith("/me/transactions")) {
+			const cursor = new URL(request.url()).searchParams.get("cursor");
+			await route.fulfill({ status: 200, json: txPage(cursor) });
 			return;
 		}
 

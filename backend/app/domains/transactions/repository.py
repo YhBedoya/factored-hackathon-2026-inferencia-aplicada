@@ -17,6 +17,7 @@ See `docs/specs/d2-a-login-read-tools-api.md` D11 and
 `docs/specs/d4-b-disputes-handoff-screens.md` D14.
 """
 
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import RowMapping, TextClause, bindparam, text
@@ -26,7 +27,12 @@ from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
 from app.domains.transactions.schemas import TxFilter
 
-__all__ = ["fetch_transactions", "fetch_transactions_by_ids", "probe_transactions_exist"]
+__all__ = [
+    "fetch_transactions",
+    "fetch_transactions_by_ids",
+    "fetch_transactions_page",
+    "probe_transactions_exist",
+]
 
 _SELECT = """
     SELECT transaction_id, product_id, transaction_date AS occurred_at,
@@ -38,7 +44,9 @@ _SELECT = """
 """
 
 
-def _build_query(customer_id: str, tx_filter: TxFilter) -> tuple[TextClause, dict[str, Any]]:
+def _build_where(
+    customer_id: str, tx_filter: TxFilter
+) -> tuple[list[str], dict[str, Any], list[str]]:
     conditions = ["customer_id = :customer_id"]
     params: dict[str, Any] = {"customer_id": customer_id}
     expanding: list[str] = []
@@ -68,6 +76,11 @@ def _build_query(customer_id: str, tx_filter: TxFilter) -> tuple[TextClause, dic
         conditions.append("merchant_name IN :merchant_names")
         params["merchant_names"] = tx_filter.merchant_names
         expanding.append("merchant_names")
+    return conditions, params, expanding
+
+
+def _build_query(customer_id: str, tx_filter: TxFilter) -> tuple[TextClause, dict[str, Any]]:
+    conditions, params, expanding = _build_where(customer_id, tx_filter)
     where_clause = " AND ".join(conditions)
     sql = text(f"{_SELECT} WHERE {where_clause} ORDER BY transaction_date DESC LIMIT 10")
     if expanding:
@@ -78,6 +91,37 @@ def _build_query(customer_id: str, tx_filter: TxFilter) -> tuple[TextClause, dic
 async def fetch_transactions(customer_id: str, tx_filter: TxFilter) -> list[RowMapping]:
     """At most 10 rows matching `tx_filter`, newest first."""
     sql, params = _build_query(customer_id, tx_filter)
+    try:
+        async with get_engine().connect() as conn:
+            result = await conn.execute(sql, params)
+            return list(result.mappings().all())
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"transactions query failed: {exc}") from exc
+
+
+async def fetch_transactions_page(
+    customer_id: str,
+    tx_filter: TxFilter,
+    after: tuple[datetime, str] | None,
+    limit: int,
+) -> list[RowMapping]:
+    """Up to `limit` rows, newest first, strictly after the keyset `after`
+    (`(transaction_date, transaction_id)`, both descending). Same filter
+    conditions as `fetch_transactions`; the caller asks for `limit + 1` to
+    learn whether another page exists.
+    """
+    conditions, params, expanding = _build_where(customer_id, tx_filter)
+    if after is not None:
+        conditions.append("(transaction_date, transaction_id) < (:after_ts, :after_id)")
+        params["after_ts"], params["after_id"] = after
+    params["limit"] = limit
+    where_clause = " AND ".join(conditions)
+    sql = text(
+        f"{_SELECT} WHERE {where_clause} "
+        "ORDER BY transaction_date DESC, transaction_id DESC LIMIT :limit"
+    )
+    if expanding:
+        sql = sql.bindparams(*(bindparam(name, expanding=True) for name in expanding))
     try:
         async with get_engine().connect() as conn:
             result = await conn.execute(sql, params)

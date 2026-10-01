@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ApiError, getStaffTranscript, postAgentMessage } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
 import { type MessagePayload, openAgentConversationStream } from "@/lib/sse";
+import { newId } from "@/lib/uuid";
 
 type AgentChatProps = {
 	conversationId: string;
@@ -41,7 +42,7 @@ export function AgentChat({ conversationId }: AgentChatProps) {
 				onMessage: (payload) => {
 					setMessages((prev) => [
 						...prev,
-						{ role: payload.role, text: payload.text, id: crypto.randomUUID() },
+						{ role: payload.role, text: payload.text, id: newId() },
 					]);
 				},
 				onError: () => {},
@@ -61,7 +62,7 @@ export function AgentChat({ conversationId }: AgentChatProps) {
 					history.map((message) => ({
 						role: message.role,
 						text: message.text,
-						id: crypto.randomUUID(),
+						id: newId(),
 					})),
 				);
 				follow();
