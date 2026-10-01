@@ -17,8 +17,11 @@ function LandingPage() {
 	return (
 		<>
 			<WarpStarfield />
-			<Nav />
-			<Hero />
+			{/* The first screen is only the controls and the hero; Cardy starts below the fold. */}
+			<div className="flex min-h-svh flex-col">
+				<Nav />
+				<Hero />
+			</div>
 			<CardyShowcase />
 			<Footer />
 			<FloatingCardy />

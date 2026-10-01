@@ -18,7 +18,7 @@ export function SoonButton({
 			aria-disabled="true"
 			className={
 				large
-					? "h-12 rounded-full px-7 text-base font-semibold"
+					? "h-12 rounded-full px-7 text-base font-semibold lg:h-14 lg:px-8 lg:text-lg"
 					: "h-10 rounded-full px-4 text-sm font-semibold"
 			}
 		>

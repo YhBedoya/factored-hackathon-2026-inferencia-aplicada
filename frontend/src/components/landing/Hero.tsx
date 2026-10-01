@@ -41,13 +41,13 @@ function CardFace({
 			className={`absolute flex aspect-[1.586/1] w-[70%] flex-col justify-between rounded-2xl p-[6%_7%] shadow-2xl ${className}`}
 		>
 			<div className="flex items-center justify-between">
-				<span className="font-heading text-lg font-bold">Swip</span>
-				<span className="text-xs font-semibold tracking-widest uppercase">
+				<span className="font-heading text-lg font-bold lg:text-2xl">Swip</span>
+				<span className="text-xs font-semibold tracking-widest uppercase lg:text-sm">
 					{kind}
 				</span>
 			</div>
 			<Chip />
-			<span className="font-semibold tracking-[0.12em]">{mask}</span>
+			<span className="font-semibold tracking-[0.12em] lg:text-xl">{mask}</span>
 		</div>
 	);
 }
@@ -55,7 +55,7 @@ function CardFace({
 function HeroVisual() {
 	const { t } = useI18n();
 	return (
-		<div className="relative mx-auto aspect-[1.15/1] w-full max-w-[520px]">
+		<div className="relative mx-auto aspect-[1.15/1] w-full max-w-[680px]">
 			<span
 				aria-hidden="true"
 				className="absolute top-[30%] left-[30%] size-[3px] rounded-full bg-gold opacity-90"
@@ -74,8 +74,8 @@ function HeroVisual() {
 				mask="•••• 0821"
 				className="top-[32%] left-[26%] rotate-3 bg-cyan text-background"
 			/>
-			<div className="absolute right-0 bottom-0 flex w-[min(300px,80%)] flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-2xl">
-				<span className="flex items-center gap-2 text-sm font-semibold">
+			<div className="absolute right-0 bottom-0 flex w-[min(300px,80%)] flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-2xl lg:w-[min(360px,80%)] lg:p-5">
+				<span className="flex items-center gap-2 text-sm font-semibold lg:text-base">
 					<span
 						aria-hidden="true"
 						className="grid size-6 place-items-center rounded-full border border-cyan bg-cyan/20 font-heading text-xs text-cyan"
@@ -84,7 +84,7 @@ function HeroVisual() {
 					</span>
 					{t("landing.hero.bubbleName")}
 				</span>
-				<p className="text-sm">{t("landing.hero.bubble")}</p>
+				<p className="text-sm lg:text-base">{t("landing.hero.bubble")}</p>
 			</div>
 		</div>
 	);
@@ -95,16 +95,17 @@ export function Hero() {
 	return (
 		<header
 			id="inicio"
-			className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-12 sm:px-8 md:grid-cols-2 md:py-24"
+			className="mx-auto grid w-full max-w-6xl flex-1 content-center items-center gap-12 px-4 py-12 sm:px-8 md:grid-cols-2 md:py-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10"
 		>
-			<div className="flex flex-col items-start gap-6">
-				<span className="text-sm font-semibold text-muted-foreground">
-					{t("landing.hero.label")}
-				</span>
-				<h1 className="text-4xl leading-[1.06] font-bold tracking-tight text-balance md:text-6xl">
-					{t("landing.hero.title")}
+			<div className="flex flex-col items-start gap-6 lg:gap-8">
+				<h1 className="flex items-center gap-4 font-heading text-8xl leading-none font-bold tracking-tight md:gap-6 md:text-9xl lg:gap-7 lg:text-[10rem]">
+					<span
+						aria-hidden="true"
+						className="size-8 rounded-[8px] bg-cyan md:size-10 lg:size-12 lg:rounded-[10px]"
+					/>
+					Swip
 				</h1>
-				<p className="max-w-[540px] text-lg text-pretty text-muted-foreground">
+				<p className="max-w-[540px] text-2xl text-pretty text-foreground md:text-3xl lg:max-w-[620px] lg:text-4xl">
 					{t("landing.hero.body")}
 				</p>
 				<div className="mt-2 flex flex-wrap gap-3">
@@ -112,7 +113,7 @@ export function Hero() {
 					<Button
 						asChild
 						variant="outline"
-						className="h-12 rounded-full px-7 text-base font-semibold"
+						className="h-12 rounded-full px-7 text-base font-semibold lg:h-14 lg:px-8 lg:text-lg"
 					>
 						<Link to="/login">{t("landing.hero.meet")}</Link>
 					</Button>

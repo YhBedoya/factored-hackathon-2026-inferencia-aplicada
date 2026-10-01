@@ -205,6 +205,10 @@ Docs:
 | AM14 | End of card | `AppShell.tsx`'s wordmark truncates at 360 px, to meet the no-horizontal-scroll criterion. This is an approved scope extension. |
 | AM15 | Final gate | The AppShell wordmark "Cardy, de Swip" is removed on every page (supersedes AM14). The landing nav "Swip" logo is kept and enlarged. |
 | AM16 | Final gate | The landing gets an animated warp starfield (`WarpStarfield.tsx`, canvas, 500 stars, still frame under reduced motion). The hero cards get gold EMV chips, and the credit card a lighter cyan gradient, using brand tokens only. |
+| AM17 | After push | Landing has no nav bar and no "Ayuda con Cardy" nav link: "Iniciar sesión" and the disabled "Abre tu cuenta" sit top-right at the content column edge, and ES/PT sits at the far right edge of the page. AppShell skips its header on `/`. The hero heading is the Swip logo (cyan square + "Swip") beside the cards, replacing "Tus tarjetas, claras y en tus manos." |
+| AM18 | After push | The hero paragraph is the tagline "Tu universo financiero, a un Swip de distancia." (PT "Seu universo financeiro, a um Swip de distância."). The logo and tagline are enlarged (tagline in `text-foreground`), and the hero label "Tarjetas de crédito y débito · México, Colombia y Argentina" is removed. |
+| AM19 | After push | The `#cardy` section copy is rewritten: title "Cardy, tu copiloto inteligente en el universo Swip", an intro, three bullets and a closing line (keys `landing.cardy.{body,item1,item2,item3,closing}`), with the CTA "Conoce a Cardy" (PT "Conheça a Cardy"). |
+| AM20 | After push | The Cardy intro is styled like its bullets. The nav and hero fill the first screen (`min-h-svh`), so the Cardy section starts below the fold, and the hero components are scaled up on large screens. |
 
 `04-contracts.md` §3, as updated by T3, is consistent with this spec. Its 422 detail codes (`invalid_filter`, `invalid_cursor`) are more specific than this spec's plain `422`, which is a refinement, not a contradiction.
 
