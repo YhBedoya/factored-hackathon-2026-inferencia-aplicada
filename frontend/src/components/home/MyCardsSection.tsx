@@ -123,7 +123,7 @@ function CardFace({ card }: { card: CardView }) {
 	return (
 		<span
 			aria-hidden="true"
-			className={`flex aspect-[1.586/1] flex-col justify-between rounded-[10px] border px-3 py-2.5 shadow-[0_8px_18px_rgba(0,0,0,.35)] ${debit ? "border-cyan bg-cyan text-bg" : "border-border bg-card/50 text-foreground"}`}
+			className={`flex aspect-[1.586/1] flex-col justify-between rounded-[10px] border px-3 py-2.5 shadow-[0_8px_18px_rgba(0,0,0,.35)] ${debit ? "border-cyan bg-cyan text-bg" : "border-cyan/40 bg-muted bg-gradient-to-br from-cyan/35 via-cyan/15 to-transparent text-foreground"}`}
 		>
 			<span className="flex items-center justify-between">
 				<span className="font-heading text-[13px] font-bold">Swip</span>
@@ -133,9 +133,7 @@ function CardFace({ card }: { card: CardView }) {
 					{t(`home.cards.kind.${card.kind}` as TKey)}
 				</span>
 			</span>
-			<span
-				className={`h-[15px] w-5 rounded-[3px] ${debit ? "border-[1.5px] border-bg" : "bg-gold"}`}
-			/>
+			<span className="h-[15px] w-5 rounded-[3px] bg-gradient-to-br from-gold via-gold/85 to-gold/60 shadow-[inset_0_1px_0_rgb(255_255_255/0.45),0_1px_2px_rgb(0_0_0/0.35)]" />
 			<span className="text-[11px] font-semibold tracking-widest">
 				{card.mask}
 			</span>

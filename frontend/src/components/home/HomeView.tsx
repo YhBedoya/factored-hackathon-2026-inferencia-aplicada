@@ -6,7 +6,7 @@ import { ME_QUERY_KEY } from "@/components/layout/useLogout";
 import { me } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
 
-import { CardyPanel } from "./CardyPanel";
+import { CardyPanel, type CardyPanelState } from "./CardyPanel";
 import { HomeNav } from "./HomeNav";
 import { HomeSidebar } from "./HomeSidebar";
 import { MyCardsSection } from "./MyCardsSection";
@@ -28,7 +28,7 @@ export function HomeView() {
 	const home = useHomeCards();
 	const [selectedId, setSelectedId] = useState<string | undefined>();
 	const [hideBalances, setHideBalances] = useState(false);
-	const [open, setOpen] = useState(false);
+	const [cardy, setCardy] = useState<CardyPanelState>("closed");
 	const [prefill, setPrefill] = useState<string | undefined>();
 
 	const name = customer?.display_name;
@@ -41,12 +41,12 @@ export function HomeView() {
 
 	function ask(prompt: string) {
 		setPrefill(prompt);
-		setOpen(true);
+		setCardy("open");
 	}
 
 	function openCardy() {
 		setPrefill(undefined);
-		setOpen(true);
+		setCardy("open");
 	}
 
 	return (
@@ -94,10 +94,11 @@ export function HomeView() {
 			</div>
 			<Footer />
 			<CardyPanel
-				open={open}
+				state={cardy}
 				prefill={prefill}
 				onOpen={openCardy}
-				onClose={() => setOpen(false)}
+				onMinimize={() => setCardy("minimized")}
+				onClose={() => setCardy("closed")}
 			/>
 		</div>
 	);

@@ -5,9 +5,11 @@ import type { CSSProperties } from "react";
 // CSS-only, like `StarryBackground`: each layer is one repeating tile of
 // `radial-gradient` stars, drawn one tile larger than the viewport and
 // shifted by exactly one tile per cycle (`star-drift` in `index.css`), so the
-// loop never jumps. The nearest layer drifts ~10 px/s (about 10 s per
-// 100 px), the farther, larger tiles ~7 and ~5 px/s for depth;
-// `star-twinkle` fades each layer's opacity on its own phase.
+// loop never jumps. The nearest layer drifts ~20 px/s (about 5 s per
+// 100 px), the farther, larger tiles ~14 and ~10 px/s for depth; a share
+// of each layer's stars are big (2.5-3 px, like the landing's nearest
+// ones) and the bright gold ones are 4 px; `star-twinkle` fades each
+// layer's opacity on its own phase.
 // Product decision: this keeps moving under `prefers-reduced-motion` too.
 
 type Layer = {
@@ -16,6 +18,7 @@ type Layer = {
 	count: number;
 	seed: number;
 	gold: number;
+	big: number;
 	drift: number;
 	twinkle: number;
 	delay: number;
@@ -28,7 +31,8 @@ const LAYERS: Layer[] = [
 		count: 9,
 		seed: 7,
 		gold: 0,
-		drift: 36,
+		big: 0.3,
+		drift: 18,
 		twinkle: 7,
 		delay: 0,
 	},
@@ -38,7 +42,8 @@ const LAYERS: Layer[] = [
 		count: 10,
 		seed: 23,
 		gold: 2,
-		drift: 75,
+		big: 0.2,
+		drift: 38,
 		twinkle: 9,
 		delay: -3,
 	},
@@ -48,7 +53,8 @@ const LAYERS: Layer[] = [
 		count: 8,
 		seed: 41,
 		gold: 2,
-		drift: 144,
+		big: 0.15,
+		drift: 72,
 		twinkle: 6,
 		delay: -5,
 	},
@@ -63,16 +69,19 @@ function random(seed: number) {
 	};
 }
 
-function stars({ width, height, count, seed, gold }: Layer): string {
+function stars({ width, height, count, seed, gold, big }: Layer): string {
 	const next = random(seed);
 	return Array.from({ length: count }, (_, i) => {
 		const x = Math.round(next() * width);
 		const y = Math.round(next() * height);
-		const size = next() < 0.3 ? 1.5 : 1;
+		const roll = next();
+		const size =
+			roll < big ? (roll < big / 2 ? 3 : 2.5) : roll < big + 0.3 ? 1.5 : 1;
+		const radius = i < gold ? 4 : size;
 		const alpha = (0.45 + next() * 0.5).toFixed(2);
 		const color =
 			i < gold ? `rgba(245,198,107,${alpha})` : `rgba(255,255,255,${alpha})`;
-		return `radial-gradient(${size}px ${size}px at ${x}px ${y}px, ${color}, transparent)`;
+		return `radial-gradient(${radius}px ${radius}px at ${x}px ${y}px, ${color}, transparent)`;
 	}).join(", ");
 }
 

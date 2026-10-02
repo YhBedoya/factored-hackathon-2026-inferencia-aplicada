@@ -119,6 +119,29 @@ test("Cardy panel opens on /home with a welcome and answers a message", async ({
 	await expect(page.getByTestId("message-bot")).toContainText(WELCOME_TEXT);
 });
 
+test("minimizing the Cardy panel keeps the conversation", async ({ page }) => {
+	await installMockApi(page, {
+		password: PASSWORD,
+		fixtures: ["card-info-ask.sse"],
+	});
+	await login(page);
+
+	await page.getByTestId("cardy-launcher").click();
+	await page.getByTestId("composer-input").fill("¿cuánto debo?");
+	await page.getByTestId("composer-send").click();
+	await expect(page.getByTestId("message-bot")).toHaveCount(2);
+
+	await page
+		.getByTestId("cardy-panel")
+		.getByRole("button", { name: es["home.cardy.minimize"], exact: true })
+		.click();
+	await expect(page.getByTestId("cardy-panel")).toBeHidden();
+	await page.getByTestId("cardy-launcher").click();
+	await expect(page.getByTestId("message-customer")).toHaveCount(1);
+	await expect(page.getByTestId("message-bot")).toHaveCount(2);
+	await expect(page.getByTestId("composer-input")).toBeFocused();
+});
+
 test("visiting /home without a session opens the login pop-up on the landing", async ({
 	page,
 }) => {

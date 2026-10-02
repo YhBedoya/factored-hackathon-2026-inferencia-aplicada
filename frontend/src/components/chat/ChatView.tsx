@@ -71,6 +71,8 @@ type ChatViewProps = {
 	fresh?: boolean;
 	/** A control shown at the right of the name row, e.g. the home panel's close button. */
 	headerAction?: ReactNode;
+	/** Called on each Cardy or agent reply, e.g. to flag a minimized panel. */
+	onReply?: () => void;
 };
 
 export function ChatView({
@@ -78,6 +80,7 @@ export function ChatView({
 	className = "h-dvh",
 	fresh = false,
 	headerAction,
+	onReply,
 }: ChatViewProps) {
 	const { t, lang } = useI18n();
 	const conversationIdRef = useRef<string | null>(
@@ -85,6 +88,9 @@ export function ChatView({
 	);
 	const streamCleanupRef = useRef<(() => void) | null>(null);
 	const pendingUiRef = useRef<TranscriptMessage["ui"]>([]);
+	// `connectStream` is created once, so it reads the latest callback here.
+	const onReplyRef = useRef(onReply);
+	onReplyRef.current = onReply;
 
 	const [conversationId, setConversationId] = useState(
 		conversationIdRef.current,
@@ -117,6 +123,7 @@ export function ChatView({
 				if (payload.role === "customer") {
 					return;
 				}
+				onReplyRef.current?.();
 				if (payload.role !== "bot") {
 					// An agent reply, or the fixed system line on return to bot.
 					setMessages((prev) => [

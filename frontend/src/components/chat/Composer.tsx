@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,12 +16,21 @@ type ComposerProps = {
 export function Composer({ disabled, onSend, prefill }: ComposerProps) {
 	const { t } = useI18n();
 	const [value, setValue] = useState("");
+	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		if (prefill) {
 			setValue(prefill);
 		}
 	}, [prefill]);
+
+	// A disabled input drops focus, so give it back each time the turn ends
+	// (and on mount): the customer types the next message without clicking.
+	useEffect(() => {
+		if (!disabled) {
+			inputRef.current?.focus();
+		}
+	}, [disabled]);
 
 	function handleSubmit(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -38,6 +47,7 @@ export function Composer({ disabled, onSend, prefill }: ComposerProps) {
 		// `h-dvh` column instead of a tall transcript squeezing it out.
 		<form onSubmit={handleSubmit} className="flex shrink-0 gap-2 border-t p-3">
 			<Input
+				ref={inputRef}
 				data-testid="composer-input"
 				value={value}
 				onChange={(event) => setValue(event.target.value)}

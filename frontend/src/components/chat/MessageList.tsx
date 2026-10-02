@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { CardPicker } from "@/components/chat/CardPicker";
 import { ConfirmCard } from "@/components/chat/ConfirmCard";
 import { HandoffBanner } from "@/components/chat/HandoffBanner";
@@ -38,8 +39,24 @@ export function MessageList({
 	onConfirmDecision,
 	onTransactionSelect,
 }: MessageListProps) {
+	const listRef = useRef<HTMLDivElement>(null);
+
+	// Every new message or typing change jumps to the latest one, even if the
+	// customer had scrolled up (product decision). The scrollbar is hidden;
+	// wheel, touch and keys still scroll back through earlier messages.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: re-run on each new message/typing change
+	useEffect(() => {
+		const list = listRef.current;
+		if (list) {
+			list.scrollTop = list.scrollHeight;
+		}
+	}, [messages, typing]);
+
 	return (
-		<div className="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
+		<div
+			ref={listRef}
+			className="no-scrollbar flex flex-1 flex-col gap-3 overflow-y-auto p-4"
+		>
 			{messages.map((message) => (
 				<div key={message.id} className="flex flex-col">
 					{message.role === "agent" && message.author && (
