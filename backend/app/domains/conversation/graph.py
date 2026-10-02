@@ -63,6 +63,7 @@ import sys
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, Literal, NotRequired, TypedDict, cast, get_args
 
+import structlog
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
@@ -74,7 +75,14 @@ from app.core.errors import AccessDenied
 from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.conversation.intent_registry import intent_nodes, management_intents
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
-from app.domains.conversation.state import TurnState, _reduce_segments
+from app.domains.conversation.state import (
+    IntentSegment,
+    SegmentStatus,
+    TurnState,
+    _reduce_intent_segments,
+    _reduce_segments,
+    mark_segment,
+)
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import UIEvent
 from app.domains.handoff.schemas import HandoffReason
@@ -177,6 +185,12 @@ class GraphState(TurnState):
     `TurnState` contract (B3): a flow's filled reply text and this turn's
     step-up resume flag are this graph's own bookkeeping, not something a
     tool, a policy or another domain ever reads.
+
+    `intent_segments` (analytics D14) is the per-intent record of the turn
+    and is a different thing from `segments` (the reply texts). Only
+    `_track_segments` writes it. `segment_deferred` holds a read flow's
+    segment until `compose` has run, because a compose failure turns it into
+    a `handoff` (D2).
     """
 
     user_text: NotRequired[str]
@@ -186,6 +200,8 @@ class GraphState(TurnState):
     selection: NotRequired[TxSelection | None]
     ui: NotRequired[list[UIEvent]]
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
+    intent_segments: NotRequired[Annotated[list[IntentSegment], _reduce_intent_segments]]
+    segment_deferred: NotRequired[IntentSegment | None]
     handoff_request: NotRequired[str]
     grounding: NotRequired[str]
     actions_at_turn_start: NotRequired[int]
@@ -395,9 +411,159 @@ def _guard_access[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
                     "escalation_reason": "unauthorized_access",
                 }
             text = get_template("injection_suspected", state.get("language", "es"))
-            return {"unauthorized_attempts": attempt, "segments": [text]}
+            return {
+                "unauthorized_attempts": attempt,
+                "segments": [text],
+                **mark_segment("abstained"),
+            }
 
     return cast(N, guarded)
+
+
+_logger = structlog.get_logger()
+
+_FLOW_INTENT: dict[str, str] = {}
+for _intent, _node in _INTENT_NODES.items():
+    _FLOW_INTENT.setdefault(_node, _intent)
+"""Flow node -> its registry intent, for a resume whose queue head belongs to
+another flow (the replacement offer). `card_info` serves two intents; its
+resume always finds its own intent at the queue head, so the first one is only
+a fallback.
+"""
+
+
+def _real_intents(state: GraphState) -> list[str]:
+    nlu = state.get("nlu")
+    return [] if nlu is None else [i for i in nlu.intents if i not in _MANAGEMENT_INTENTS]
+
+
+def _queue_head(state: GraphState) -> Intent | None:
+    queue = state.get("intent_queue") or []
+    return queue[0] if queue else None
+
+
+def _flow_segment(name: str, state: GraphState, update: dict[str, Any]) -> dict[str, Any]:
+    """The segment a flow node's turn produced, by D2's first-match rules (D18)."""
+    pending = state.get("pending")
+    via_pending = pending is not None and _FLOW_NODES.get(pending["flow"]) == name
+    head = _queue_head(state)
+    if via_pending and (head is None or _INTENT_NODES.get(head) != name):
+        intent = _FLOW_INTENT.get(name)
+    else:
+        intent = head
+    if intent is None:
+        return {}
+
+    new_pending = update["pending"] if "pending" in update else pending
+    owns_pending = new_pending is not None and _FLOW_NODES.get(new_pending["flow"]) == name
+
+    # D22: a pause another flow opened as an offer marks the flow it opened.
+    offered = state.get("bot_offered_flow")
+    bot_offered = via_pending and offered is not None and _FLOW_NODES.get(offered) == name
+    new_offered: str | None = None
+    if new_pending is not None and not owns_pending and new_pending["node"] == "offer":
+        new_offered = new_pending["flow"]
+    elif owns_pending and bot_offered:
+        new_offered = offered
+    out: dict[str, Any] = {}
+    if new_offered != offered:
+        out["bot_offered_flow"] = new_offered
+
+    segment: IntentSegment = {"intent": intent, "route": name, "status": "resolved"}
+    if bot_offered:
+        segment["bot_offered"] = True
+
+    mark = update.get("segment_mark")
+    reason = update.get("escalation_reason")
+    status: SegmentStatus
+    if mark is not None:
+        status = mark["status"]
+        if mark.get("awaiting_slot") is not None:
+            segment["awaiting_slot"] = mark["awaiting_slot"]
+    elif reason == "no_cards":
+        status = "abstained"
+    elif reason is not None or update.get("handoff_queue") is not None:
+        status = "handoff"
+    elif owns_pending and new_pending is not None:
+        status = "awaiting"
+        if new_pending["awaiting_slot"] is not None:
+            segment["awaiting_slot"] = new_pending["awaiting_slot"]
+    elif any(a.verified for a in update.get("actions") or []):
+        status = "resolved"
+    elif update.get("facts"):
+        # Decided after `compose`: a compose failure makes it a handoff.
+        out["segment_deferred"] = segment
+        return out
+    else:
+        # A flow ending nobody classified: record nothing rather than guess.
+        _logger.warning("segment.unmarked", node=name)
+        return out
+    segment["status"] = status
+    out["intent_segments"] = [segment]
+    return out
+
+
+def _segment_update(name: str, state: GraphState, update: dict[str, Any]) -> dict[str, Any]:
+    """The extra channels a wrapped node's update gets (never an LLM's say, R6)."""
+    if name in _FLOW_NODES:
+        return _flow_segment(name, state, update)
+    if name == "unsupported":
+        nlu = state.get("nlu")
+        head = _queue_head(state)
+        # An injection attempt is not work on the paused intent behind it.
+        if head is None or (nlu is not None and nlu.status == "injection_suspected"):
+            return {}
+        return {"intent_segments": [{"intent": head, "route": name, "status": "abstained"}]}
+    if name == "abstain":
+        return {
+            "intent_segments": [
+                {"intent": i, "route": name, "status": "abstained"} for i in _real_intents(state)
+            ]
+        }
+    if name == "compose":
+        deferred = state.get("segment_deferred")
+        if deferred is None:
+            return {}
+        status: SegmentStatus = "handoff" if update.get("escalation_reason") else "resolved"
+        return {"intent_segments": [{**deferred, "status": status}], "segment_deferred": None}
+    # handoff_summary (D19)
+    existing = state.get("intent_segments") or []
+    head = _queue_head(state)
+    if (
+        head is not None
+        and state.get("degraded")
+        and state.get("escalation_reason") == "llm_unavailable"
+        and head in get_policies().escalation.degraded_handoff_intents
+        and all(seg["intent"] != head for seg in existing)
+    ):
+        # PQ1: no flow node ran, and only the head intent is handed off.
+        return {"intent_segments": [{"intent": head, "route": name, "status": "handoff"}]}
+    if existing:
+        return {}
+    return {
+        "intent_segments": [
+            {"intent": i, "route": name, "status": "handoff"} for i in _real_intents(state)
+        ]
+    }
+
+
+def _track_segments[N: Callable[..., Awaitable[dict[str, Any]]]](name: str, node: N) -> N:
+    """Wrap a node so the turn's per-intent segments are recorded (analytics D14).
+
+    Reads the node's update and the state, never calls anything: it adds
+    `intent_segments` (and, for a flow, the deferral and offer bookkeeping) and
+    removes `segment_mark`, which is a flow's message to this wrapper and not a
+    channel. An LLM node gets no write path from here (R6).
+    """
+
+    @functools.wraps(node)
+    async def tracked(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+        update = dict(await node(state, config) or {})
+        extra = _segment_update(name, state, update)
+        update.pop("segment_mark", None)
+        return {**update, **extra}
+
+    return cast(N, tracked)
 
 
 def build_graph(
@@ -447,21 +613,31 @@ def build_graph(
     graph.add_node("understand", baseline_understand if baseline else understand)
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
-    graph.add_node("card_info", _guard_access(card_info))
-    graph.add_node("card_block", _guard_access(card_block))
-    graph.add_node("card_unlock", _guard_access(card_unlock))
-    graph.add_node("replacement", _guard_access(replacement))
-    graph.add_node("unrecognized_charge", _guard_access(unrecognized_charge))
-    graph.add_node("decline_explain", _guard_access(decline_explain))
-    graph.add_node("tx_search", _guard_access(tx_search))
-    graph.add_node("tx_explain", _guard_access(tx_explain))
-    graph.add_node("unsupported", unsupported)
+    graph.add_node("card_info", _track_segments("card_info", _guard_access(card_info)))
+    graph.add_node("card_block", _track_segments("card_block", _guard_access(card_block)))
+    graph.add_node("card_unlock", _track_segments("card_unlock", _guard_access(card_unlock)))
+    graph.add_node("replacement", _track_segments("replacement", _guard_access(replacement)))
+    graph.add_node(
+        "unrecognized_charge",
+        _track_segments("unrecognized_charge", _guard_access(unrecognized_charge)),
+    )
+    graph.add_node(
+        "decline_explain", _track_segments("decline_explain", _guard_access(decline_explain))
+    )
+    graph.add_node("tx_search", _track_segments("tx_search", _guard_access(tx_search)))
+    graph.add_node("tx_explain", _track_segments("tx_explain", _guard_access(tx_explain)))
+    graph.add_node("unsupported", _track_segments("unsupported", unsupported))
     graph.add_node("fallback", fallback)
-    graph.add_node("compose", baseline_compose if baseline else compose)
+    graph.add_node("compose", _track_segments("compose", baseline_compose if baseline else compose))
     graph.add_node("next_intent", next_intent)
     graph.add_node("finish", finish)
-    graph.add_node("abstain", baseline_abstain if baseline else abstain)
-    graph.add_node("handoff_summary", baseline_handoff_summary if baseline else handoff_summary)
+    graph.add_node("abstain", _track_segments("abstain", baseline_abstain if baseline else abstain))
+    graph.add_node(
+        "handoff_summary",
+        _track_segments(
+            "handoff_summary", baseline_handoff_summary if baseline else handoff_summary
+        ),
+    )
     graph.add_node("handoff", handoff)
     graph.add_node("relay_to_agent", relay_to_agent)
 

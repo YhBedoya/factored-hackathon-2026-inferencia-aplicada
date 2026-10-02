@@ -14,7 +14,7 @@ COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f d
 COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
 STACK_NAME ?= swip-card-support
 
-.PHONY: langfuse-up langfuse-down eval eval-pii-check setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check intent-gen intent-train intent-compare
+.PHONY: langfuse-up langfuse-down eval eval-pii-check setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check intent-gen intent-train intent-compare analytics
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -24,10 +24,10 @@ setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cd frontend && npm ci
 	pre-commit install --hook-type pre-commit --hook-type commit-msg
 
-fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED / PII_VAULT_KEY (Fernet) in .env with random values (D21). Never prints a value.
+fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED / PII_VAULT_KEY (Fernet) / ANALYTICS_DB_PASSWORD in .env with random values (D21). Never prints a value.
 	python3 -c "\
 	import base64, os, re, secrets; \
-	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED', 'PII_VAULT_KEY']; \
+	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED', 'PII_VAULT_KEY', 'ANALYTICS_DB_PASSWORD']; \
 	gen = lambda k: base64.urlsafe_b64encode(os.urandom(32)).decode() if k == 'PII_VAULT_KEY' else secrets.token_urlsafe(32); \
 	lines = open('.env').read().splitlines(); \
 	matches = [re.match(r'^([A-Z_]+)=(.*)$$', l) for l in lines]; \
@@ -83,6 +83,9 @@ data: ## Ingest (S3 or SOURCE=local:<path>) -> contracts -> dbt -> golden DB -> 
 
 demo-reset: ## Reset latam_app from latam_golden (03 §7).
 	cd pipeline && uv run python -m load.demo_reset
+
+analytics: ## One analytics pass over finished conversations (analytics worker, --once). Needs the stack up.
+	$(COMPOSE) run --rm analytics-worker uv run --no-sync python -m app.domains.analytics.worker --once
 
 seed-identity: ## Seed identity.accounts into latam_golden (D5), then reset latam_app from it.
 	cd backend && DATABASE_URL=$(GOLDEN_DATABASE_URL) uv run alembic upgrade head

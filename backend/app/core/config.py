@@ -74,6 +74,17 @@ class Settings(BaseSettings):
     retry_backoff_base_s: float = 0.5
     retry_backoff_cap_s: float = 2.0
 
+    # Interaction analytics worker (ADR-033). An empty `analytics_database_url`
+    # is a start-up error in the worker (no superuser fallback); Compose builds
+    # it from `analytics_db_password`, which migration 0009 also reads.
+    analytics_database_url: str = ""
+    analytics_db_password: str = ""
+    analytics_idle_minutes: int = 30
+    analytics_worker_interval_s: int = 120
+    analytics_timezone: str = "America/Bogota"
+    analytics_mock_enabled: bool = False
+    analytics_mock_backfill_days: int = 30
+
     @field_validator("faults", mode="before")
     @classmethod
     def _parse_faults(cls, value: object) -> object:

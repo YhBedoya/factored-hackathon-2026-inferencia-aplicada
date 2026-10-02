@@ -14,7 +14,7 @@ reviews the change.
 from datetime import date, datetime
 from decimal import Decimal
 from operator import add
-from typing import Annotated, Literal, NotRequired, TypedDict
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -25,14 +25,17 @@ from app.domains.localization.format import Queue
 
 __all__ = [
     "RESET_FACTS",
+    "RESET_INTENT_SEGMENTS",
     "RESET_SEGMENTS",
     "DeclineState",
     "DisputeState",
     "Fact",
+    "IntentSegment",
     "Pending",
     "TurnState",
     "TxOfferState",
     "bind_once",
+    "mark_segment",
 ]
 
 
@@ -133,6 +136,57 @@ def _reduce_segments(current: list[str], update: list[str]) -> list[str]:
     return current + update
 
 
+SegmentStatus = Literal["resolved", "awaiting", "handoff", "abstained", "cancelled"]
+
+
+class IntentSegment(TypedDict):
+    """What one turn did for one real intent (analytics spec D2, D14, D17, D22).
+
+    It is the `segments` entry of the `reply_sent` audit payload. `awaiting_slot`
+    is present only on `awaiting` and `bot_offered` only on a flow the bot
+    itself offered, so the audit JSON stays small.
+    """
+
+    intent: str
+    route: str
+    status: SegmentStatus
+    awaiting_slot: NotRequired[str]
+    bot_offered: NotRequired[bool]
+
+
+class _IntentSegmentsReset(list[IntentSegment]):
+    """Marker subclass for `GraphState.intent_segments`, same pattern as
+    `_SegmentsReset`: an instance means "start this turn's record over".
+    The reducer lives here for the same `__main__` reason (see above).
+    """
+
+
+RESET_INTENT_SEGMENTS: list[IntentSegment] = _IntentSegmentsReset()
+"""Written by `load_session` every turn so the runner only reads this turn's segments."""
+
+
+def _reduce_intent_segments(
+    current: list[IntentSegment], update: list[IntentSegment]
+) -> list[IntentSegment]:
+    """Reducer for `GraphState.intent_segments`: reset on the marker, else append (D14)."""
+    if isinstance(update, _IntentSegmentsReset):
+        return []
+    return current + update
+
+
+def mark_segment(status: SegmentStatus, *, awaiting_slot: str | None = None) -> dict[str, Any]:
+    """A flow's explicit say on how it ended, for the segment wrapper (`graph.py`).
+
+    The node merges the returned dict into its update. The wrapper removes
+    `segment_mark` before LangGraph sees it, so it is never a channel. Flows
+    use it only for endings the wrapper cannot infer from the update (D18).
+    """
+    mark: dict[str, Any] = {"status": status}
+    if awaiting_slot is not None:
+        mark["awaiting_slot"] = awaiting_slot
+    return {"segment_mark": mark}
+
+
 class DisputeState(TypedDict):
     """`unrecognized_charge`'s own sub-state (D4-B §Contracts "Graph and state").
 
@@ -226,3 +280,7 @@ class TurnState(TypedDict):
     # Read by `nodes/handoff.py` to append `priority_claim` to
     # `escalation_rules_hit`, then cleared on handoff.
     priority_flags: NotRequired[list[str]]
+    # The flow a bot offer opened (`replacement` after a permanent block), kept
+    # while that flow is paused so its later turns still carry `bot_offered`
+    # (analytics D22). Written only by the segment wrapper in `graph.py`.
+    bot_offered_flow: NotRequired[str | None]

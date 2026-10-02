@@ -33,7 +33,7 @@ from app.core.errors import AccessDenied, NotFound, ToolUnavailable
 from app.domains.conversation.flows.tx_search import build_tx_filter, card_mask_fact, offer_tx_pick
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import NLUSlots
-from app.domains.conversation.state import Fact
+from app.domains.conversation.state import Fact, mark_segment
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
@@ -96,7 +96,11 @@ async def _run_search(state: GraphState, config: RunnableConfig) -> dict[str, An
         )
 
     if not has_criterion:
-        return {"pending": None, "segments": [get_template("tx_explain_none", language)]}
+        return {
+            "pending": None,
+            **mark_segment("resolved"),
+            "segments": [get_template("tx_explain_none", language)],
+        }
 
     # D3: zero matches *with* a slot -> offer every Pending/Reversed row of
     # the last 12 months instead (D5-B D2's "zero matches -> offer all").
@@ -112,7 +116,11 @@ async def _run_search(state: GraphState, config: RunnableConfig) -> dict[str, An
         return {"escalation_reason": "tool_failure"}
 
     if not rows:
-        return {"pending": None, "segments": [get_template("tx_explain_none", language)]}
+        return {
+            "pending": None,
+            **mark_segment("resolved"),
+            "segments": [get_template("tx_explain_none", language)],
+        }
     return offer_tx_pick(
         rows, cards, country, language, flow="tx_explain", prompt_kind="tx_explain_pick_ask"
     )
@@ -130,6 +138,7 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {
             "pending": None,
             "tx_offer": None,
+            **mark_segment("cancelled"),
             "segments": [get_template("nothing_pending", language)],
         }
 
@@ -151,6 +160,7 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {
             "pending": None,
             "tx_offer": None,
+            **mark_segment("cancelled"),
             "segments": [get_template("nothing_pending", language)],
         }
     return await explain_tx(state, config, tx)

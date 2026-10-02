@@ -20,6 +20,12 @@ services:
       - ../policies:/policies:ro
       - ../eval/personas.yaml:/app/eval/personas.yaml:ro
 
+  analytics-worker:
+    environment:
+      LLM_DISABLED: ${LLM_DISABLED:-false}
+    volumes:
+      - ../backend/app:/app/app
+
   redis:
     # Loopback-only, dev overlay only (never base/prod): lets
     # `backend/tests/integration/` reach Redis from the host, same as

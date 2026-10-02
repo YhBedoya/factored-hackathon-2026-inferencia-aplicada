@@ -323,6 +323,9 @@ async def _run_turn(
         # This turn's fact provenance (`Fact.source`), recorded on
         # `reply_sent` so the staff timeline's "why" lists sources (D7-A D20).
         fact_sources: list[str] = []
+        # Per-intent record of the turn (analytics D14): each node update carries
+        # only its own delta, and `load_session`'s reset marker streams as `[]`.
+        intent_segments: list[JsonValue] = []
         with fact_values.collecting() as collected_values:
             async for update in host.graph.astream(
                 {
@@ -371,6 +374,7 @@ async def _run_turn(
                     elif route_taken is None and node_name in _BRANCH_NODES:
                         route_taken = node_name
                     fact_sources.extend(fact.source for fact in values.get("facts") or [])
+                    intent_segments.extend(values.get("intent_segments") or [])
                     reply_value = values.get("reply")
                     if reply_value is not None:
                         reply = reply_value
@@ -415,6 +419,7 @@ async def _run_turn(
                 "ui_kinds": [event.kind for event in ui],
                 "length": len(reply),
                 "degraded": degraded,
+                "segments": intent_segments,
                 # Deduplicated in order; only code-written values, never raw PII.
                 "fact_values": list(dict.fromkeys(collected_values)),
                 **({"grounding": {"outcome": grounding_outcome}} if grounding_outcome else {}),

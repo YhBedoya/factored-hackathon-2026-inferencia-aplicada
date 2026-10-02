@@ -284,6 +284,24 @@ A `tool_result` for a failed tool attempt carries `{tool, error, attempt}` (1-ba
 
 `reply_sent` payload also carries `degraded: bool`, always present: `true` when the turn ran on the no-LLM path (the trained classifier and fixed templates, ADR-032). The same per-turn value is set on the turn's OTel span as the attribute `cardy.degraded`. `nlu_result` payload carries `source: "llm" | "classifier"`. When the source is `classifier` it also carries `classifier_version` and `label_set_version`, so every degraded decision names the model that made it.
 
+`reply_sent` payload also carries `segments`, always present: one entry per real intent the turn worked on, in order. A turn that worked on no real intent has `segments: []`. A turn relayed to an agent writes no `reply_sent`, so it has no segments.
+
+```json
+"segments": [{"intent": "card_block", "route": "card_block", "status": "awaiting", "awaiting_slot": "confirmation"}]
+```
+
+- `intent` is a non-management member of `Intent`. On a resume turn (card pick, confirmation, OTP, selection) it is the paused flow's intent.
+- `route` is the branch node that served it, or `handoff_summary`.
+- `status` is one of `resolved`, `awaiting`, `handoff`, `abstained`, `cancelled`. On a write flow that performs a write, `resolved` is written only on the turn whose `ActionResult.verified` read-back succeeded. Endings that need no write (`already_in_state` in `card_block`, `not_blocked` in `card_unlock`) are `resolved` without one.
+- `awaiting_slot` is present only when `status` is `awaiting`: the value of `pending.awaiting_slot` at the end of the turn (`confirmation`, `otp`, or a flow's own slot such as `card_id`). When a flow asks without pausing, code sets the slot name.
+- `bot_offered: true` is present only on a segment whose flow the bot offered, not the customer (the replacement offer after a permanent block or after `card_unlock`'s `block_permanent_no_undo` answer). It is absent otherwise.
+
+- A turn that `route` sends straight to `handoff_summary` writes one `handoff` segment per non-management intent in its NLU result, in order, with `route = handoff_summary`. The degraded queue-head handoff (head intent in `degraded_handoff_intents`) writes one `handoff` segment for the head intent only.
+- An `unsupported` turn flagged `injection_suspected` writes no segment.
+- When `compose` fails after the flow ran and the turn hands off, an `awaiting` segment and any explicitly marked segment keep their status. Only a read-flow segment whose `resolved` depended on the composed answer becomes `handoff`.
+
+The analytics worker reads `segments` to build `analytics.interaction_intents` (`03` §6).
+
 ## 7. Confirmation token
 
 Issued by `policy` (`app/domains/policy/confirmation.py`) when a flow reaches one or more side-effecting steps. Every token is a **plan** (ADR-027): an ordered list of steps, where a single action is a plan of one. The `ConfirmationStore` protocol, bound to one customer + conversation at construction:

@@ -13,7 +13,8 @@ repeat, raise-on-change semantics as before.
 turn (Q3) so a later `compose` node only ever sees facts a flow wrote this
 turn, not ones left over from an earlier one. `segments` (B3) gets the same
 treatment through `RESET_SEGMENTS`, so `finish` only ever joins the
-segments this turn's nodes actually wrote.
+segments this turn's nodes actually wrote; `intent_segments` (the per-intent
+record the runner audits) is reset the same way.
 
 `ui` (D16) is reset to `[]` here too: it is a graph-local, non-checkpointed
 channel, so a turn only ever reports the events an emitting node appended
@@ -27,7 +28,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.config import get_settings
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import RESET_FACTS, RESET_SEGMENTS
+from app.domains.conversation.state import RESET_FACTS, RESET_INTENT_SEGMENTS, RESET_SEGMENTS
 from app.domains.conversation.tools import BankReadTools, ToolContext
 
 __all__ = ["load_session"]
@@ -68,6 +69,8 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "customer_name": profile.first_name,
         "facts": RESET_FACTS,
         "segments": RESET_SEGMENTS,
+        "intent_segments": RESET_INTENT_SEGMENTS,
+        "segment_deferred": None,
         "nlu": None,
         "escalation_reason": reason,
         "degraded": degraded,
