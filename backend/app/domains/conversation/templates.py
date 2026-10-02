@@ -62,7 +62,6 @@ TemplateKind = Literal[
     "offer_replacement",
     "replacement_declined",
     "replacement_not_eligible",
-    "credit_only",
     "synthetic_footnote",
     "read_only_note",
     "handoff_transfer",
@@ -72,6 +71,7 @@ TemplateKind = Literal[
     "abstain_fallback",
     "goal_card_status",
     "goal_balance_due",
+    "goal_debit_balance",
     "goal_decline_explain",
     "ask_which_card_dispute",
     "dispute_no_transactions",
@@ -392,16 +392,6 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
     # ADR-020: balance_due on a debit card has no balance or minimum payment.
     # No offer here: the card's status follows right away in the same reply,
     # so there is never an offer the customer has to answer.
-    "credit_only": {
-        "es": (
-            "Esa es una tarjeta de débito, así que no tiene saldo por pagar ni "
-            "fecha de vencimiento. Te dejo su información:"
-        ),
-        "pt": (
-            "Esse é um cartão de débito, então não tem saldo a pagar nem data "
-            "de vencimento. Aqui estão as informações dele:"
-        ),
-    },
     # D5: the minimum payment and due date are a synthetic Swip policy, not
     # an official bank figure.
     "synthetic_footnote": {
@@ -770,6 +760,11 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
             "Seu saldo atual é {current_balance}. Seu pagamento mínimo estimado é "
             "{min_payment} e vence em {due_date}."
         ),
+    },
+    # ADR-032: a debit card's balance is the money available in it.
+    "goal_debit_balance": {
+        "es": "Tu tarjeta {card_kind} {card_mask} tiene {available_balance} disponible.",
+        "pt": "Seu cartão {card_kind} {card_mask} tem {available_balance} disponível.",
     },
     "goal_decline_explain": {
         "es": "Tu compra fue rechazada: {decline_cause} {decline_next_step}",

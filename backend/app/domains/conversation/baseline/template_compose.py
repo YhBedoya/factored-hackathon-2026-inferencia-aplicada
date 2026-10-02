@@ -15,6 +15,7 @@ from app.domains.conversation.nodes.abstain import make_abstain
 from app.domains.conversation.nodes.compose import (
     _HIDDEN_KEYS,
     Goal,
+    _card_goal,
     _current_intent,
     _fill_goal_template,
 )
@@ -47,9 +48,7 @@ async def baseline_compose(state: GraphState, config: RunnableConfig) -> dict[st
     offered_keys = [key for key in facts_by_key if key not in _HIDDEN_KEYS]
     card_kind = facts_by_key.get("card_kind")
     is_debit = card_kind is not None and card_kind.value == "debit"
-    goal: Goal = (
-        "balance_due" if _current_intent(state) == "balance_due" and not is_debit else "card_status"
-    )
+    goal: Goal = _card_goal(_current_intent(state), is_debit=is_debit)
     language = state["language"]
     text = _fill_goal_template(goal, offered_keys, facts_by_key, language, state["country"])
     segments = [text]

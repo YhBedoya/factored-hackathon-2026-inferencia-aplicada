@@ -62,7 +62,7 @@ def test_facts_fenced_placeholders_filled_in_code() -> None:
     assert len(llm.calls) == 1
     call = llm.calls[0]
     assert call.step == "compose"
-    assert call.prompt.label == "compose@v8"
+    assert call.prompt.label == "compose@v9"
     assert call.schema is ComposeDraft
     assert "Idioma de la respuesta: es" in call.user
     assert "Objetivo: card_status" in call.user

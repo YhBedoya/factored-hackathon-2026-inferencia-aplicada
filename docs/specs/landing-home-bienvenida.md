@@ -14,7 +14,7 @@ It serves every "Hecho cuando" line of R1, R2 and R3 in the requirements doc. Th
 
 ## Assumptions (accepted with the human answers)
 
-- **A1: debit cards (ADR-020).** Debit cards show card facts only: mask, status, expiry and transactions. They never show a balance. `/me` views return `current_balance = null` for debit, even though `cards.service.get_card_details` fills it.
+- **A1: debit cards (ADR-020, revised by ADR-032 on 2026-10-01).** Debit cards show mask, status, expiry, transactions and their **available balance**: `/me` views return `current_balance`/`current_balance_display` for debit. Credit limit, available credit and days past due stay `null` for debit.
 - **A2: welcome text (`docs/brand.md` §"Where the brand lives in code", R3 "Por qué plantillas").** Fixed ES/PT templates in code. No LLM call, and no digits in any template. PT is pending review by a native speaker.
 - **A3: chat on `/home` (requirement R2 table).** The chat is a side panel, full screen on mobile. The chat body moves out of `routes/chat.tsx` into one shared component, which `/chat` (still a full page) and the panel both use. They share `conversationStore` (`sessionStorage`), so they continue the same conversation.
 - **A4: the `/me` router (R13, `06` §2).** It is a new router with router-level `require_role("customer")` + `require_csrf`, and it calls `cards.service` and `transactions.service` directly. Both `AccessDenied` and `NotFound` map to `404 not_found`.
@@ -78,7 +78,7 @@ class CardDetailsView(CardView):
     currency: str
     expiration_date: date | None; expiration_date_display: str | None       # format_date
     credit_limit: Decimal | None; credit_limit_display: str | None          # null for debit
-    current_balance: Decimal | None; current_balance_display: str | None    # null for debit (A1)
+    current_balance: Decimal | None; current_balance_display: str | None    # debit: available balance (A1, ADR-032)
     available_credit: Decimal | None; available_credit_display: str | None  # null for debit
     days_past_due: int | None                                               # null for debit
 

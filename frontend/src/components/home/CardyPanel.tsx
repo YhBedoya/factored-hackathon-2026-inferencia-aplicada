@@ -21,14 +21,20 @@ export function CardyPanel({
 	return (
 		<>
 			{!open && (
-				<Button
+				<button
 					type="button"
 					data-testid="cardy-launcher"
-					className="fixed right-4 bottom-4 z-20 shadow-lg"
+					className="fixed right-7 bottom-7 z-20 flex cursor-pointer items-center gap-2.5 rounded-full border border-cyan bg-card py-2 pr-[18px] pl-2 text-[15px] font-semibold whitespace-nowrap shadow-[0_12px_32px_rgba(0,0,0,.5)] hover:bg-muted"
 					onClick={onOpen}
 				>
+					<span
+						aria-hidden="true"
+						className="grid size-8 place-items-center rounded-full bg-cyan/20 font-heading text-cyan"
+					>
+						C
+					</span>
 					{t("home.cardy.launcher")}
-				</Button>
+				</button>
 			)}
 			{open && (
 				<aside

@@ -43,13 +43,14 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = ["ComposeDraft", "compose", "compose_checked", "compose_reply"]
 
-_PROMPT = PromptRef("compose", 8)
+_PROMPT = PromptRef("compose", 9)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Grounding = Literal["ok", "regenerated", "template"]
 _GOAL_TEMPLATES: dict[str, TemplateKind] = {
     "card_status": "goal_card_status",
     "balance_due": "goal_balance_due",
+    "debit_balance": "goal_debit_balance",
     "decline_explain": "goal_decline_explain",
     "tx_explain": "goal_tx_explain",
     "tx_details": "goal_tx_details",
@@ -66,7 +67,13 @@ _PT_WORDS = frozenset(
 )
 
 Goal = Literal[
-    "card_status", "balance_due", "abstain", "decline_explain", "tx_explain", "tx_details"
+    "card_status",
+    "balance_due",
+    "debit_balance",
+    "abstain",
+    "decline_explain",
+    "tx_explain",
+    "tx_details",
 ]
 Country = Literal["MX", "CO", "AR"]
 
@@ -277,7 +284,14 @@ def _format_fact(
         return format_date(cast(date, value))
     if key == "payment_overdue":
         return format_days(cast(int, value), language)
-    if key in ("credit_limit", "available_credit", "current_balance", "min_payment", "amount"):
+    if key in (
+        "credit_limit",
+        "available_credit",
+        "current_balance",
+        "available_balance",
+        "min_payment",
+        "amount",
+    ):
         return _money_fact(cast(Decimal, value), facts_by_key, language=language, country=country)
     # D5-B D4, D6: the policy's own key, rendered through its fixed template
     # -- the LLM never sees or picks what a decline code means.
@@ -344,15 +358,22 @@ def _current_intent(state: GraphState) -> Intent:
     return queue[0] if queue else "card_status"
 
 
+def _card_goal(intent: Intent, *, is_debit: bool) -> Goal:
+    """`card_info`'s goal: the balance goal for the card's kind on
+    `balance_due` (ADR-032), else `card_status`."""
+    if intent != "balance_due":
+        return "card_status"
+    return "debit_balance" if is_debit else "balance_due"
+
+
 async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Graph wrapper around `compose_reply`: picks the goal, then fills the reply.
 
     The goal follows this turn's intent and the selected card's kind (D19,
     D2-B B1): `decline_explain` for that intent (D5-B, always -- there is no
     debit/credit split for it); otherwise `balance_due` for a credit card on
-    `balance_due`, else `card_status` -- a debit card on `balance_due` gets
-    its status described right after the fixed `credit_only` segment
-    (`flows/card_info.py`). The "which card?" question never reaches here: it
+    `balance_due`, `debit_balance` for a debit card on `balance_due`
+    (ADR-032), else `card_status`. The "which card?" question never reaches here: it
     is a fixed per-action template the flow writes itself
     (`card_select.ask_which_card_text`, or the flow's own equivalent). `facts`
     are read straight off `state` -- the per-turn reset in `load_session`
@@ -387,7 +408,7 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         # from a `tx_search` list is `tx_details` instead.
         goal = "tx_explain" if "tx_state_cause" in facts_by_key else "tx_details"
     else:
-        goal = "balance_due" if intent == "balance_due" and not is_debit else "card_status"
+        goal = _card_goal(intent, is_debit=is_debit)
 
     customer_name = state.get("customer_name")
     if customer_name:

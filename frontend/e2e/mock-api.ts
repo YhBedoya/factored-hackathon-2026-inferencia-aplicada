@@ -63,8 +63,8 @@ const ME_CARD_DETAILS: Record<string, Record<string, unknown>> = {
 		expiration_date_display: "09/2028",
 		credit_limit: null,
 		credit_limit_display: null,
-		current_balance: null,
-		current_balance_display: null,
+		current_balance: "820.50",
+		current_balance_display: "$820.50",
 		available_credit: null,
 		available_credit_display: null,
 		days_past_due: null,
@@ -84,28 +84,83 @@ const ME_CARD_DETAILS: Record<string, Record<string, unknown>> = {
 	},
 };
 
-/** One page of fake transactions; dates are computed at request time so the 7-day decline alert stays true. */
-function txPage(cursor: string | null) {
-	const second = cursor !== null;
+/**
+ * One page of fake transactions for `cardId` (none = every card, as the
+ * home's alerts ask). Dates are computed at request time so the 7-day decline
+ * alert stays true. The credit card has two pages, with one income row
+ * (`Payment`); the debit card one page with a `Deposit` and a `Withdrawal`;
+ * the blocked card none.
+ */
+function txPage(cursor: string | null, cardId: string | null) {
 	const base = Date.now() - 24 * 60 * 60 * 1000;
-	const rows = [0, 1, 2].map((i) => {
-		const at = new Date(base - (second ? 10 + i : i) * 60 * 60 * 1000);
-		const declined = !second && i === 0;
+	const row = (
+		id: string,
+		hoursAgo: number,
+		card: string,
+		mask: string,
+		merchant: string,
+		type: string,
+		status: string,
+	) => {
+		const at = new Date(base - hoursAgo * 60 * 60 * 1000);
 		return {
-			tx_id: `tx-${second ? "b" : "a"}${i}`,
-			card_id: "card-credit",
-			card_mask: "•••• 6475",
+			tx_id: id,
+			card_id: card,
+			card_mask: mask,
 			occurred_at: at.toISOString(),
 			date_display: at.toISOString().slice(0, 10),
 			amount: "100.00",
 			currency: "MXN",
 			amount_display: "$100.00",
-			merchant_name: `Comercio ${second ? "B" : "A"}${i}`,
-			type: "Purchase",
-			status: declined ? "Declined" : "Approved",
+			merchant_name: merchant,
+			type,
+			status,
 		};
+	};
+	if (cardId === "card-debit") {
+		return {
+			items: [
+				row(
+					"tx-d0",
+					0,
+					cardId,
+					"•••• 1122",
+					"Depósito nómina",
+					"Deposit",
+					"Approved",
+				),
+				row(
+					"tx-d1",
+					2,
+					cardId,
+					"•••• 1122",
+					"Cajero Centro",
+					"Withdrawal",
+					"Approved",
+				),
+			],
+			next_cursor: null,
+		};
+	}
+	if (cardId === "card-blocked") {
+		return { items: [], next_cursor: null };
+	}
+	const second = cursor !== null;
+	const items = [0, 1, 2].map((i) => {
+		const merchant = `Comercio ${second ? "B" : "A"}${i}`;
+		const declined = !second && i === 0;
+		const income = !second && i === 2;
+		return row(
+			`tx-${second ? "b" : "a"}${i}`,
+			second ? 10 + i : i,
+			"card-credit",
+			"•••• 6475",
+			merchant,
+			income ? "Payment" : "Purchase",
+			declined ? "Declined" : "Approved",
+		);
 	});
-	return { items: rows, next_cursor: second ? null : "page-2" };
+	return { items, next_cursor: second ? null : "page-2" };
 }
 
 export type MockCustomer = {
@@ -293,8 +348,11 @@ export async function installMockApi(
 		}
 
 		if (method === "GET" && pathname.endsWith("/me/transactions")) {
-			const cursor = new URL(request.url()).searchParams.get("cursor");
-			await route.fulfill({ status: 200, json: txPage(cursor) });
+			const params = new URL(request.url()).searchParams;
+			await route.fulfill({
+				status: 200,
+				json: txPage(params.get("cursor"), params.get("card_id")),
+			});
 			return;
 		}
 

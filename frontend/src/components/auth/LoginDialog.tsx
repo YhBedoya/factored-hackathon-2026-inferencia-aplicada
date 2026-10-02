@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { LoginForm } from "@/components/auth/LoginForm";
-import { ME_QUERY_KEY } from "@/components/layout/AppShell";
+import { ME_QUERY_KEY } from "@/components/layout/useLogout";
 import {
 	Dialog,
 	DialogContent,
