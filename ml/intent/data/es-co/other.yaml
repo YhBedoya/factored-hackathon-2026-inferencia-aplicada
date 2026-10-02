@@ -1,0 +1,356 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: other
+items:
+- text: ¿Me puedes recomendar una receta fácil para preparar pasta?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Busco una receta sencilla de pasta, ¿cuál me sugieres?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué receta fácil puedo hacer con pasta?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me ayudas a planear una rutina para empezar a hacer ejercicio?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero comenzar a entrenar, ¿me sugieres una rutina para principiantes?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedes armarme un plan de ejercicios sencillo para empezar?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿me recomienda un sitio bacano para almorzar por acá?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, ¿qué restaurante chévere me aconseja para almorzar cerca?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ando buscando un lugar bueno para comer por esta zona, ¿cuál me recomienda?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explica de una cómo cuidar una mata de sábila en la casa?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿qué toca hacer para que la sábila crezca bien en la casa?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, ¿cómo hago para cuidar bien una mata de sábila?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holi, me pasas una receta facil pa hacer pancakes?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola, como preparo pancakes rapidito?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me dices una recetica pa unos pancakes?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q peli buena me recomiendas pa ver esta noche?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: recomiendame una pelicula chevere pa hoy pls
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ando sin q ver, q peli me aconsejas?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito bloquear mi tarjeta porque la perdí; no busco recomendaciones de restaurantes.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me explicas cómo hacer el balance general de una panadería para mi tarea de contabilidad?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero congelar mi tarjeta, que se me extravió; no estoy pidiendo sitios para comer.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ayúdame a bloquear la tarjeta perdida; no necesito sugerencias de restaurantes.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Necesito entender cómo se arma el balance de un negocio pequeño para una clase de contabilidad.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Me ayudas a preparar el balance general de una tienda para un ejercicio del colegio?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero cambiar el PIN de mi tarjeta; no necesito ayuda para escoger una receta.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me ayudas a revisar el saldo pendiente de la factura del agua?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito actualizar la clave de mi tarjeta, no que me recomienden qué cocinar.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ayúdame a modificar el PIN de mi tarjeta; no estoy buscando recetas.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quisiera consultar cuánto debo del servicio de acueducto.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Dónde puedo ver el valor que me falta pagar por el agua de la casa?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito una receta; quiero saber cómo bloquear mi tarjeta perdida.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito ayuda con mi tarjeta; ¿me decís cómo estará el clima en Bogotá mañana?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco consejos de cocina, necesito congelar mi tarjeta porque no la encuentro.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero ayuda para preparar comida; quiero bloquear la tarjeta que extravié.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es una consulta sobre mi tarjeta, quisiera saber si va a llover mañana en Bogotá.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: De mi tarjeta no necesito nada; ¿qué clima se espera mañana en Bogotá?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Una receta, porfa
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: El clima
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Música tranquila
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

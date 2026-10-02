@@ -35,6 +35,7 @@ services:
       context: ../backend
       additional_contexts:
         eval: ../eval
+        intent: ../ml/intent
       args:
         GIT_SHA: ${GIT_SHA:-unknown}
     env_file:

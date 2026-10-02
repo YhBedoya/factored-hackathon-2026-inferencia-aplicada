@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: loans
+items:
+- text: quiero pedir un préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: necesito un préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: me interesa sacar un préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: ¿cuánto debo de mi préstamo?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quiero ver mi préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: consulto el saldo del préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: che, ¿me dan un préstamo?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: ¿cuándo vence la cuota del préstamo, che?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quiero un préstamo en pesos, dale
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: no es la tarjeta, es el préstamo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: hablo del préstamo, no de la tarjeta
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: mi consulta es por un crédito
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: prestmo pa mi casa
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: kiero un prestamo xfa
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: cuota del prestamo cuando
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

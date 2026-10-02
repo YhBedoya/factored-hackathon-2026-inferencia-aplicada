@@ -1,0 +1,722 @@
+{
+  "label": "offline evaluation",
+  "runs": {
+    "proposed": [
+      {
+        "overall": {
+          "label": "offline evaluation",
+          "cases": 8,
+          "safe_automated_resolution": {
+            "k": 0,
+            "n": 8,
+            "value": 0.0,
+            "ci": [
+              0.0,
+              0.3244156195108769
+            ]
+          },
+          "automation_attempted": {
+            "k": 0,
+            "n": 8,
+            "value": 0.0,
+            "ci": [
+              0.0,
+              0.3244156195108769
+            ]
+          },
+          "containment": {
+            "k": 0,
+            "n": 8,
+            "value": 0.0,
+            "ci": [
+              0.0,
+              0.3244156195108769
+            ]
+          },
+          "escalation": {
+            "correct": 0,
+            "missed": 0,
+            "unnecessary": 8,
+            "correct_no_transfer": 0,
+            "recall": {
+              "k": 0,
+              "n": 0,
+              "value": null,
+              "ci": null
+            },
+            "precision": {
+              "k": 0,
+              "n": 8,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.3244156195108769
+              ]
+            }
+          },
+          "unsafe": {
+            "k": 0,
+            "n": 8,
+            "value": 0.0,
+            "ci": [
+              0.0,
+              0.3244156195108769
+            ],
+            "upper_bound_rule_of_three": 0.375
+          },
+          "clarification_accuracy": {
+            "k": 0,
+            "n": 3,
+            "value": 0.0,
+            "ci": [
+              0.0,
+              0.5615060804490177
+            ]
+          },
+          "latency_ms": {
+            "turn": {
+              "n": 8,
+              "p50": 2081,
+              "p95": 2556
+            },
+            "conversation": {
+              "n": 8,
+              "p50": 2081,
+              "p95": 2556
+            }
+          },
+          "cost_usd": {
+            "total": null,
+            "per_case": null,
+            "per_success": null
+          }
+        },
+        "by_language_variant": {
+          "es-CO": {
+            "label": "offline evaluation",
+            "cases": 4,
+            "safe_automated_resolution": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "automation_attempted": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "containment": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "escalation": {
+              "correct": 0,
+              "missed": 0,
+              "unnecessary": 4,
+              "correct_no_transfer": 0,
+              "recall": {
+                "k": 0,
+                "n": 0,
+                "value": null,
+                "ci": null
+              },
+              "precision": {
+                "k": 0,
+                "n": 4,
+                "value": 0.0,
+                "ci": [
+                  0.0,
+                  0.48990002040399916
+                ]
+              }
+            },
+            "unsafe": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ],
+              "upper_bound_rule_of_three": 0.75
+            },
+            "clarification_accuracy": {
+              "k": 0,
+              "n": 3,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.5615060804490177
+              ]
+            },
+            "latency_ms": {
+              "turn": {
+                "n": 4,
+                "p50": 2081,
+                "p95": 2257
+              },
+              "conversation": {
+                "n": 4,
+                "p50": 2081,
+                "p95": 2257
+              }
+            },
+            "cost_usd": {
+              "total": null,
+              "per_case": null,
+              "per_success": null
+            }
+          },
+          "pt-BR": {
+            "label": "offline evaluation",
+            "cases": 4,
+            "safe_automated_resolution": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "automation_attempted": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "containment": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ]
+            },
+            "escalation": {
+              "correct": 0,
+              "missed": 0,
+              "unnecessary": 4,
+              "correct_no_transfer": 0,
+              "recall": {
+                "k": 0,
+                "n": 0,
+                "value": null,
+                "ci": null
+              },
+              "precision": {
+                "k": 0,
+                "n": 4,
+                "value": 0.0,
+                "ci": [
+                  0.0,
+                  0.48990002040399916
+                ]
+              }
+            },
+            "unsafe": {
+              "k": 0,
+              "n": 4,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.48990002040399916
+              ],
+              "upper_bound_rule_of_three": 0.75
+            },
+            "clarification_accuracy": {
+              "k": 0,
+              "n": 0,
+              "value": null,
+              "ci": null
+            },
+            "latency_ms": {
+              "turn": {
+                "n": 4,
+                "p50": 1500,
+                "p95": 2556
+              },
+              "conversation": {
+                "n": 4,
+                "p50": 1500,
+                "p95": 2556
+              }
+            },
+            "cost_usd": {
+              "total": null,
+              "per_case": null,
+              "per_success": null
+            }
+          }
+        },
+        "by_segment": {
+          "Basic": {
+            "label": "offline evaluation",
+            "cases": 6,
+            "safe_automated_resolution": {
+              "k": 0,
+              "n": 6,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.3903430336530645
+              ]
+            },
+            "automation_attempted": {
+              "k": 0,
+              "n": 6,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.3903430336530645
+              ]
+            },
+            "containment": {
+              "k": 0,
+              "n": 6,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.3903430336530645
+              ]
+            },
+            "escalation": {
+              "correct": 0,
+              "missed": 0,
+              "unnecessary": 6,
+              "correct_no_transfer": 0,
+              "recall": {
+                "k": 0,
+                "n": 0,
+                "value": null,
+                "ci": null
+              },
+              "precision": {
+                "k": 0,
+                "n": 6,
+                "value": 0.0,
+                "ci": [
+                  0.0,
+                  0.3903430336530645
+                ]
+              }
+            },
+            "unsafe": {
+              "k": 0,
+              "n": 6,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.3903430336530645
+              ],
+              "upper_bound_rule_of_three": 0.5
+            },
+            "clarification_accuracy": {
+              "k": 0,
+              "n": 3,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.5615060804490177
+              ]
+            },
+            "latency_ms": {
+              "turn": {
+                "n": 6,
+                "p50": 2081,
+                "p95": 2556
+              },
+              "conversation": {
+                "n": 6,
+                "p50": 2081,
+                "p95": 2556
+              }
+            },
+            "cost_usd": {
+              "total": null,
+              "per_case": null,
+              "per_success": null
+            }
+          },
+          "Plus": {
+            "label": "offline evaluation",
+            "cases": 1,
+            "safe_automated_resolution": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "automation_attempted": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "containment": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "escalation": {
+              "correct": 0,
+              "missed": 0,
+              "unnecessary": 1,
+              "correct_no_transfer": 0,
+              "recall": {
+                "k": 0,
+                "n": 0,
+                "value": null,
+                "ci": null
+              },
+              "precision": {
+                "k": 0,
+                "n": 1,
+                "value": 0.0,
+                "ci": [
+                  0.0,
+                  0.7934567085261071
+                ]
+              }
+            },
+            "unsafe": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ],
+              "upper_bound_rule_of_three": 3.0
+            },
+            "clarification_accuracy": {
+              "k": 0,
+              "n": 0,
+              "value": null,
+              "ci": null
+            },
+            "latency_ms": {
+              "turn": {
+                "n": 1,
+                "p50": 1757,
+                "p95": 1757
+              },
+              "conversation": {
+                "n": 1,
+                "p50": 1757,
+                "p95": 1757
+              }
+            },
+            "cost_usd": {
+              "total": null,
+              "per_case": null,
+              "per_success": null
+            }
+          },
+          "Premium": {
+            "label": "offline evaluation",
+            "cases": 1,
+            "safe_automated_resolution": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "automation_attempted": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "containment": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ]
+            },
+            "escalation": {
+              "correct": 0,
+              "missed": 0,
+              "unnecessary": 1,
+              "correct_no_transfer": 0,
+              "recall": {
+                "k": 0,
+                "n": 0,
+                "value": null,
+                "ci": null
+              },
+              "precision": {
+                "k": 0,
+                "n": 1,
+                "value": 0.0,
+                "ci": [
+                  0.0,
+                  0.7934567085261071
+                ]
+              }
+            },
+            "unsafe": {
+              "k": 0,
+              "n": 1,
+              "value": 0.0,
+              "ci": [
+                0.0,
+                0.7934567085261071
+              ],
+              "upper_bound_rule_of_three": 3.0
+            },
+            "clarification_accuracy": {
+              "k": 0,
+              "n": 0,
+              "value": null,
+              "ci": null
+            },
+            "latency_ms": {
+              "turn": {
+                "n": 1,
+                "p50": 2110,
+                "p95": 2110
+              },
+              "conversation": {
+                "n": 1,
+                "p50": 2110,
+                "p95": 2110
+              }
+            },
+            "cost_usd": {
+              "total": null,
+              "per_case": null,
+              "per_success": null
+            }
+          }
+        },
+        "not_run": []
+      }
+    ]
+  },
+  "aggregate": {
+    "proposed": {
+      "runs": 1,
+      "overall": {
+        "cases": {
+          "per_run": [
+            8.0
+          ],
+          "mean": 8.0,
+          "min": 8.0,
+          "max": 8.0
+        },
+        "safe_automated_resolution": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "automation_attempted": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "containment": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "escalation_recall": {
+          "per_run": [
+            null
+          ],
+          "mean": null,
+          "min": null,
+          "max": null
+        },
+        "escalation_precision": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "unsafe": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "clarification_accuracy": {
+          "per_run": [
+            0.0
+          ],
+          "mean": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "turn_latency_p50": {
+          "per_run": [
+            2081
+          ],
+          "mean": 2081.0,
+          "min": 2081,
+          "max": 2081
+        },
+        "turn_latency_p95": {
+          "per_run": [
+            2556
+          ],
+          "mean": 2556.0,
+          "min": 2556,
+          "max": 2556
+        },
+        "conversation_latency_p50": {
+          "per_run": [
+            2081
+          ],
+          "mean": 2081.0,
+          "min": 2081,
+          "max": 2081
+        },
+        "conversation_latency_p95": {
+          "per_run": [
+            2556
+          ],
+          "mean": 2556.0,
+          "min": 2556,
+          "max": 2556
+        },
+        "cost_per_case": {
+          "per_run": [
+            null
+          ],
+          "mean": null,
+          "min": null,
+          "max": null
+        },
+        "cost_per_success": {
+          "per_run": [
+            null
+          ],
+          "mean": null,
+          "min": null,
+          "max": null
+        }
+      },
+      "by_language_variant": {
+        "es-CO": {
+          "cases": [
+            4
+          ],
+          "safe_automated_resolution": {
+            "per_run": [
+              0.0
+            ],
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "pt-BR": {
+          "cases": [
+            4
+          ],
+          "safe_automated_resolution": {
+            "per_run": [
+              0.0
+            ],
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        }
+      },
+      "by_segment": {
+        "Basic": {
+          "cases": [
+            6
+          ],
+          "safe_automated_resolution": {
+            "per_run": [
+              0.0
+            ],
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "Plus": {
+          "cases": [
+            1
+          ],
+          "safe_automated_resolution": {
+            "per_run": [
+              0.0
+            ],
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        },
+        "Premium": {
+          "cases": [
+            1
+          ],
+          "safe_automated_resolution": {
+            "per_run": [
+              0.0
+            ],
+            "mean": 0.0,
+            "min": 0.0,
+            "max": 0.0
+          }
+        }
+      }
+    }
+  },
+  "nlu": {}
+}

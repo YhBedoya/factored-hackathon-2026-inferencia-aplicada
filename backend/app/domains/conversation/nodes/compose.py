@@ -41,7 +41,7 @@ from app.domains.localization import (
 )
 from app.domains.localization.schemas import FxRate
 
-__all__ = ["ComposeDraft", "compose", "compose_checked", "compose_reply"]
+__all__ = ["ComposeDraft", "compose", "compose_checked", "compose_reply", "compose_reply_flagged"]
 
 _PROMPT = PromptRef("compose", 8)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
@@ -123,6 +123,23 @@ async def compose_reply(
     """`compose_checked`'s text alone, for callers that don't need the outcome."""
     text, _ = await compose_checked(llm, language=language, country=country, goal=goal, facts=facts)
     return text
+
+
+async def compose_reply_flagged(
+    llm: LLMClient, *, language: Language, country: Country, goal: Goal, facts: list[Fact]
+) -> tuple[str, bool]:
+    """`compose_reply`'s text plus whether the LLM call raised `LLMError`.
+
+    The text is the same as `compose_reply`'s; the flag lets a node mark the
+    turn degraded (D4) instead of losing the failure inside the fallback.
+    """
+    try:
+        text, _ = await _compose_draft(
+            llm, language=language, country=country, goal=goal, facts=facts
+        )
+    except LLMError:
+        return get_template("fallback", language), True
+    return text, False
 
 
 async def compose_checked(
@@ -370,6 +387,13 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     node that joins this turn's segments into the one reply the caller
     reads.
     """
+    # D4: with a classifier loaded, a degraded turn composes from the baseline
+    # template and never calls the LLM. Lazy import: baseline imports this module.
+    has_classifier = config["configurable"].get("classifier") is not None
+    if has_classifier and state.get("degraded"):
+        from app.domains.conversation.baseline.template_compose import baseline_compose
+
+        return await baseline_compose(state, config)
     llm: LLMClient = config["configurable"]["llm"]
     facts = list(state.get("facts", []))
     facts_by_key = {fact.key: fact for fact in facts}
@@ -401,6 +425,11 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             facts=facts,
         )
     except LLMError:
+        if has_classifier:
+            # D2: the no-LLM path serves the turn instead of handing off.
+            from app.domains.conversation.baseline.template_compose import baseline_compose
+
+            return {**await baseline_compose(state, config), "degraded": True}
         # D8, A5: no segment; `fallback` speaks and the turn hands off.
         return {"escalation_reason": "llm_unavailable", "grounding": "template"}
     segments = [text]

@@ -18,7 +18,7 @@ from langchain_core.runnables import RunnableConfig
 from app.core.llm import LLMClient
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.nodes.compose import compose_reply
+from app.domains.conversation.nodes.compose import compose_reply_flagged
 from app.domains.conversation.state import Fact
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
@@ -81,19 +81,34 @@ def make_abstain(*, llm_wording: bool = True) -> Callable[..., Awaitable[dict[st
     """
 
     async def node(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-        return await _abstain(state, config, llm_wording=llm_wording)
+        result, _ = await _abstain(state, config, llm_wording=llm_wording)
+        return result
 
     return node
 
 
 async def abstain(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-    """Compose the four-part abstain reply and offer the chips (ADR-026)."""
-    return await _abstain(state, config, llm_wording=True)
+    """Compose the four-part abstain reply and offer the chips (ADR-026).
+
+    With a classifier loaded, a degraded turn takes the baseline wording (D4).
+    When its own LLM call fails, the reply is the usual fallback and the turn
+    is marked `degraded` (D2).
+    """
+    if config["configurable"].get("classifier") is not None and state.get("degraded"):
+        # Lazy import: the baseline module imports this one.
+        from app.domains.conversation.baseline.template_compose import baseline_abstain
+
+        return await baseline_abstain(state, config)
+    result, llm_failed = await _abstain(state, config, llm_wording=True)
+    if llm_failed and config["configurable"].get("classifier") is not None:
+        result["degraded"] = True
+    return result
 
 
 async def _abstain(
     state: GraphState, config: RunnableConfig, *, llm_wording: bool
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], bool]:
+    """The reply update and whether the wording call raised `LLMError`."""
     language = state["language"]
     nlu = state.get("nlu")
     topic = nlu.slots.topic if nlu is not None and nlu.slots.topic else "other"
@@ -115,9 +130,10 @@ async def _abstain(
     # placeholder that would fill as an empty string.
     facts = [Fact(key=k, value=v, source=_SOURCE) for k, v in values.items() if v]
     text = get_template("fallback", language)
+    llm_failed = False
     if llm_wording:
         llm: LLMClient = config["configurable"]["llm"]
-        text = await compose_reply(
+        text, llm_failed = await compose_reply_flagged(
             llm, language=language, country=state["country"], goal="abstain", facts=facts
         )
     if text == get_template("fallback", language):
@@ -131,7 +147,7 @@ async def _abstain(
 
     labels = [closest_action] if closest_action else []
     options = [PickerOption(label=label) for label in [*labels, human_offer]]
-    return {
+    update = {
         "segments": [text],
         "ui": [
             QuickRepliesEvent(
@@ -140,3 +156,4 @@ async def _abstain(
             )
         ],
     }
+    return update, llm_failed

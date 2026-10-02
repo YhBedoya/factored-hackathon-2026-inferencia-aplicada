@@ -31,14 +31,17 @@ from app.domains.conversation.schemas import NLUResult  # noqa: E402
 from app.domains.conversation.state import Pending  # noqa: E402
 
 from eval.harness.metrics import LABEL, Rate, percentiles  # noqa: E402
-from eval.scenarios.schema import Case  # noqa: E402
+from eval.scenarios.schema import Case, load_dir  # noqa: E402
 
 __all__ = [
     "NLU_MODELS",
     "NluItem",
+    "abstain_rates",
     "compare",
     "derive_suite_items",
+    "dev_items",
     "load_smoke_items",
+    "predict_items",
     "render",
     "score",
 ]
@@ -46,6 +49,7 @@ __all__ = [
 NLU_MODELS = ("claude-sonnet-5-5", "claude-haiku-4-5-20251001")
 PERSONAS_PATH = _REPO_ROOT / "eval" / "personas.yaml"
 SMOKE_PATH = _REPO_ROOT / "eval" / "nlu" / "nlu_v1_smoke.yaml"
+DEV_DIR = _REPO_ROOT / "eval" / "scenarios" / "dev"
 CAVEAT = "Anthropic API; Bedrock serves the same models (ADR-028)"
 
 NluFn = Callable[..., Awaitable[NLUResult]]
@@ -107,6 +111,57 @@ def load_smoke_items(path: Path) -> list[NluItem]:
             )
         )
     return items
+
+
+def dev_items(*, seeds_only: bool) -> list[NluItem]:
+    """Smoke items plus the items derived from `eval/scenarios/dev` (D21).
+
+    `seeds_only` keeps the suite items whose id ends in `.s` (one per seed);
+    otherwise every language variant is included.
+    """
+    suite = derive_suite_items(load_dir(DEV_DIR), PERSONAS_PATH)
+    if seeds_only:
+        suite = [i for i in suite if i.id.endswith(".s")]
+    return [*load_smoke_items(SMOKE_PATH), *suite]
+
+
+def predict_items(
+    items: Sequence[NluItem], predict: Callable[[NluItem], NLUResult | None]
+) -> list[NLUResult | None]:
+    """Run ``predict`` over ``items``; an exception counts as a miss (None), like `compare`."""
+    out: list[NLUResult | None] = []
+    for item in items:
+        try:
+            out.append(predict(item))
+        except Exception:
+            out.append(None)
+    return out
+
+
+def abstain_rates(
+    items: Sequence[NluItem], predictions: Sequence[NLUResult | None]
+) -> dict[str, Any]:
+    """OOS recall (out_of_* items answered with an out_of_* status) and false abstain
+    (in-scope items answered out_of_*), each a Rate with a Wilson CI. A None prediction
+    is not an abstain."""
+
+    def abstained(p: NLUResult | None) -> bool:
+        return p is not None and p.status.startswith("out_of_")
+
+    oos = [(i, p) for i, p in zip(items, predictions, strict=True) if _is_oos(i)]
+    ins = [
+        (i, p)
+        for i, p in zip(items, predictions, strict=True)
+        if i.expected_status is not None and not _is_oos(i)
+    ]
+    return {
+        "oos_recall": Rate.of(sum(abstained(p) for _, p in oos), len(oos)).model_dump(),
+        "false_abstain": Rate.of(sum(abstained(p) for _, p in ins), len(ins)).model_dump(),
+    }
+
+
+def _is_oos(item: NluItem) -> bool:
+    return (item.expected_status or "").startswith("out_of_")
 
 
 def _macro_prf(gold: list[set[str]], pred: list[set[str]]) -> tuple[float, float, float]:

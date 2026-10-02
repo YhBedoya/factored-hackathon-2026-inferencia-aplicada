@@ -45,7 +45,7 @@ The dataset can't provide intent labels. `call_transcripts.customer_text` has 42
 | **Baseline** | Keyword/regex intent router (with the regional lexicon) + the same tools, policy engine and flows + fixed ES/PT template replies. It isolates the value of the LLM layer. Multi-intent messages: clause split at connectors and punctuation, per-clause match, precedence rules and a negation window (ADR-005) |
 | **Proposed** | Full system (LLM NLU + flows + answer node + composer) |
 | Operational reference | Call-center figures from the data (FCR `was_resolved`, handle time, `was_escalated`, `sla_breached`) for card-related contact reasons. Labeled as **historical synthetic data, not comparable 1:1** |
-| Learned component | The pretrained LLM NLU vs the keyword router on `eval/nlu/` held-out (ADR-005), plus a model-selection comparison between Bedrock models |
+| Learned component | The pretrained LLM NLU vs the keyword router on `eval/nlu/` held-out (ADR-005), plus a model-selection comparison between Bedrock models. The trained intent classifier (ADR-032) is compared with the keyword router and the LLM NLU (Ref) on the dev items, with run records and the report in `ml/intent/runs/<run_id>/nlu_classifier.md` |
 
 Each run starts from a clone whose suite personas are verified equal to golden. One `FILE_COPY` clone of the golden DB is created per `make eval` invocation and reused by every run of every system; before each run the runner restores and verifies every persona in the selected cases, and any diff aborts the run. Runs record the git SHA, model IDs, prompt versions, policy hash and suite hash (E2).
 

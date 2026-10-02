@@ -1,3 +1,4 @@
+# Relabeled under ADR-032: the degraded path (bedrock_timeout) hands off decline_explain (human decision at the verify gate); reviewer/reviewed_at reset for re-review.
 seed_id: h-decline_explain-tool_failure-pt-br-05
 intent: decline_explain
 category: tool_failure

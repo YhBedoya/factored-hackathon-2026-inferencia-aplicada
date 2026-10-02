@@ -22,6 +22,14 @@ come from fixed templates, so Cardy can't report an action that didn't happen.
 The Portuguese texts are team-generated and still pending review by a native
 Brazilian speaker.
 
+## Where AI is used
+
+- **Cardy's LLM.** Three steps run on the LLM: `understand` (intent and slots), `compose` (the reply wording) and the handoff summary. Money, dates and card masks, the tools and every side effect stay in code, and only PII-masked text reaches the provider.
+- **Evaluation and data generation.** The eval simulator, the paraphrase step and the intent-classifier training data are generated with `gpt-6-luna`. These steps never run in the served graph. The training data is AI-generated and human-audited.
+- **Trained intent classifier.** A small model trained on that data, used **only** in degraded mode: when the LLM fails after its retries or `LLM_DISABLED` is on. While the LLM is up, it is not consulted. Without a loaded model, those turns hand off to a human.
+
+See [ADR-032](docs/solution-docs/decision-log.md) for the decision and [`ml/intent/MODEL_CARD.md`](ml/intent/MODEL_CARD.md) for the model's data, metrics and limits.
+
 ## 1. Prerequisites
 
 Versions this card was built and verified against (later patch versions

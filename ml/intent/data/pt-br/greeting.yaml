@@ -1,0 +1,396 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: greeting
+items:
+- text: Oi, tudo bem?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Olá, como vai?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Bom dia, tudo certo?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Boa tarde!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Olá!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oi, boa noite!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: E aí, beleza?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oi, tudo tranquilo por aí?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa, como cê tá?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa, tudo de boa?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: E aí, tudo certo?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiê, beleza por aí?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiee, td bem?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oii, blz?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Eai, tudo certin?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa, td tranquilo?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiê, blz por ai?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Eaii, como c ta?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Já mandei um “oi” na conversa, mas ainda quero entender uma cobrança no meu cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Oi! A fatura fica pra depois; só passei pra te dar um alô.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Eu já cumprimentei vocês com um “olá”, mas preciso tirar uma dúvida sobre meu cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Já comecei com um “bom dia”; agora quero saber de uma compra que não reconheço.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Olá! Deixo a dúvida sobre o saldo pra outra hora, agora só queria te cumprimentar.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Bom dia! Ainda não vou perguntar quanto devo, vim só dizer oi.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A mensagem automática pede um “olá”, mas vim direto perguntar sobre o limite do meu cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Oi, bom dia! Tudo bem? Depois eu confiro meu saldo, mas queria começar te dando um oi.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O atendimento sugere começar com “oi”, mas quero resolver uma questão da fatura.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi que pedem um “bom dia” no começo, mas preciso de ajuda com uma compra no cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Bom dia! Como vai? Mais tarde vejo meu saldo; por enquanto, passei só pra cumprimentar.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Oi! Espero que esteja tudo certo. Vou conferir meu saldo depois, mas primeiro queria te dar bom
+    dia.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero começar com um oi; preciso falar de uma cobrança no meu cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Oi! Não vim consultar meu saldo, só passei pra dar um oi.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não vou cumprimentar, só quero tirar uma dúvida sobre a fatura.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero dar bom dia; vim resolver um problema com meu cartão.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Olá! Não quero ver meu saldo agora, só queria te cumprimentar.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Bom dia! Não é pra conferir o saldo, vim apenas dizer oi.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Oi!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tudo bem?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

@@ -1,0 +1,359 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: other
+items:
+- text: ¿Me ayudás a armar un menú vegetariano para esta semana?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero organizar las comidas vegetarianas de la semana, ¿me das algunas ideas?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Podés sugerirme platos sin carne para planificar el menú semanal?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Podés explicarme cómo cuidar una planta de interior?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito consejos para mantener sana una planta que tengo adentro de casa.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué cuidados básicos necesita una planta de interior?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me recomendás una serie copada para mirar esta noche?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, decime qué serie está buena para arrancar hoy a la noche.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué serie me recomendás, che? Quiero mirar algo copado hoy.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ayudame a pensar qué cocinar; tengo poco tiempo y pocas ganas de complicarme.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: 'Dame una mano, che: ¿qué puedo preparar rápido y sin mucho lío?'
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, tirame una idea para cocinar algo fácil, que hoy ando a las corridas.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me tiras una receta facil para hacer fideos? no tengo muchas cosas
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tenes alguna receta sencilla de pastas? hay re pocos ingredientes en casa
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: pasame una idea pa cocinar fideos con lo q haya, no tengo casi nada
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: alguna peli buena para ver hoy? toy sin ideas
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q pelicula me recomendas para esta noche? no se q mirar
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tirame alguna peli copada, ando sin ideas pa hoy
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Estoy armando un cuento sobre alguien que pierde su tarjeta; ¿me sugerís un final sorpresivo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Lo del pago con tarjeta puede esperar; ¿me pasás una receta fácil para hacer empanadas de carne?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En mi relato, un personaje pierde la tarjeta y no sé cómo cerrar la historia. ¿Qué final se te
+    ocurre?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Necesito ideas para el desenlace de un cuento donde alguien extravía su tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Después veo el tema del pago, ahora contame cómo preparás unas empanadas de carne sencillas.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Dejemos las tarjetas un minuto: ¿cómo hago empanadas de carne caseras?'
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Para una escena, necesito que el personaje diga que va a bloquear su tarjeta, pero no sé cómo
+    hacerlo sonar natural.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy jugando al ajedrez y no sé cómo bloquear el ataque de la torre. ¿Me explicás una estrategia?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy escribiendo un diálogo donde alguien menciona que bloqueará su tarjeta; ¿cómo podría decirlo
+    de forma creíble?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me ayudás a redactar una frase para una escena en la que un personaje decide bloquear su tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: En la partida de ajedrez me están atacando con la torre; ¿cómo puedo bloquearla?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Qué jugada me conviene hacer para bloquear el ataque de la torre en ajedrez?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito ayuda con mi tarjeta; ¿me traducís este párrafo al español?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es una consulta por mi tarjeta; ¿me pasás una receta fácil de empanadas?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero consultar nada sobre mi tarjeta, solo necesito que traduzcas este texto al español.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco soporte para mi tarjeta. ¿Podés pasar este párrafo al español?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito ayuda con la tarjeta, quiero una receta sencilla de empanadas.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'No te escribo por mi tarjeta: ¿cómo preparo unas empanadas caseras?'
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El pronóstico.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Clima de hoy.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: El tiempo.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

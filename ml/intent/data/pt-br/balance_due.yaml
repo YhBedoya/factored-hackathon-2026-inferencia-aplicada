@@ -1,0 +1,465 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: balance_due
+items:
+- text: Quanto ficou o valor da minha fatura deste mês?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qual é o total que preciso pagar no vencimento?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quanto estou devendo no cartão agora?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Até que dia tenho para quitar a fatura do cartão?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qual é a data de vencimento da minha fatura?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quando vence o pagamento do cartão?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa, cê me fala aí quanto deu a fatura desse mês?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá pra ver pra mim quanto tô devendo no cartão?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me diz aí até que dia vence a fatura, por favor?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ei, qual foi o total que ficou pra pagar no cartão?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cê sabe me dizer que dia vence a minha fatura?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quanto deu a conta do cartão pra eu pagar agora?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: qto ficou minha fatura esse mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me fala o total q to devendo no cartao pfv
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: qual dia vence a fatura? n achei aqui
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ate q dia tenho pra paga a fatura?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: qto tenho q pagar do cartao esse mes??
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ve ai pra mim o vencimento da fatura pf
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Já vi o valor da fatura; agora quero contestar uma compra que não reconheço.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tô na tela do Pix; quanto ficou a fatura do cartão pra eu saber o valor que devo?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sei quanto devo, só preciso de ajuda para entender uma cobrança na fatura.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A data de vencimento já está anotada; quero trocar o dia de fechamento da fatura.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de fazer um Pix, preciso ver quanto tenho que pagar na fatura do meu cartão.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vou transferir o dinheiro, mas primeiro quero saber o total devido no cartão.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho dúvida sobre o total da fatura; quero saber como atualizar meu endereço.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero conferir uma compra que fiz, mas antes me diz quanto ficou a fatura pra pagar?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já consultei o vencimento do cartão e agora quero pedir uma segunda via.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O valor que devo está certo; gostaria de entender como funciona o parcelamento de uma compra.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tô olhando minhas compras no cartão; qual é o total que preciso pagar na fatura?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Além de ver os lançamentos, queria saber quanto veio pra eu pagar este mês.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero consultar quanto devo; preciso contestar uma compra da fatura.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, só preciso saber quanto devo na fatura.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso saber a data de vencimento, só quero atualizar meu endereço.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero ver o total a pagar; podem me ajudar a desbloquear meu cartão?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; quero ver o valor que tenho que pagar.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero fazer bloqueio nenhum, só consultar o total da minha fatura.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Valor da fatura
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Data de vencimento
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Total a pagar
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Valor devido?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Qual é o valor que eu tenho que pagar na fatura do meu cartão de crédito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Me diz quanto está vindo para pagar no cartão de crédito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quanto eu estou devendo na fatura do cartão de crédito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quanto ficou o valor devido na fatura do meu cartão de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Qual é o total que preciso pagar referente ao cartão de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você consegue me informar o valor em aberto da fatura do cartão de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

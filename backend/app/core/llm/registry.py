@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 Provider = Literal["anthropic", "bedrock", "openai"]
-Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate", "judge"]
+Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate", "judge", "intent_gen"]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
 # The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
@@ -47,6 +47,10 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     # reply-quality judge, `eval/judges/judge.py`. Scores dev-suite transcripts
     # only, never the served graph.
     "judge": {"openai": "gpt-6-luna"},
+    # Same eval-only tooling and model (ADR-032, extending ADR-030's list):
+    # offline training-data generation, `ml/intent/generate.py`. Never runs in
+    # the served graph.
+    "intent_gen": {"openai": "gpt-6-luna"},
 }
 
 # `None` means "send no temperature" (the model default). claude-sonnet-5-5 answers
@@ -67,6 +71,8 @@ TEMPERATURE: dict[Step, float | None] = {
     # model accepts", so `agreement.md` carries a non-repeatable caveat instead
     # of relying on a low temperature for reproducibility.
     "judge": 1.0,
+    # Same gpt-6-luna constraint (ADR-032, eval-only).
+    "intent_gen": 1.0,
 }
 
 # Steps whose provider is pinned regardless of `LLM_PROVIDER` (ADR-030). Every
@@ -75,6 +81,7 @@ STEP_PROVIDER: dict[Step, Provider] = {
     "paraphrase": "openai",
     "simulate": "openai",
     "judge": "openai",
+    "intent_gen": "openai",  # ADR-032, eval-only
 }
 
 

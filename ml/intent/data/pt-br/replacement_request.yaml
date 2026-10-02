@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: replacement_request
+items:
+- text: Meu cartão quebrou e preciso pedir outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero solicitar a substituição do meu cartão danificado.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão está rachado; como faço para receber um novo?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Perdi meu cartão e preciso de uma segunda via.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não encontro meu cartão e quero pedir outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão sumiu. Pode solicitar a reposição pra mim?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão quebrou, tô precisando de outro, viu?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Perdi meu cartão e quero pedir um novo, pode me ajudar?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão rachou todo, preciso trocar por outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão sumiu e tô precisando pedir outro pra mim.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: O cartão foi roubado, quero que mandem outro pra minha casa.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão estragou, como faço pra conseguir outro?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao quebro, preciso de outro pfv
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: perdi meu cartao, da pra pedi uma segunda via?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao ta rachado e quero troca ele
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: roubaram meu cartao, manda otro pra mim por favor
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao sumiu, preciso de um novo urgente
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero troca meu cartao q ta todo danificado
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A troca do cartão já foi solicitada; quero só saber quando o novo chega.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Já bloqueei meu cartão, mas também preciso pedir outro porque o atual quebrou.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já pedi a reposição do cartão, só preciso consultar o prazo de entrega.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O pedido de um novo cartão já está feito. Quero acompanhar o envio.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O bloqueio já foi feito; agora quero a reposição do cartão danificado.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Meu cartão está bloqueado e rachado. Preciso que enviem um novo no lugar dele.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A substituição do cartão já foi resolvida; quero apenas conferir meu limite.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Meu saldo eu vejo depois; agora quero pedir outra via porque o cartão trincou.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já recebi o cartão de reposição e só quero consultar a fatura.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A troca do meu cartão aconteceu antes; agora preciso atualizar meu endereço.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria conferir o saldo, mas meu cartão rachou e preciso solicitar um substituto.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Deixo pra olhar o saldo mais tarde; meu cartão quebrou e preciso receber outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero substituir meu cartão, só preciso desbloquear o atual.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero só bloquear o cartão; ele rachou e preciso pedir outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso de outro cartão; quero apenas consultar meu saldo.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero pedir reposição, só saber onde está meu cartão atual.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: 'Não é apenas um bloqueio: meu cartão quebrou e quero uma segunda via.'
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não estou pedindo só pra bloquear, meu cartão trincou e preciso de um novo.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero outro cartão.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode substituir.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero a reposição.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão de crédito quebrou, quero pedir outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Perdi meu cartão de crédito; preciso de uma segunda via.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Meu cartão de crédito foi roubado. Como faço para receber um novo?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Meu cartão de débito está danificado, preciso substituir por outro.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Perdi meu cartão de débito e quero pedir um novo.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Roubaram meu cartão de débito. Preciso solicitar a reposição.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

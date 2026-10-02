@@ -1,0 +1,6 @@
+{
+  "version": "intent_clf@v4",
+  "sha256": "7e5b03af27f01dbe28814ef994e56709e85019b0437665985bf1ac0f0e45f725",
+  "label_set_version": 1,
+  "s3_uri": null
+}

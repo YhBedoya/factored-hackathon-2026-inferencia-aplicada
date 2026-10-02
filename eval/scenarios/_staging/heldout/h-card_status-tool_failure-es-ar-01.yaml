@@ -1,3 +1,4 @@
+# Relabeled under ADR-032: the degraded path (bedrock_timeout) serves this read-only intent; reviewer/reviewed_at reset for re-review.
 seed_id: h-card_status-tool_failure-es-ar-01
 intent: card_status
 category: tool_failure
@@ -12,16 +13,14 @@ setup:
 labels:
   expected_intents:
   - card_status
-  expected_outcome: handoff:atencion
-  required_tools: []
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
   forbidden_tools: []
   expected_db_state: []
-  required_handoff_fields:
-  - handoff_id
-  - queue
-  - reason
-  - request
-  eligible_for_automation: false
+  required_handoff_fields: []
+  eligible_for_automation: true
 cases:
 - case_id: h-card_status-tool_failure-es-ar-01.s
   language_variant: es-AR

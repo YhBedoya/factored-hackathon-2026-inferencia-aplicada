@@ -30,6 +30,10 @@ dependencies = [
     "cryptography>=50.0.1",
     "langchain-openai>=1.6.6",
     "langfuse>=4.15.6",
+    # Learned intent classifier served at runtime (D15; winner C2 = TF-IDF + LR joblib head).
+    "scikit-learn>=1.6",
+    "joblib>=1.4",
+    "numpy>=2",
 ]
 
 [dependency-groups]
@@ -42,9 +46,17 @@ dev = [
     "types-PyYAML",
     "streamlit>=1.38",
 ]
+# Learned intent classifier training/eval only (REQ-learned-intent-fallback).
+# The served winner's deps (scikit-learn, joblib, numpy) are runtime deps (D15).
+ml = [
+    "fastembed>=0.4",
+    "onnxruntime>=1.18",
+    "matplotlib>=3.9",
+]
 
 [tool.uv]
 package = false
+default-groups = ["dev", "ml"]
 
 [tool.ruff]
 target-version = "py312"
@@ -58,6 +70,10 @@ python_version = "3.12"
 plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "fastembed.*", "onnxruntime.*", "joblib.*", "matplotlib.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["app.core.*", "app.domains.conversation.*", "app.domains.policy.*"]

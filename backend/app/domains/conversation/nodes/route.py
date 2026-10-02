@@ -50,6 +50,10 @@ def route(state: GraphState) -> str:
     nlu = state.get("nlu")
     if nlu is None:
         return "fallback"
+    degraded = state.get("degraded", False)
+    # D8: `understand` set this on the second ambiguous degraded turn in a row.
+    if degraded and state.get("escalation_reason") == "clarification_exhausted":
+        return "handoff_summary"
     if nlu.status == "injection_suspected":
         return "unsupported"
 
@@ -69,6 +73,15 @@ def route(state: GraphState) -> str:
     if nlu.status in _ABSTAIN_STATUSES:
         return "abstain"
 
+    # D8 (degraded only): the first ambiguous turn gets `smalltalk`'s rephrase ask.
+    if (
+        degraded
+        and nlu.status == "ambiguous"
+        and nlu.clarification is None
+        and not _answer_fits(nlu, pending)
+    ):
+        return "smalltalk"
+
     if pending is not None and _answer_fits(nlu, pending):
         return _FLOW_NODES.get(pending["flow"], "unsupported")
 
@@ -77,10 +90,12 @@ def route(state: GraphState) -> str:
     return "enqueue"
 
 
-def _answer_fits(nlu: NLUResult, pending: Pending) -> bool:
+def _answer_fits(nlu: NLUResult, pending: Pending | None) -> bool:
     """An answer fits the open pause when the NLU carries the awaited slot
     and no other flow's intent rides along with it (Graph shape, step 3).
     """
+    if pending is None:
+        return False
     slots = nlu.slots
     awaits = pending["awaiting_slot"]
     if awaits == "card_hint":

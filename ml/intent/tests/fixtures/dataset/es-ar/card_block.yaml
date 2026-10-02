@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: card_block
+items:
+- text: bloqueame la tarjeta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: preciso bloquear el plástico de mi tarjeta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quiero que me bloqueen la tarjeta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quiero bloquear la ⟨CARD_1⟩
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: bloqueá la ⟨CARD_1⟩, por favor
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: pará la ⟨CARD_1⟩ ya
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: che, bloqueame la tarjeta ya
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: che, frená mi tarjeta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: dale, bloqueame el plástico
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: me afanaron la tarjeta, bloqueala
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: me robaron la tarjeta, bloqueala
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: perdí la tarjeta, bloqueala ya
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: bloqeame la tarjta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: blokear mi tarjeta xfa
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: bloquea la tarjeta urgente
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

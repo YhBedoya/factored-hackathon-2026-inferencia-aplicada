@@ -1,0 +1,358 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: accounts
+items:
+- text: Quiero abrir una cuenta bancaria, ¿qué requisitos necesito?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo puedo abrir una cuenta nueva?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito saber qué hace falta para abrir una cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo consulto el saldo de mi cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera revisar cuánto dinero tengo en la cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Dónde puedo ver los movimientos y el saldo de mi cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me ayudás a abrir una cuenta bancaria?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo hago, che, para sacar una cuenta corriente?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero abrirme una cuenta, ¿qué tengo que presentar?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero cerrar mi cuenta, ¿me das una mano?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explicás cómo dar de baja mi cuenta, porfa?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero dejar de usar la cuenta y cerrarla, ¿cómo hago?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como abro una cuenta nueva? q necesito?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, k tengo q hacer pa abrirme una cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quiero sacar una cuenta, me decis los reqs?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: dnd veo el saldo de mi cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como chekeo cuanta plata tengo en la cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: no encuentro los movim de mi cuenta, donde los miro?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Veo un consumo de mi tarjeta en el resumen de la cuenta que no reconozco, ¿cómo lo reclamo?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy viendo lo de una tarjeta, pero lo que necesito es abrir una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Hay un cargo de la tarjeta en mi cuenta que no hice; ¿cómo puedo desconocerlo?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cómo reclamo una compra que aparece en el resumen de mi cuenta y no es mía?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Además de consultar por la tarjeta, quiero saber cómo hago para abrir una cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'La tarjeta no es lo principal: quiero iniciar la apertura de una cuenta bancaria.'
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No puedo entrar a mi cuenta de la aplicación, ¿cómo restablezco la contraseña?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me rechazaron una compra con mi tarjeta, pero lo que necesito es abrir una cuenta bancaria. ¿Cómo
+    hago?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Olvidé la clave para ingresar a la aplicación, ¿cómo la recupero?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me quedé afuera de mi usuario de la app, ¿cómo cambio la contraseña?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No pasó el pago de mi tarjeta; en realidad quiero saber cómo abrir una cuenta corriente.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me salió denegada una compra, pero mi consulta es para dar de alta una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero abrir ni cerrar una cuenta; necesito cambiar el PIN de mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco una tarjeta de crédito; quiero abrir una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy buscando una cuenta nueva ni quiero dar de baja la que tengo; quiero actualizar el PIN
+    de la tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito hacer nada con mis cuentas, solo quiero modificar el PIN de mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito sacar una tarjeta, quiero abrir una cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En vez de pedir una tarjeta de crédito, quiero abrir una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Abrir una cuenta
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero abrirla
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cuenta nueva, sí
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
