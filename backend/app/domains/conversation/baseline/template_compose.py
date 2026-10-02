@@ -18,6 +18,7 @@ from app.domains.conversation.nodes.compose import (
     _card_goal,
     _current_intent,
     _fill_goal_template,
+    append_next_step_offer,
 )
 from app.domains.conversation.nodes.handoff_summary import _fallback
 from app.domains.conversation.templates import get_template
@@ -56,6 +57,7 @@ async def baseline_compose(state: GraphState, config: RunnableConfig) -> dict[st
         segments.append(get_template("synthetic_footnote", language))
     if "read_only_note" in facts_by_key:
         segments.append(get_template("read_only_note", language))
+    segments = append_next_step_offer(segments, facts_by_key, language)
     return {"segments": segments, "grounding": "template"}
 
 

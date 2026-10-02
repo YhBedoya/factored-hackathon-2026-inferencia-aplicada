@@ -54,7 +54,7 @@ def test_pending_explained_pt(fakebank_dir: Path) -> None:
             session.graph, "o que houve com minha compra no Uber?", config=session.config
         )
 
-        assert debug.pending is None
+        assert debug.pending == "smalltalk.anything_else"
         assert "03/04/2026" in reply
 
         state = await session.graph.aget_state(session.config)
@@ -93,7 +93,7 @@ def test_reversed_explained_es(fakebank_dir: Path) -> None:
             config=session.config,
         )
 
-        assert debug.pending is None
+        assert debug.pending == "smalltalk.anything_else"
         state = await session.graph.aget_state(session.config)
         facts_by_key = {fact.key: fact for fact in state.values["facts"]}
         assert facts_by_key["tx_state_cause"].value == "reversed_charge"
@@ -135,7 +135,7 @@ def test_pending_on_non_card_product_still_explained(
             session.graph, "o que houve com minha compra no Uber?", config=session.config
         )
 
-        assert debug.pending is None
+        assert debug.pending == "smalltalk.anything_else"
         assert "Uber" in reply
         state = await session.graph.aget_state(session.config)
         assert "card_mask" not in {fact.key for fact in state.values["facts"]}

@@ -24,8 +24,8 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 ## 2. NLU (understand node)
 
-- **One** Bedrock structured-output call per turn. Temperature 0, pinned model ID and prompt version.
-- Input: the masked user message, the last N masked turns, the pending flow and the slot it is waiting for, the customer's country (for regional vocabulary). **No tool output** is ever passed to this node.
+- **One** Bedrock structured-output call per turn, plus at most one `summary` call (Haiku 4.5, temperature 0, `summary@v1`) when messages leave the 6-message window. Temperature 0, pinned model ID and prompt version.
+- Input: the masked user message, the last 6 masked messages plus the masked summary of older ones (`context.build_context`; values stripped from the compose copy), the pending flow and the slot it is waiting for, the customer's country (for regional vocabulary). **No tool output** is ever passed to this node.
 - Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`, `other`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
 - If validation fails, the node retries once with the validation error, then falls back (see §6).
 - **Confidence** is not a number. It comes from explicit labels (`ambiguous`) plus counters in the graph state (ADR-004).
@@ -34,7 +34,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 ```
 load_session ─┬─ mode == human ─► relay_to_agent ─► END   (_entry, no LLM, no bot reply)
-              └─► understand ─► route
+              └─► summarize (proposed only) ─► understand ─► route
                                             ├─ escalation rule hit ───────► handoff_summary ─► handoff ─► END
                                             ├─ status out_of_market ──────► abstain(out_of_market) ─► compose
                                             ├─ status out_of_scope ───────► abstain(scope) ─► compose
@@ -54,7 +54,7 @@ flow finished ─► pop next queued intent (if any) ─► …   compose (groun
 **Graph state** (checkpointed in Postgres, keyed by `conversation_id`):
 `customer_id` (bound from the validated session passed in the run config, read-only; ADR-025), `language`, `country`, `mode` (`bot` / `human`), `nlu` (the current turn's `NLUResult`, or none), `intent_queue`, `pending` (`flow`, `node`, `awaiting_slot`), `slots`, `selected_card_id`, `clarification_failures`, `confirmation_token_id`, `dispute` (`unrecognized_charge`'s `DisputeState`: card, offered and picked tx ids, fraud scores, answers, question index, compromise and block-refused flags; D4-B), `facts[]` (for the composer, reset by `load_session` at the start of each turn and appended to by flows within that turn; Dev A reviews the reducer), `actions: list[ActionResult]` (tool results, D9), `escalation_reason`. `user_text`, `confirmation`, `resume` (in) and `reply`, `ui` (out) are graph-local channels, not part of the checkpointed `TurnState`: `confirmation` carries the button's `ConfirmationDecision{token_id, decision}` and is `None` on a typed turn (D17); `resume: Literal["step_up"] | None` marks a step-up completed outside the chat and is `None` on every other turn (D2-B D1, amends D2-K D17); `ui` is `list[UIEvent]`, reset to `[]` by `load_session` each turn (D16).
 
-`pending.awaiting_slot` values: `"confirmation"` and `"otp"` for a plan pause and a step-up pause (D2-K D15); `"card_hint"` (`card_select`'s re-ask, D2-B); `"block_kind"` (`card_block`'s lock-vs-block clarification); `"address_confirm"` (`replacement`'s "send it to the address on file?" gate) and `"address"` (the raw-address turn that follows a "no", D2-B D4); `"offer_replacement"` (the yes/no gate `card_block` and `card_unlock` both use to offer a replacement after a verified permanent block); `"transactions"` (`unrecognized_charge` waiting on a `selection` from `ui.transaction_list`), `"card_possession"` and `"dispute_question"` (its yes/no questions, D4-B).
+`pending.awaiting_slot` values: `"confirmation"` and `"otp"` for a plan pause and a step-up pause (D2-K D15); `"card_hint"` (`card_select`'s re-ask, D2-B); `"block_kind"` (`card_block`'s lock-vs-block clarification); `"address_confirm"` (`replacement`'s "send it to the address on file?" gate) and `"address"` (the raw-address turn that follows a "no", D2-B D4); `"offer_replacement"` (the yes/no gate `card_block` and `card_unlock` both use to offer a replacement after a verified permanent block); `"offer_unlock"` and `"offer_block"` (the same yes/no gate for the unlock offer after a `card_status` answer on a customer-locked card, and the block offer from `replacement` when the card is still active; "no" to either shows the closing question, the same as a declined replacement offer); `"transactions"` (`unrecognized_charge` waiting on a `selection` from `ui.transaction_list`), `"card_possession"` and `"dispute_question"` (its yes/no questions, D4-B).
 
 **Entry routing** (the conditional edge right after `load_session`, before `understand`; D2-B D1/D4/D20), in this order: (0) `selection` set (the transaction pick, `04` §3, D4-B D7) → resume `unrecognized_charge` when paused at `awaiting_slot == "transactions"`, else `smalltalk` (the route has already rejected ids that weren't offered with `409 selection_invalid`, and the flow checks again); (1) `confirmation` set → resume the flow paused at `awaiting_slot == "confirmation"`, else `smalltalk`; (2) `resume == "step_up"` → resume the flow paused at `awaiting_slot == "otp"`, else `smalltalk`; (3) `awaiting_slot == "address"` → resume that flow directly; (4) otherwise → `understand`. The human-mode check comes before all five: `mode == human` goes `load_session → relay_to_agent → finish` (D4-A D13). Steps 0–3 skip the LLM entirely; `smalltalk` is what a stale button or an OTP resume with no matching pause falls to instead of crashing.
 
@@ -94,12 +94,13 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 
 ### 4.6 `card_block` (MVP centerpiece)
 1. `card_select`.
-2. If `block_kind` is missing, **clarify** `lock_vs_block`: "¿Quieres pausarla temporalmente o cancelarla y pedir una nueva?" This is the demo's ambiguous case.
-3. The policy check makes sure the card is not already Blocked/Closed. **C**: the server issues a confirmation token and emits `ui.confirm`.
+2. **State is checked before lock-vs-block**: a card already Blocked, Closed or locked gets `already_in_state` plus a next-step offer (replacement, unlock or a person, by block origin from `policies/card_select.yaml` `next_step_offer`), not the lock-vs-block question. The policy check makes sure the card is not already Blocked/Closed.
+3. If `block_kind` is missing, **clarify** `lock_vs_block`: "¿Quieres pausarla temporalmente o cancelarla y pedir una nueva?" This is the demo's ambiguous case. Then **C**: the server issues a confirmation token and emits `ui.confirm`.
 4. On affirm (a button or "sí"):
    - `temporary_lock` → T `cards.lock_card(card_id, token)` → **V** `card_controls.locked = true`.
    - `permanent_block` (lost/stolen) → T `cards.block_card(card_id, reason, token)` → **V** `products.product_status = 'Blocked'` → offer `replacement`.
 5. If the read-back fails: handoff (`action_unverified`). Never say "done".
+6. After a verified lock, and once any queued intents have run (the queue drains first), the reply ends with the closing question "¿Te ayudo con algo más o damos por terminada la conversación?" and `ui.quick_replies` `slot: closing` ("Algo más" / "Terminar"); the pause is `smalltalk`'s `anything_else`, so "Terminar" ends the conversation.
 
 ### 4.7 `card_unlock`
 1. `card_select` → T `cards.get_block_origin(card_id)`.
@@ -117,7 +118,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 4. **Priority flags** (repeat complainer, amount above the per-currency threshold, an open Critical complaint) are checked in code before the claim plan is issued, on both the single-charge and compromise paths, never asked of the LLM (D7-B D5). On the single-charge path, the claim still runs C → `create_claim` → V, and after a verified read-back the flow sets `escalation_reason = priority_claim` and hands off to Reclamos; an unverified claim goes through the existing `action_unverified` handoff instead (D7-B D6). On the compromise path, Fraudes still wins: the handoff stays `suspected_fraud` → Fraudes, and `priority_claim` is appended to `escalation_rules_hit` (D7-B D7). A regulator mention is unchanged: `legal_regulator` still hands off to Reclamos at once with no claim, even when it lands mid-flow on a paused `unrecognized_charge` (D7-B D8). "Open Critical" means a `bank.complaints` row for the customer with `priority = Critical` and `status in disputes.yaml priority.open_statuses` (`[Open, In Process, Escalated]`) (D7-B D9).
 
 ### 4.9 `replacement`
-1. Precondition: the card is permanently blocked or expired.
+1. Precondition: the card is eligible. Eligibility is a `customer_block` origin (`policies/card_select.yaml` `replacement.eligible_origins`) or an expired card (checked in code against the expiration date). The picker lists eligible cards only. One eligible card means no picker. None, or an ineligible active card, gets an explanation plus an offer to block it (pause `offer_block`). Bank-side, Suspended or Closed cards go to a person. A request for a *new* card (not a replacement) is the `new_card` abstain (§5), never this flow.
 2. Confirm the delivery address (masked). An **address change** requires **S** step-up.
 3. **C** → T `cards.order_replacement` → **V** → simulated tracking ID.
 
@@ -143,7 +144,7 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 
 Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `retencion` and `creditos` are Stretch **(proposed)**.
 
-**Structured abstain (ADR-026).** An abstain reply is never just a list of topics. Code builds four facts from `policies/scope.yaml` using the NLU `topic`, and `compose` phrases them: (1) acknowledge the topic, (2) the `reason_key` (why this chat can't do it), (3) the closest supported action, if `closest_intents` has one, as a one-tap suggestion, and (4) an offer of a human (`human_queue`). After two abstains in a row, the human offer becomes a button **(proposed)**. If a flow is pending, it stays pending and the reply restates its question. Example: "¿Me das un préstamo?" → "Por aquí no puedo gestionar préstamos: este chat atiende tus tarjetas. Si quieres, reviso el cupo disponible de tu tarjeta de crédito, o te paso con un asesor."
+**Structured abstain (ADR-026).** An abstain reply is never just a list of topics. Code builds four facts from `policies/scope.yaml` using the NLU `topic`, and `compose` phrases them: (1) acknowledge the topic, (2) the `reason_key` (why this chat can't do it), (3) the closest supported action, if `closest_intents` has one, as a one-tap suggestion, and (4) an offer of a human (`human_queue`). After two abstains in a row, the human offer becomes a button **(proposed)**. The reply is warm and in the first person (the `abstain_fallback` variants thank the customer and ask a question). The `new_card` topic (a request for a new card, not a replacement) is a fixed template with no compose call and no human chip (`scope.yaml` `offer_human: false`): this chat can't issue a new card, and a person can't either. If a flow is pending, it stays pending and the reply restates its question. Example: "¿Me das un préstamo?" → "Por aquí no puedo gestionar préstamos: este chat atiende tus tarjetas. Si quieres, reviso el cupo disponible de tu tarjeta de crédito, o te paso con un asesor."
 
 ## 6. Live takeover (handoff UX)
 

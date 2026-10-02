@@ -42,6 +42,8 @@ _CONFIRMATION_SLOTS = {
     "confirmation",
     "address_confirm",
     "offer_replacement",
+    "offer_unlock",
+    "offer_block",
     "card_possession",
     "dispute_question",
 }

@@ -13,7 +13,7 @@ export type CardPickerUiEvent = {
 };
 
 export type QuickRepliesPayload = {
-	slot: "block_kind" | "abstain" | "next_step";
+	slot: "block_kind" | "abstain" | "next_step" | "closing";
 	options: PickerOption[];
 };
 export type QuickRepliesUiEvent = {

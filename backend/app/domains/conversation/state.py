@@ -29,6 +29,7 @@ __all__ = [
     "DeclineState",
     "DisputeState",
     "Fact",
+    "HistoryMessage",
     "Pending",
     "TurnState",
     "TxOfferState",
@@ -63,6 +64,16 @@ class Pending(TypedDict):
     flow: str
     node: str
     awaiting_slot: str | None
+
+
+class HistoryMessage(TypedDict):
+    """One masked message of the conversation window (naturalidad-cardy D3, R5).
+
+    `text` is `user_text` or the masked reply, never raw PII.
+    """
+
+    role: Literal["customer", "cardy"]
+    text: str
 
 
 class Fact(BaseModel):
@@ -226,3 +237,7 @@ class TurnState(TypedDict):
     # Read by `nodes/handoff.py` to append `priority_claim` to
     # `escalation_rules_hit`, then cleared on handoff.
     priority_flags: NotRequired[list[str]]
+    # Conversation memory (naturalidad-cardy D3): the last 6 masked messages and
+    # an LLM-written masked summary of the older ones. Plain last-write-wins.
+    history: NotRequired[list[HistoryMessage]]
+    summary: NotRequired[str | None]

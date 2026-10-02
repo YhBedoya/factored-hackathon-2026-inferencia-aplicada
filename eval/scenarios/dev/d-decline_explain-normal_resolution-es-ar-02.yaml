@@ -31,7 +31,7 @@ cases:
   source: seed
   turns:
   - say: ¿por qué rechazaron mi compra?
-  - say: Quiero una tarjeta nueva
+  - say: Quiero reponer mi tarjeta
   reviewer: null
   reviewed_at: null
 - case_id: d-decline_explain-normal_resolution-es-ar-02.p1
@@ -40,7 +40,7 @@ cases:
   source: paraphrase:gpt-6-luna:paraphrase@v1
   turns:
   - say: ¿Por qué me rechazaron la compra?
-  - say: Quisiera una tarjeta nueva
+  - say: Quisiera reponer mi tarjeta
   reviewer: null
   reviewed_at: null
 - case_id: d-decline_explain-normal_resolution-es-ar-02.p2
@@ -49,6 +49,6 @@ cases:
   source: paraphrase:gpt-6-luna:paraphrase@v1
   turns:
   - say: ¿Por qué no aceptaron mi compra?
-  - say: Me gustaría tener una tarjeta nueva
+  - say: Me gustaría reponer mi tarjeta
   reviewer: null
   reviewed_at: null

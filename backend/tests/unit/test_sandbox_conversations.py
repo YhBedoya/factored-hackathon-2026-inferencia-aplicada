@@ -24,7 +24,7 @@ from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.conversation.tools.handoff import InMemoryHandoffTools
-from tests.conftest import RecordingAudit, ScriptedLLM
+from tests.conftest import RecordingAudit, ScriptedLLM, strip_closing
 
 
 def _config(ctx: ToolContext, bank_tools: FakeBank, llm: ScriptedLLM, thread_id: str) -> Any:
@@ -69,13 +69,11 @@ def test_es_multi_card_asks_then_answers(fakebank_dir: Path) -> None:
         run_turn(graph, "hola, cual es el estado de mi tarjeta?", config=config)
     )
     assert debug1.route == "card_info"
-    assert reply1.startswith("¿Sobre cuál tarjeta quieres saber?\n")
-    assert "Crédito" in reply1
-    assert "6475" in reply1
+    assert reply1 == "¿Sobre cuál tarjeta quieres saber?"
 
     reply2, debug2 = asyncio.run(run_turn(graph, "la de credito", config=config))
     assert debug2.route == "card_info"
-    assert reply2 == (
+    assert strip_closing(reply2, "es") == (
         "Tu tarjeta Crédito •••• 6475 esta Activa. Vence el 31/08/2027. "
         "Limite US$5,000.00, disponible US$3,765.50."
     )
@@ -100,7 +98,7 @@ def test_pt_single_card_answers_in_pt(fakebank_dir: Path) -> None:
     reply, debug = asyncio.run(run_turn(graph, "qual e o status do meu cartao?", config=config))
     assert debug.route == "card_info"
     assert debug.language == "pt"
-    assert reply == "Seu cartao Crédito •••• 2222 esta Ativo."
+    assert strip_closing(reply, "pt") == "Seu cartao Crédito •••• 2222 esta Ativo."
 
 
 def test_pix_routes_out_of_market(fakebank_dir: Path) -> None:
@@ -205,7 +203,7 @@ def test_pt_compose_uses_customer_name_only_as_placeholder(fakebank_dir: Path) -
     config = _config(ctx, bank_tools, llm, "t-pt-name")
 
     reply, _ = asyncio.run(run_turn(graph, "qual e o status do meu cartao?", config=config))
-    assert reply == "Prueba, seu cartão Crédito •••• 2222 está Ativo."
+    assert strip_closing(reply, "pt") == "Prueba, seu cartão Crédito •••• 2222 está Ativo."
     compose_call = next(call for call in llm.calls if call.step == "compose")
     assert "customer_name" in compose_call.user
     for call in llm.calls:

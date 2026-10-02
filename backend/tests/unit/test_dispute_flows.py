@@ -22,7 +22,7 @@ from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.localization.format import format_date, format_money, mask_card
 from app.domains.transactions.schemas import TxFilter
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 _CARD_ID = "PRD-TFS2CRED0001"
 _TXN01 = "TRX-TFS2CRED0001TXN01"  # Approved, low fraud_score
@@ -170,7 +170,8 @@ def test_single_charge_questions_claim(fakebank_dir: Path, language: Language) -
             config=session.config,
             confirmation=ConfirmationDecision(token_id=token_id, decision="confirm"),
         )
-        assert debug5.pending is None
+        assert debug5.pending == "smalltalk.anything_else"
+        assert reply5.endswith(get_template("closing_question", language))
         assert re.search(r"CLM-[0-9A-F]+", reply5)
         assert "Fraudes" not in reply5
         assert session.handoff_tools.created == []
@@ -192,9 +193,9 @@ def test_no_transactions_writes_nothing(fakebank_dir: Path) -> None:
         reply, debug = await run_turn(
             session.graph, "no reconozco estas compras", config=session.config
         )
-        assert reply == get_template("dispute_no_transactions", "es")
-        assert debug.pending is None
-        assert debug.ui == []
+        assert strip_closing(reply, "es") == get_template("dispute_no_transactions", "es")
+        assert debug.pending == "smalltalk.anything_else"
+        assert debug.ui == ["quick_replies"]
         assert session.handoff_tools.created == []
 
     asyncio.run(run())

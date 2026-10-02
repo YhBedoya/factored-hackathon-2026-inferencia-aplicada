@@ -32,7 +32,8 @@ __all__ = [
 ]
 
 Country = Literal["MX", "CO", "AR"]
-CardStatus = Literal["Active", "Blocked", "Suspended", "Closed"]
+# "Locked" is not a bank status: it labels an Active card carrying a temporary lock.
+CardStatus = Literal["Active", "Blocked", "Suspended", "Closed", "Locked"]
 CardKind = Literal["credit", "debit"]
 Language = Literal["es", "pt"]
 Queue = Literal["atencion", "cobranza", "fraudes", "reclamos"]
@@ -66,6 +67,7 @@ _STATUS_LABELS: dict[Language, dict[CardStatus, str]] = {
         "Blocked": "Bloqueada",
         "Suspended": "Suspendida",
         "Closed": "Cerrada",
+        "Locked": "Bloqueada temporalmente",
     },
     # Masculine agreement: "o cartão" (pt).
     "pt": {
@@ -73,6 +75,7 @@ _STATUS_LABELS: dict[Language, dict[CardStatus, str]] = {
         "Blocked": "Bloqueado",
         "Suspended": "Suspenso",
         "Closed": "Fechado",
+        "Locked": "Bloqueado temporariamente",
     },
 }
 

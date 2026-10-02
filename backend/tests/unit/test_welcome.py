@@ -24,7 +24,7 @@ from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.identity.models import Session
 from app.domains.localization import format_date, kind_label, mask_card, status_label
 from app.domains.safety.vault import InMemoryPiiVault
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 _CUSTOMER_ID = "CLI-TFMULTI00001"
 _FIRST_NAME = "Prueba"
@@ -161,5 +161,5 @@ def test_first_turn_after_welcome(
     )
     assert debug.route == "card_info"
     assert debug.language == language
-    assert reply == expected
+    assert strip_closing(reply, language) == expected
     assert [m["role"] for m in recorded] == ["bot", "customer", "bot"]

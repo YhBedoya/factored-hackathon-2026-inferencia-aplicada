@@ -10,7 +10,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from app.domains.conversation.baseline.keyword_nlu import keyword_nlu
 from app.domains.conversation.graph import build_graph, run_turn
 from app.domains.conversation.templates import get_template
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 
 @pytest.mark.parametrize(
@@ -66,4 +66,4 @@ def test_baseline_turn_makes_no_llm_call(fakebank_dir: Path) -> None:
     expected = get_template("goal_card_status", "es").format(
         card_kind="Crédito", card_mask="•••• 2222", status="Activa", expiry="30/11/2027"
     )
-    assert reply == expected
+    assert strip_closing(reply, "es") == expected

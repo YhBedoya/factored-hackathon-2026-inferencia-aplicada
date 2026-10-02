@@ -25,7 +25,16 @@ _DEFAULT_POLICY_PATH = _REPO_ROOT / "policies" / "scope.yaml"
 
 # Mirrors the NLU `Topic` literal.
 TOPICS = frozenset(
-    {"loans", "accounts", "investments", "insurance", "transfers", "pix_boleto", "other"}
+    {
+        "loans",
+        "accounts",
+        "investments",
+        "insurance",
+        "transfers",
+        "pix_boleto",
+        "new_card",
+        "other",
+    }
 )
 
 
@@ -38,6 +47,8 @@ class TopicScope(BaseModel):
     reason_key: str
     closest_intents: list[str]
     human_queue: Queue
+    # False when a person cannot help either (e.g. a new card is not offered).
+    offer_human: bool = True
 
 
 class ScopePolicy(BaseModel):

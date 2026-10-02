@@ -28,6 +28,7 @@ from pydantic import BaseModel, JsonValue
 
 from app.core.llm import LLMError, PromptRef, Step
 from app.domains.audit.schemas import AuditType, NullAuditRecorder
+from app.domains.conversation import templates
 from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -76,12 +77,37 @@ class ScriptedLLM:
     ) -> Any:
         self.calls.append(Call(step=step, prompt=prompt, system=system, user=user, schema=schema))
         queue = self._queues.get(step)
+        if not queue and step == "summary" and step not in self._queues:
+            # The summary step runs from the fourth typed turn on; most tests don't
+            # script it, so it gets a harmless default. A scripted queue still wins.
+            return schema.model_validate({"text": "resumen previo"})
         if not queue:
             raise AssertionError(f"ScriptedLLM: no scripted output left for step {step!r}")
         result = queue.pop(0)
         if isinstance(result, LLMError):
             raise result
         return cast(Any, result)
+
+
+class _FirstVariant:
+    """A stand-in for `random` that always picks the first variant."""
+
+    def choice(self, seq: Sequence[str], /) -> str:
+        return seq[0]
+
+
+@pytest.fixture(autouse=True)
+def _first_template_variant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Template variants are random in production (D13); tests see variant 0."""
+    monkeypatch.setattr(templates, "_RNG", _FirstVariant())
+
+
+def strip_closing(reply: str, language: str) -> str:
+    """Assert `reply` ends with the closing question and return it without that
+    last segment (variant 0 under tests), so a flow's own text is asserted alone."""
+    closing = "\n\n" + templates.get_template("closing_question", cast(Any, language))
+    assert reply.endswith(closing)
+    return reply[: -len(closing)]
 
 
 @pytest.fixture

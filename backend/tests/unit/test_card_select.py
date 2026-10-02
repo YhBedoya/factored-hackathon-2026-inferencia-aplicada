@@ -84,3 +84,37 @@ def test_eligibility_and_hints() -> None:
     all_closed = [_card("PRD-DEBT0002", "debit", "1203", "Closed")]
     no_cards = select_card(all_closed, hint=None, failures=0, policy=_POLICY, language="es")
     assert no_cards == NoCards()
+
+
+def test_r1_focus_hint_never_crosses_customer() -> None:
+    mine = [
+        _card("PRD-MINE0001", "credit", "6475", "Active"),
+        _card("PRD-MINE0002", "debit", "1203", "Active"),
+    ]
+    # A focus id from another customer is not in this session's list -> picker,
+    # no failure counted, and the foreign id never shows up.
+    foreign = select_card(
+        mine, hint="focus", failures=0, policy=_POLICY, language="es", focus_card_id="PRD-OTHER9999"
+    )
+    assert isinstance(foreign, Ask)
+    assert foreign.failures == 0
+    assert "PRD-OTHER9999" not in {c.card_id for c in foreign.options}
+
+    # A focus id that is in the list resolves to it.
+    own = select_card(
+        mine, hint="focus", failures=0, policy=_POLICY, language="es", focus_card_id="PRD-MINE0002"
+    )
+    assert own == Selected(card_id="PRD-MINE0002")
+
+
+def test_picker_labels_locked_active_card_as_locked() -> None:
+    cards = [
+        CardSummary(
+            card_id="PRD-CRED0001", kind="credit", last4="4503", status="Active", locked=True
+        ),
+        _card("PRD-DEBT0002", "debit", "1203", "Active"),
+    ]
+    ask = select_card(cards, hint=None, failures=0, policy=_POLICY, language="es")
+    assert isinstance(ask, Ask)
+    assert "•••• 4503 · Bloqueada temporalmente" in ask.card_options
+    assert "•••• 4503 · Activa" not in ask.card_options

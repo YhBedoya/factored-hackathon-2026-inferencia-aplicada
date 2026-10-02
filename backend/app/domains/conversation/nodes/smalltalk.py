@@ -98,6 +98,9 @@ def _close(language: Language) -> dict[str, Any]:
         "slots": NLUSlots(),
         "clarification_failures": 0,
         "confirmation_token_id": None,
+        # The conversation is over: memory goes with it (naturalidad-cardy D3).
+        "history": [],
+        "summary": None,
         "segments": [get_template("farewell", language)],
         "ui": [ConversationClosedEvent(kind="conversation_closed")],
     }

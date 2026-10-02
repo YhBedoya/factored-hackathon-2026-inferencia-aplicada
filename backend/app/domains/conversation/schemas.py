@@ -45,7 +45,9 @@ Intent = Literal[
 
 NLUStatus = Literal["clear", "ambiguous", "out_of_scope", "out_of_market", "injection_suspected"]
 
-Topic = Literal["loans", "accounts", "investments", "insurance", "transfers", "pix_boleto", "other"]
+Topic = Literal[
+    "loans", "accounts", "investments", "insurance", "transfers", "pix_boleto", "new_card", "other"
+]
 
 Clarification = Literal["lock_vs_block", "which_card", "which_transaction"]
 
@@ -55,7 +57,7 @@ class NLUSlots(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    card_hint: str | None = Field(default=None, pattern=r"^(credit|debit|last4:\d{4})$")
+    card_hint: str | None = Field(default=None, pattern=r"^(credit|debit|focus|last4:\d{4})$")
     block_kind: Literal["temporary_lock", "permanent_block"] | None = None
     date_expression: str | None = None
     merchant_text: str | None = None

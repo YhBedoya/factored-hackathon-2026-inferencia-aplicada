@@ -21,7 +21,7 @@ from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.conversation.tools.handoff import InMemoryHandoffTools
-from tests.conftest import RecordingAudit, ScriptedLLM
+from tests.conftest import RecordingAudit, ScriptedLLM, strip_closing
 
 _MMD_PATH = Path(__file__).resolve().parents[3] / "docs" / "diagrams" / "turn-graph-v0.mmd"
 _D13_CREDIT_KEYS = {
@@ -76,7 +76,7 @@ def test_graph_compiles_and_diagram_is_current(fakebank_dir: Path) -> None:
 
     assert debug1.route == "card_info"
     assert debug2.route == "card_info"
-    assert reply1 == "Tu tarjeta •••• 2222 esta Activa."
+    assert strip_closing(reply1, "es") == "Tu tarjeta •••• 2222 esta Activa."
     assert reply2 == reply1
 
     snapshot = asyncio.run(graph.aget_state(config))

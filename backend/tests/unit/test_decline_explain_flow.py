@@ -16,7 +16,7 @@ from app.domains.conversation.graph import run_turn
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import Language, get_template
 from app.domains.localization.format import format_date, format_money, mask_card
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 _CUSTOMER = "CLI-TFDECLN00006"
 _DATE = date(2026, 3, 30)
@@ -73,9 +73,15 @@ def test_explains_decline(fakebank_dir: Path, code: str, language: Language) -> 
             f"{merchant} {format_money(amount, 'COP', 'CO')} {format_date(_DATE)} "
             f"{mask_card('6666')} {cause_text} {next_text}"
         )
-        assert reply == expected
-        assert debug.pending is None
-        assert debug.ui == (["quick_replies"] if self_service else [])
+        if self_service:
+            # The reply already offers the replacement chip: no closing question.
+            assert reply == expected
+            assert debug.pending is None
+            assert debug.ui == ["quick_replies"]
+        else:
+            assert strip_closing(reply, language) == expected
+            assert debug.pending == "smalltalk.anything_else"
+            assert debug.ui == ["quick_replies"]
 
     asyncio.run(run())
 
@@ -107,9 +113,9 @@ def test_no_declines(fakebank_dir: Path, language: Language) -> None:
         )
         reply, debug = await run_turn(session.graph, opening, config=session.config)
 
-        assert reply == get_template("decline_none", language)
-        assert debug.pending is None
-        assert debug.ui == []
+        assert strip_closing(reply, language) == get_template("decline_none", language)
+        assert debug.pending == "smalltalk.anything_else"
+        assert debug.ui == ["quick_replies"]
         assert [call.step for call in llm.calls] == ["nlu"]
 
     asyncio.run(run())

@@ -441,6 +441,7 @@ def build_graph(
         relay_to_agent,
         route,
         smalltalk,
+        summarize,
         understand,
         unsupported,
     )
@@ -449,6 +450,10 @@ def build_graph(
     graph.add_node("load_session", load_session)
     baseline = system == "baseline"
     graph.add_node("understand", baseline_understand if baseline else understand)
+    # The baseline never summarizes (D17): it has no LLM and no memory.
+    if not baseline:
+        graph.add_node("summarize", summarize)
+        graph.add_edge("summarize", "understand")
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
     graph.add_node("card_info", _guard_access(card_info))
@@ -474,7 +479,7 @@ def build_graph(
         "load_session",
         _entry,
         {
-            "understand": "understand",
+            "understand": "understand" if baseline else "summarize",
             "relay_to_agent": "relay_to_agent",
             "fallback": "fallback",
             "smalltalk": "smalltalk",

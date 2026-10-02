@@ -11,9 +11,14 @@ resumes the "send it to the address on file?" question (D4, D13);
 routing (D4, never a typed message through `understand`); `"confirm"`
 resumes the plan's confirm/cancel decision (D14).
 
-A card is eligible for a replacement only when `get_block_origin` says
-`customer_block` (D11's own offer already guarantees this) or the card is
-already past its expiry (D13). A new delivery address needs step-up first
+A card is eligible for a replacement only when its block origin is in the
+policy's `replacement.eligible_origins` (`customer_block`) or the card is
+already past its expiry (D13). `_select_card` computes that set first, so the
+picker only lists eligible cards; a card the customer names that isn't
+eligible gets the block offer or a person instead of a dead-end refusal. The
+guard in `_check_active_and_eligibility` stays for the offer-resume path.
+
+A new delivery address needs step-up first
 (`policies/tools.yaml`'s `when_address_changed`, D2); the on-file address
 does not. The raw address text is captured only in the `"address"` turn and
 never leaves this module except as `vault.put_address`'s opaque
@@ -32,14 +37,18 @@ from langchain_core.runnables import RunnableConfig
 from app.core.actions import ActionResult
 from app.core.errors import ToolUnavailable
 from app.domains.conversation.flows.actions import (
+    OFFER_BLOCK_PAUSE,
     StepSpec,
     cancel,
+    closing,
     decision,
     execute,
     fill,
     handoff,
+    offer,
     otp_pause,
     start_plan,
+    with_closing,
 )
 from app.domains.conversation.flows.card_select import (
     Ask,
@@ -48,6 +57,7 @@ from app.domains.conversation.flows.card_select import (
     ask_which_card_text,
     card_picker_event,
     load_card_select_policy,
+    next_step_offer_kind,
     select_card,
 )
 from app.domains.conversation.graph import GraphState
@@ -99,6 +109,7 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     """Fresh turn, or a `card_hint` resume: the same `card_select` sub-flow
     `card_block`/`card_unlock` run, then the eligibility check below."""
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]
+    bank_write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
     language = state["language"]
     nlu = state.get("nlu")
     hint = nlu.slots.card_hint if nlu is not None else None
@@ -110,7 +121,39 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
-    outcome = select_card(cards, hint, failures, policy, language)
+    open_cards = [card for card in cards if card.status != "Closed"]
+    # Origin is read only for Blocked/locked cards: an Active card has none to read.
+    origins: dict[str, str] = {}
+    eligible: set[str] = set()
+    try:
+        for card in open_cards:
+            origin_kind = "none"
+            if card.status == "Blocked" or card.locked:
+                origin = await bank_write_tools.get_block_origin(
+                    card.card_id, "replacement_request"
+                )
+                origin_kind = origin.kind
+            origins[card.card_id] = origin_kind
+            if origin_kind in policy.replacement.eligible_origins:
+                eligible.add(card.card_id)
+                continue
+            details = await bank_tools.get_card_details(card.card_id)
+            if details.expiration_date is not None and details.expiration_date < local_today(
+                state["country"]
+            ):
+                eligible.add(card.card_id)
+    except ToolUnavailable:
+        return {"escalation_reason": "tool_failure"}
+
+    outcome = select_card(
+        cards,
+        hint,
+        failures,
+        policy,
+        language,
+        focus_card_id=state.get("selected_card_id"),
+        candidate_ids=frozenset(eligible),
+    )
 
     if isinstance(outcome, Ask):
         return {
@@ -120,7 +163,14 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
             "ui": [card_picker_event(outcome)],
         }
     if isinstance(outcome, NoCards):
-        return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
+        if not open_cards:
+            return {"escalation_reason": "no_cards", "pending": None, "clarification_failures": 0}
+        # Cards exist but none can be replaced yet: offer the block that unlocks it.
+        return {
+            "pending": OFFER_BLOCK_PAUSE,
+            "clarification_failures": 0,
+            "segments": [get_template("replacement_needs_block", language)],
+        }
     if isinstance(outcome, Fallback):
         return {
             "escalation_reason": "clarification_exhausted",
@@ -129,7 +179,21 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         }
 
     update: dict[str, Any] = {"selected_card_id": outcome.card_id, "clarification_failures": 0}
-    update.update(await _check_active_and_eligibility(state, config, outcome.card_id))
+    if outcome.card_id in eligible:
+        update.update(await _check_active_and_eligibility(state, config, outcome.card_id))
+        return update
+
+    # Named by the customer but not replaceable: by status/origin, block it or a person.
+    chosen = next(card for card in cards if card.card_id == outcome.card_id)
+    kind = next_step_offer_kind(
+        policy, status=chosen.status, origin_kind=origins.get(chosen.card_id, "none")
+    )
+    if kind == "human":
+        update.update(offer("human", language, chosen.last4))
+        update["pending"] = None
+        return update
+    update["pending"] = OFFER_BLOCK_PAUSE
+    update["segments"] = [get_template("replacement_needs_block", language)]
     return update
 
 
@@ -142,7 +206,9 @@ async def _resume_offer(state: GraphState, config: RunnableConfig) -> dict[str, 
     card_id = state.get("selected_card_id")
     if outcome == "confirm" and card_id is not None:
         return await _check_active_and_eligibility(state, config, card_id)
-    return {"pending": None, "segments": [get_template("replacement_declined", language)]}
+    declined = closing(language)
+    declined["segments"] = [get_template("replacement_declined", language), *declined["segments"]]
+    return declined
 
 
 async def _check_active_and_eligibility(
@@ -320,7 +386,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
     ) -> ActionResult:
         return await bank_write_tools.order_replacement(card_id, address_ref, token_id)
 
-    return await execute(
+    update = await execute(
         state,
         config,
         call,
@@ -331,3 +397,4 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
         },
         card_last4=details.last4,
     )
+    return with_closing(state, update)
