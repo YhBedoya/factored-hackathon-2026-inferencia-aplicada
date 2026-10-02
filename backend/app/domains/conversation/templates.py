@@ -30,6 +30,7 @@ TemplateKind = Literal[
     "greeting_named",
     "injection_suspected",
     "unsupported_intent",
+    "unsupported_language",
     "fallback",
     "tool_error",
     "clarification_exhausted",
@@ -136,6 +137,18 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
         "pt": (
             "Só posso ver e gerenciar os cartões da pessoa com a sessão ativa. "
             "Se precisar de algo de outra conta, o titular deve entrar em contato."
+        ),
+    },
+    # The message is in neither Spanish nor Portuguese. The customer may read
+    # either language, so both texts carry both versions, own language first.
+    "unsupported_language": {
+        "es": (
+            "Solo puedo ayudarte en español o portugués. ¿Me escribes en alguno de los dos? / "
+            "Só posso ajudar em espanhol ou português. Pode me escrever em um dos dois?"
+        ),
+        "pt": (
+            "Só posso ajudar em espanhol ou português. Pode me escrever em um dos dois? / "
+            "Solo puedo ayudarte en español o portugués. ¿Me escribes en alguno de los dos?"
         ),
     },
     # D14: any intent other than card_status or a lone greeting.

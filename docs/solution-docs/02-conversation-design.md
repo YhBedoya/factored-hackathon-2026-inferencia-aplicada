@@ -26,7 +26,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 - **One** Bedrock structured-output call per turn. Temperature 0, pinned model ID and prompt version.
 - Input: the masked user message, the last N masked turns, the pending flow and the slot it is waiting for, the customer's country (for regional vocabulary). **No tool output** is ever passed to this node.
-- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
+- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`, `other`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
 - If validation fails, the node retries once with the validation error, then falls back (see §6).
 - **Confidence** is not a number. It comes from explicit labels (`ambiguous`) plus counters in the graph state (ADR-004).
 
@@ -155,7 +155,7 @@ Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `
 
 ## 7. Language and localization
 
-- The reply language equals the **current turn's** detected language. `mixed` replies in the language that dominates the latest message (ties go to the previous reply language).
+- The reply language equals the **current turn's** detected language. `mixed` replies in the language that dominates the latest message (ties go to the previous reply language). `other` (neither Spanish nor Portuguese, nlu@v5) gets the fixed bilingual `unsupported_language` template, conversation language first; no flow runs and `pending` is kept.
 - Regional lexicon (`localization/lexicon/*.yaml`): tarjeta/cartão, bloquear/travar, "compra no reconocida"/"compra não reconhecida", voseo ("¿me podés bloquear…?"), MX/CO terms. Used in NLU prompt examples and by the keyword baseline.
 - Money follows the **account's country format**, whatever language the reply is in:
   - MX: `US$1,234.50 (≈ MXN $21,480.00, tipo de cambio del 12/03/2026)`. The record currency comes first and the MXN estimate is labeled.

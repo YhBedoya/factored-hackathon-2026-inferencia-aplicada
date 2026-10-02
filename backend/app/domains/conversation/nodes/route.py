@@ -6,6 +6,8 @@ as `docs/plans/d2-b-card-info-block.md` §"Graph shape" pins it:
 
 1. A missing NLU result always falls back first.
 2. `injection_suspected` goes to `unsupported` (which counts the attempt, D6).
+   A message in neither Spanish nor Portuguese (`language == "other"`) also
+   goes to `unsupported`, which answers that Cardy only helps in ES and PT.
    A legal keyword or a `human_request` intent goes to `handoff_summary`
    (D4); `out_of_market`/`out_of_scope` go to `abstain` (D13). `pending` is
    kept as-is (D14): `route` never touches it.
@@ -50,7 +52,7 @@ def route(state: GraphState) -> str:
     nlu = state.get("nlu")
     if nlu is None:
         return "fallback"
-    if nlu.status == "injection_suspected":
+    if nlu.status == "injection_suspected" or nlu.language == "other":
         return "unsupported"
 
     # Only a rule hit *this* turn escalates from here: a reason already in

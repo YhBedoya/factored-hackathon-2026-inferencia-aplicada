@@ -65,7 +65,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 
 ```json
 {
-  "language": "es | pt | mixed",
+  "language": "es | pt | mixed | other",
   "intents": ["card_block", "decline_explain"],
   "status": "clear | ambiguous | out_of_scope | out_of_market | injection_suspected",
   "slots": {

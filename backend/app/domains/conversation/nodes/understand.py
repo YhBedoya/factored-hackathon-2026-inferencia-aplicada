@@ -19,7 +19,7 @@ from app.domains.conversation.state import Pending
 
 __all__ = ["run_nlu", "understand"]
 
-_PROMPT = PromptRef("nlu", 4)
+_PROMPT = PromptRef("nlu", 5)
 
 
 async def run_nlu(
@@ -65,8 +65,8 @@ async def understand(state: GraphState, config: RunnableConfig) -> dict[str, Any
     On `LLMError` (unavailable, or still invalid after the client's one
     retry) `nlu` is written as `None` so `route` falls back with no crash.
     Either way the turn still needs a reply language: `nlu.language` when
-    it's `es`/`pt`, otherwise (a `mixed` result, or no result at all) the
-    previous `state["language"]`, or `es` on the very first turn (D16).
+    it's `es`/`pt`, otherwise (a `mixed` or `other` result, or no result at
+    all) the previous `state["language"]`, or `es` on the very first turn (D16).
     """
     llm: LLMClient = config["configurable"]["llm"]
     previous_language = state.get("language", "es")

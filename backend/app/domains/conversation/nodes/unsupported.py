@@ -1,6 +1,7 @@
 """Fixed-template reply for routes with no handler yet (D14, D20).
 
-`route` sends here for `injection_suspected`, and `_dispatch` sends here for
+`route` sends here for `injection_suspected` and for a message in neither
+Spanish nor Portuguese (`unsupported_language`), and `_dispatch` sends here for
 any queued card-action intent with no flow yet (P3). `out_of_market` and
 `out_of_scope` go to the `abstain` node (D13). Any other status gets the
 generic `unsupported_intent` text. No LLM call (D14).
@@ -33,6 +34,8 @@ async def unsupported(state: GraphState, config: RunnableConfig) -> dict[str, An
     kind: TemplateKind = "unsupported_intent"
     if nlu is not None:
         kind = _STATUS_TEMPLATES.get(nlu.status, "unsupported_intent")
+        if nlu.status != "injection_suspected" and nlu.language == "other":
+            kind = "unsupported_language"
     if nlu is None or nlu.status != "injection_suspected":
         return {"segments": [get_template(kind, language)]}
 

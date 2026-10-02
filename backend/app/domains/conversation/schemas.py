@@ -75,7 +75,9 @@ class NLUResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    language: Literal["es", "pt", "mixed"]
+    # "other": written in neither Spanish nor Portuguese; `route` answers with
+    # the fixed bilingual `unsupported_language` template.
+    language: Literal["es", "pt", "mixed", "other"]
     intents: list[Intent]
     status: NLUStatus
     slots: NLUSlots = Field(default_factory=NLUSlots)
