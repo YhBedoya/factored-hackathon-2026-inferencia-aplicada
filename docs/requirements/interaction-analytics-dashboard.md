@@ -93,6 +93,8 @@ Tests stay minimal (CLAUDE.md): the lines above and R13.
 
 ## Open questions
 
+Answered at spec time; see `docs/specs/interaction-analytics-dashboard.md` (Q1 → D8; Q2 → D2, the active number is dropped; Q3 → D4; Q4 → D6, D7; Q5 → Dev A; Q6 → D1, a fifth stack "Other"; Q7 → D3). The original wording is kept below.
+
 - **Q1 · Staff console language.** Does the page follow the ES | PT toggle (ADR-022), and are its labels added to both dictionaries?
 - **Q2 · Active interactions.** The fact tables hold finished interactions only. Does the "active" number come from a live count of `app.conversations`, or is it dropped?
 - **Q3 · Table size.** How many recent interactions the table shows, and whether it pages.

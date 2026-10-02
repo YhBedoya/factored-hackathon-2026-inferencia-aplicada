@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 
+import { analyticsSummaryFixture } from "./fixtures/analytics-summary";
+
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_COOKIE_VALUE = "e2e-fake-staff-csrf-token";
 
@@ -137,6 +139,8 @@ export type InstallMockStaffApiOptions = {
 	/** The only password `/auth/staff/login` accepts; anything else answers `401 invalid_credentials`. */
 	password: string;
 	agentDisplayName?: string;
+	/** Session role; `admin` unlocks the analytics route (D14). Defaults to `agent`. */
+	role?: "agent" | "admin";
 };
 
 export type MockStaffApi = {
@@ -196,7 +200,7 @@ export async function installMockStaffApi(
 
 	// D4-A's `StaffMeResponse`, `HandoffSummary` and `HandoffDetail` shapes.
 	const profile = {
-		role: "agent",
+		role: options.role ?? "agent",
 		username: "agent.fraudes",
 		display_name: displayName,
 		queue: "fraudes",
@@ -294,6 +298,24 @@ export async function installMockStaffApi(
 			requests.push({ pathname, method, body: request.postDataJSON() });
 			claimed = false;
 			await route.fulfill({ status: 200, json: summary() });
+			return;
+		}
+
+		if (pathname.endsWith("/staff/analytics/summary") && method === "GET") {
+			if (profile.role !== "admin") {
+				await route.fulfill({
+					status: 403,
+					json: { detail: "forbidden_role" },
+				});
+				return;
+			}
+			const source = new URL(request.url()).searchParams.get("source");
+			await route.fulfill({
+				status: 200,
+				json: analyticsSummaryFixture(
+					source === "real" || source === "mock" ? source : "all",
+				),
+			});
 			return;
 		}
 

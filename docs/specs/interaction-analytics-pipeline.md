@@ -155,6 +155,6 @@ DW8 is proved by commands (Success criteria 8), run in the one live-stack task (
 
 | # | Question | Who decides |
 |---|---|---|
-| OQ1 | Card 2: an interaction whose only shortfall is a `cancelled` intent is in none of the per-day stacks (resolved, escalated, abandoned, abstained). Recorded as Q6 in the dashboard requirement; not answered here | Human, at card 2's spec |
+| OQ1 | *Closed by card 2's spec D1* (exclusive stacks with a fifth stack "Other"; the mock profile keeps 0% `cancelled`) | Answered by the human |
 | OQ2 | *Closed by D22* (a bot-offered occurrence is left out only when it ends `cancelled`; in every other status it counts) | Answered by the human |
-| OQ3 | Card 2: whether bot-offered occurrences show in the intents chart and its per-intent resolution rate. Recorded as Q7 in the dashboard requirement; not answered here | Human, at card 2's spec |
+| OQ3 | *Closed by card 2's spec D3* (the D22 rule: bot-offered rows that ended `cancelled` are left out; every other row counts) | Answered by the human |
