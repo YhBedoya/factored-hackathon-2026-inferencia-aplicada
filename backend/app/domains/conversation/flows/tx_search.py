@@ -96,9 +96,15 @@ async def _run_search(state: GraphState, config: RunnableConfig) -> dict[str, An
         return {"escalation_reason": "tool_failure"}
 
     tx_filter, has_criterion = build_tx_filter(
-        slots, today=today, tz=BANK_TZ[country], language=language, cards=cards
+        slots,
+        today=today,
+        tz=BANK_TZ[country],
+        language=language,
+        cards=cards,
+        focus_card_id=state.get("selected_card_id"),
     )
-    if not has_criterion:
+    # D6: accepting the closing suggestion is itself the criterion (focus card, default window).
+    if not (has_criterion or state.get("suggestion_accepted")):
         return {"pending": None, "segments": [get_template("tx_search_ask_criterion", language)]}
 
     try:
@@ -220,6 +226,7 @@ def build_tx_filter(
     language: Language,
     cards: list[CardSummary],
     status: list[TxStatus] | None = None,
+    focus_card_id: str | None = None,
 ) -> tuple[TxFilter, bool]:
     """Build a `TxFilter` from this turn's NLU slots (D1, A1-A4), and
     whether the customer actually supplied a resolvable criterion.
@@ -256,18 +263,23 @@ def build_tx_filter(
         amount_max=amount_max,
         currency=slots.currency,
         status=list(status) if status else [],
-        card_id=_narrow_card_id(cards, slots.card_hint),
+        card_id=_narrow_card_id(cards, slots.card_hint, focus_card_id),
     )
     return tx_filter, has_criterion
 
 
-def _narrow_card_id(cards: list[CardSummary], hint: str | None) -> str | None:
+def _narrow_card_id(
+    cards: list[CardSummary], hint: str | None, focus_card_id: str | None = None
+) -> str | None:
     """A2: a `card_hint` narrows the search to one card; a hint matching
     zero or more than one card (or no hint at all) leaves `card_id=None`, so
     the search covers every one of the customer's cards -- there is no
-    interactive `card_select` sub-flow here (D1)."""
+    interactive `card_select` sub-flow here (D1). `focus` is the card in focus,
+    only if it is one of the customer's own (D7, R1)."""
     if hint is None:
         return None
+    if hint == "focus":
+        return focus_card_id if any(c.card_id == focus_card_id for c in cards) else None
     if hint == "credit":
         matches = [c for c in cards if c.kind == "credit"]
     elif hint == "debit":

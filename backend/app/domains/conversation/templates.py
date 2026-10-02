@@ -66,7 +66,11 @@ TemplateKind = Literal[
     "offer_human",
     "replacement_needs_block",
     "new_card_not_available",
-    "closing_question",
+    "closing_suggest_transaction_search",
+    "closing_suggest_unrecognized_charge",
+    "closing_generic",
+    "greeting_again",
+    "greeting_again_plain",
     "block_none_eligible",
     "replacement_declined",
     "replacement_not_eligible",
@@ -312,12 +316,12 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # T6 NoCards: no hint, and zero cards pass the eligibility policy.
     "no_cards": {
         "es": [
-            "No encontré tarjetas activas asociadas a tu cuenta.",
+            "Revisé y no encontré tarjetas activas asociadas a tu cuenta.",
             "Por ahora no veo tarjetas activas en tu cuenta.",
             "No hay tarjetas activas asociadas a tu cuenta en este momento.",
         ],
         "pt": [
-            "Não encontrei cartões ativos associados à sua conta.",
+            "Verifiquei e não encontrei cartões ativos associados à sua conta.",
             "Por enquanto não vejo cartões ativos na sua conta.",
             "Não há cartões ativos associados à sua conta neste momento.",
         ],
@@ -325,13 +329,13 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # Not wired yet (card actions): before a side effect, with the fixed buttons.
     "action_confirm": {
         "es": [
-            "Voy a {action} tu tarjeta terminada en {card_last4}. {effect} ¿Confirmas?",
+            "Voy a {action} tu tarjeta que termina en {card_last4}. {effect} ¿Confirmas?",
             (
-                "Con tu confirmación, voy a {action} tu tarjeta terminada en {card_last4}. "
+                "Con tu confirmación, voy a {action} tu tarjeta que termina en {card_last4}. "
                 "{effect} ¿Lo hago?"
             ),
             (
-                "Esto es lo que haré: {action} tu tarjeta terminada en {card_last4}. {effect} "
+                "Esto es lo que haré: {action} tu tarjeta que termina en {card_last4}. {effect} "
                 "¿Me confirmas?"
             ),
         ],
@@ -351,15 +355,15 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     "action_done": {
         "es": [
             (
-                "Listo: tu tarjeta terminada en {card_last4} quedó {result} a las {time}. "
+                "Listo: tu tarjeta que termina en {card_last4} quedó {result} a las {time}. "
                 "Número de gestión: {reference}."
             ),
             (
-                "Hecho: tu tarjeta terminada en {card_last4} quedó {result} a las {time}. Tu "
+                "Hecho: tu tarjeta que termina en {card_last4} quedó {result} a las {time}. Tu "
                 "número de gestión es {reference}."
             ),
             (
-                "Ya quedó: tu tarjeta terminada en {card_last4} está {result} desde las "
+                "Ya quedó: tu tarjeta que termina en {card_last4} está {result} desde las "
                 "{time}. Gestión: {reference}."
             ),
         ],
@@ -420,8 +424,8 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # D16: thanks with nothing pending. Kept for callers that only need the
     # acknowledgement; `smalltalk` itself now answers with `anything_else`.
     "thanks_close": {
-        "es": "¡De nada! Aquí estoy si necesitas algo más con tu tarjeta.",
-        "pt": "De nada! Estou por aqui se precisar de mais alguma coisa com seu cartão.",
+        "es": "¡Con mucho gusto! Aquí estoy si necesitas algo más con tu tarjeta.",
+        "pt": "Com muito prazer! Estou por aqui se precisar de mais alguma coisa com seu cartão.",
     },
     # Thanks (or a bare "no") with nothing pending: ask before closing, and
     # `smalltalk` opens the `anything_else` pause so the answer can close it.
@@ -603,9 +607,9 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # D11: card_block/card_unlock, the card is already in the requested state.
     "already_in_state": {
         "es": [
-            "Tu tarjeta terminada en {card_last4} ya está {state}. No hice ningún cambio.",
-            "Tu tarjeta terminada en {card_last4} ya estaba {state}, así que no cambié nada.",
-            "Veo que tu tarjeta terminada en {card_last4} ya está {state}. No hice ningún cambio.",
+            "Tu tarjeta que termina en {card_last4} ya está {state}. No hice ningún cambio.",
+            "Tu tarjeta que termina en {card_last4} ya estaba {state}, así que no cambié nada.",
+            "Veo que tu tarjeta que termina en {card_last4} ya está {state}. No cambié nada.",
         ],
         "pt": [
             "Seu cartão final {card_last4} já está {state}. Não fiz nenhuma alteração.",
@@ -630,9 +634,9 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # audit_event_id exists.
     "action_done_noref": {
         "es": [
-            "Listo: tu tarjeta terminada en {card_last4} quedó {result} a las {time}.",
-            "Hecho: tu tarjeta terminada en {card_last4} quedó {result} a las {time}.",
-            "Ya quedó: tu tarjeta terminada en {card_last4} está {result} desde las {time}.",
+            "Listo: tu tarjeta que termina en {card_last4} quedó {result} a las {time}.",
+            "Hecho: tu tarjeta que termina en {card_last4} quedó {result} a las {time}.",
+            "Ya quedó: tu tarjeta que termina en {card_last4} está {result} desde las {time}.",
         ],
         "pt": [
             "Pronto: seu cartão final {card_last4} ficou {result} às {time}.",
@@ -674,7 +678,7 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # D12: card_unlock, get_block_origin came back "customer_block".
     "block_permanent_no_undo": {
         "es": (
-            "Tu tarjeta terminada en {card_last4} quedó bloqueada de forma "
+            "Tu tarjeta que termina en {card_last4} quedó bloqueada de forma "
             "permanente por un reporte de pérdida o robo. Ese bloqueo no se "
             "puede deshacer, pero puedo pedirte una tarjeta nueva."
         ),
@@ -688,15 +692,15 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     "offer_replacement": {
         "es": [
             (
-                "¿Quieres que te pida una tarjeta nueva para reemplazar la terminada en "
+                "¿Quieres que te pida una tarjeta nueva para reemplazar la que termina en "
                 "{card_last4}, o te ayudo con algo más?"
             ),
             (
-                "Puedo pedirte una tarjeta nueva para reemplazar la terminada en "
+                "Puedo pedirte una tarjeta nueva para reemplazar la que termina en "
                 "{card_last4}. ¿Quieres que lo haga, o te ayudo con algo más?"
             ),
             (
-                "Si quieres, te pido una tarjeta nueva en lugar de la terminada en "
+                "Si quieres, te pido una tarjeta nueva en lugar de la que termina en "
                 "{card_last4}. ¿Lo hacemos, o te ayudo con algo más?"
             ),
         ],
@@ -717,16 +721,67 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     },
     # P4: "no" to the replacement offer. A block may already have happened,
     # so this never claims nothing changed.
-    "closing_question": {
+    # personalidad-cardy D3: the closing appended after a flow ends, with the
+    # next useful step suggested. Chosen by `next_intent._closing_update`.
+    "closing_suggest_transaction_search": {
         "es": [
-            "¿Te ayudo con algo más o damos por terminada la conversación?",
-            "¿Necesitas algo más o damos por terminada la conversación?",
-            "¿Hay algo más en lo que te ayude, o terminamos la conversación aquí?",
+            "¿Quieres que revisemos tus últimos movimientos o te puedo ayudar con algo adicional?",
+            "Si te sirve, podemos mirar tus últimos movimientos. ¿O te ayudo con algo adicional?",
+            "¿Revisamos juntas tus últimos movimientos, o hay algo adicional en lo que te ayude?",
         ],
         "pt": [
-            "Posso ajudar com mais alguma coisa ou damos a conversa por encerrada?",
-            "Você precisa de mais alguma coisa ou encerramos a conversa?",
-            "Há mais alguma coisa em que eu ajude, ou encerramos a conversa por aqui?",
+            "Quer que a gente confira suas últimas movimentações ou ajudo com algo adicional?",
+            "Se ajudar, podemos olhar suas últimas movimentações. Ou ajudo com algo adicional?",
+            "Conferimos juntas suas últimas movimentações, ou há algo adicional em que eu ajude?",
+        ],
+    },
+    "closing_suggest_unrecognized_charge": {
+        "es": [
+            "¿Hay algún cobro que no reconozcas y quieras reportar, o te ayudo con algo adicional?",
+            "Si ves un cobro que no reconoces, lo reportamos. ¿O te ayudo con algo adicional?",
+            "¿Quieres reportar un cobro que no reconozcas, o te puedo ayudar con algo adicional?",
+        ],
+        "pt": [
+            "Há alguma cobrança que você não reconhece e quer reportar, ou ajudo com outra coisa?",
+            "Se vir uma cobrança que não reconhece, reportamos. Ou ajudo com algo adicional?",
+            "Quer reportar uma cobrança que não reconhece, ou posso ajudar com algo adicional?",
+        ],
+    },
+    "closing_generic": {
+        "es": [
+            "¿Te puedo ayudar con algo adicional?",
+            "¿Hay algo adicional en lo que te pueda ayudar?",
+            "¿Necesitas algo adicional con tus tarjetas?",
+        ],
+        "pt": [
+            "Posso te ajudar com algo adicional?",
+            "Há algo adicional em que eu possa ajudar?",
+            "Você precisa de algo adicional com seus cartões?",
+        ],
+    },
+    # personalidad-cardy D11: a lone greeting once Cardy already introduced herself.
+    "greeting_again": {
+        "es": [
+            "¡Hola de nuevo, {customer_name}! Cuéntame, ¿en qué te ayudo con tus tarjetas?",
+            "¡Qué bueno verte otra vez, {customer_name}! ¿Qué necesitas con tus tarjetas?",
+            "Hola otra vez, {customer_name}. Dime, ¿en qué te puedo ayudar?",
+        ],
+        "pt": [
+            "Oi de novo, {customer_name}! Me conta, em que posso ajudar com seus cartões?",
+            "Que bom ver você de novo, {customer_name}! Do que você precisa com seus cartões?",
+            "Olá outra vez, {customer_name}. Diga, em que posso ajudar?",
+        ],
+    },
+    "greeting_again_plain": {
+        "es": [
+            "¡Hola de nuevo! Cuéntame, ¿en qué te ayudo con tus tarjetas?",
+            "¡Qué bueno verte otra vez! ¿Qué necesitas con tus tarjetas?",
+            "Hola otra vez. Dime, ¿en qué te puedo ayudar?",
+        ],
+        "pt": [
+            "Oi de novo! Me conta, em que posso ajudar com seus cartões?",
+            "Que bom ver você de novo! Do que você precisa com seus cartões?",
+            "Olá outra vez. Diga, em que posso ajudar?",
         ],
     },
     # Block picker with no card left to block: every card is already blocked or
@@ -856,12 +911,12 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     },
     "replacement_declined": {
         "es": [
-            "Entendido, no pido la tarjeta nueva por ahora.",
+            "Entendido, no pido la tarjeta nueva por ahora. Aquí estoy si cambias de idea.",
             "Sin problema, dejo la tarjeta nueva para otro momento.",
             "De acuerdo, no pido la tarjeta nueva por ahora.",
         ],
         "pt": [
-            "Entendido, não peço o cartão novo por enquanto.",
+            "Entendido, não peço o cartão novo por enquanto. Estou aqui se mudar de ideia.",
             "Sem problema, deixo o cartão novo para outro momento.",
             "Certo, não peço o cartão novo por enquanto.",
         ],
@@ -928,15 +983,15 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     "dispute_transactions_prompt": {
         "es": [
             (
-                "Estos son los movimientos recientes de tu tarjeta terminada en {card_last4}. "
+                "Estos son los movimientos recientes de tu tarjeta que termina en {card_last4}. "
                 "Marca los que no reconoces."
             ),
             (
-                "Aquí están los movimientos recientes de tu tarjeta terminada en "
+                "Aquí están los movimientos recientes de tu tarjeta que termina en "
                 "{card_last4}. Marca los que no reconozcas."
             ),
             (
-                "Revisa los movimientos recientes de tu tarjeta terminada en {card_last4} y "
+                "Revisa los movimientos recientes de tu tarjeta que termina en {card_last4} y "
                 "marca los que no reconoces."
             ),
         ],
@@ -969,7 +1024,7 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # D9: the two-step [block, claim] plan's confirmation.
     "dispute_confirm_compromise": {
         "es": (
-            "Voy a bloquear tu tarjeta terminada en {card_last4} y a abrir un "
+            "Voy a bloquear tu tarjeta que termina en {card_last4} y a abrir un "
             "reclamo por {tx_count} movimiento(s) que no reconoces. Este "
             "bloqueo no se puede deshacer. ¿Confirmas?"
         ),
@@ -998,7 +1053,7 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     # D9: the two-step plan, both steps verified.
     "dispute_claim_opened": {
         "es": (
-            "Listo: bloqueé tu tarjeta terminada en {card_last4} a las {time} "
+            "Listo: bloqueé tu tarjeta que termina en {card_last4} a las {time} "
             "y abrí estos reclamos: {case_ids}."
         ),
         "pt": (
@@ -1063,15 +1118,15 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     "decline_pick_ask": {
         "es": [
             (
-                "Estos son los rechazos recientes de tu tarjeta terminada en {card_last4}. "
+                "Estos son los rechazos recientes de tu tarjeta que termina en {card_last4}. "
                 "¿Cuál quieres que te explique?"
             ),
             (
-                "Estos son los rechazos recientes de tu tarjeta terminada en {card_last4}. "
+                "Estos son los rechazos recientes de tu tarjeta que termina en {card_last4}. "
                 "¿Cuál te explico?"
             ),
             (
-                "Aquí están los rechazos recientes de tu tarjeta terminada en {card_last4}. "
+                "Aquí están los rechazos recientes de tu tarjeta que termina en {card_last4}. "
                 "Elige el que quieres revisar."
             ),
         ],
@@ -1326,8 +1381,8 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     },
     # D14: system message when the agent returns the conversation to the bot.
     "back_with_cardy": {
-        "es": "Vuelves a hablar conmigo, Cardy. ¿Qué más necesitas con tu tarjeta?",
-        "pt": "Você voltou a falar comigo, a Cardy. Do que mais precisa com seu cartão?",
+        "es": "¡Qué bueno tenerte de vuelta conmigo, Cardy! ¿Qué más necesitas con tu tarjeta?",
+        "pt": "Que bom ter você de volta comigo, a Cardy! Do que mais precisa com seu cartão?",
     },
     # D18: fixed four-part abstain when the composed draft fails or is
     # rejected: topic, reason, closest action, human offer. The caller passes

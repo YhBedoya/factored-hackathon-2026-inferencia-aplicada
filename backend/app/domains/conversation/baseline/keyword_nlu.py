@@ -42,6 +42,7 @@ def _lexicon() -> dict[str, Any]:
         "market": _compile(raw["out_of_market"]),
         "scope": {name: _compile(t) for name, t in raw["out_of_scope"].items()},
         "markers": _compile(raw["language_markers"]),
+        "card_hints": {name: _compile(t) for name, t in raw["card_hints"].items()},
     }
 
 
@@ -63,6 +64,17 @@ def _exclusive(patterns: dict[_Lang, re.Pattern[str]], lang: _Lang, m: re.Match[
 
 
 def keyword_nlu(text: str, language_hint: str | None = None) -> NLUResult:
+    """Intents and slots by keyword, plus `card_hint=other` ("la otra", D12)."""
+    result = _keyword_intents(text, language_hint)
+    norm = _normalize(text)
+    for hint, patterns in _lexicon()["card_hints"].items():
+        if _hits(patterns, norm):
+            slots = result.slots.model_copy(update={"card_hint": hint})
+            return result.model_copy(update={"slots": slots})
+    return result
+
+
+def _keyword_intents(text: str, language_hint: str | None) -> NLUResult:
     lex = _lexicon()
     norm = _normalize(text)
     langs: set[_Lang] = set()

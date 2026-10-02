@@ -30,7 +30,7 @@ from typing import Any
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import NLUSlots
 from app.domains.conversation.state import Pending
-from app.domains.conversation.templates import Language, get_template
+from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.conversation.ui import ConversationClosedEvent
 
 __all__ = ["smalltalk"]
@@ -63,7 +63,13 @@ def smalltalk(state: GraphState) -> dict[str, Any]:
         if closing:
             return _close(language)
         if "affirm" in intents:
-            return {"pending": None, "segments": [get_template("ask_what_else", language)]}
+            # A suggestion would have gone to `enqueue` (`route`): this "sí"
+            # answers a generic closing.
+            return {
+                "pending": None,
+                "closing_suggestion": None,
+                "segments": [get_template("ask_what_else", language)],
+            }
         # A lone greeting: answer it and keep waiting.
 
     elif pending is not None:
@@ -75,15 +81,21 @@ def smalltalk(state: GraphState) -> dict[str, Any]:
 
     if intents == ["greeting"]:
         customer_name = state.get("customer_name")
+        # D11: once Cardy has introduced herself, a new "hola" doesn't repeat it.
+        again = state.get("introduced", False)
         if customer_name:
-            text = get_template("greeting_named", language).replace(
-                "{customer_name}", customer_name
-            )
+            kind: TemplateKind = "greeting_again" if again else "greeting_named"
+            text = get_template(kind, language).replace("{customer_name}", customer_name)
             return {"segments": [text]}
-        return {"segments": [get_template("greeting", language)]}
+        plain: TemplateKind = "greeting_again_plain" if again else "greeting"
+        return {"segments": [get_template(plain, language)]}
 
     if closing:
-        return {"pending": _ANYTHING_ELSE, "segments": [get_template("anything_else", language)]}
+        return {
+            "pending": _ANYTHING_ELSE,
+            "closing_suggestion": None,
+            "segments": [get_template("anything_else", language)],
+        }
 
     # A bare affirm with nothing pending.
     return {"segments": [get_template("ask_what_else", language)]}
@@ -98,6 +110,7 @@ def _close(language: Language) -> dict[str, Any]:
         "slots": NLUSlots(),
         "clarification_failures": 0,
         "confirmation_token_id": None,
+        "closing_suggestion": None,
         # The conversation is over: memory goes with it (naturalidad-cardy D3).
         "history": [],
         "summary": None,

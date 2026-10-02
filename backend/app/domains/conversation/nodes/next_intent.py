@@ -22,7 +22,9 @@ from typing import Any
 from langchain_core.runnables import RunnableConfig
 
 from app.domains.conversation.flows.actions import closing
+from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.graph import _INTENT_NODES, _MANAGEMENT_INTENTS, GraphState
+from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import RESET_FACTS
 from app.domains.conversation.templates import TemplateKind, template_variants
 
@@ -36,6 +38,22 @@ async def enqueue(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     update: dict[str, Any] = {"intent_queue": non_management}
 
     pending = state.get("pending")
+    closing_open = pending is not None and pending["awaiting_slot"] == "anything_else"
+    suggestion = state.get("closing_suggestion")
+    if closing_open and nlu is not None and suggestion is not None:
+        accepted = "affirm" in nlu.intents or (bool(nlu.intents) and nlu.intents[0] == suggestion)
+        if accepted:
+            # D4: the suggestion becomes this turn's only intent, on the focus card.
+            update["intent_queue"] = [suggestion]
+            update["nlu"] = nlu.model_copy(
+                update={
+                    "intents": [suggestion],
+                    "slots": nlu.slots.model_copy(update={"card_hint": "focus"}),
+                }
+            )
+            update["suggestion_accepted"] = True
+    if closing_open:
+        update["closing_suggestion"] = None
     if pending is not None:
         token_id = state.get("confirmation_token_id")
         bank_write_tools = config["configurable"].get("bank_write_tools")
@@ -65,7 +83,7 @@ def next_intent(state: GraphState) -> dict[str, Any]:
     elif queue[0] in _INTENT_NODES and _closing_allowed({**state, "intent_queue": []}):
         # The last queued flow just answered (a query, a cancel, a declined
         # offer) and left nothing pending: close the flow with the question.
-        update.update(_closing_update(state))
+        update.update(_closing_update(state, queue[0]))
     return update
 
 
@@ -87,6 +105,7 @@ def finish(state: GraphState) -> dict[str, Any]:
     reply = "\n\n".join(segments)
     update["reply"] = reply
     if reply and state.get("mode") != "human":
+        update["introduced"] = True
         update["history"] = [*(state.get("history") or []), {"role": "cardy", "text": reply}]
     return update
 
@@ -116,14 +135,14 @@ def _closing_allowed(state: GraphState) -> bool:
     return not any(getattr(event, "kind", None) == "quick_replies" for event in state.get("ui", []))
 
 
-def _closing_update(state: GraphState) -> dict[str, Any]:
-    """`closing(...)` as a state update that keeps this turn's other ui events."""
-    extra = closing(state["language"])
-    return {
-        "segments": extra["segments"],
-        "pending": extra["pending"],
-        "ui": [*state.get("ui", []), *extra["ui"]],
-    }
+def _closing_update(state: GraphState, finished: Intent | None = None) -> dict[str, Any]:
+    """`closing(...)` as a state update, suggesting the step policy keys to the
+    intent that just finished. No ui events: the turn keeps its own, if any.
+    """
+    suggestion = None
+    if finished is not None:
+        suggestion = load_card_select_policy().closing_suggestion.get(finished)
+    return closing(state["language"], suggestion)
 
 
 def _owes_closing(state: GraphState) -> bool:

@@ -42,6 +42,11 @@ intents:
   affirm:
     es: ["algo mas"]
     pt: ["mais alguma coisa"]
+# "The other card" (D8/D12): the only card hint the baseline extracts.
+card_hints:
+  other:
+    es: ["la otra", "el otro"]
+    pt: ["a outra", "o outro"]
 # Words that make "bloquear" specific (temporary lock vs permanent block).
 block_qualifiers:
   temporary_lock:

@@ -15,7 +15,7 @@ D2-K D5), the one key the R6 scan guards, and never a raw `BankWriteTools`.
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast, get_args
 
 from langchain_core.runnables import RunnableConfig
 
@@ -86,33 +86,29 @@ OFFER_BLOCK_PAUSE: Pending = {
     "awaiting_slot": "offer_block",
 }
 # Same value as `smalltalk._ANYTHING_ELSE`, defined here because flows never
-# import from `nodes/`: with it open, "Terminar" closes and "Algo más" asks what else.
+# import from `nodes/`: with it open, a "no" closes and an "yes" takes the suggestion.
 CLOSING_PAUSE: Pending = {
     "flow": "smalltalk",
     "node": "anything_else",
     "awaiting_slot": "anything_else",
 }
 
-_CLOSING_OPTIONS: dict[str, list[str]] = {
-    "es": ["Algo más", "Terminar"],
-    "pt": ["Mais alguma coisa", "Encerrar"],
-}
 
+def closing(language: Language, suggestion: Intent | None = None) -> dict[str, Any]:
+    """The closing with the next useful step suggested (personalidad-cardy D3).
 
-def closing(language: Language) -> dict[str, Any]:
-    """The closing question with its "anything else / finish" buttons."""
+    Text only, no chips: the customer answers in their own words inside the
+    open `anything_else` pause. A `suggestion` without a template falls back
+    to the generic closing.
+    """
+    kind = f"closing_suggest_{suggestion}"
+    template_kind: TemplateKind = cast(
+        TemplateKind, kind if kind in get_args(TemplateKind) else "closing_generic"
+    )
     return {
         "pending": CLOSING_PAUSE,
-        "segments": [get_template("closing_question", language)],
-        "ui": [
-            QuickRepliesEvent(
-                kind="quick_replies",
-                payload=QuickRepliesPayload(
-                    slot="closing",
-                    options=[PickerOption(label=label) for label in _CLOSING_OPTIONS[language]],
-                ),
-            )
-        ],
+        "closing_suggestion": suggestion,
+        "segments": [get_template(template_kind, language)],
     }
 
 
@@ -133,7 +129,7 @@ def with_closing(state: GraphState, update: dict[str, Any]) -> dict[str, Any]:
         **update,
         "segments": [*update.get("segments", []), *extra["segments"]],
         "pending": extra["pending"],
-        "ui": [*update.get("ui", []), *extra["ui"]],
+        "closing_suggestion": extra["closing_suggestion"],
     }
 
 

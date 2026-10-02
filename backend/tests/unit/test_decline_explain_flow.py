@@ -81,7 +81,7 @@ def test_explains_decline(fakebank_dir: Path, code: str, language: Language) -> 
         else:
             assert strip_closing(reply, language) == expected
             assert debug.pending == "smalltalk.anything_else"
-            assert debug.ui == ["quick_replies"]
+            assert debug.ui == []
 
     asyncio.run(run())
 
@@ -115,7 +115,7 @@ def test_no_declines(fakebank_dir: Path, language: Language) -> None:
 
         assert strip_closing(reply, language) == get_template("decline_none", language)
         assert debug.pending == "smalltalk.anything_else"
-        assert debug.ui == ["quick_replies"]
+        assert debug.ui == []
         assert [call.step for call in llm.calls] == ["nlu"]
 
     asyncio.run(run())

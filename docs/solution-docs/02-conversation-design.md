@@ -69,6 +69,7 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 ### 4.1 `card_select` (shared sub-flow)
 1. T `cards.list_cards()`. If there's one eligible card, select it. If there are several, emit a `ui.card_picker` event with masked options such as "Crédito •••• 6475 · Activa" and "Débito •••• 1203 · Bloqueada", then ask.
 2. If the slot has a hint ("la de crédito", "la que termina en 6475"), resolve it in code. If it's still ambiguous, ask again and increment `clarification_failures`.
+3. The hint `other` ("la otra", "a outra") means every card except the focus card (`selected_card_id`), resolved in code over `list_cards()` and every status: one candidate is selected, two or more are asked about (the options exclude the focus card). A missing focus, one not in the list, or no card besides the focus card (or none eligible) is treated as no hint: the normal selector runs and no failure is counted (personalidad-cardy D8).
 
 ### 4.2 `card_info` (status, details, balance, due date, minimum payment)
 1. `card_select` → T `cards.get_card_details(card_id)`.
@@ -85,8 +86,9 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 ### 4.4 `tx_search`
 1. The LLM slots carry date expressions, merchant, amount and currency. **Code** resolves the dates in the customer's time zone (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`) against the bank clock, fuzzy-matches the merchant against the known merchant list, and applies amount ±10%.
 2. T `transactions.search(filter)` returns at most 10 rows, shown as a `ui.transaction_list`.
-3. With 0 results, widen once (date ±3 days), then say nothing was found and show the filters used.
-4. `transaction_search` routes to `tx_search` in the graph, reusing the shared `transactions` pause; a Pending/Reversed pick explains from `tx_explain`'s rules, an Approved (or other) pick shows decoded details, and an ambiguous result just shows the single-pick list, with no new clarification (D7-B D1-D2).
+3. When the customer accepts a closing suggestion ("sí" to the proposal to review their latest movements), the search is a focus-card search: it counts as a criterion, so there is no `tx_search_ask_criterion`, and it covers only the focus card (`selected_card_id`, honored only if it is in `list_cards()`; otherwise every own card), the default 12-month window, newest first, at most 10 rows (personalidad-cardy D6, D7). A typed request with no criterion still asks for one.
+4. With 0 results, widen once (date ±3 days), then say nothing was found and show the filters used.
+5. `transaction_search` routes to `tx_search` in the graph, reusing the shared `transactions` pause; a Pending/Reversed pick explains from `tx_explain`'s rules, an Approved (or other) pick shows decoded details, and an ambiguous result just shows the single-pick list, with no new clarification (D7-B D1-D2).
 
 ### 4.5 `tx_explain` (pending and reversed)
 Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected drop date (synthetic policy), and what a Reversed row means. T `transactions.get(tx_id)`.
@@ -100,7 +102,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
    - `temporary_lock` → T `cards.lock_card(card_id, token)` → **V** `card_controls.locked = true`.
    - `permanent_block` (lost/stolen) → T `cards.block_card(card_id, reason, token)` → **V** `products.product_status = 'Blocked'` → offer `replacement`.
 5. If the read-back fails: handoff (`action_unverified`). Never say "done".
-6. After a verified lock, and once any queued intents have run (the queue drains first), the reply ends with the closing question "¿Te ayudo con algo más o damos por terminada la conversación?" and `ui.quick_replies` `slot: closing` ("Algo más" / "Terminar"); the pause is `smalltalk`'s `anything_else`, so "Terminar" ends the conversation.
+6. After a verified lock, and once any queued intents have run (the queue drains first), the reply ends with one warm closing question written in code from fixed templates, with no chips (personalidad-cardy D1, D4, D5). The suggestion comes from `policies/card_select.yaml` `closing_suggestion`, keyed by the intent that just finished; after a verified action the closing is generic ("¿Te puedo ayudar con algo adicional?"). The pause is `smalltalk`'s `anything_else`: an affirm (or the suggested intent) enters that flow on the focus card, a deny or thanks ends the conversation with the farewell, and any other card request replaces the pause.
 
 ### 4.7 `card_unlock`
 1. `card_select` → T `cards.get_block_origin(card_id)`.

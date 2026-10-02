@@ -57,7 +57,7 @@ class NLUSlots(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    card_hint: str | None = Field(default=None, pattern=r"^(credit|debit|focus|last4:\d{4})$")
+    card_hint: str | None = Field(default=None, pattern=r"^(credit|debit|focus|other|last4:\d{4})$")
     block_kind: Literal["temporary_lock", "permanent_block"] | None = None
     date_expression: str | None = None
     merchant_text: str | None = None

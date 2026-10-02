@@ -20,7 +20,7 @@ from app.domains.conversation.state import Pending
 
 __all__ = ["run_nlu", "understand"]
 
-_PROMPT = PromptRef("nlu", 6)
+_PROMPT = PromptRef("nlu", 7)
 
 
 async def run_nlu(

@@ -228,6 +228,10 @@ class TurnState(TypedDict):
     handoff_queue: NotRequired[Queue | None]
     handoff_id: NotRequired[str | None]
     unauthorized_attempts: NotRequired[int]
+    # The next step the closing suggested (D4); set with the anything_else pause.
+    closing_suggestion: NotRequired[Intent | None]
+    # True after any bot reply or a stored welcome (personalidad-cardy T5 re-greeting).
+    introduced: NotRequired[bool]
     handoff_evidence: NotRequired[list[HandoffEvidence]]
     handoff_open_questions: NotRequired[list[str]]
     # `tx_search`/`tx_explain`'s single-pick offer (this card's B1).

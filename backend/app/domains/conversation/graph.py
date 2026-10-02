@@ -145,6 +145,7 @@ class TurnInput(TypedDict):
     confirmation: NotRequired[ConfirmationDecision | None]
     resume: NotRequired[Literal["step_up"] | None]
     selection: NotRequired[TxSelection | None]
+    introduced: NotRequired[bool]
 
 
 class TurnOutput(TypedDict):
@@ -189,6 +190,9 @@ class GraphState(TurnState):
     grounding: NotRequired[str]
     actions_at_turn_start: NotRequired[int]
     write_failed: NotRequired[bool]
+    # personalidad-cardy D6: "sí" to the closing suggestion this turn. Reset by
+    # `load_session`, set by `enqueue`, read only by `tx_search` as a criterion.
+    suggestion_accepted: NotRequired[bool]
 
 
 class DebugInfo(BaseModel):

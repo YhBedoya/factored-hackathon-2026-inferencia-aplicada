@@ -50,7 +50,7 @@ __all__ = [
     "compose_reply",
 ]
 
-_PROMPT = PromptRef("compose", 10)
+_PROMPT = PromptRef("compose", 11)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 Grounding = Literal["ok", "regenerated", "template"]

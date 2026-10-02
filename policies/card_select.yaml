@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
-version: 3
+version: 4
 card_status:
   # Closed excluded from card_select's own options; a hint may still resolve
   # to a Closed card (D12, backend/app/domains/conversation/flows/card_select.py).
@@ -20,3 +20,11 @@ next_step_offer:
   bank_side: human
   suspended: human
   closed: human
+closing_suggestion:
+  # One suggestion per situation (D1): intent that just finished -> intent Cardy
+  # suggests next. A missing key gets the generic closing. Values must be
+  # intents with a flow (validated by the loader).
+  card_status: transaction_search
+  balance_due: transaction_search
+  transaction_search: unrecognized_charge
+  pending_reversal_explain: unrecognized_charge

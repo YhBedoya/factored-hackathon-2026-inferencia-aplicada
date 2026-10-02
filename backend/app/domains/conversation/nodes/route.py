@@ -76,6 +76,16 @@ def route(state: GraphState) -> str:
     if pending is not None and _answer_fits(nlu, pending):
         return _FLOW_NODES.get(pending["flow"], "unsupported")
 
+    # A "sí" to the closing suggestion starts that flow (D4); `enqueue` does it.
+    if (
+        pending is not None
+        and pending["awaiting_slot"] == "anything_else"
+        and state.get("closing_suggestion") is not None
+        and "affirm" in nlu.intents
+        and "deny" not in nlu.intents
+    ):
+        return "enqueue"
+
     if nlu.intents and all(intent in _MANAGEMENT_INTENTS for intent in nlu.intents):
         return "smalltalk"
     return "enqueue"
