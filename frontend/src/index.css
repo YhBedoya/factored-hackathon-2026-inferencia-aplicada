@@ -149,7 +149,7 @@
 
 	/* `SessionExpiredModal`'s `DialogContent` renders through a Radix portal,
 	 * outside `.chat-shell`'s DOM subtree, so its own login form
-	 * (`LoginForm.tsx`, shared with `/login`) needs the same rule scoped by
+	 * (`LoginForm.tsx`, shared with `LoginDialog`) needs the same rule scoped by
 	 * its own test id instead of `.chat-shell` ancestry. */
 	[data-testid="session-expired-modal"] [data-slot="button"],
 	[data-testid="session-expired-modal"] [data-slot="input"],

@@ -58,8 +58,8 @@ export type LoginFormProps = {
 };
 
 /**
- * The document + password form (`04` §3 "Login"). `routes/login.tsx` renders
- * it as the `/login` page; `SessionExpiredModal` (D8) renders the same form
+ * The document + password form (`04` §3 "Login"). `LoginDialog` renders it
+ * as the landing's login pop-up; `SessionExpiredModal` (D8) renders the same form
  * inside a dialog, so each caller decides what "logged in" means for it --
  * navigate to `/chat`, or compare identities and replay a held request.
  */

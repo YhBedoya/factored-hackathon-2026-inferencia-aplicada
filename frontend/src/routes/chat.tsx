@@ -10,7 +10,7 @@ export const Route = createFileRoute("/chat")({
 	beforeLoad: async () => {
 		const customer = await me();
 		if (!customer) {
-			throw redirect({ to: "/login" });
+			throw redirect({ to: "/", search: { login: true } });
 		}
 	},
 	component: () => <ChatView />,

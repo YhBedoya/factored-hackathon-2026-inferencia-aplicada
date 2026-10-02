@@ -6,6 +6,7 @@ the customer's first name (R5). Fake LLM, in-memory Redis and vault, no network.
 
 import asyncio
 import random
+import re
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,7 @@ from app.domains.conversation import welcome
 from app.domains.conversation.graph import run_turn
 from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
-from app.domains.conversation.templates import WELCOME_BODIES, Language
+from app.domains.conversation.templates import WELCOME_BODIES, WELCOME_SALUTATIONS, Language
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.identity.models import Session
@@ -77,6 +78,20 @@ def test_consecutive_welcomes_differ(monkeypatch: pytest.MonkeyPatch, fakebank_d
 
     assert all(a != b for a, b in pairwise(indexes))
     assert welcome.pick_body(3, len(WELCOME_BODIES["es"]), random) != 3
+
+
+@pytest.mark.parametrize("language", ["es", "pt"])
+def test_welcome_texts_speak_of_the_universe(language: Language) -> None:
+    """Every body names the Swip universe, none is gendered and none has a digit;
+    ES and PT keep the same body count (the stored index is shared)."""
+    assert len(WELCOME_BODIES["es"]) == len(WELCOME_BODIES["pt"])
+    for body in WELCOME_BODIES[language]:
+        assert "universo" in body
+        # "te doy la bienvenida" is neutral; "bienvenido/bienvenida" alone is not.
+        assert not re.search(r"(?<!la )bienvenid[oa]s?", body.lower())
+        assert not any(ch.isdigit() for ch in body)
+    for salutation in WELCOME_SALUTATIONS[language]:
+        assert "{customer_name}" in salutation["named"]
 
 
 @pytest.mark.parametrize(

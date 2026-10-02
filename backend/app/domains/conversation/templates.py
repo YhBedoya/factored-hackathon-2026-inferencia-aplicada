@@ -19,14 +19,12 @@ from typing import Literal
 __all__ = [
     "WELCOME_BODIES",
     "WELCOME_SALUTATIONS",
-    "DayPart",
     "Language",
     "TemplateKind",
     "get_template",
 ]
 
 Language = Literal["es", "pt"]
-DayPart = Literal["morning", "afternoon", "evening"]
 TemplateKind = Literal[
     "greeting",
     "greeting_named",
@@ -768,47 +766,62 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str]] = {
 
 
 # Cardy's proactive welcome (landing-home-bienvenida D3, D4). `welcome.py` picks
-# one body and prefixes a day-part salutation. The stored "last used" index is
-# language-agnostic, so ES and PT MUST keep the same number of bodies. No text
-# carries a digit. The PT texts are team-generated and pending review by a
-# native Brazilian speaker.
+# one salutation and one body, and every body speaks of the Swip universe. The
+# stored "last used" body index is language-agnostic, so ES and PT MUST keep the
+# same number of bodies. No text carries a digit, and none is gendered: we don't
+# know the customer's gender, so it is "te doy la bienvenida", never
+# "bienvenido/bienvenida". The PT texts are team-generated and pending review
+# by a native Brazilian speaker.
 WELCOME_BODIES: dict[Language, tuple[str, ...]] = {
     "es": (
-        "Soy Cardy, de Swip, y estoy aquí para lo que necesites con tus tarjetas. "
-        "¿En qué te puedo ayudar hoy?",
-        "Soy Cardy, tu asistente de tarjetas en Swip. Cuéntame qué necesitas y lo vemos juntas.",
-        "Qué gusto tenerte por aquí. Dime qué necesitas con tu tarjeta y me pongo manos a la obra.",
-        "Soy Cardy, de Swip, y puedo ayudarte con tus tarjetas y tus movimientos. ¿Qué necesitas?",
-        "Estoy lista para ayudarte con tus tarjetas. ¿Qué necesitas hoy?",
-        "Soy Cardy y cuido de tus tarjetas en Swip. Cuéntame con qué te puedo ayudar.",
-        "Me alegra verte. Dime qué quieres resolver con tu tarjeta y empezamos.",
-        "Soy Cardy, de Swip. Cuando quieras, cuéntame qué necesitas con tus tarjetas.",
+        "Soy Cardy y te doy la bienvenida a este universo de posibilidades. "
+        "¿Qué quieres resolver hoy con tus tarjetas?",
+        "Soy Cardy, tu copiloto en el universo Swip. Cuéntame qué necesitas con tus tarjetas "
+        "y lo vemos juntas.",
+        "Qué gusto tenerte de vuelta en el universo Swip. Soy Cardy, dime qué necesitas "
+        "con tu tarjeta y empezamos.",
+        "Soy Cardy y en este universo tus tarjetas están en buenas manos. ¿En qué te ayudo hoy?",
+        "Tu universo financiero está a un mensaje de distancia. Soy Cardy, cuéntame qué "
+        "necesitas con tus tarjetas.",
+        "Soy Cardy, de Swip, y estoy lista para explorar contigo este universo de posibilidades. "
+        "¿Qué necesitas hoy?",
+        "Te doy la bienvenida al universo Swip. Soy Cardy y puedo ayudarte con tus tarjetas "
+        "y tus movimientos. ¿Por dónde empezamos?",
+        "Soy Cardy y cuido de tus tarjetas en todo el universo Swip. Cuando quieras, "
+        "cuéntame qué necesitas.",
     ),
     "pt": (
-        "Sou a Cardy, da Swip, e estou aqui para o que você precisar com seus cartões. "
-        "Em que posso ajudar hoje?",
-        "Sou a Cardy, sua assistente de cartões na Swip. Conte o que você precisa e vemos juntas.",
-        "Que bom ter você por aqui. Diga o que precisa com seu cartão e eu começo já.",
-        "Sou a Cardy, da Swip, e posso ajudar com seus cartões e suas transações. "
-        "O que você precisa?",
-        "Estou pronta para ajudar com seus cartões. O que você precisa hoje?",
-        "Sou a Cardy e cuido dos seus cartões na Swip. Conte o que posso fazer por você.",
-        "Fico feliz em ver você. Diga o que quer resolver com seu cartão e começamos.",
-        "Sou a Cardy, da Swip. Quando quiser, conte o que você precisa com seus cartões.",
+        "Sou a Cardy e dou as boas-vindas a este universo de possibilidades. "
+        "O que você quer resolver hoje com seus cartões?",
+        "Sou a Cardy, sua copiloto no universo Swip. Conte o que você precisa com seus cartões "
+        "e vemos juntas.",
+        "Que bom ter você de volta ao universo Swip. Sou a Cardy, diga o que precisa com seu "
+        "cartão e começamos.",
+        "Sou a Cardy e neste universo seus cartões estão em boas mãos. Como posso ajudar hoje?",
+        "Seu universo financeiro está a uma mensagem de distância. Sou a Cardy, conte o que "
+        "você precisa com seus cartões.",
+        "Sou a Cardy, da Swip, e estou pronta para explorar com você este universo de "
+        "possibilidades. O que você precisa hoje?",
+        "Boas-vindas ao universo Swip. Sou a Cardy e posso ajudar com seus cartões e suas "
+        "transações. Por onde começamos?",
+        "Sou a Cardy e cuido dos seus cartões em todo o universo Swip. Quando quiser, "
+        "conte o que você precisa.",
     ),
 }
 
-WELCOME_SALUTATIONS: dict[Language, dict[DayPart, dict[Literal["named", "plain"], str]]] = {
-    "es": {
-        "morning": {"named": "Buenos días, {customer_name}.", "plain": "Buenos días."},
-        "afternoon": {"named": "Buenas tardes, {customer_name}.", "plain": "Buenas tardes."},
-        "evening": {"named": "Buenas noches, {customer_name}.", "plain": "Buenas noches."},
-    },
-    "pt": {
-        "morning": {"named": "Bom dia, {customer_name}.", "plain": "Bom dia."},
-        "afternoon": {"named": "Boa tarde, {customer_name}.", "plain": "Boa tarde."},
-        "evening": {"named": "Boa noite, {customer_name}.", "plain": "Boa noite."},
-    },
+WELCOME_SALUTATIONS: dict[Language, tuple[dict[Literal["named", "plain"], str], ...]] = {
+    "es": (
+        {"named": "Hola, {customer_name}.", "plain": "Hola."},
+        {"named": "¡Qué bueno verte, {customer_name}!", "plain": "¡Qué bueno verte!"},
+        {"named": "Hola de nuevo, {customer_name}.", "plain": "Hola de nuevo."},
+        {"named": "¡Hola, {customer_name}!", "plain": "¡Hola!"},
+    ),
+    "pt": (
+        {"named": "Olá, {customer_name}.", "plain": "Olá."},
+        {"named": "Que bom ver você, {customer_name}!", "plain": "Que bom ver você!"},
+        {"named": "Olá de novo, {customer_name}.", "plain": "Olá de novo."},
+        {"named": "Oi, {customer_name}!", "plain": "Oi!"},
+    ),
 }
 
 

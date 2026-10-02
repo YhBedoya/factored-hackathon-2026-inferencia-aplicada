@@ -21,10 +21,18 @@ export function Footer() {
 				</div>
 				<div className="flex flex-col gap-2.5 text-sm">
 					<span className={heading}>Swip</span>
-					<Link to="/login" className="rounded-md hover:text-cyan">
+					<Link
+						to="/"
+						search={{ login: true }}
+						className="rounded-md hover:text-cyan"
+					>
 						{t("landing.nav.help")}
 					</Link>
-					<Link to="/login" className="rounded-md hover:text-cyan">
+					<Link
+						to="/"
+						search={{ login: true }}
+						className="rounded-md hover:text-cyan"
+					>
 						{t("landing.cta")}
 					</Link>
 				</div>

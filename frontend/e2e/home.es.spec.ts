@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import es from "../src/lib/i18n/es.json" with { type: "json" };
 import { installMockApi, WELCOME_TEXT } from "./mock-api";
 
 // Banking home against the mock API (spec §Test list). Fake credentials only,
@@ -9,7 +10,7 @@ test.use({ locale: "es-ES" });
 const PASSWORD = "demo-pass";
 
 async function login(page: import("@playwright/test").Page) {
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();
@@ -49,10 +50,36 @@ test("Cardy panel opens on /home with a welcome and answers a message", async ({
 	await page.getByTestId("composer-input").fill("¿cuánto debo?");
 	await page.getByTestId("composer-send").click();
 	await expect(page.getByTestId("message-bot")).toHaveCount(2);
+
+	// Closing ends that conversation: reopening starts a new one, and Cardy
+	// greets again instead of showing an empty chat.
+	await page
+		.getByTestId("cardy-panel")
+		.getByRole("button", { name: es["home.cardy.close"], exact: true })
+		.click();
+	await expect(page.getByTestId("cardy-panel")).toHaveCount(0);
+	await page.getByTestId("cardy-launcher").click();
+	await expect(page.getByTestId("message-bot")).toHaveCount(1);
+	await expect(page.getByTestId("message-bot")).toContainText(WELCOME_TEXT);
 });
 
-test("visiting /home without a session ends on /login", async ({ page }) => {
+test("visiting /home without a session opens the login pop-up on the landing", async ({
+	page,
+}) => {
 	await installMockApi(page, { password: PASSWORD, fixtures: [] });
 	await page.goto("/home");
-	await page.waitForURL("**/login");
+	await page.waitForURL("**/?login=true");
+	await expect(page.getByTestId("login-dialog")).toBeVisible();
+});
+
+test("the landing's login button opens the pop-up without leaving /", async ({
+	page,
+}) => {
+	await installMockApi(page, { password: PASSWORD, fixtures: [] });
+	await page.goto("/");
+	await page.getByRole("link", { name: es["landing.cta"] }).first().click();
+	await expect(page.getByTestId("login-dialog")).toBeVisible();
+	expect(new URL(page.url()).pathname).toBe("/");
+	await page.keyboard.press("Escape");
+	await expect(page.getByTestId("login-dialog")).toHaveCount(0);
 });

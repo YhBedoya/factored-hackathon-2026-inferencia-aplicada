@@ -9,7 +9,7 @@ export const Route = createFileRoute("/home")({
 	beforeLoad: async () => {
 		const customer = await me();
 		if (!customer) {
-			throw redirect({ to: "/login" });
+			throw redirect({ to: "/", search: { login: true } });
 		}
 	},
 	component: HomeView,

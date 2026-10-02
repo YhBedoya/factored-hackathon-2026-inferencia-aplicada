@@ -24,7 +24,7 @@ test("checkboxes pick, confirm plan, handoff banner, mode switch", async ({
 		],
 	});
 
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();

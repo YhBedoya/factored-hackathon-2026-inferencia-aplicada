@@ -35,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 		await logout();
 		conversationStore.clear();
 		queryClient.setQueryData(ME_QUERY_KEY, null);
-		await navigate({ to: "/login" });
+		await navigate({ to: "/" });
 	}
 
 	return (

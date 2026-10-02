@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 
 // Always-visible entry to Cardy: a link, not a toggle, since the chat needs a
-// session and lives behind /login. The bubble shows only between the hero (which
+// session and starts at the login pop-up. The bubble shows only between the hero (which
 // has its own Cardy bubble) and the footer (whose team column it would cover).
 export function FloatingCardy() {
 	const { t } = useI18n();
@@ -44,7 +44,8 @@ export function FloatingCardy() {
 				{t("landing.floating.bubble")}
 			</p>
 			<Link
-				to="/login"
+				to="/"
+				search={{ login: true }}
 				className="flex items-center gap-2.5 rounded-full border border-cyan bg-card py-2 pr-4 pl-2 text-sm font-semibold whitespace-nowrap shadow-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan"
 			>
 				<span
