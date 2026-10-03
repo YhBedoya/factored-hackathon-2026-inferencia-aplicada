@@ -13,6 +13,7 @@ from typing import Any
 
 from langfuse import Langfuse
 from langfuse.span_filter import is_langfuse_span
+from pydantic import BaseModel
 
 from app.core.llm.settings import LLMSettings
 from app.core.pii import redact
@@ -21,9 +22,9 @@ __all__ = ["LLMSpan", "langfuse_mask", "trace_llm_call"]
 
 
 class LLMSpan:
-    """Handle yielded by `trace_llm_call`: the trace id and a usage reporter.
+    """Handle yielded by `trace_llm_call`: the trace id plus usage and output reporters.
 
-    Both are inert (`id` None, `set_usage` does nothing) when the call isn't traced.
+    All are inert (`id` None, the setters do nothing) when the call isn't traced.
     """
 
     def __init__(self, generation: Any | None = None) -> None:
@@ -35,6 +36,20 @@ class LLMSpan:
         if self._generation is None or input_tokens is None or output_tokens is None:
             return
         self._generation.update(usage_details={"input": input_tokens, "output": output_tokens})
+
+    def set_output(self, parsed: Any, raw: Any) -> None:
+        """Record the attempt's answer: the parsed object, else the raw model text.
+
+        Langfuse runs it through `langfuse_mask` like the input (R5).
+        """
+        if self._generation is None:
+            return
+        if isinstance(parsed, BaseModel):
+            output: Any = parsed.model_dump(mode="json")
+        else:
+            output = getattr(raw, "content", None)
+        if output is not None:
+            self._generation.update(output=output)
 
 
 def langfuse_mask(*, data: Any, **_: Any) -> Any:
@@ -76,10 +91,13 @@ async def trace_llm_call(
     model_id: str,
     step: str,
     prompt_version: str,
-    input_text: str | None = None,
+    messages: list[dict[str, str]] | None = None,
+    output_schema: dict[str, Any] | None = None,
 ) -> AsyncIterator[LLMSpan]:
     """Span one LLM call attempt and yield an `LLMSpan` (trace id, usage reporter).
 
+    `messages` is the full chat sent to the model (system prompt, user message, retry
+    nudge) and `output_schema` the structured-output JSON Schema, kept in metadata.
     Does nothing while `langfuse_host` or the keys are unset (D7).
     """
     client = _client(langfuse_host) if langfuse_host else None
@@ -90,7 +108,12 @@ async def trace_llm_call(
         name=step,
         as_type="generation",
         model=model_id,
-        input=input_text,
-        metadata={"provider": provider, "step": step, "prompt_version": prompt_version},
+        input=messages,
+        metadata={
+            "provider": provider,
+            "step": step,
+            "prompt_version": prompt_version,
+            "output_schema": output_schema,
+        },
     ) as generation:
         yield LLMSpan(generation)
