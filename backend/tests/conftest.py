@@ -374,6 +374,9 @@ async def run_recorded_turn(
     async def _add_message(*_: Any, **__: Any) -> None:
         return None
 
+    async def _no_messages(*_: Any, **__: Any) -> list[Any]:
+        return []
+
     class _Redis:
         async def eval(self, *_: Any) -> int:
             return 0
@@ -386,6 +389,7 @@ async def run_recorded_turn(
     monkeypatch.setattr(runner.registry, "turn_tools", lambda *_: (bank, cfg["bank_write_tools"]))
     monkeypatch.setattr(runner.events, "publish", _publish)
     monkeypatch.setattr(runner.store, "add_message", _add_message)
+    monkeypatch.setattr(runner.store, "list_messages", _no_messages)
     monkeypatch.setattr(runner, "get_redis", lambda: _Redis())
 
     before = len(session.audit.events)

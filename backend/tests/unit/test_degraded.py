@@ -238,6 +238,9 @@ def test_runner_marks_degraded_in_debug_and_audit(
     async def _add_message(*_: Any, **__: Any) -> None:
         return None
 
+    async def _no_messages(*_: Any, **__: Any) -> list[Any]:
+        return []
+
     class _Redis:
         async def eval(self, *_: Any) -> int:
             return 0
@@ -250,6 +253,7 @@ def test_runner_marks_degraded_in_debug_and_audit(
     monkeypatch.setattr(runner.registry, "turn_tools", lambda *_: (bank, cfg["bank_write_tools"]))
     monkeypatch.setattr(runner.events, "publish", _publish)
     monkeypatch.setattr(runner.store, "add_message", _add_message)
+    monkeypatch.setattr(runner.store, "list_messages", _no_messages)
     monkeypatch.setattr(runner, "get_redis", lambda: _Redis())
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
