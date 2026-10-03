@@ -95,6 +95,12 @@ def _error_message(exc: BaseException) -> str:
     return redact(text)[:_ERROR_MESSAGE_MAX]
 
 
+def _as_chat_dict(message: BaseMessage) -> dict[str, str]:
+    """One sent message in Langfuse's chat shape (`role`/`content`), for the trace input."""
+    role = {"system": "system", "human": "user", "ai": "assistant"}.get(message.type, message.type)
+    return {"role": role, "content": str(message.content)}
+
+
 class _ChatModel(Protocol):
     """The one capability the wrapper needs from a chat model.
 
@@ -260,7 +266,8 @@ class StructuredLLMClient:
                     model_id=model_id,
                     step=step,
                     prompt_version=prompt.label,
-                    input_text=user,
+                    messages=[_as_chat_dict(m) for m in request],
+                    output_schema=schema.model_json_schema(),
                 ) as span:
                     langfuse_trace_id = span.id
                     if fault_active("bedrock_timeout"):
@@ -268,6 +275,7 @@ class StructuredLLMClient:
                     raw_result = cast(dict[str, Any], await structured_model.ainvoke(request))
                     usage = getattr(raw_result.get("raw"), "usage_metadata", None) or {}
                     span.set_usage(usage.get("input_tokens"), usage.get("output_tokens"))
+                    span.set_output(raw_result.get("parsed"), raw_result.get("raw"))
             except (*_TRANSPORT_ERRORS, _SyntheticTimeout) as exc:
                 await self._finish(
                     provider,

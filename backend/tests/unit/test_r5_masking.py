@@ -3,7 +3,7 @@
 import asyncio
 from pathlib import Path
 
-from app.core.llm.tracing import langfuse_mask
+from app.core.llm.tracing import LLMSpan, langfuse_mask
 from app.domains.conversation.graph import run_turn
 from app.domains.conversation.masking import mask_user_text
 from app.domains.conversation.nodes.compose import ComposeDraft
@@ -17,6 +17,22 @@ def test_langfuse_mask_redacts() -> None:
         data={"input": ["mi tarjeta 4111 1111 1111 1111", "a@b.com"], "n": 3},
     )
     assert masked == {"input": ["mi tarjeta ⟨CARD⟩", "⟨EMAIL⟩"], "n": 3}
+
+
+class _FakeGeneration:
+    trace_id = "t-1"
+
+    def __init__(self) -> None:
+        self.updates: list[dict[str, object]] = []
+
+    def update(self, **kwargs: object) -> None:
+        self.updates.append(kwargs)
+
+
+def test_span_records_parsed_output() -> None:
+    generation = _FakeGeneration()
+    LLMSpan(generation).set_output(ComposeDraft(text="Listo"), raw=None)
+    assert generation.updates and generation.updates[0]["output"]["text"] == "Listo"
 
 
 def test_nlu_sees_only_tokens(fakebank_dir: Path) -> None:
