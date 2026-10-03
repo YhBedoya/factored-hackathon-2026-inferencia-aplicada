@@ -9,7 +9,7 @@ test.use({ locale: "es-MX" });
 
 const PASSWORD = "demo-staff-pass";
 
-test("staff login, list, filter by intent, expand a turn's why", async ({
+test("staff login, list, filter by intent, select a turn's why", async ({
 	page,
 }) => {
 	await installMockStaffApi(page, { password: PASSWORD });
@@ -43,22 +43,24 @@ test("staff login, list, filter by intent, expand a turn's why", async ({
 	await page.getByTestId("filter-intent").selectOption("card_status");
 	await expect(rows).toHaveCount(1);
 
-	// 4. open a conversation and expand a turn
+	// 4. open a conversation: the turn list shows every turn, the first one
+	// is selected and its "why" is on screen
 	await page.getByTestId("conversation-row-link").first().click();
 	await page.waitForURL("**/staff/conversations/**");
-	const turns = page.getByTestId("turn-details");
-	await expect(turns).toHaveCount(2);
-	await turns.first().locator("summary").click();
+	const turnItems = page.getByTestId("turn-item");
+	await expect(turnItems).toHaveCount(2);
+	const detail = page.getByTestId("turn-details");
+	await expect(detail).toHaveCount(1);
 
 	// 5. NLU, rules, sources, the policy hash and the Langfuse link are visible
-	const firstTurn = turns.first();
-	await expect(firstTurn.getByTestId("turn-nlu")).toBeVisible();
-	await expect(firstTurn.getByTestId("turn-rule")).toBeVisible();
-	await expect(firstTurn.getByTestId("turn-source")).toBeVisible();
-	await expect(firstTurn.getByTestId("turn-policy-version")).toBeVisible();
-	await expect(firstTurn.getByTestId("turn-langfuse-link")).toBeVisible();
+	await expect(detail.getByTestId("turn-nlu")).toBeVisible();
+	await expect(detail.getByTestId("turn-rule").first()).toBeVisible();
+	await expect(detail.getByTestId("turn-source").first()).toBeVisible();
+	await expect(detail.getByTestId("turn-policy-version")).toBeVisible();
+	await expect(detail.getByTestId("turn-langfuse-link")).toBeVisible();
 
-	// 6. the null-link turn shows no link
-	await turns.nth(1).locator("summary").click();
-	await expect(turns.nth(1).getByTestId("turn-langfuse-link")).toHaveCount(0);
+	// 6. selecting the null-link turn shows no link
+	await turnItems.nth(1).click();
+	await expect(turnItems.nth(1)).toHaveAttribute("aria-current", "true");
+	await expect(detail.getByTestId("turn-langfuse-link")).toHaveCount(0);
 });
