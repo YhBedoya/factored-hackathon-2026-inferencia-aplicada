@@ -1,4 +1,4 @@
-"""D13: the intent registry, the `Intent` Literal and the `nlu@v4` prompt list agree."""
+"""D13: the intent registry, the `Intent` Literal and the `nlu@v5` prompt list agree."""
 
 import re
 import sys
@@ -24,7 +24,7 @@ from app.domains.conversation.intent_registry import (  # noqa: E402
 )
 from app.domains.conversation.schemas import Intent  # noqa: E402
 
-_PROMPT = _REPO_ROOT / "backend/app/domains/conversation/prompts/nlu@v4.md"
+_PROMPT = _REPO_ROOT / "backend/app/domains/conversation/prompts/nlu@v5.md"
 
 
 def _prompt_intents() -> set[str]:

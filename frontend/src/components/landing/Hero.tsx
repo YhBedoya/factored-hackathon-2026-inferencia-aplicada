@@ -115,7 +115,9 @@ export function Hero() {
 						variant="outline"
 						className="h-12 rounded-full px-7 text-base font-semibold lg:h-14 lg:px-8 lg:text-lg"
 					>
-						<Link to="/login">{t("landing.hero.meet")}</Link>
+						<Link to="/" search={{ login: true }}>
+							{t("landing.hero.meet")}
+						</Link>
 					</Button>
 				</div>
 			</div>

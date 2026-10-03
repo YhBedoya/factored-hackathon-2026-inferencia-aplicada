@@ -1,5 +1,6 @@
 """`/me` view builders: every display string is the `localization.format`
-output (R4), and a debit card never shows a balance (A1, ADR-020).
+output (R4), and a debit card shows its balance but no credit-only field
+(A1, ADR-034).
 """
 
 from datetime import UTC, date, datetime
@@ -76,8 +77,8 @@ def test_display_strings_from_localization() -> None:
         assert row.card_mask == mask_card("6475")
 
     debit = card_details_view(_details("debit", "MXN"), "MX")
-    assert debit.current_balance is None
-    assert debit.current_balance_display is None
+    assert debit.current_balance == Decimal("12345.67")
+    assert debit.current_balance_display == format_money(Decimal("12345.67"), "MXN", "MX")
     assert debit.credit_limit is None
     assert debit.available_credit is None
     assert debit.days_past_due is None

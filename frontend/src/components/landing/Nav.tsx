@@ -20,7 +20,9 @@ export function Nav() {
 					variant="outline"
 					className="h-10 rounded-full px-4 text-sm font-semibold"
 				>
-					<Link to="/login">{t("landing.cta")}</Link>
+					<Link to="/" search={{ login: true }}>
+						{t("landing.cta")}
+					</Link>
 				</Button>
 				<span className="hidden sm:inline-flex">
 					<SoonButton label={t("landing.nav.open")} />

@@ -1,31 +1,65 @@
 import type { ReactNode } from "react";
 
-import { Card } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
 
-// One frame for every home block: title plus the three states each section
-// must translate (D10). `state` picks what the body shows.
+export type SectionState = "loading" | "error" | "empty" | "ready";
+
+// One panel frame for the home blocks ("Swip Panel" design): title, an
+// optional header action, plus the three states each block must translate
+// (D10). `state` picks what the body shows.
 export function Section({
 	title,
 	testId,
 	state,
 	children,
 	emptyText,
+	action,
+	className = "",
 }: {
 	title: string;
 	testId: string;
-	state: "loading" | "error" | "empty" | "ready";
+	state: SectionState;
 	children?: ReactNode;
 	emptyText: string;
+	action?: ReactNode;
+	className?: string;
+}) {
+	return (
+		<section
+			data-testid={testId}
+			className={`relative flex flex-col gap-6 overflow-hidden rounded-[20px] border border-border bg-card p-7 ${className}`}
+		>
+			<div className="flex items-center justify-between gap-4">
+				<h2 className="font-heading text-[22px] font-bold text-foreground">
+					{title}
+				</h2>
+				{action}
+			</div>
+			<SectionBody state={state} emptyText={emptyText}>
+				{children}
+			</SectionBody>
+		</section>
+	);
+}
+
+export function SectionBody({
+	state,
+	emptyText,
+	children,
+}: {
+	state: SectionState;
+	emptyText: string;
+	children?: ReactNode;
 }) {
 	const { t } = useI18n();
 	return (
-		<section data-testid={testId} className="flex flex-col gap-3">
-			<h2 className="font-heading text-lg text-foreground">{title}</h2>
+		<>
 			{state === "loading" && (
-				<Card role="status" aria-label={t("home.loading")}>
-					<div className="mx-4 h-16 animate-pulse rounded-lg bg-muted" />
-				</Card>
+				<div
+					role="status"
+					aria-label={t("home.loading")}
+					className="h-16 animate-pulse rounded-xl bg-muted"
+				/>
 			)}
 			{state === "error" && (
 				<p role="alert" className="text-sm text-alert">
@@ -36,6 +70,6 @@ export function Section({
 				<p className="text-sm text-muted-foreground">{emptyText}</p>
 			)}
 			{state === "ready" && children}
-		</section>
+		</>
 	);
 }

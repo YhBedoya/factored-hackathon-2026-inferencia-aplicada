@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 import type { MeResponse } from "@/client";
 import { Composer } from "@/components/chat/Composer";
@@ -58,13 +64,33 @@ type ChatViewProps = {
 	prefill?: string;
 	/** Sizing for the host; defaults to the full-page `h-dvh` column. */
 	className?: string;
+	/**
+	 * Ignore the stored conversation and open a new one with Cardy's welcome.
+	 * The home panel unmounts on close, so each open is a fresh conversation.
+	 */
+	fresh?: boolean;
+	/** A control shown at the right of the name row, e.g. the home panel's close button. */
+	headerAction?: ReactNode;
+	/** Called on each Cardy or agent reply, e.g. to flag a minimized panel. */
+	onReply?: () => void;
 };
 
-export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
+export function ChatView({
+	prefill,
+	className = "h-dvh",
+	fresh = false,
+	headerAction,
+	onReply,
+}: ChatViewProps) {
 	const { t, lang } = useI18n();
-	const conversationIdRef = useRef<string | null>(conversationStore.get());
+	const conversationIdRef = useRef<string | null>(
+		fresh ? null : conversationStore.get(),
+	);
 	const streamCleanupRef = useRef<(() => void) | null>(null);
 	const pendingUiRef = useRef<TranscriptMessage["ui"]>([]);
+	// `connectStream` is created once, so it reads the latest callback here.
+	const onReplyRef = useRef(onReply);
+	onReplyRef.current = onReply;
 
 	const [conversationId, setConversationId] = useState(
 		conversationIdRef.current,
@@ -97,6 +123,7 @@ export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
 				if (payload.role === "customer") {
 					return;
 				}
+				onReplyRef.current?.();
 				if (payload.role !== "bot") {
 					// An agent reply, or the fixed system line on return to bot.
 					setMessages((prev) => [
@@ -180,7 +207,8 @@ export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
 	);
 
 	// A reload keeps the stored conversation id (no history route, D12), so it
-	// only re-opens the stream: no create, no welcome (D2).
+	// only re-opens the stream: no create, no welcome (D2). A `fresh` host
+	// never reuses it, so it always starts with the welcome.
 	// biome-ignore lint/correctness/useExhaustiveDependencies: mount-only; a `lang` change must not re-create.
 	useEffect(() => {
 		if (conversationIdRef.current) {
@@ -198,7 +226,7 @@ export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
 	}, []);
 
 	// D8: the chat is the only caller that holds a `401 session_expired`
-	// instead of letting `withAuthRetry` redirect to `/login`.
+	// instead of letting `withAuthRetry` redirect to the login pop-up.
 	useEffect(() => {
 		sessionExpired.register(() => setSessionExpiredOpen(true));
 		return () => sessionExpired.unregister();
@@ -320,10 +348,13 @@ export function ChatView({ prefill, className = "h-dvh" }: ChatViewProps) {
 		<div
 			className={`chat-shell flex flex-col overflow-x-hidden bg-bg ${className}`}
 		>
-			<ModeIndicator
-				mode={mode.mode}
-				agentDisplayName={mode.agent_display_name}
-			/>
+			<div className="flex items-center justify-between">
+				<ModeIndicator
+					mode={mode.mode}
+					agentDisplayName={mode.agent_display_name}
+				/>
+				{headerAction && <div className="px-4">{headerAction}</div>}
+			</div>
 			<MessageList
 				messages={messages}
 				typing={typing}

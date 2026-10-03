@@ -18,6 +18,8 @@
 	--color-cyan: #3dd6e0;
 	--color-gold: #f5c66b;
 	--color-alert: #ff6b6b;
+	/* Banking home only ("Swip Panel" design): approved movements and income. */
+	--color-ok: #5cd69a;
 	--font-heading: "Plus Jakarta Sans", sans-serif;
 	--font-sans: "Inter", sans-serif;
 }
@@ -154,11 +156,34 @@
 
 	/* `SessionExpiredModal`'s `DialogContent` renders through a Radix portal,
 	 * outside `.chat-shell`'s DOM subtree, so its own login form
-	 * (`LoginForm.tsx`, shared with `/login`) needs the same rule scoped by
+	 * (`LoginForm.tsx`, shared with `LoginDialog`) needs the same rule scoped by
 	 * its own test id instead of `.chat-shell` ancestry. */
 	[data-testid="session-expired-modal"] [data-slot="button"],
 	[data-testid="session-expired-modal"] [data-slot="input"],
 	[data-testid="session-expired-modal"] [data-slot="select-trigger"] {
 		min-height: 44px;
+	}
+}
+
+/* `DriftStarfield.tsx` (banking home). A layer moves by exactly one star
+ * tile (`--tile-w`/`--tile-h`, set inline) per cycle, so the repeat is
+ * seamless; the twinkle only fades opacity. Deliberately not disabled under
+ * `prefers-reduced-motion` (product decision): the drift is slow and calm. */
+@keyframes star-drift {
+	from {
+		transform: translate3d(0, 0, 0);
+	}
+	to {
+		transform: translate3d(var(--tile-w), var(--tile-h), 0);
+	}
+}
+
+@keyframes star-twinkle {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
 	}
 }

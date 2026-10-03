@@ -26,7 +26,7 @@ The NLU call must return intents from this list only. Anything else is `status =
 
 - **One** Bedrock structured-output call per turn. Temperature 0, pinned model ID and prompt version.
 - Input: the masked user message, the last N masked turns, the pending flow and the slot it is waiting for, the customer's country (for regional vocabulary). **No tool output** is ever passed to this node.
-- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
+- Output (Pydantic-validated, schema in `04-contracts.md`): `language` (`es`, `pt`, `mixed`, `other`), `intents[]` (ordered), `status`, `slots` (card hint, block kind, date expression, merchant, amount, currency, answer to the pending question, and `topic` for out-of-scope / out-of-market requests, ADR-026), `clarification` (e.g. `lock_vs_block`, `which_card`, `which_transaction`).
 - If validation fails, the node retries once with the validation error, then falls back (see §6).
 - **Confidence** is not a number. It comes from explicit labels (`ambiguous`) plus counters in the graph state (ADR-004).
 
@@ -75,7 +75,7 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 2. Facts: masked number, status, expiry, credit limit, available credit (= limit − balance, computed in code), interest rate, balance, `days_past_due` bucket, and the minimum payment from the **synthetic policy formula** (labeled as synthetic in the reply footnote). Each fact carries its source (`bank.products:<product_id>` or `policy:min_payment@<hash>`).
    - **The formula has no overdue term** (D2-B D5, P5): `min_payment = min(max(percent × balance, floor[currency]), balance)`, `0` when balance ≤ 0. `days_past_due > 0` instead adds a separate `payment_overdue` fact carrying the bucket, so a card can be both current on the formula and flagged overdue.
    - **Due date** (P6): the next `due_day_of_month` on or after today in the country's `BANK_TZ`, so it is today when today is the 10th.
-3. **Debit cards** (ADR-020) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot says plainly that balance, due date and minimum payment apply to credit cards, and offers what it can show.
+3. **Debit cards** (ADR-020, ADR-034) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot answers with its **available balance** (`current_balance`, fact `available_balance`, goal `debit_balance`); due date and minimum payment stay credit-only.
 
 ### 4.3 `decline_explain`
 1. `card_select` → T `transactions.search(status=Declined, …)` to find the decline (by default the most recent; otherwise ask which one). With a `merchant_text`/`amount` slot, code narrows the ≤10 declines (case-insensitive merchant match, or amount ±10%); one match explains it directly, two or more offer those in a single-pick `ui.transaction_list` (`multi: false`), and zero offer every decline the same way (D5-B D2).
@@ -155,7 +155,7 @@ Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `
 
 ## 7. Language and localization
 
-- The reply language equals the **current turn's** detected language. `mixed` replies in the language that dominates the latest message (ties go to the previous reply language).
+- The reply language equals the **current turn's** detected language. `mixed` replies in the language that dominates the latest message (ties go to the previous reply language). `other` (neither Spanish nor Portuguese, nlu@v5) gets the fixed bilingual `unsupported_language` template, conversation language first; no flow runs and `pending` is kept.
 - Regional lexicon (`localization/lexicon/*.yaml`): tarjeta/cartão, bloquear/travar, "compra no reconocida"/"compra não reconhecida", voseo ("¿me podés bloquear…?"), MX/CO terms. Used in NLU prompt examples and by the keyword baseline.
 - Money follows the **account's country format**, whatever language the reply is in:
   - MX: `US$1,234.50 (≈ MXN $21,480.00, tipo de cambio del 12/03/2026)`. The record currency comes first and the MXN estimate is labeled.

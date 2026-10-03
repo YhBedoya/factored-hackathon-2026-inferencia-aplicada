@@ -103,7 +103,7 @@ ADR-style record of the design decisions taken collaboratively on 2026-09-26. St
 - The demo and video are **not** planned now. They show the strongest features once they're built, so build order follows Core priority, not a demo script.
 **Alternatives:** the full MVP list (high risk of shallow coverage and a rushed eval); Core only.
 
-### ADR-020 — Debit cards: card facts only · Accepted
+### ADR-020 — Debit cards: card facts only · Superseded by ADR-034
 **Context:** 39.9K of 140K cards (29%) are debit. They have no credit limit and no days past due (structural nulls).
 **Decision:** for debit cards, `card_info` shows the masked number, status, expiry and recent transactions. Balance, due date and minimum payment are credit-only, and the bot says so plainly and offers what it can show. Block, lock, replacement and claims work the same for both card types.
 **Alternatives:** show the linked savings/checking account balance (pulls account inquiries into scope); credit cards only.
@@ -210,6 +210,11 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 **Alternatives:** per-turn or per-message grain (more rows, and every metric asked for is per interaction or per intent); closing idle conversations in the product (changes chat behaviour for a reporting need); a lexicon or trained sentiment model (no LLM cost, but weaker on four language variants and nothing to train on); SQL views or dbt over live tables (no stored sentiment, and every dashboard load scans raw tables); the job inside the API process (competes with the chat); Superset or Metabase in a container (a second login and about 1–2 GiB of RAM for one page); a public Grafana dashboard (Grafana stays private, `08`); a separate mock table (two code paths in the dashboard).
 **Growth path, not built:** daily rollup tables, monthly partitions, a read replica, a columnar export.
 
+### ADR-034 — Debit cards show their available balance · Accepted (2026-10-01)
+**Context:** the new banking home ("Swip Panel" design) shows every card with its balance, and customers ask Cardy how much money is in their debit card. `bank.products.current_balance` is filled for debit cards too, and `cards.get_card_details` already returns it.
+**Decision:** supersedes ADR-020 for the balance. A debit card's `current_balance` is shown as its **available balance**, both in `GET /me/cards/{id}` (`current_balance`/`current_balance_display`) and in the chat: `balance_due` on a debit card answers with the `debit_balance` compose goal (fact `available_balance`, formatted in code, R4) instead of the fixed `credit_only` text. Credit limit, available credit, due date, minimum payment and days past due stay credit-only.
+**Alternatives:** keep ADR-020 (the home would show an empty balance for 29% of cards); show the linked savings account balance (pulls account inquiries into scope).
+
 ### D3-A D4 — Step-up validity window · Resolved
 **Decision:** `policies/tools.yaml`'s `step_up_window_minutes: 5` sets `SessionStepUpGate`'s window (valid when `now - session.step_up_at <= window`). An open confirmation plan is not tied to the session: it dies at its own 5-minute Redis TTL (ADR-027) regardless of session state, and `POST /conversations/{id}/confirmations/{token_id}` returns `401` once the session itself has expired, before the plan is even looked at.
 **Why:** resolves the "Step-up validity window" item below, decided while building the D3-A step-up flow (ADR-025) as planned. See spec `docs/specs/d3-a-guardrails-write-path.md` D4.
@@ -258,7 +263,7 @@ These are known and owned, and they're decided while building the related featur
 | Suspected-fraud triage | `fraud_score` is shown as a data field only. It is not presented as a reliable model | `is_fraud` vs `fraud_score` is circular above 30 and noise below it |
 | Intent classifier vs keyword baseline (MVP · ML) | Now **MVP · LLM**. This pretrained LLM classifier vs the keyword baseline is the learned component (ADR-005) | ADR-004, ADR-005 |
 | Unblock with reason check | A customer lock is undone only after step-up (fixed demo OTP), not just by being logged in. Moved to if-time | `02` §4.7, ADR-008, ADR-019 |
-| Card status and details; balance, due date and minimum payment | Balance, due date and minimum payment apply to credit cards only | ADR-020 |
+| Card status and details; balance, due date and minimum payment | Due date and minimum payment apply to credit cards only; a debit card shows its available balance | ADR-020, ADR-034 |
 | Mock identity provider and session token | The OTP is a fixed demo code shared with judges; a real OTP system is out of scope | ADR-008 |
 | Control and traceability of LLM | Core scope defined | ADR-024 |
 | Out-of-market requests (and out-of-scope replies) | Structured abstain: acknowledge the topic, say why, offer the closest supported action and a human | ADR-026 |

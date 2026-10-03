@@ -58,7 +58,6 @@ from app.domains.conversation.flows.card_select import (
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
-from app.domains.conversation.templates import get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.localization import local_today
 from app.domains.policy.escalation import load_escalation_policy
@@ -139,41 +138,33 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}
 
-    facts, segments = await _facts_and_segments(intent, details, bank_tools, state)
-    update: dict[str, Any] = {
+    facts = await _facts(intent, details, bank_tools, state)
+    return {
         "selected_card_id": card_id,
         "pending": None,
         "clarification_failures": 0,
         "facts": facts,
     }
-    if segments:
-        update["segments"] = segments
-    return update
 
 
-async def _facts_and_segments(
+async def _facts(
     intent: Intent, details: CardDetails, bank_tools: BankReadTools, state: GraphState
-) -> tuple[list[Fact], list[str]]:
-    """This turn's facts, plus any fixed-template segment `card_info` itself
-    writes (only `credit_only`, ADR-020) -- everything else the reply needs
-    goes through `compose` instead (R4, R6).
+) -> list[Fact]:
+    """This turn's facts; the reply itself always goes through `compose`
+    (R4, R6). ADR-034 retired the fixed `credit_only` text a debit card got
+    on `balance_due`.
     """
-    segments: list[str] = []
     if intent == "balance_due" and details.kind == "credit":
         facts = await _credit_balance_facts(details, bank_tools, country=state["country"])
+    elif intent == "balance_due":
+        facts = await _debit_balance_facts(details, bank_tools, country=state["country"])
     else:
         facts = _card_status_facts(details)
-        if intent == "balance_due":
-            # Debit on `balance_due` (ADR-020): the fixed `credit_only`
-            # template, then whatever `card_status`-style facts we can still
-            # show (mask, kind, status, expiry -- no money fact for a debit
-            # card in the first place).
-            segments = [get_template("credit_only", state["language"])]
 
     read_only = await _read_only_note_fact(bank_tools)
     if read_only is not None:
         facts = [*facts, read_only]
-    return facts, segments
+    return facts
 
 
 def _card_status_facts(details: CardDetails) -> list[Fact]:
@@ -204,6 +195,29 @@ def _card_status_facts(details: CardDetails) -> list[Fact]:
         for key, value in candidates
         if value is not None
     ]
+
+
+async def _debit_balance_facts(
+    details: CardDetails, bank_tools: BankReadTools, *, country: Literal["MX", "CO", "AR"]
+) -> list[Fact]:
+    """`balance_due` on a debit card (ADR-034): mask, kind, status and its
+    available balance (`current_balance`, as `available_balance`), plus the
+    hidden `currency` (and MXN-estimate facts) that format it. Due date and
+    minimum payment are credit-only.
+    """
+    candidates: list[tuple[str, Any]] = [
+        ("card_mask", details.last4),
+        ("card_kind", details.kind),
+        ("status", details.status),
+        ("available_balance", details.current_balance),
+        ("currency", details.currency),
+    ]
+    facts = [
+        Fact(key=key, value=value, source=details.source)
+        for key, value in candidates
+        if value is not None
+    ]
+    return [*facts, *await _fx_facts(details, bank_tools, country=country)]
 
 
 async def _credit_balance_facts(
@@ -241,16 +255,25 @@ async def _credit_balance_facts(
             Fact(key="payment_overdue", value=details.days_past_due, source=details.source)
         )
 
-    if country == "MX" and details.currency == "USD":
-        try:
-            fx = await bank_tools.get_fx_rate("USD", "MXN")
-        except NotFound:
-            fx = None
-        if fx is not None:
-            facts.append(Fact(key="fx_rate", value=fx.rate, source=_FX_SOURCE))
-            facts.append(Fact(key="fx_as_of", value=fx.as_of, source=_FX_SOURCE))
+    return [*facts, *await _fx_facts(details, bank_tools, country=country)]
 
-    return facts
+
+async def _fx_facts(
+    details: CardDetails, bank_tools: BankReadTools, *, country: Literal["MX", "CO", "AR"]
+) -> list[Fact]:
+    """The MXN estimate's facts (D18): only for an MX card billed in USD.
+    `NotFound` on the FX pair means no estimate this turn, not an error (D3).
+    """
+    if country != "MX" or details.currency != "USD":
+        return []
+    try:
+        fx = await bank_tools.get_fx_rate("USD", "MXN")
+    except NotFound:
+        return []
+    return [
+        Fact(key="fx_rate", value=fx.rate, source=_FX_SOURCE),
+        Fact(key="fx_as_of", value=fx.as_of, source=_FX_SOURCE),
+    ]
 
 
 async def _read_only_note_fact(bank_tools: BankReadTools) -> Fact | None:

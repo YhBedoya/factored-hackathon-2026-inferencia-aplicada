@@ -125,7 +125,7 @@ async function withAuthRetry<T>(
 }
 
 function redirectToLogin<T>(result: FetchResult<T>): FetchResult<T> {
-	window.location.assign("/login");
+	window.location.assign("/?login=1");
 	return result;
 }
 

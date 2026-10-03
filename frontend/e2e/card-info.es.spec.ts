@@ -18,7 +18,7 @@ test("ES chrome, card picker, language toggle and logout", async ({ page }) => {
 		fixtures: ["card-info-ask.sse", "card-info-answer.sse"],
 	});
 
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();
@@ -48,8 +48,10 @@ test("ES chrome, card picker, language toggle and logout", async ({ page }) => {
 	await expect(page.getByTestId("logout")).toHaveText(pt["shell.logout"]);
 
 	await page.getByTestId("logout").click();
-	await page.waitForURL("**/login");
+	await page.waitForURL((url) => url.pathname === "/");
+	await expect(page.getByTestId("login-dialog")).toHaveCount(0);
 
 	await page.goto("/chat");
-	await page.waitForURL("**/login");
+	await page.waitForURL("**/?login=true");
+	await expect(page.getByTestId("login-dialog")).toBeVisible();
 });

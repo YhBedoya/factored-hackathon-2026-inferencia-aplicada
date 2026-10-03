@@ -40,7 +40,7 @@ test("expiry -> modal -> re-login -> confirmation resumes", async ({
 		expireOnRequest: 2,
 	});
 
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await login(page, PASSWORD, "12345678");
 	await page.waitForURL("**/home");
 	await page.goto("/chat");
@@ -76,7 +76,7 @@ test("different customer drops the held request", async ({ page }) => {
 		altPassword: ALT_PASSWORD,
 	});
 
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await login(page, PASSWORD, "12345678");
 	await page.waitForURL("**/home");
 	await page.goto("/chat");

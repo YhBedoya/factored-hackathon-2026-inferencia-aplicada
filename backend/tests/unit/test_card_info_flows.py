@@ -185,9 +185,9 @@ def test_credit_balance_due(
 
 
 @pytest.mark.parametrize("language", ["es", "pt"])
-def test_debit_gets_credit_only(fakebank_dir: Path, language: Language) -> None:
-    """B1, ADR-020: `balance_due` on a debit card -- the `credit_only`
-    template, then whatever non-money facts it can still show.
+def test_debit_balance(fakebank_dir: Path, language: Language) -> None:
+    """B1, ADR-034: `balance_due` on a debit card -- its available balance
+    through the `debit_balance` goal; never a credit-only money fact.
     """
     ctx = ToolContext(
         customer_id="CLI-TFMULTI00001",
@@ -205,26 +205,23 @@ def test_debit_gets_credit_only(fakebank_dir: Path, language: Language) -> None:
         status="clear",
         slots=NLUSlots(card_hint="last4:1203"),
     )
-    draft = ComposeDraft(text="{card_kind} {card_mask} {status} {expiry}")
+    draft = ComposeDraft(text="{card_kind} {card_mask} {available_balance}")
     llm = ScriptedLLM({"nlu": [nlu], "compose": [draft]})
     graph = build_graph(MemorySaver())
-    config = _config(ctx, bank_tools, llm, f"t-debit-credit-only-{language}")
+    config = _config(ctx, bank_tools, llm, f"t-debit-balance-{language}")
 
-    reply, debug = asyncio.run(run_turn(graph, "cuanto debo de mi debito?", config=config))
+    reply, debug = asyncio.run(run_turn(graph, "cuanto saldo tengo en mi debito?", config=config))
     assert debug.route == "card_info"
 
     details = asyncio.run(bank_tools.get_card_details(_card_id(bank_tools, "debit")))
-    assert details.expiration_date is not None
-    expected_compose = (
-        f"{kind_label('debit', language)} {mask_card(details.last4)} "
-        f"{status_label(details.status, language)} {format_date(details.expiration_date)}"
-    )
-    expected = get_template("credit_only", language) + "\n\n" + expected_compose
-    assert reply == expected
+    assert details.current_balance is not None
+    balance_text = format_money(details.current_balance, "USD", "MX")
+    balance_text += " " + mxn_estimate(details.current_balance, _MX_USD_MXN_FX, language)
+    assert reply == f"{kind_label('debit', language)} {mask_card(details.last4)} {balance_text}"
 
-    # No money fact ever reached the LLM for a debit card (R6).
     compose_call = next(c for c in llm.calls if c.step == "compose")
-    for leaked in ("current_balance", "min_payment", "available_credit", "currency"):
+    assert "debit_balance" in compose_call.user
+    for leaked in ("current_balance", "min_payment", "available_credit", "due_date", "currency"):
         assert leaked not in compose_call.user
 
 

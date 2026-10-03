@@ -20,7 +20,7 @@ test("quick reply, gold confirm card, verified cyan reply", async ({
 		fixtures: ["block-clarify.sse", "block-confirm.sse", "block-verified.sse"],
 	});
 
-	await page.goto("/login");
+	await page.goto("/?login=1");
 	await page.getByTestId("login-document-number").fill("12345678");
 	await page.getByTestId("login-password").fill(PASSWORD);
 	await page.getByTestId("login-submit").click();

@@ -46,7 +46,9 @@ export function CardyShowcase() {
 						asChild
 						className="h-12 rounded-full px-7 text-base font-semibold"
 					>
-						<Link to="/login">{t("landing.cardy.cta")}</Link>
+						<Link to="/" search={{ login: true }}>
+							{t("landing.cardy.cta")}
+						</Link>
 					</Button>
 				</div>
 			</div>
