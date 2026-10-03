@@ -258,6 +258,7 @@
 	"home.data.expires": "Vence",
 	"home.notif.ask": "Pregúntale a Cardy",
 	"staff.analytics.nav_link": "Analítica",
+	"staff.analytics.back": "Bandeja",
 	"staff.analytics.title": "Dashboard de control de interacciones Cardy",
 	"staff.analytics.filter.date_from": "Desde",
 	"staff.analytics.filter.date_to": "Hasta",

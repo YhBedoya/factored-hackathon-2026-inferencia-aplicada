@@ -14,6 +14,23 @@ const TAB_ACTIVE = "border-cyan text-foreground";
 const TAB_IDLE =
 	"border-transparent text-muted-foreground hover:text-foreground";
 
+// The "Swip" wordmark plus the gold "Staff" badge, shared by `StaffNav` and
+// the analytics header.
+export function StaffLogo() {
+	const { t } = useI18n();
+	return (
+		<>
+			<span className="flex items-center gap-2 font-heading text-[22px] font-bold tracking-tight">
+				<span aria-hidden="true" className="size-2.5 rounded-[3px] bg-cyan" />
+				Swip
+			</span>
+			<span className="rounded-full border border-gold px-2.5 py-0.5 text-xs font-semibold tracking-[0.06em] text-gold uppercase">
+				{t("staff.nav.badge")}
+			</span>
+		</>
+	);
+}
+
 // The staff top bar ("Swip Staff Bandeja" design), shared by the inbox, the
 // case screen and the conversation screens. `AppShell` hides its own header
 // on those routes, so the language toggle lives here.
@@ -42,13 +59,7 @@ export function StaffNav() {
 			className="sticky top-0 z-20 border-b border-border bg-bg/95 backdrop-blur-md"
 		>
 			<div className="mx-auto flex h-16 max-w-[1120px] items-center gap-3.5 px-6 lg:px-10">
-				<span className="flex items-center gap-2 font-heading text-[22px] font-bold tracking-tight">
-					<span aria-hidden="true" className="size-2.5 rounded-[3px] bg-cyan" />
-					Swip
-				</span>
-				<span className="rounded-full border border-gold px-2.5 py-0.5 text-xs font-semibold tracking-[0.06em] text-gold uppercase">
-					{t("staff.nav.badge")}
-				</span>
+				<StaffLogo />
 				<div className="ml-6 flex h-16 items-center gap-6">
 					<Link
 						to="/staff"
