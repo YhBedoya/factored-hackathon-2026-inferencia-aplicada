@@ -148,6 +148,7 @@ New file `docker/docker-compose.prod.yml`, already expected by 01 §9 and 06 §3
 | `redis` | No published port |
 | `frontend` | **Not run.** The dev Vite server (784 MiB) is replaced by the static build in `nginx` |
 | observability | The existing overlay, with every published port rebound to `127.0.0.1` |
+| `analytics-worker` | The interaction-analytics worker loop (`python -m app.domains.analytics.worker`). Memory limit **512 MiB**, database pool of 3 connections, `restart: unless-stopped`. Connects as the `analytics_worker` role |
 | `certbot` | Issues and renews the certificate through the HTTP-01 webroot shared with `nginx` (§8) |
 
 **Ports:** the base and observability files publish ports on all interfaces (`5432`, `8428`, `9428`, `10428`, `3000`). The prod overlay has to **replace** those lists, not add to them, using Compose's `!override` / `!reset` YAML tags (Docker Compose ≥ 2.24). The security group already blocks these ports. The overlay is the second guard, because Docker's port publishing bypasses host firewalls such as ufw.
@@ -172,6 +173,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 | `DEMO_OTP_CODE` | SSM SecureString (ADR-008) |
 | `PII_VAULT_KEY` | SSM SecureString at `/swip/prod/PII_VAULT_KEY`, a Fernet key. Losing it makes the vault rows and the encrypted message content unreadable, so back it up with the other secrets |
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
+| `ANALYTICS_DB_PASSWORD` | SSM SecureString at `/swip/prod/ANALYTICS_DB_PASSWORD`. Password of the Postgres role `analytics_worker`; migration `0009` reads it to set the role's password. `ANALYTICS_DATABASE_URL` is built from it in Compose |
 | `S3_BUCKET` | SSM (our bucket) |
 | `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-1`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE`, `ANTHROPIC_API_KEY`, organizer credentials | **Absent.** The instance role supplies AWS credentials, and the Anthropic API isn't used in prod (ADR-028) |

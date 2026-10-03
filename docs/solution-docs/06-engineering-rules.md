@@ -36,7 +36,8 @@ backend/
     api/            router registration, deps
     core/           config, db, security, logging, telemetry, llm/, crud base
     domains/        identity, customers, cards, transactions, disputes, handoff,
-                    policy, safety, localization, conversation, audit
+                    policy, safety, localization, conversation, audit,
+                    analytics (worker, own SQL, no conversation import)
     alembic/        migrations (all schemas)
   tests/unit/…  tests/integration/…  (integration = ephemeral DB)
 frontend/

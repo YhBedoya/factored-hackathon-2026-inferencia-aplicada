@@ -64,6 +64,37 @@ services:
       retries: 10
       start_period: 15s
 
+  # Interaction analytics worker (ADR-033): same image as the backend, its own
+  # long-lived process. Both URLs point at the least-privilege `analytics_worker`
+  # role, so nothing in this process can connect as the superuser. An empty
+  # ANALYTICS_DB_PASSWORD is a start-up error, never a fallback.
+  analytics-worker:
+    build:
+      context: ../backend
+      additional_contexts:
+        eval: ../eval
+        intent: ../ml/intent
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    # No `env_file`: the worker gets only what it reads, never the whole `.env`
+    # (POSTGRES_PASSWORD, PII_VAULT_KEY, JWT_SECRET stay out of this process).
+    environment:
+      ANALYTICS_DATABASE_URL: postgresql+asyncpg://analytics_worker:${ANALYTICS_DB_PASSWORD}@postgres:5432/latam_app
+      DATABASE_URL: postgresql+asyncpg://analytics_worker:${ANALYTICS_DB_PASSWORD}@postgres:5432/latam_app
+      ANALYTICS_IDLE_MINUTES: ${ANALYTICS_IDLE_MINUTES:-30}
+      ANALYTICS_WORKER_INTERVAL_S: ${ANALYTICS_WORKER_INTERVAL_S:-120}
+      ANALYTICS_TIMEZONE: ${ANALYTICS_TIMEZONE:-America/Bogota}
+      ANALYTICS_MOCK_ENABLED: ${ANALYTICS_MOCK_ENABLED:-false}
+      ANALYTICS_MOCK_BACKFILL_DAYS: ${ANALYTICS_MOCK_BACKFILL_DAYS:-30}
+      # Sentiment scoring goes through app.core.llm (R7).
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    command: uv run --no-sync python -m app.domains.analytics.worker
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     ports:

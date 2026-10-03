@@ -15,6 +15,13 @@ services:
       - ../policies:/policies:ro
     restart: unless-stopped
 
+  analytics-worker:
+    environment:
+      APP_ENV: prod
+      LLM_PROVIDER: bedrock
+      AWS_REGION: us-east-1
+    restart: unless-stopped
+
   nginx:
     build:
       context: ..

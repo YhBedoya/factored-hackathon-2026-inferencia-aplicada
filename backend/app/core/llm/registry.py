@@ -19,7 +19,16 @@ __all__ = [
 ]
 
 Provider = Literal["anthropic", "bedrock", "openai"]
-Step = Literal["nlu", "compose", "handoff_summary", "paraphrase", "simulate", "judge", "intent_gen"]
+Step = Literal[
+    "nlu",
+    "compose",
+    "handoff_summary",
+    "sentiment",
+    "paraphrase",
+    "simulate",
+    "judge",
+    "intent_gen",
+]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
 # The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
@@ -36,6 +45,11 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
         "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
     },
     "handoff_summary": {
+        "anthropic": "claude-haiku-4-5-20251001",
+        "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
+    },
+    # Offline analytics worker (ADR-033, D13): scores customer-message sentiment.
+    "sentiment": {
         "anthropic": "claude-haiku-4-5-20251001",
         "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
     },
@@ -60,6 +74,7 @@ TEMPERATURE: dict[Step, float | None] = {
     "nlu": None,
     "compose": 0.0,
     "handoff_summary": 0.0,
+    "sentiment": 0.0,
     # gpt-6-luna rejects any non-default temperature ("Only the default (1)
     # value is supported"), so `paraphrase` pins 1.0 instead of 0.0; variety
     # still comes from the request (N distinct items), not from sampling.

@@ -280,6 +280,8 @@ def test_runner_marks_degraded_in_debug_and_audit(
     assert debug.degraded
     reply_sent = [p for t, p in session.audit.events if t == "reply_sent"]
     assert reply_sent and reply_sent[0]["degraded"] is True
+    segments = reply_sent[0]["segments"]
+    assert segments and {"intent", "route", "status"} <= segments[0].keys()
     # The attribute lands on the turn's own span, which outlives the request span.
     (turn_span,) = exporter.get_finished_spans()
     assert turn_span.name == "cardy.turn"
