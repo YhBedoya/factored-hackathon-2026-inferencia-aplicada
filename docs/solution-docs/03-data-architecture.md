@@ -13,7 +13,7 @@
 
 S3 credentials come from env vars / an AWS profile (page 2 of the data dictionary). They are never written to the repo.
 
-The deployment reads a one-time copy of the organizers' `data/` prefix in the team's own S3 bucket (us-east-1), accessed through the EC2 instance role. The copy is checked by file count and per-key size against the source listing (see `08-deployment.md` §5).
+The deployment reads a one-time copy of the organizers' `data/` prefix in the team's own S3 bucket (us-east-2, ADR-017 amended 2026-10-03), accessed through the EC2 instance role. The copy is checked by file count and per-key size against the source listing (see `08-deployment.md` §5).
 
 ## 2. Pipeline
 
