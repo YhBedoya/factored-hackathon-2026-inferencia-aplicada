@@ -59,7 +59,7 @@ export function useHomeCards(): {
 }
 
 /**
- * The amount a card shows (A1, ADR-032): a debit card's balance is the money
+ * The amount a card shows (A1, ADR-034): a debit card's balance is the money
  * available in it; a credit card shows its available credit. Always the
  * server's display string (R4).
  */

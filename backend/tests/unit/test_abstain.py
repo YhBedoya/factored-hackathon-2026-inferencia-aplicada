@@ -14,13 +14,16 @@ from uuid import uuid4
 
 import pytest
 
+from app.core.llm import LLMUnavailable
 from app.domains.conversation.graph import run_turn
+from app.domains.conversation.nodes.abstain import abstain
 from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.sandbox import _RecordingBankTools, _RecordingWriteTools
 from app.domains.conversation.schemas import NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBankOverlay, FakeBankWrites
 from tests.conftest import ScriptedLLM, make_session
+from tests.stub_classifier import make_stub_classifier
 
 _FOUR_KEYS = ["topic_label", "abstain_reason", "closest_action", "human_offer"]
 
@@ -93,3 +96,19 @@ def test_abstains_without_tools(
     (event,) = state["ui"]
     assert event.kind == "quick_replies"
     assert event.payload.slot == "abstain"
+
+
+@pytest.mark.parametrize("with_classifier", [True, False], ids=["classifier", "no-classifier"])
+def test_abstain_llm_error_marks_degraded_only_with_classifier(with_classifier: bool) -> None:
+    llm = ScriptedLLM({"compose": [LLMUnavailable("boom")]})
+    configurable: dict[str, Any] = {"llm": llm}
+    if with_classifier:
+        configurable["classifier"] = make_stub_classifier({})
+    state: Any = {"language": "es", "country": "MX"}
+
+    result = asyncio.run(abstain(state, {"configurable": configurable}))
+
+    if with_classifier:
+        assert result["degraded"] is True
+    else:
+        assert "degraded" not in result

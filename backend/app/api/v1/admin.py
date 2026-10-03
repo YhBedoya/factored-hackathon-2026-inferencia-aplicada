@@ -44,6 +44,9 @@ async def demo_reset(request: Request) -> DemoResetResponse:
         duration_ms = await reset_app_database()
     finally:
         request.app.state.turn_host = await open_host(
-            get_settings().database_url, old_host.llm, system=get_settings().agent_system
+            get_settings().database_url,
+            old_host.llm,
+            system=get_settings().agent_system,
+            classifier=old_host.classifier,
         )
     return DemoResetResponse(status="reset", duration_ms=duration_ms)

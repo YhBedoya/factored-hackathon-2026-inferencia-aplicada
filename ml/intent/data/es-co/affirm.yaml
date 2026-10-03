@@ -1,0 +1,405 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: affirm
+items:
+- text: Sí, estoy de acuerdo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, eso me parece bien.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Claro, coincido con lo que propones.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Acepto esa opción; sigamos así.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me parece bien, hagámoslo de esa manera.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Está bien para mí, podemos continuar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, parce, hagámosle así.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: De una, parce, estoy de acuerdo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Listo, parce, esa opción me sirve.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, vos tenés razón; sigamos con eso.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: De una, esa propuesta está buena, parce.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hagámosle, vos sabés que estoy de acuerdo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: sii, hagale asi q me parece bn
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: sip, estoy deacuerdo, sigamos x ahi
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: listo, me sirve esa opcion, hagamosle
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: de unaaa, acepto eso, dale
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: sisas, estoy de acuerdo con eso
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: obvio, esa idea ta bn, sigamos
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No me respondas solo con un «sí»; necesito que me expliques la opción.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, estoy de acuerdo con bloquear mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No basta con decir «claro», cuéntame cómo funciona primero.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: En vez de contestar «de acuerdo», explícame los detalles.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: De una, acepto que bloqueen mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Listo, sí autorizo el bloqueo de la tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero saber cómo se escribe «estoy de acuerdo»; no estoy aceptando nada.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, confirmo que quiero bloquear mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Solo pregunto qué significa «de una», no estoy confirmando la propuesta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Necesito traducir la expresión «sí, claro», no responder a una pregunta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, estoy de acuerdo con dejarla bloqueada.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, dale, hagamos el bloqueo de una vez.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No, no estoy de acuerdo con esa opción.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco otra alternativa; sí, esa opción me sirve.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No acepto esa propuesta; prefiero revisar otra alternativa.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No me parece bien seguir con ese plan.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero comparar más opciones; claro, me quedo con esa.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito que me muestres otra opción; sí, esa está bien.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, claro.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: De una.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Listo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Claro
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true

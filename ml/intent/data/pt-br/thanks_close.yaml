@@ -1,0 +1,395 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: thanks_close
+items:
+- text: Obrigado pela ajuda, pode encerrar por aqui.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Agradeço o atendimento, não preciso de mais nada. Até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Valeu pela atenção, vou finalizar por aqui.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Muito obrigado, era só isso mesmo. Tenha um bom dia!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Agradeço por esclarecer, podemos encerrar. Até a próxima!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Obrigado por resolver, vou ficando por aqui.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Valeu demais, já tá tudo certo por aqui. Pode fechar!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Brigadão pela força, não preciso de mais nada. Tô indo!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Show, resolveu tudo! Valeu e até mais.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ajudou bastante, viu? Valeu, vou nessa!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fechou, era isso mesmo. Obrigadão e até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Valeu pela atenção, tá tudo resolvido. Fui!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: vlw, resolveu aq, pode encerra o atendimento
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: obg pela ajuda, era so isso msm. flw!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: brigadooo, deu td certo aqui, to indo
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: valeu pela força, ja ta td certo, fuii
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: obg, me ajudou mto! pode fecha por aqui
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: vlw msm, nao preciso de mais nada, ate mais
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Na mensagem automática, por que aparece a palavra “obrigado” antes de eu terminar o atendimento?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Valeu por desbloquear meu cartão, era só isso mesmo. Até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O texto pronto mostra “obrigado” mesmo quando a conversa ainda não acabou?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Dá pra mudar a palavra “obrigado” que aparece na mensagem automática durante o atendimento?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Obrigado por resolver o bloqueio do meu cartão. Não preciso de mais nada, tchau!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Show, meu cartão já está desbloqueado. Valeu pela ajuda e até!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O botão “encerrar conversa” fecha só o atendimento ou também bloqueia meu cartão?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Valeu por explicar como pagar a fatura. Era isso mesmo, obrigado e até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Se eu tocar em “encerrar”, o que acontece com o histórico da conversa?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria entender se a opção “encerrar atendimento” apaga as mensagens ou só fecha a janela.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Obrigado pela orientação sobre o pagamento da fatura, já entendi. Até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Show, agora sei como fazer o pagamento. Valeu pela ajuda, tchau!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero encerrar o atendimento, ainda preciso tirar uma dúvida sobre meu cartão.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não preciso de mais ajuda, obrigado. Até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não estou me despedindo; falta resolver uma questão antes de terminar.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Prefiro não fechar a conversa ainda, preciso de mais uma informação.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Era só isso mesmo, não preciso de outra ajuda. Valeu, tchau!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho mais nada pra pedir. Obrigado pela ajuda, até!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Valeu!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Até mais!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Obrigado!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

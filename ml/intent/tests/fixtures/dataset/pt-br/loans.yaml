@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: loans
+items:
+- text: quero pedir um empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: preciso de um empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: tenho interesse em um empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quanto devo do meu empréstimo?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quero ver meu empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: consulto o saldo do empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: e aí, tem empréstimo pra mim?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quando vence a parcela do empréstimo, pô?
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quero um empréstimo, bora
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: não é o cartão, é o empréstimo
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: falo do empréstimo, não do cartão
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: minha dúvida é sobre crédito
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: emprestimo pra casa
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quero emprestimo pfv
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: parcela do emprestimo quando
+  intents:
+  - loans
+  status: clear
+  topic: null
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

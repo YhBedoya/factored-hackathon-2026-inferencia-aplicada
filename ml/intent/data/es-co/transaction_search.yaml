@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: transaction_search
+items:
+- text: Quiero consultar las compras que hice el mes pasado.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me muestras mis compras del mes pasado?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito ver el historial de compras del último mes.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedes listar los cobros que tengo en mi tarjeta?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera revisar los cargos registrados en mi tarjeta.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Muéstrame los cobros que aparecen en mi tarjeta.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿me mostrás las compras que hice la semana pasada?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos me podés mostrar los cobros de la semana pasada, parce?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, quiero revisar qué compras me salieron la semana pasada.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos me revisás los movimientos de mi tarjeta de este mes, parce?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, mostrame las compras que hice este mes.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me listás los cobros de este mes en la tarjeta?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me muestras las compras de ayer?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: necesito ver los cobros q hice ayer
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: pasame el listado de compras de ayer pls
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero revisar los movimientos de mi tarjeta
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me decis q compras tengo registradas?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mostrame los cargos de la tarjeta xfa
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me apareció un cobro que no reconozco; quiero saber cómo reclamarlo, no consultar otras compras.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de bloquear mi tarjeta, ayúdenme a revisar las compras que aparecen desde ayer.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No reconozco un cargo y necesito que me expliquen cómo disputarlo.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero reportar un cobro desconocido y pedir que lo revisen.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy pensando en congelar la tarjeta; primero quiero ver el detalle de los cargos recientes.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Si toca apagar mi tarjeta, necesito consultar qué consumos se hicieron este fin de semana.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Cómo activo las alertas para que me avisen cada vez que haga una compra?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me muestra las compras que componen el saldo que me aparece en la tarjeta?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito configurar notificaciones para mis próximos cobros.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me explican cómo recibir un aviso cuando pague con mi tarjeta?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero consultar los cobros que están sumando al saldo actual de mi tarjeta.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Puede listar las transacciones que explican el saldo que tengo pendiente?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero revisar mis compras anteriores; necesito saber cuándo vence mi tarjeta.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, solo consultar las compras que hice últimamente.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco consultar cobros pasados, solo quiero conocer mi fecha de corte.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito ver el historial de compras; ¿cómo cambio la clave de mi tarjeta?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito bloquearla; quiero revisar mis compras recientes.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No es para bloquear la tarjeta, sino para ver qué compras aparecen.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Las de ayer
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Compras de ayer
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cobros de ayer
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me muestras las compras que hice con mi tarjeta de crédito?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero consultar los cobros pasados de mi tarjeta de crédito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Dónde puedo ver los movimientos de mi tarjeta de crédito de estos días?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me puedes listar los pagos que hice con mi tarjeta de débito?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero revisar las compras anteriores de mi tarjeta de débito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Muéstrame los cargos que han pasado por mi tarjeta de débito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

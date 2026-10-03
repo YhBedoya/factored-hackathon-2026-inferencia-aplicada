@@ -19,7 +19,17 @@ __all__ = [
 ]
 
 Provider = Literal["anthropic", "bedrock", "openai"]
-Step = Literal["nlu", "compose", "handoff_summary", "summary", "paraphrase", "simulate", "judge"]
+Step = Literal[
+    "nlu",
+    "compose",
+    "handoff_summary",
+    "summary",
+    "sentiment",
+    "paraphrase",
+    "simulate",
+    "judge",
+    "intent_gen",
+]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
 # The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
@@ -45,6 +55,11 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
         "anthropic": "claude-haiku-4-5-20251001",
         "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
     },
+    # Offline analytics worker (ADR-033, D13): scores customer-message sentiment.
+    "sentiment": {
+        "anthropic": "claude-haiku-4-5-20251001",
+        "bedrock": "us.anthropic.claude-haiku-4-5-20251001-v1:0",  # unconfirmed until K2
+    },
     "paraphrase": {"openai": "gpt-6-luna"},
     # Same eval-only tooling and model as `paraphrase` (ADR-030 "Simulator note",
     # D6-B): the goal-driven customer simulator, `eval/simulator/simulator.py`.
@@ -53,6 +68,10 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     # reply-quality judge, `eval/judges/judge.py`. Scores dev-suite transcripts
     # only, never the served graph.
     "judge": {"openai": "gpt-6-luna"},
+    # Same eval-only tooling and model (ADR-032, extending ADR-030's list):
+    # offline training-data generation, `ml/intent/generate.py`. Never runs in
+    # the served graph.
+    "intent_gen": {"openai": "gpt-6-luna"},
 }
 
 # `None` means "send no temperature" (the model default). claude-sonnet-5-5 answers
@@ -63,6 +82,7 @@ TEMPERATURE: dict[Step, float | None] = {
     "compose": 0.0,
     "handoff_summary": 0.0,
     "summary": 0.0,
+    "sentiment": 0.0,
     # gpt-6-luna rejects any non-default temperature ("Only the default (1)
     # value is supported"), so `paraphrase` pins 1.0 instead of 0.0; variety
     # still comes from the request (N distinct items), not from sampling.
@@ -74,6 +94,8 @@ TEMPERATURE: dict[Step, float | None] = {
     # model accepts", so `agreement.md` carries a non-repeatable caveat instead
     # of relying on a low temperature for reproducibility.
     "judge": 1.0,
+    # Same gpt-6-luna constraint (ADR-032, eval-only).
+    "intent_gen": 1.0,
 }
 
 # Steps whose provider is pinned regardless of `LLM_PROVIDER` (ADR-030). Every
@@ -82,6 +104,7 @@ STEP_PROVIDER: dict[Step, Provider] = {
     "paraphrase": "openai",
     "simulate": "openai",
     "judge": "openai",
+    "intent_gen": "openai",  # ADR-032, eval-only
 }
 
 

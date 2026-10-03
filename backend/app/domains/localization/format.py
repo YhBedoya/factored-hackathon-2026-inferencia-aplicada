@@ -7,6 +7,7 @@ table below rather than from CLDR locale defaults, since Babel's locale data
 doesn't line up with `02` §7's strings and the plan's Q5 examples one-for-one.
 """
 
+import re
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Literal
@@ -19,6 +20,7 @@ from app.domains.localization.schemas import FxRate
 
 __all__ = [
     "BANK_TZ",
+    "CARD_MASK_RE",
     "format_date",
     "format_days",
     "format_money",
@@ -27,6 +29,7 @@ __all__ = [
     "local_today",
     "mask_card",
     "mxn_estimate",
+    "parse_card_mask",
     "queue_label",
     "status_label",
 ]
@@ -136,6 +139,16 @@ def format_date(d: date) -> str:
 def mask_card(last4: str) -> str:
     """`•••• 1234`. `last4` is already the masked tail (R1); never a full PAN."""
     return f"•••• {last4}"
+
+
+# Exactly what `mask_card` emits, so a picker chip label can be parsed back.
+CARD_MASK_RE = re.compile(r"•{4} (\d{4})")
+
+
+def parse_card_mask(text: str) -> str | None:
+    """The 4 digits of the first `•••• 1234` mask in `text`, or None."""
+    m = CARD_MASK_RE.search(text)
+    return m.group(1) if m else None
 
 
 def status_label(status: CardStatus, language: Language) -> str:

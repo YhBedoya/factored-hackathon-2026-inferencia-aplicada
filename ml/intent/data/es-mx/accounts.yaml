@@ -1,0 +1,356 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: accounts
+items:
+- text: Quiero abrir una cuenta de cheques, ¿qué necesito?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué requisitos piden para abrir una cuenta bancaria?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me gustaría abrir una cuenta, ¿me pueden orientar?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito cerrar mi cuenta bancaria, ¿cómo lo hago?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me ayudan a cancelar mi cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero dar de baja mi cuenta, ¿qué pasos sigo?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿cómo le hago para abrir una cuenta de banco?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ahorita quiero sacar una cuenta, ¿qué ocupo?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿qué necesito para abrir mi cuenta bancaria?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me pueden ayudar a cerrar mi cuenta? Ya no la voy a usar.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oigan, quiero dar de baja mi cuenta porque ya no me sirve.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo cancelo mi cuenta? Ya no la ocupo.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: k necesito pa abrir una cuenta de banco?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q piden pa sacar una cuenta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me urge abrir una cuenta, como le ago?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero cerrar mi cuenta, ya no la uso, como le ago?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ya no ocupo la cuenta, como la cancelo?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me ayudan a dar de baja mi cuenta xfa?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Mi cuenta está bien; necesito reportar mi tarjeta como robada.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero abrir una cuenta de débito para usarla con mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo problema con mi cuenta, quiero bloquear la tarjeta porque me la robaron.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: La cuenta no es el tema, necesito que me repongan mi tarjeta extraviada.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me ayudan a contratar una cuenta de cheques para hacer mis compras con tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Busco abrir una cuenta bancaria y después vincularle mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero saber si puedo pagar con mi tarjeta aunque no tenga saldo en la cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero abrir una cuenta bancaria; ¿qué necesito para que también me manden una tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Puedo hacer una compra con la tarjeta si mi cuenta está en ceros?
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Solo quiero saber si mi tarjeta pasa cuando no hay dinero en la cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cómo le hago para abrir una cuenta? Me interesa que incluya tarjeta de débito.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Busco abrir una cuenta bancaria y quisiera saber si después puedo pedir una tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero cerrar mi cuenta, solo necesito cambiar mi domicilio.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco un crédito; quiero abrir una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No voy a cancelar la cuenta; nada más quiero actualizar mi dirección.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito dar de baja mi cuenta, solo cambiar el domicilio que aparece en mi perfil.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito pedir un préstamo, quiero saber cómo abrir una cuenta.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy solicitando financiamiento, solo quiero abrir una cuenta bancaria.
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: De cheques
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Una de cheques
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cuenta de cheques
+  intents: []
+  status: out_of_scope
+  topic: accounts
+  family: accounts-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

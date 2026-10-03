@@ -1,0 +1,358 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: transfers
+items:
+- text: Quero transferir dinheiro de uma conta minha pra outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como faço uma transferência entre minhas contas?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso mandar um valor da minha conta pra outra conta minha.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero passar dinheiro da minha conta principal pra minha outra conta.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá pra transferir um valor entre duas contas minhas?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso mover uma quantia de uma conta minha para outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me ajuda aí, quero passar uma grana de uma conta minha pra outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria jogar um dinheiro pra minha outra conta, como faço?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem como mandar uma graninha entre minhas contas por aqui?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero mandar uma grana da minha conta pra outra, dá uma força?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como é que passo um dinheirinho pra minha outra conta?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso jogar uma grana de uma conta minha pra outra, beleza?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero transfri um valor da minha conta pra outra, como faz?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: da pra manda dinheiro de uma conta minha pra outra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: preciso passa uma grana pra minha outra conta hj, me ajuda
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: comu transfiro da minha conta pra outra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero move um dinhero entre minhas contas, pfv
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem como transfiri uma grana pra minha otra conta?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Só quero baixar o comprovante da transferência que já fiz, não fazer outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Entrei na área de pagamentos, mas quero transferir dinheiro da minha conta para outra conta. Como
+    faço?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso apenas do recibo da transferência concluída, não vou iniciar uma nova.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me manda o comprovante daquela transferência já feita; não quero transferir agora.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tô vendo as opções de pagamento, só que preciso mandar uma transferência entre contas. Onde começo?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero fazer uma transferência da minha conta pra outra, não pagar uma compra. Como faço isso?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O que significa “transferência” no meu extrato?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi uma compra no meu cartão, mas preciso mesmo é transferir dinheiro da minha conta pra outra.
+    Como faço?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Queria entender o que quer dizer a descrição “transferência” que apareceu no extrato.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Pode explicar o lançamento chamado “transferência” no meu extrato?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tô conferindo uma compra no cartão e queria mandar dinheiro de uma conta minha pra outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Apareceu uma compra no cartão, mas minha dúvida é como transferir um valor entre minhas contas.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero fazer transferência entre minhas contas agora.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero consultar meu saldo, quero transferir dinheiro da minha conta para outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não vou mandar dinheiro de uma conta minha pra outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Prefiro não transferir valores entre minhas contas.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não preciso ver quanto tenho na conta; quero fazer uma transferência entre minhas contas.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Em vez de conferir meu saldo, preciso mandar dinheiro de uma conta minha pra outra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Entre minhas contas
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pra outra conta
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Conta pra conta
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

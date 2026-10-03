@@ -260,11 +260,16 @@ def _stop_backend(proc: subprocess.Popen[bytes]) -> None:
         proc.wait()
 
 
-def fault_groups(cases: list[Case]) -> list[tuple[frozenset[str], list[Case]]]:
-    """Group cases by fault set: the empty set first, the rest in first-seen order."""
+def fault_groups(
+    cases: list[Case], extra_faults: frozenset[str] = frozenset()
+) -> list[tuple[frozenset[str], list[Case]]]:
+    """Group cases by fault set: the empty set first, the rest in first-seen order.
+
+    `extra_faults` (the CLI `--faults`) is unioned into every case's set, so the
+    backend each group starts with carries it too."""
     groups: dict[frozenset[str], list[Case]] = {frozenset(): []}
     for case in cases:
-        groups.setdefault(frozenset(case.setup.faults), []).append(case)
+        groups.setdefault(frozenset(case.setup.faults) | extra_faults, []).append(case)
     return [(faults, group) for faults, group in groups.items() if group]
 
 
@@ -400,6 +405,7 @@ async def _run_system(
     driver: Driver,
     run_id: str,
     run_index: int,
+    extra_faults: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Run `run_index` (1-based) of `system` on the shared clone `dbname` (created and
     dropped by `run`)."""
@@ -427,7 +433,9 @@ async def _run_system(
             handle: tuple[subprocess.Popen[bytes], str],
             faults: frozenset[str],
             group: list[Case],
-        ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]]:
+        ) -> tuple[
+            list[dict[str, Any]], list[dict[str, Any]], int, list[dict[str, Any]]
+        ]:
             return await _play(
                 group,
                 handle[1],
@@ -441,7 +449,10 @@ async def _run_system(
             )
 
         group_results = await _play_groups(
-            fault_groups(cases), start, lambda h: _stop_backend(h[0]), play_group
+            fault_groups(cases, extra_faults),
+            start,
+            lambda h: _stop_backend(h[0]),
+            play_group,
         )
         verdicts = [v for r in group_results for v in r[0]]
         llm_rows = [row for r in group_results for row in r[1]]
@@ -482,13 +493,16 @@ async def _run_all(
     cases: list[Case],
     driver: Driver,
     run_id: str,
+    extra_faults: frozenset[str] = frozenset(),
 ) -> list[dict[str, Any]]:
     """Proposed x`runs`, baseline x1 (D4), sequentially on the one clone."""
     results: list[dict[str, Any]] = []
     for system in systems:
         for index in range(1, (runs if system == "proposed" else 1) + 1):
             results.append(
-                await _run_system(system, dbname, cases, driver, run_id, index)
+                await _run_system(
+                    system, dbname, cases, driver, run_id, index, extra_faults
+                )
             )
     return results
 
@@ -518,6 +532,7 @@ def run(
     cases_filter: list[str] | None = None,
     runs: int = 1,
     nlu: str = "off",
+    faults: frozenset[str] = frozenset(),
 ) -> str:
     """Play `suite` on `system` (`proposed`, `baseline` or `both`); returns the folder name.
 
@@ -554,7 +569,9 @@ def run(
     # One clone per invocation (D10); the name is the folder name with `-` -> `_`.
     dbname, clone_seconds = clone.create(run_id.replace("-", "_").lower())
     try:
-        results = asyncio.run(_run_all(systems, runs, dbname, cases, play, run_id))
+        results = asyncio.run(
+            _run_all(systems, runs, dbname, cases, play, run_id, faults)
+        )
     finally:
         clone.drop(dbname)
 
@@ -605,7 +622,9 @@ def run(
         # Any diff aborts the run, so a finished run has none.
         "reset_diffs": 0,
         "models": {
-            s: _model_ledger([row for r in results if r["system"] == s for row in r["llm_rows"]])
+            s: _model_ledger(
+                [row for r in results if r["system"] == s for row in r["llm_rows"]]
+            )
             for s in by_system
         },
         "restore_count": sum(r["restores"] for r in results),
@@ -630,4 +649,3 @@ def run(
         nlu_section=nlu_section,
     )
     return run_id
-

@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: transaction_search
+items:
+- text: Quero consultar minhas compras anteriores no cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode me mostrar a lista das compras que já fiz?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso ver as cobranças passadas do meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero conferir os lançamentos antigos do meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me mostra as compras que apareceram na fatura passada.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso consultar minhas transações anteriores.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá uma olhada pra mim nas compras que fiz no cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria ver aí a lista dos gastos que já passaram no meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me mostra as comprinhas antigas do cartão, por favor.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem como puxar pra mim as cobranças anteriores do cartão?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero conferir direitinho o que já gastei no cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me ajuda a ver os lançamentos que já caíram na fatura.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: da pra ve minhas compra antiga no cartao?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: olha pra mim as cobrança q ja apareceu no cartao
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria confiri os gasto passado do meu cartao
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me mostra ai as compra q fiz antes
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem como puxar os lançamntos antigo do cartao?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero ver minhas transaçoes passadas pfv
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como faço para aumentar o limite para compras no cartão?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero ver as compras antigas que alteraram meu saldo disponível.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero saber se posso parcelar uma compra antes de pagar.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Onde altero as configurações para permitir compras pela internet?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me mostra o histórico de compras que mexeram no saldo da conta.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso consultar os lançamentos de compras que impactaram meu saldo.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso trocar a data de vencimento da fatura do cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Pra entender meu limite, me mostra a lista das compras que fiz no cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Como faço para bloquear compras internacionais no meu cartão?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero entender como funciona o pagamento parcelado das compras.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero conferir o limite disponível vendo as compras que já passaram no meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Me ajuda a revisar meus gastos: lista as transações recentes do cartão.'
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero consultar minhas compras; preciso desbloquear meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão; só preciso ver as compras que já fiz.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso ver cobranças antigas, só quero atualizar meu endereço.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero listar transações, preciso saber como trocar a senha do cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão, quero apenas consultar minhas compras anteriores.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Deixa o bloqueio pra lá, preciso olhar a lista de compras passadas do meu cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: As compras recentes, por favor.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Lançamentos do cartão.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cobranças antigas, por favor.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero consultar as compras que fiz no cartão de crédito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você pode me mostrar as cobranças anteriores do meu cartão de crédito?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Preciso ver o histórico de gastos no cartão de crédito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quero conferir as compras feitas no cartão de débito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você consegue listar os lançamentos anteriores do meu cartão de débito?
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Preciso consultar as cobranças que passaram no cartão de débito.
+  intents:
+  - transaction_search
+  status: clear
+  topic: null
+  family: transaction_search-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

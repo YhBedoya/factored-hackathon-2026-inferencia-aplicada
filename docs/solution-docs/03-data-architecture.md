@@ -8,6 +8,7 @@
 | S3 `data_backup_20260831/`, root `marketing_campaigns.csv` | Synthetic, older partial copies | **Not used**. Documented as excluded |
 | `policies/*.yaml` | **Team-generated synthetic** policy | Decline codes, min payment, limits, dispute questions, escalation thresholds |
 | `eval/scenarios/**` | **Team-generated** (seeds + LLM paraphrases, human-reviewed) | Evaluation and dev tuning |
+| `analytics.*` rows with `source = 'mock'` | **Team-generated synthetic** (seeded by the analytics worker from a fixed profile) | Dashboard demo data; never mixed with `source = 'real'` rows |
 | Demo credentials, fixed step-up OTP | **Team-generated** (credentials at load; the OTP is a fixed code in an env var) | Mock IdP |
 
 S3 credentials come from env vars / an AWS profile (page 2 of the data dictionary). They are never written to the repo.
@@ -90,6 +91,21 @@ Indexes **(proposed)**: `products(customer_id, product_type)`, `transactions(cus
 
 ### `audit`
 `audit_events` (migration `0004`, D3-A5, append-only, no update or delete path: `id, at, conversation_id, turn_id, actor, type, payload jsonb, sources jsonb, policy_version, model jsonb, trace_id, langfuse_trace_id`; index `(conversation_id, at)`; see `04-contracts.md` §6 for the full shape), `llm_calls` (migration `0007`, append-only, one row per LLM attempt: `id, at, conversation_id, turn_id` (both null-able, from the log context), `step, provider, model_id, prompt_version, temperature` (nullable since migration `0008`: null when the model takes no temperature, e.g. Sonnet 5.5 for NLU), `attempt, status` (`CHECK` in `ok`, `invalid`, `unavailable`, `refused`), `input_text` (masked; null when refused), `output_json, input_tokens, output_tokens, cost_usd, latency_ms, langfuse_trace_id`; index `(conversation_id, at)`).
+
+### `analytics`
+(migration `0009`) Derived interaction metrics, written by the analytics worker and read by the dashboard. The tables hold no message text and no customer identifier. `conversation_id` has no foreign key, because mock rows have no conversation behind them. Created and owned by Alembic like every other schema.
+
+| Table | Columns |
+|---|---|
+| `analytics.interactions` | Primary key `conversation_id` (uuid). Time: `source` (`real` or `mock`), `started_at`, `ended_at`, `end_reason` (`customer_closed`, `idle`, `handoff_returned`), `duration_s`. Dimensions: `language`, `country`, `channel`. Volume: `customer_messages`, `bot_messages`, `agent_messages`, `turns`. Outcome: `real_intent_count`, `resolved` (null when there was no real intent or no segments), `abandoned`, `abstained`, `degraded`. Escalation: `escalated`, `handoff_count`, `handoff_queue`, `handoff_reason`, `handoff_cause_group`, `time_to_claim_s`. Cost (`numeric(12,6)`): `cost_usd`, `cost_nlu_usd`, `cost_compose_usd`, `cost_handoff_summary_usd`, plus `llm_call_count`. Sentiment (all nullable): `sentiment_overall`, `sentiment_start`, `sentiment_end` (`negative`, `neutral`, `positive`), `sentiment_model`, `sentiment_prompt_version`, `sentiment_cost_usd`, `sentiment_scored_at`. Bookkeeping: `computed_at`, `metrics_version`. Index on `ended_at`. Checks on `source`, `end_reason` and the sentiment labels |
+| `analytics.interaction_intents` | Primary key `(conversation_id, seq)`. `intent`, `outcome`, `needed_clarification`, `turns`, `bot_offered` (boolean, not null, default false) |
+| `analytics.worker_state` | One row (`id = 1`): `watermark` (timestamptz, null) and `mock_seeded_through` (date, null) |
+
+- `outcome` is one of `resolved`, `handoff`, `abstained`, `abandoned`, `cancelled`.
+- `source = 'mock'` marks team-generated synthetic rows (see §1). `source = 'real'` rows come from conversations in `app`.
+- Migration `0009` also adds the index `ix_messages_created_at` on `app.messages(created_at)`, which the worker uses to find conversations with recent activity. It also creates an index on `app.conversations(closed_at)`, from which the worker reads candidate conversations.
+- Role `analytics_worker` (`LOGIN`, created only if missing; its password comes from `ANALYTICS_DB_PASSWORD`, and an empty value creates the role without a password). Grants, and nothing else: `USAGE` on schemas `app`, `audit`, `bank` and `analytics`; `SELECT` on all tables of `app`, `audit` and `bank`; `SELECT, INSERT, UPDATE, DELETE` on all tables of `analytics`; `INSERT` on `audit.llm_calls`. The worker process uses this role for everything, including the LLM ledger write for sentiment.
+- `make demo-reset` wipes the `analytics` schema together with the conversations.
 
 ### Redis
 Confirmation tokens (`conf:<id>`, TTL 5 min, single-use plans with a step cursor, ADR-027), idempotency keys, rate limits and turn caps (ADR-023), pub/sub channels `conv:<id>` (customer and claimed-agent streams) and `handoff:<queue>` (`handoff_created`/`handoff_updated` for the staff inbox).

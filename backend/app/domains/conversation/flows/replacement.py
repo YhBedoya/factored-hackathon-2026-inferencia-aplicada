@@ -62,7 +62,7 @@ from app.domains.conversation.flows.card_select import (
 )
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import NLUSlots
-from app.domains.conversation.state import Fact
+from app.domains.conversation.state import Fact, mark_segment
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -208,7 +208,7 @@ async def _resume_offer(state: GraphState, config: RunnableConfig) -> dict[str, 
         return await _check_active_and_eligibility(state, config, card_id)
     declined = closing(language)
     declined["segments"] = [get_template("replacement_declined", language), *declined["segments"]]
-    return declined
+    return {**declined, **mark_segment("cancelled")}
 
 
 async def _check_active_and_eligibility(
@@ -249,6 +249,7 @@ async def _check_active_and_eligibility(
         return {
             "pending": None,
             "segments": [get_template("replacement_not_eligible", language)],
+            **mark_segment("abstained"),
         }
 
     address_masked = f"•••, {profile.city}" if profile.city else "•••"
@@ -272,7 +273,11 @@ async def _resume_address_confirm(state: GraphState, config: RunnableConfig) -> 
     outcome = decision(state)
     card_id = state.get("selected_card_id")
     if card_id is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
+        }
     if outcome == "confirm":
         return await _start_replacement_plan(state, config, card_id, "on_file")
     if outcome != "cancel":
@@ -288,7 +293,11 @@ async def _resume_otp(state: GraphState, config: RunnableConfig) -> dict[str, An
     language = state["language"]
     card_id = state.get("selected_card_id")
     if card_id is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
+        }
     if await bank_write_tools.is_step_up_valid():
         return _ask_address(language)
     # Still invalid: pause again, nothing issued (D1).
@@ -310,7 +319,11 @@ async def _resume_address(state: GraphState, config: RunnableConfig) -> dict[str
     vault: AddressVault = config["configurable"]["vault"]
     card_id = state.get("selected_card_id")
     if card_id is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
+        }
     address_ref = vault.put_address(state["user_text"])
     return await _start_replacement_plan(state, config, card_id, address_ref)
 
@@ -375,6 +388,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
             "pending": None,
             "confirmation_token_id": None,
             "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
         }
 
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]

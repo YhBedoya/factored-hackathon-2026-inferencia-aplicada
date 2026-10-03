@@ -63,12 +63,27 @@ class Settings(BaseSettings):
     # line only; the guard in `main.py` refuses it under APP_ENV=prod.
     faults: Annotated[frozenset[Fault], NoDecode] = frozenset()
     llm_disabled: bool = False
+    # Learned intent classifier bundle dir (ADR-032). The image sets
+    # INTENT_MODEL_DIR to /app/ml/intent/models; this default is the repo path
+    # the host-run eval backend uses.
+    intent_model_dir: Path = Path(__file__).resolve().parents[3] / "ml" / "intent" / "models"
     tool_timeout_s: float = 3.0
     turn_cap_per_conversation: int = 40
     turn_cap_per_account_day: int = 150
     retry_max: int = 2
     retry_backoff_base_s: float = 0.5
     retry_backoff_cap_s: float = 2.0
+
+    # Interaction analytics worker (ADR-033). An empty `analytics_database_url`
+    # is a start-up error in the worker (no superuser fallback); Compose builds
+    # it from `analytics_db_password`, which migration 0009 also reads.
+    analytics_database_url: str = ""
+    analytics_db_password: str = ""
+    analytics_idle_minutes: int = 30
+    analytics_worker_interval_s: int = 120
+    analytics_timezone: str = "America/Bogota"
+    analytics_mock_enabled: bool = False
+    analytics_mock_backfill_days: int = 30
 
     @field_validator("faults", mode="before")
     @classmethod

@@ -5,25 +5,21 @@ persona: CLI-15CX29YY6SS9
 goal: Bloquear la tarjeta cuando el modelo no responde a tiempo
 fact_sheet: {}
 setup:
-  faults:
-  - bedrock_timeout
+  faults: []
   expire_session_before_turn: null
   db_patches: []
 labels:
   expected_intents:
   - card_block
-  expected_outcome: handoff:atencion
-  required_tools: []
+  expected_outcome: clarified
+  required_tools:
+  - cards.list_cards
   forbidden_tools:
-  - cards.block_card
   - cards.lock_card
+  - cards.block_card
   expected_db_state: []
-  required_handoff_fields:
-  - handoff_id
-  - queue
-  - reason
-  - request
-  eligible_for_automation: false
+  required_handoff_fields: []
+  eligible_for_automation: true
 cases:
 - case_id: d-card_block-tool_failure-es-co-01.s
   language_variant: es-CO

@@ -186,7 +186,7 @@ def test_credit_balance_due(
 
 @pytest.mark.parametrize("language", ["es", "pt"])
 def test_debit_balance(fakebank_dir: Path, language: Language) -> None:
-    """B1, ADR-032: `balance_due` on a debit card -- its available balance
+    """B1, ADR-034: `balance_due` on a debit card -- its available balance
     through the `debit_balance` goal; never a credit-only money fact.
     """
     ctx = ToolContext(

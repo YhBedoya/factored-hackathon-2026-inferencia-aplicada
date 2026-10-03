@@ -75,7 +75,7 @@ Notation: **T** = tool call (customer-scoped), **C** = confirmation required (se
 2. Facts: masked number, status, expiry, credit limit, available credit (= limit − balance, computed in code), interest rate, balance, `days_past_due` bucket, and the minimum payment from the **synthetic policy formula** (labeled as synthetic in the reply footnote). Each fact carries its source (`bank.products:<product_id>` or `policy:min_payment@<hash>`).
    - **The formula has no overdue term** (D2-B D5, P5): `min_payment = min(max(percent × balance, floor[currency]), balance)`, `0` when balance ≤ 0. `days_past_due > 0` instead adds a separate `payment_overdue` fact carrying the bucket, so a card can be both current on the formula and flagged overdue.
    - **Due date** (P6): the next `due_day_of_month` on or after today in the country's `BANK_TZ`, so it is today when today is the 10th.
-3. **Debit cards** (ADR-020, ADR-032) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot answers with its **available balance** (`current_balance`, fact `available_balance`, goal `debit_balance`); due date and minimum payment stay credit-only.
+3. **Debit cards** (ADR-020, ADR-034) have no credit limit and no days past due. `card_info` shows the masked number, status, expiry and recent transactions. For `balance_due` on a debit card, the bot answers with its **available balance** (`current_balance`, fact `available_balance`, goal `debit_balance`); due date and minimum payment stay credit-only.
 
 ### 4.3 `decline_explain`
 1. `card_select` → T `transactions.search(status=Declined, …)` to find the decline (by default the most recent; otherwise ask which one). With a `merchant_text`/`amount` slot, code narrows the ≤10 declines (case-insensitive merchant match, or amount ±10%); one match explains it directly, two or more offer those in a single-pick `ui.transaction_list` (`multi: false`), and zero offer every decline the same way (D5-B D2).
@@ -124,7 +124,7 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 
 ## 5. Clarification, abstention and escalation rules
 
-Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and after every tool result. When `LLM_DISABLED` is set (cost guard, ADR-023), every turn takes the safe-fallback path.
+Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and after every tool result. When `LLM_DISABLED` is set (cost guard, ADR-023), every turn takes the degraded path (ADR-032): the trained classifier replaces `understand` and the baseline templates replace the LLM nodes, with zero LLM calls. A degraded turn hands off only when no classifier is loaded, when its intent is in `degraded_handoff_intents` (`transaction_search`, `general_question`), or after two ambiguous turns in a row (`clarify_rephrase` first, then `clarification_exhausted`).
 
 | Rule | Trigger | Outcome |
 |---|---|---|
@@ -139,7 +139,7 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Claim priority flags | See 4.8 | Handoff to Reclamos |
 | Customer not active | Customer status is Closed, Suspended or Inactive (it takes precedence over card status, ADR-021) | Card info read-only, block still allowed, no unlock or replacement; handoff (Atención) |
 | Unauthorized access | An `injection_suspected` turn (another person's data) or a tool raising `AccessDenied` | Refuse with the `injection_suspected` template and audit `access_denied{source: nlu\|tool, attempt}` every time; the 2nd attempt in a conversation (`attempts_before_handoff`) → handoff (Atención, `unauthorized_access`) |
-| Tool / LLM failure | Retries exhausted (2 retries, `01` §7), any `LLMError`, or `LLM_DISABLED` | `failure_handoff` template (no LLM; `failure_handoff_after_action` when the turn already has a verified action or a write failed after its retries, the graph-local `write_failed` flag; with no language in state yet, `load_session` picks ES/PT with the in-code `_guess_language` check, since the country can't tell PT) + handoff (`tool_failure` / `llm_unavailable`, queue as `human_request`, priority normal; D6-A D8-D10) |
+| Tool / LLM failure | Tool retries exhausted (2 retries, `01` §7); with a loaded classifier, an `LLMError` or `LLM_DISABLED` runs the degraded path first and hands off only per the rules above; with none loaded, any `LLMError` or `LLM_DISABLED` | `failure_handoff` template (no LLM; `failure_handoff_after_action` when the turn already has a verified action or a write failed after its retries, the graph-local `write_failed` flag; with no language in state yet, `load_session` picks ES/PT with the in-code `_guess_language` check, since the country can't tell PT) + handoff (`tool_failure` / `llm_unavailable`, queue as `human_request`, priority normal; D6-A D8-D10) |
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |
 
 Queues: `atencion`, `cobranza`, `fraudes`, `reclamos` (one seeded agent each). `retencion` and `creditos` are Stretch **(proposed)**.

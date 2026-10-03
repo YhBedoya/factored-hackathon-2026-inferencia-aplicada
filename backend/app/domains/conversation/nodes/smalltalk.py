@@ -56,6 +56,11 @@ def smalltalk(state: GraphState) -> dict[str, Any]:
             return {"segments": [get_template("otp_required", language)]}
         return {"segments": [get_template("nothing_pending", language)]}
 
+    if state.get("degraded") and nlu.status == "ambiguous" and not nlu.intents:
+        # D8: the degraded classifier couldn't tell what she meant. The pause (if
+        # any) stays open; the second miss in a row is `route`'s handoff.
+        return {"segments": [get_template("clarify_rephrase", language)]}
+
     intents = nlu.intents
     closing = "deny" in intents or "thanks_close" in intents
 

@@ -99,6 +99,13 @@ def _fallback(reason: str | None, language: Language) -> str:
 async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Draft `handoff_request` for this turn's handoff; never raises on LLM failure."""
     configurable = config["configurable"]
+    has_classifier = configurable.get("classifier") is not None
+    if has_classifier and state.get("degraded"):
+        # D4: degraded turns take the fixed per-reason text, no LLM call. Lazy
+        # import: the baseline module imports this one.
+        from app.domains.conversation.baseline.template_compose import baseline_handoff_summary
+
+        return await baseline_handoff_summary(state, config)
     llm: LLMClient = configurable["llm"]
     language: Language = state["language"]
 
@@ -158,6 +165,12 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
             schema=HandoffSummaryDraft,
         )
     except LLMError:
+        if has_classifier:
+            from app.domains.conversation.baseline.template_compose import (
+                baseline_handoff_summary,
+            )
+
+            return {**await baseline_handoff_summary(state, config), "degraded": True}
         return {"handoff_request": fallback}
 
     text = draft.request

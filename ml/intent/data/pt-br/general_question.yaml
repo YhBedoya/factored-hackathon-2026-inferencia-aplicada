@@ -1,0 +1,458 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: general_question
+items:
+- text: Quais vantagens meu cartão oferece?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Que benefícios vêm com meu cartão?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: O que meu cartão oferece de vantagem?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria entender como funciona o serviço do cartão.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Você pode me explicar como funciona o serviço do cartão?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gostaria de saber como é o funcionamento do cartão.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ô, como é que funciona esse cartão aí?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me explica aí como funciona meu cartão?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Conta pra mim como funciona esse cartão, por favor.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: E aí, quais são as vantagens desse cartão?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Na boa, o que meu cartão tem de bom?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me fala aí quais benefícios vêm com o cartão.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: alguem me explica como funciona meu cartao? to meio perdida
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como q funciona esse cartao? alguem me conta
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria entende como meu cartao funciona, me ajuda ai
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quais as vantagem do cartao? tem como explica pra mim?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me fala ai quais beneficio meu cartao tem
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria sabe oq vem junto com o cartao, alguem explica?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não quero saber como funciona o cartão; preciso pedir uma segunda via porque perdi o meu.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria entender como funciona o bloqueio temporário do cartão e quais recursos estão disponíveis
+    no serviço.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já sei como o cartão funciona, só quero solicitar outro porque perdi o meu.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não tenho dúvida sobre o funcionamento do cartão; preciso de uma segunda via.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Você pode me explicar como é o bloqueio temporário e que outras funções o cartão oferece?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Como funciona a opção de bloquear o cartão por um tempo? Queria conhecer melhor os recursos do
+    serviço.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho dúvidas sobre os benefícios do cartão; quero apenas atualizar meu endereço cadastrado.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quais recursos do cartão consigo consultar pelo app, incluindo as opções de bloqueio?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já conheço as vantagens do cartão. Preciso só corrigir meu endereço.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero informações sobre o cartão, só preciso mudar o endereço da minha conta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria entender que serviços do cartão ficam disponíveis no aplicativo, como as funções de bloquear
+    e desbloquear.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O que dá pra saber pelo app sobre os recursos do meu cartão, inclusive sobre bloqueio?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero tirar dúvidas sobre o cartão, só quero bloquear o meu.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, só queria saber quais benefícios ele oferece.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso de informações sobre o cartão; quero apenas bloquear ele.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero saber como o cartão funciona, só preciso fazer o bloqueio.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; quero entender o que ele oferece.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não estou tentando bloquear nada, só tenho uma dúvida sobre os benefícios do meu cartão.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Como funciona?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: E o funcionamento?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me explica?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como funciona o cartão de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Queria entender melhor como funciona o cartão de crédito.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você pode me explicar o funcionamento do cartão de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Como funciona o cartão de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Queria entender melhor como funciona o cartão de débito.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você pode me explicar o funcionamento do cartão de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

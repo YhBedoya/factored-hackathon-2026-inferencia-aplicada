@@ -1,0 +1,415 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: deny
+items:
+- text: No, gracias; prefiero no continuar.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No por ahora, gracias. Lo dejo así.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gracias, pero no quiero seguir con eso.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No, prefiero mantenerlo como está.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No deseo hacer ese cambio, gracias.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Mejor no; quiero dejarlo así.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No, parce, mejor paso esta vez.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, no me animo; dejémoslo para otro día.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No, gracias, parce; por ahora no quiero hacerlo.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No, parce, dejémoslo así por ahora.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, mejor no; luego miro con calma.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No, gracias, parce, esta vez no me sirve.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: nop, grax, esta vez paso
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: noo, mejor no x ahora, gracias
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: nah, no kiero seguir con eso
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: no gracias, mejor lo dejo asi
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: nop, no me interesa por ahora
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: grax pero no voy a hacerlo
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo reporto una compra que aparece como no reconocida?
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No, no quiero activar mi tarjeta todavía.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero saber qué hacer con un cobro que no reconozco.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Dónde puedo avisar que no hice esa compra?
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No la actives por ahora, gracias.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Prefiero dejar mi tarjeta sin activar por el momento.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito revisar por qué mi compra figura como no autorizada.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No, no quiero bloquear mi tarjeta.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Cómo consulto una transacción que aparece como no aprobada?
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero entender por qué dice que el pago no fue autorizado.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No, dejala activa; no la bloquees.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No, parce, no me la bloqueés.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy rechazando la oferta; primero quiero conocer las condiciones.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No, gracias.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: false
+- text: No, gracias, no quiero seguir.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero decir que no, solo necesito más información antes de decidir.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy diciendo que no; ¿me explicas cómo funciona primero?
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No, por ahora no.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No, muchas gracias.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: false
+- text: Gracias, pero no.
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No, gracias
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Mejor no
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Paso, gracias
+  intents:
+  - deny
+  status: clear
+  topic: null
+  family: deny-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

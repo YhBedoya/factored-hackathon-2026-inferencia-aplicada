@@ -45,7 +45,7 @@ from app.domains.conversation.flows.card_select import (
 )
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import NLUSlots
-from app.domains.conversation.state import Fact
+from app.domains.conversation.state import Fact, mark_segment
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -89,11 +89,11 @@ _BLOCK_EFFECT: dict[Language, str] = {
 # `ui.quick_replies` labels for `clarify_lock_vs_block` (D4, R4). Worded from
 # the lock/block lexicon above, never "cancelar": `card_cancel` (Stretch) and
 # `deny` are separate intents, and the word would collide with them.
-_TEMPORARY_LOCK_LABEL: dict[Language, str] = {
+TEMPORARY_LOCK_LABEL: dict[Language, str] = {
     "es": "Bloqueo temporal",
     "pt": "Bloqueio temporário",
 }
-_PERMANENT_BLOCK_LABEL: dict[Language, str] = {
+PERMANENT_BLOCK_LABEL: dict[Language, str] = {
     "es": "Reportar pérdida o robo",
     "pt": "Reportar perda ou roubo",
 }
@@ -223,8 +223,8 @@ def _ask_block_kind(state: GraphState, *, failures: int) -> dict[str, Any]:
             "clarification_failures": 0,
         }
     options = [
-        PickerOption(label=_TEMPORARY_LOCK_LABEL[language]),
-        PickerOption(label=_PERMANENT_BLOCK_LABEL[language]),
+        PickerOption(label=TEMPORARY_LOCK_LABEL[language]),
+        PickerOption(label=PERMANENT_BLOCK_LABEL[language]),
     ]
     return {
         "pending": {"flow": "card_block", "node": "block_kind", "awaiting_slot": "block_kind"},
@@ -257,7 +257,9 @@ async def _check_state_and_plan(
 
     already = await _already_in_state(details, block_kind, config, language)
     if already is not None:
-        return already
+        # Already in the requested state counts as resolved with no write (ADR-033),
+        # even when a next-step offer follows.
+        return {**already, **mark_segment("resolved")}
     if block_kind is None:
         return _ask_block_kind(state, failures=0)
 
@@ -361,6 +363,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
             "pending": None,
             "confirmation_token_id": None,
             "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
         }
 
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]

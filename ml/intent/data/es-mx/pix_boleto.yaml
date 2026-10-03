@@ -1,0 +1,365 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: pix_boleto
+items:
+- text: ¿Cómo puedo pagar con Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Puedo pagar con Pix desde aquí?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quisiera hacer un pago por Pix, ¿cómo le hago?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explican cómo se paga usando Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedo pagar mi cuenta con un boleto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo genero un boleto para pagar?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero hacer un pago con boleto, ¿dónde lo consigo?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, wey, ¿cómo pago con Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me dices ahorita cómo sacar un boleto para pagar?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿sí puedo liquidar esto usando Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué onda, wey? ¿Me ayudas a pagar con un boleto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿dónde consigo ahorita un boleto para hacer mi pago?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, explícame cómo mandar un pago por Pix, porfa.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como pago x pix? no le entiendo
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oye como saco un boleto pa pagar esto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me pasan los pasos pa pagar con pix pls
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero pagar con boleto, como le ago?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: se puede pagar x pix? diganme como
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: donde genero el boletoo para pagar?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: En una tarea, ¿Pix se escribe con mayúscula?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero revisar mi saldo; ¿puedo pagar un boleto bancario con mi tarjeta?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Cuál es el plural de la palabra «boleto»?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy corrigiendo un texto, ¿«boleto» lleva acento?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy viendo cuánto dinero tengo disponible. ¿Ese saldo sirve para pagar un boleto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Antes de consultar mi saldo, dime si puedo usar la tarjeta para pagar un boleto bancario.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Me ayudas a traducir la palabra «Pix» al español?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Puedo pagar mi boleto con tarjeta de crédito?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi la palabra «boleto» en un libro; ¿qué significa en este contexto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Puedes revisar si escribí bien «Pix» en mi presentación?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero liquidar el boleto usando mi tarjeta de crédito, ¿se puede?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Aceptan tarjeta de crédito para cubrir el pago de un boleto?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero pagar con Pix ni con boleto; solo quiero consultar el saldo de mi tarjeta.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar mi saldo, ¿cómo hago un pago por Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito hacer pagos por Pix o boleto, nada más quiero cambiar mi contraseña.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No voy a usar boleto ni Pix; solo busco revisar los datos de mi tarjeta.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito ver cuánto dinero tengo; quiero saber cómo pagar por Pix.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco revisar mi saldo, solo quiero hacer un pago por Pix.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Con Pix
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pagar por Pix
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Con boleto de pago
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

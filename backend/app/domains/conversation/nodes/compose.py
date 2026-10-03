@@ -48,6 +48,7 @@ __all__ = [
     "compose",
     "compose_checked",
     "compose_reply",
+    "compose_reply_flagged",
 ]
 
 _PROMPT = PromptRef("compose", 10)
@@ -146,6 +147,23 @@ async def compose_reply(
         llm, language=language, country=country, goal=goal, facts=facts, context=context
     )
     return text
+
+
+async def compose_reply_flagged(
+    llm: LLMClient, *, language: Language, country: Country, goal: Goal, facts: list[Fact]
+) -> tuple[str, bool]:
+    """`compose_reply`'s text plus whether the LLM call raised `LLMError`.
+
+    The text is the same as `compose_reply`'s; the flag lets a node mark the
+    turn degraded (D4) instead of losing the failure inside the fallback.
+    """
+    try:
+        text, _ = await _compose_draft(
+            llm, language=language, country=country, goal=goal, facts=facts
+        )
+    except LLMError:
+        return get_template("fallback", language), True
+    return text, False
 
 
 async def compose_checked(
@@ -411,7 +429,7 @@ def _current_intent(state: GraphState) -> Intent:
 
 def _card_goal(intent: Intent, *, is_debit: bool) -> Goal:
     """`card_info`'s goal: the balance goal for the card's kind on
-    `balance_due` (ADR-032), else `card_status`."""
+    `balance_due` (ADR-034), else `card_status`."""
     if intent != "balance_due":
         return "card_status"
     return "debit_balance" if is_debit else "balance_due"
@@ -450,7 +468,7 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     D2-B B1): `decline_explain` for that intent (D5-B, always -- there is no
     debit/credit split for it); otherwise `balance_due` for a credit card on
     `balance_due`, `debit_balance` for a debit card on `balance_due`
-    (ADR-032), else `card_status`. The "which card?" question never reaches here: it
+    (ADR-034), else `card_status`. The "which card?" question never reaches here: it
     is a fixed per-action template the flow writes itself
     (`card_select.ask_which_card_text`, or the flow's own equivalent). `facts`
     are read straight off `state` -- the per-turn reset in `load_session`
@@ -468,6 +486,13 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     node that joins this turn's segments into the one reply the caller
     reads.
     """
+    # D4: with a classifier loaded, a degraded turn composes from the baseline
+    # template and never calls the LLM. Lazy import: baseline imports this module.
+    has_classifier = config["configurable"].get("classifier") is not None
+    if has_classifier and state.get("degraded"):
+        from app.domains.conversation.baseline.template_compose import baseline_compose
+
+        return await baseline_compose(state, config)
     llm: LLMClient = config["configurable"]["llm"]
     facts = list(state.get("facts", []))
     facts_by_key = {fact.key: fact for fact in facts}
@@ -500,6 +525,11 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             context=build_context(state.get("history", []), state.get("summary")),
         )
     except LLMError:
+        if has_classifier:
+            # D2: the no-LLM path serves the turn instead of handing off.
+            from app.domains.conversation.baseline.template_compose import baseline_compose
+
+            return {**await baseline_compose(state, config), "degraded": True}
         # D8, A5: no segment; `fallback` speaks and the turn hands off.
         return {"escalation_reason": "llm_unavailable", "grounding": "template"}
     segments = [text]

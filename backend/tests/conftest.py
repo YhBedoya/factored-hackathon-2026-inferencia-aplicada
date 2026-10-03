@@ -13,7 +13,7 @@ over an `InMemoryConfirmationStore` and a `FakeStepUpGate`, `InMemoryAddressVaul
 -- once, so a flow test doesn't hand-roll that wiring itself.
 """
 
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -26,9 +26,11 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, JsonValue
 
+from app.core.config import get_settings
 from app.core.llm import LLMError, PromptRef, Step
 from app.domains.audit.schemas import AuditType, NullAuditRecorder
 from app.domains.conversation import templates
+from app.domains.conversation.classifier import IntentClassifier
 from app.domains.conversation.graph import GraphState, TurnInput, TurnOutput, build_graph
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -110,6 +112,15 @@ def strip_closing(reply: str, language: str) -> str:
     return reply[: -len(closing)]
 
 
+@pytest.fixture(autouse=True)
+def _empty_intent_model_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """No test may pick up a real classifier bundle from the checkout (D24)."""
+    monkeypatch.setenv("INTENT_MODEL_DIR", str(tmp_path / "intent-models"))
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.fixture
 def scripted_llm() -> type[ScriptedLLM]:
     """A factory fixture: call it with the per-step outputs dict to build one `ScriptedLLM`."""
@@ -161,6 +172,7 @@ def make_session(
     clock: Callable[[], datetime] | None = None,
     write_audit: bool = False,
     sleep: Callable[[float], Awaitable[None]] | None = None,
+    classifier: IntentClassifier | None = None,
 ) -> Session:
     """Build one write-flow session over the test fixture (T10).
 
@@ -171,7 +183,8 @@ def make_session(
 
     `write_audit=True` hands the session's `RecordingAudit` to `ConfirmedWriteTools`
     (default: `NullAuditRecorder`), so a test can read its `tool_result` rows;
-    `sleep` replaces the retry backoff sleep.
+    `sleep` replaces the retry backoff sleep; `classifier` (default none, i.e.
+    today's behaviour) lands in `configurable` for the degraded path (ADR-032).
     """
     conversation_id = uuid4()
     ctx = ToolContext(
@@ -211,6 +224,7 @@ def make_session(
             "llm": llm,
             "handoff_tools": handoff_tools,
             "audit": audit,
+            "classifier": classifier,
         }
     }
     graph = build_graph(MemorySaver())

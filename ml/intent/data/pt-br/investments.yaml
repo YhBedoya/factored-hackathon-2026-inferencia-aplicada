@@ -1,0 +1,358 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: investments
+items:
+- text: Como faço para começar a investir pelo app?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quais opções de investimento vocês oferecem?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero saber como aplicar meu dinheiro por aqui.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem algum produto de investimento para guardar dinheiro e obter rendimento?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como posso investir uma parte do meu saldo?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria conhecer as opções para fazer meu dinheiro render.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá pra deixar uma graninha rendendo por aqui?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria botar meu dinheiro pra render, como faz?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem algum investimento legal pra eu guardar uma grana?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô querendo investir uma grana, quais opções tem?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como faço pra aplicar meu dinheiro por aqui, hein?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria guardar uma graninha num investimento que renda.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como q começo a invetir pelo app?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria faze meu dinhero render, tem como?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quais opçoes de investimento tem ai?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem algum invetimento pra guarda uma grana?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: qro aplica meu saldo, como faz?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como faço pro meu dinhero rende aqui?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vi a área de investimentos, mas preciso atualizar meu endereço.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria saber quais investimentos vocês oferecem, além das opções de pagamento da fatura do meu
+    cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Apareceu uma opção de investimento, mas quero trocar o telefone da conta.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sobre os investimentos, só queria saber como alterar meu e-mail cadastrado.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Que produtos de investimento tem por aí? Também queria entender como funciona a fatura do cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pode me explicar as opções para aplicar meu dinheiro? Estou olhando as formas de pagar a fatura
+    também.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Recebi uma notificação de investimento, mas minha dúvida é sobre uma compra no cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero ver quanto rendeu minha aplicação, não o valor das compras no cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi uma oferta de aplicação, mas quero contestar uma cobrança.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A tela de investimentos não abriu; na verdade, preciso de ajuda com meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Onde consulto o rendimento do meu investimento, em vez das compras feitas com o cartão?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me mostra o retorno da aplicação; não quero conferir os gastos do cartão.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero investir nem abrir uma aplicação agora.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, só quero saber quais opções tenho para investir meu dinheiro.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Por enquanto não quero guardar dinheiro em nenhum produto de investimento.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não tenho interesse em fazer meu saldo render.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; queria conhecer as opções de investimento disponíveis.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso bloquear meu cartão, quero apenas ver em que posso investir meu dinheiro.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero investir
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero aplicar
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fazer render
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

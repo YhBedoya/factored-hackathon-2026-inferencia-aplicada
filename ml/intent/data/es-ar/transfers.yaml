@@ -1,0 +1,359 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: transfers
+items:
+- text: ¿Cómo puedo transferir dinero entre mis cuentas?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero pasar plata de una cuenta mía a otra, ¿cómo hago?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explican cómo mover fondos entre mis cuentas bancarias?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito hacer una transferencia de una cuenta mía a otra. ¿Cómo se hace?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo paso dinero entre dos cuentas que están a mi nombre?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero transferir plata entre mis propias cuentas, ¿cuáles son los pasos?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿cómo hago para pasar plata de una cuenta mía a otra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me decís cómo transferir entre mis cuentas, porfa?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero mover unos mangos entre mis cuentas, ¿cómo lo hago?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos sabés cómo transferir plata entre mis cuentas?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿cómo paso guita de una cuenta mía a la otra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explicás cómo mandar plata entre mis cuentas, por favor?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como transfiero plata entre mis cuentas? no encuentro la opcion
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q hago para pasar plata de una cuenta mia a otra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, quiero mover plata entre mis cuentas y no se como
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: necesito tranferir entre mis cuentas, me dicen como?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como paso guita de mi cuenta a la otra? no veo donde
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quiero mandar plata entre mis cuentas, donde esta esa opcion?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: En el aviso de transferencia figura mal mi dirección, ¿cómo la actualizo?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tengo que pagar la tarjeta, pero antes quiero transferir plata de mi cuenta a otra cuenta.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En el menú de transferencias, ¿dónde cambio el idioma de la aplicación?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: El comprobante de transferencia muestra mal mi correo, ¿cómo actualizo mis datos de contacto?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes del pago de la tarjeta, necesito hacer una transferencia desde mi cuenta hacia otra cuenta.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero pasar dinero de una cuenta a otra; después me ocupo de pagar la tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Veo la palabra “transferencia” en la pantalla, pero quiero cambiar la clave de acceso. ¿Dónde
+    se hace?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me figura la tarjeta como bloqueada; ¿cómo transfiero plata entre mis cuentas?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me aparece una sección de transferencias; ¿cómo cambio mi foto de perfil?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: En la notificación de transferencia sale mi nombre, ¿cómo puedo actualizarlo?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me aparece un aviso de bloqueo de la tarjeta. ¿Cómo hago una transferencia de una cuenta mía a
+    otra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Aunque veo la tarjeta marcada como bloqueada, necesito pasar plata entre mis cuentas. ¿Cómo se
+    hace?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero transferir plata entre mis cuentas; necesito cambiar mi clave de acceso.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar el saldo, quiero saber cómo transferir plata de mi cuenta a otra.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No voy a hacer una transferencia entre cuentas, solo quiero actualizar mi correo de contacto.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero pasar dinero de una cuenta a otra; ¿cómo cambio el idioma de la aplicación?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es para ver cuánto tengo; necesito saber cómo hacer una transferencia entre cuentas.
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco revisar mi saldo, ¿cómo paso plata desde mi cuenta a otra?
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Transferir fondos
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Entre mis cuentas
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pasar plata
+  intents: []
+  status: out_of_scope
+  topic: transfers
+  family: transfers-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
