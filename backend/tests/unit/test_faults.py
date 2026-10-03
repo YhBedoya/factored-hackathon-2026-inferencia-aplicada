@@ -193,7 +193,11 @@ def _lock_llm(language: str, summary: str) -> ScriptedLLM:
                     slots=NLUSlots(block_kind="temporary_lock"),
                 )
             ],
-            "handoff_summary": [HandoffSummaryDraft(request=summary)],
+            "handoff_summary": [
+                HandoffSummaryDraft(
+                    request=summary, asked="Pidió ayuda.", did="Nada.", unfinished="Todo."
+                )
+            ],
         }
     )
 
@@ -277,7 +281,14 @@ def test_cards_write_error_fallback_handoff_pt(
                 ),
                 NLUResult(language="pt", intents=["greeting"], status="clear", slots=NLUSlots()),
             ],
-            "handoff_summary": [HandoffSummaryDraft(request="Falha ao bloquear em {queue_label}.")],
+            "handoff_summary": [
+                HandoffSummaryDraft(
+                    request="Falha ao bloquear em {queue_label}.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
+            ],
         }
     )
 

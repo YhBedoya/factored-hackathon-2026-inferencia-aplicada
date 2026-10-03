@@ -31,7 +31,14 @@ def test_non_answer_keeps_card_question_es(fakebank_dir: Path) -> None:
                     _non_answer("es"),
                     _non_answer("es"),
                 ],
-                "handoff_summary": [HandoffSummaryDraft(request="No aclaró la tarjeta.")],
+                "handoff_summary": [
+                    HandoffSummaryDraft(
+                        request="No aclaró la tarjeta.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
+                ],
             }
         )
         session = make_session("CLI-TFMULTI00001", fakebank_dir, llm)
@@ -142,7 +149,14 @@ def test_r2_non_answer_on_confirmation_never_writes(fakebank_dir: Path) -> None:
                     _non_answer("es"),
                     _non_answer("es"),
                 ],
-                "handoff_summary": [HandoffSummaryDraft(request="No confirmó.")],
+                "handoff_summary": [
+                    HandoffSummaryDraft(
+                        request="No confirmó.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
+                ],
             }
         )
         session = make_session("CLI-TFSINGLE0002", fakebank_dir, llm)

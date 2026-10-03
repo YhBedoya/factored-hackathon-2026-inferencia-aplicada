@@ -7,16 +7,20 @@ its `HandoffTools` protocol.
 """
 
 from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.core.events import publish_handoff
+from app.domains.disputes import service as disputes_service
 from app.domains.handoff import repository
 from app.domains.handoff.repository import AlreadyClaimed, HandoffClosed, NotClaimant
 from app.domains.handoff.schemas import (
+    CustomerHistory,
     HandoffDetail,
     HandoffPacket,
     HandoffStatus,
     HandoffSummary,
+    PastHandoff,
     Priority,
 )
 
@@ -26,6 +30,7 @@ __all__ = [
     "NotClaimant",
     "claim",
     "create",
+    "customer_history",
     "get_detail",
     "is_claimed_by",
     "list_handoffs",
@@ -75,3 +80,29 @@ async def return_handoff(handoff_id: UUID, agent_id: UUID) -> HandoffSummary:
 
 async def is_claimed_by(conversation_id: UUID, agent_id: UUID) -> bool:
     return await repository.open_claim_for(conversation_id, agent_id)
+
+
+async def customer_history(
+    customer_id: str, exclude_conversation_id: UUID, days: int, limit: int = 5
+) -> CustomerHistory:
+    """Earlier handoffs (other conversations) and claims of one customer within
+    `days`, newest first (R1: scoped by `customer_id`)."""
+    since = datetime.now(UTC) - timedelta(days=days)
+    details = await repository.fetch_customer_handoffs(
+        customer_id, exclude_conversation_id, since, limit
+    )
+    claims = await disputes_service.recent_claims(customer_id, since, limit)
+    return CustomerHistory(
+        days=days,
+        handoffs=[
+            PastHandoff(
+                reference=d.summary.reference,
+                reason=d.summary.reason,
+                queue=d.summary.queue,
+                status=d.summary.status,
+                created_at=d.summary.created_at,
+            )
+            for d in details
+        ],
+        claims=claims,
+    )

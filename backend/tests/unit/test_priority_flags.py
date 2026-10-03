@@ -14,7 +14,12 @@ from app.domains.conversation.schemas import NLUResult
 from app.domains.conversation.templates import Language, get_template
 from tests.conftest import ScriptedLLM, Session, make_session
 
-_SUMMARY = HandoffSummaryDraft(request="Reclamo de cargo no reconocido, cola {queue_label}.")
+_SUMMARY = HandoffSummaryDraft(
+    request="Reclamo de cargo no reconocido, cola {queue_label}.",
+    asked="Pidió ayuda.",
+    did="Nada.",
+    unfinished="Todo.",
+)
 _OPENING = {"es": "no reconozco esta compra", "pt": "não reconheço essa compra"}
 _YES = {"es": "sí", "pt": "sim"}
 

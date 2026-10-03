@@ -17,13 +17,20 @@ from app.domains.localization.format import Queue
 
 __all__ = [
     "ActionTaken",
+    "CaseSummary",
+    "CustomerHistory",
+    "Friction",
     "HandoffDetail",
     "HandoffEvidence",
     "HandoffPacket",
     "HandoffReason",
     "HandoffStatus",
     "HandoffSummary",
+    "PastClaim",
+    "PastHandoff",
     "Priority",
+    "RiskSignals",
+    "Routing",
     "TranscriptMessage",
     "VerifiedFact",
     "reference_for",
@@ -79,8 +86,61 @@ class ActionTaken(_Frozen):
     case_ids: list[str] | None = None
 
 
+class CaseSummary(_Frozen):
+    """LLM-written case summary, placeholders already filled (D4)."""
+
+    asked: str = Field(max_length=280)
+    did: str = Field(max_length=280)
+    unfinished: str = Field(max_length=280)
+
+
+class Routing(_Frozen):
+    """Why the case landed in this queue (D5)."""
+
+    reason: HandoffReason
+    queue: Queue
+    # rule queue | queue set by the flow | human_request_queues.by_flow | .default
+    branch: Literal["rule", "flow", "by_flow", "default"]
+    flow: str | None  # pending flow used for by_flow, else None
+
+
+class RiskSignals(_Frozen):
+    priority_flags: list[str]
+    legal_keyword: bool  # legal_hit() on this turn's masked text, or reason == legal_regulator
+    unauthorized_attempts: int
+
+
+class PastHandoff(_Frozen):
+    reference: str
+    reason: HandoffReason
+    queue: Queue
+    status: HandoffStatus
+    created_at: datetime
+
+
+class PastClaim(_Frozen):
+    claim_id: str
+    category: str | None
+    status: str | None
+    created_at: datetime | None
+
+
+class CustomerHistory(_Frozen):
+    """Earlier handoffs and claims of this customer, each at most 5, newest first."""
+
+    days: int
+    handoffs: list[PastHandoff]
+    claims: list[PastClaim]
+
+
+class Friction(_Frozen):
+    clarifications: int
+    abstentions: int
+    non_answers: int
+
+
 class HandoffPacket(_Frozen):
-    """The `04` §4 packet. `request` is the only LLM-written field (D10)."""
+    """The `04` §4 packet. `request` and `case_summary` are the LLM-written fields."""
 
     handoff_id: UUID
     conversation_id: UUID
@@ -97,6 +157,12 @@ class HandoffPacket(_Frozen):
     escalation_rules_hit: list[HandoffReason]
     policy_version: str
     created_at: datetime
+    case_summary: CaseSummary | None = None
+    focus_card: str | None = None  # "Crédito •••• 9118", built in code (R4)
+    routing: Routing | None = None
+    risk: RiskSignals | None = None
+    history: CustomerHistory | None = None
+    friction: Friction | None = None
 
 
 class HandoffSummary(_Frozen):
@@ -112,6 +178,9 @@ class HandoffSummary(_Frozen):
     language: Literal["es", "pt"]
     created_at: datetime
     claimed_by: str | None
+    request: str
+    case_summary: CaseSummary | None
+    claimed_at: datetime | None
 
 
 class HandoffDetail(_Frozen):

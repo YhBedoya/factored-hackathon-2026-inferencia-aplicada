@@ -48,7 +48,12 @@ def test_segments_multi_intent(fakebank_dir: Path) -> None:
                 "nlu": [_nlu("card_status", "card_unlock")],
                 "compose": [ComposeDraft(text="{card_kind} {card_mask} {status} {expiry}")],
                 "handoff_summary": [
-                    HandoffSummaryDraft(request="Bloqueo del banco en {queue_label}.")
+                    HandoffSummaryDraft(
+                        request="Bloqueo del banco en {queue_label}.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
                 ],
             }
         )
@@ -99,7 +104,12 @@ def test_segments_write_flow(fakebank_dir: Path) -> None:
             {
                 "nlu": [lock, _nlu("affirm")],
                 "handoff_summary": [
-                    HandoffSummaryDraft(request="Acción sin verificar en {queue_label}.")
+                    HandoffSummaryDraft(
+                        request="Acción sin verificar en {queue_label}.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
                 ],
             }
         )

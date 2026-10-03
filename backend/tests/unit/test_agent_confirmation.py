@@ -54,7 +54,14 @@ def test_r2_typed_text_never_confirms(
                     AgentScript(rounds=[], finals=[_turn()]),  # typed 2, 3
                     AgentScript(rounds=[], finals=[_turn()]),
                 ],
-                "handoff_summary": [HandoffSummaryDraft(request="Sin respuesta al plan.")],
+                "handoff_summary": [
+                    HandoffSummaryDraft(
+                        request="Sin respuesta al plan.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
+                ],
             }
         )
         session = make_session("CLI-TFMULTI00001", fakebank_dir, llm)
@@ -113,7 +120,14 @@ def test_r3_unverified_claim_is_replaced(fakebank_dir: Path, agent_on: None) -> 
                     _propose("c1"),
                     AgentScript(rounds=[], finals=[_turn("Ya quedó bloqueada.", [0])]),
                 ],
-                "handoff_summary": [HandoffSummaryDraft(request="Acción sin verificar.")],
+                "handoff_summary": [
+                    HandoffSummaryDraft(
+                        request="Acción sin verificar.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
+                ],
             }
         )
         session = make_session(

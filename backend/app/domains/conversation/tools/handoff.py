@@ -12,7 +12,7 @@ from uuid import UUID
 
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.handoff import service
-from app.domains.handoff.schemas import HandoffPacket
+from app.domains.handoff.schemas import CustomerHistory, HandoffPacket
 
 __all__ = ["HandoffTools", "InMemoryHandoffTools", "ServiceHandoffTools"]
 
@@ -26,16 +26,30 @@ class HandoffTools(Protocol):
         customer sees must be a real row)."""
         ...
 
+    async def history(self, days: int) -> CustomerHistory | None:
+        """This customer's earlier handoffs and claims within `days`. No customer
+        argument: the session decides whose (R1)."""
+        ...
+
 
 class InMemoryHandoffTools:
     """Records packets instead of persisting them: sandbox and unit tests."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, history: CustomerHistory | None = None, history_error: Exception | None = None
+    ) -> None:
         self.created: list[HandoffPacket] = []
+        self._history = history
+        self._history_error = history_error
 
     async def create(self, packet: HandoffPacket) -> UUID:
         self.created.append(packet)
         return packet.handoff_id
+
+    async def history(self, days: int) -> CustomerHistory | None:
+        if self._history_error is not None:
+            raise self._history_error
+        return self._history
 
 
 class ServiceHandoffTools:
@@ -51,3 +65,8 @@ class ServiceHandoffTools:
         if packet.conversation_id != self._ctx.conversation_id:
             raise ValueError("handoff packet does not belong to this conversation")
         return await service.create(packet, packet.priority)
+
+    async def history(self, days: int) -> CustomerHistory | None:
+        return await service.customer_history(
+            self._ctx.customer_id, self._ctx.conversation_id, days, 5
+        )

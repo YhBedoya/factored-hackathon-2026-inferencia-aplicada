@@ -216,7 +216,12 @@ def test_handoff_claim_chat_return(
                 NLUResult(language="es", intents=["card_status"], status="clear", slots=NLUSlots()),
             ],
             "handoff_summary": [
-                HandoffSummaryDraft(request="El cliente pidió hablar con alguien.")
+                HandoffSummaryDraft(
+                    request="El cliente pidió hablar con alguien.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
             "compose": [ComposeDraft(text="Tu tarjeta {card_kind} {card_mask} esta {status}.")],
         }
@@ -241,10 +246,29 @@ def test_handoff_claim_chat_return(
         assert any(_is("message", role="bot")(e) for e in conv.events)
         handoff_id = str(row["id"])
 
+        # Before the claim: the inbox row carries the preview and no claim time,
+        # and the transcript is closed to the agent (R13).
+        def _inbox_row() -> dict[str, Any]:
+            listing = app_client.get("/api/v1/staff/handoffs", headers=staff)
+            assert listing.status_code == 200, listing.text
+            return next(r for r in listing.json() if r["handoff_id"] == handoff_id)
+
+        queued_row = _inbox_row()
+        assert queued_row["request"]
+        assert queued_row["case_summary"] is None or isinstance(queued_row["case_summary"], dict)
+        assert queued_row["claimed_at"] is None
+        assert (
+            app_client.get(
+                f"/api/v1/staff/conversations/{conversation_id}/messages", headers=staff
+            ).status_code
+            == 404
+        )
+
         # 3. Claim: `mode{human, name}` reaches the customer.
         claim = app_client.post(f"/api/v1/staff/handoffs/{handoff_id}/claim", headers=staff)
         assert claim.status_code == 200, claim.text
         conv.wait_for(_is("mode", mode="human", agent_display_name=agent.display_name))
+        assert _inbox_row()["claimed_at"] is not None
 
         # The claimant reads the transcript: the customer's ask and the
         # handoff bot row (whose ui_payload is a list) are both there.
@@ -303,7 +327,12 @@ def test_pt_handoff_happy_path(
         {
             "nlu": [_human_request_nlu("pt")],
             "handoff_summary": [
-                HandoffSummaryDraft(request="O cliente pediu para falar com alguem.")
+                HandoffSummaryDraft(
+                    request="O cliente pediu para falar com alguem.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
         }
     )
@@ -334,7 +363,12 @@ def test_staff_access_boundaries(
         {
             "nlu": [_human_request_nlu("es")],
             "handoff_summary": [
-                HandoffSummaryDraft(request="El cliente pidió hablar con alguien.")
+                HandoffSummaryDraft(
+                    request="El cliente pidió hablar con alguien.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
         }
     )
