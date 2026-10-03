@@ -202,7 +202,7 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 ### D4 · Wed 30 Sep — Fraud, human handoff, public URL
 **Goal:** on the public URL, a customer reports charges they don't recognize → the card is blocked → a claim is filed → a Fraudes agent takes over live in the staff console and hands the conversation back to the bot. Out-of-market and human requests are handled.
 
-**AWS setup (ADR-017): decided 2026-09-28.** A single EC2 t3.xlarge (us-east-1) running the Compose prod layer + Nginx + TLS, an IAM instance role for S3 and Bedrock, and data from our own S3 copy built on the box. A5 follows [`08-deployment.md`](08-deployment.md).
+**AWS setup (ADR-017): decided 2026-09-28.** A single EC2 t3.xlarge (us-east-1) running the Compose prod layer (**amended 2026-10-03:** m7i-flex.large in us-east-2, the Free plan project) + Nginx + TLS, an IAM instance role for S3 and Bedrock, and data from our own S3 copy built on the box. A5 follows [`08-deployment.md`](08-deployment.md).
 
 **Dev A: G10 escalation and handoff backend, and G12a deploy**
 | # | Task | Done when |
@@ -435,7 +435,7 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D1 | Time zone of `transaction_date` | **Decided (A5, D1-A D1):** every `bank.*` TIMESTAMP column is UTC (`timestamptz`); local display uses `BANK_TZ` per country (MX `America/Mexico_City`, CO `America/Bogota`, AR `America/Argentina/Buenos_Aires`) |
 | D2 | Minimum payment formula (synthetic) | `max(5% × balance, floor)` with floors USD 10 / COP 40.000 / ARS 5.000, plus overdue amounts when `days_past_due > 0` |
 | D2 | Final persona list | B's 10 + ~20 found by query |
-| D4 | AWS setup (ADR-017) | **Decided 2026-09-28:** single EC2 t3.xlarge + Compose + IAM role, us-east-1 (`08-deployment.md`) |
+| D4 | AWS setup (ADR-017) | **Decided 2026-09-28:** single EC2 t3.xlarge + Compose + IAM role, us-east-1 (`08-deployment.md`). **Amended 2026-10-03:** m7i-flex.large, us-east-2 |
 | D4 | Suspected-compromise rule | ≥ 2 transactions picked, or card not in hand, or `fraud_score` > 30 |
 | D5 | D1.5 numeric targets | **Moved 2026-09-29** to a later card, after the first full dev run; still recorded before any held-out run |
 | D5 | Deploy of main after D5-A merge | **Decided 2026-09-29:** postponed to the end of D6 unless strictly required earlier. The human deploys `main` with the D5-A runbook (T27), and `/wave-run D5-A-deploy` records the results then |

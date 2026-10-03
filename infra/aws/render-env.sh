@@ -11,7 +11,11 @@ OUT="$ROOT/.env"
 TMP="$(mktemp "$ROOT/.env.XXXXXX")"
 trap 'rm -f "$TMP" "$TMP.ssm"' EXIT
 
-aws ssm get-parameters-by-path --path /swip/prod/ --with-decryption --recursive \
+# Region from the environment, else the template's AWS_REGION (the first render
+# runs before any .env exists).
+REGION="${AWS_REGION:-$(grep -m1 '^AWS_REGION=' "$TEMPLATE" | cut -d= -f2)}"
+
+aws ssm get-parameters-by-path --region "$REGION" --path /swip/prod/ --with-decryption --recursive \
   --query 'Parameters[].[Name,Value]' --output json \
   | jq -r '.[] | "\(.[0] | split("/") | last)=\(.[1])"' > "$TMP.ssm"
 

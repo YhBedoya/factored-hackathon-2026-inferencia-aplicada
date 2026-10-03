@@ -40,12 +40,12 @@ Step = Literal[
 MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "nlu": {
         "anthropic": "claude-sonnet-5-5",
-        "bedrock": "us.anthropic.claude-sonnet-5-5-v1:0",  # unconfirmed until K2
+        "bedrock": "us.anthropic.claude-sonnet-5-5",  # unconfirmed until K2
     },
     # The tool-using conversation agent (cardy-agent-s1 D2): same model as `nlu`.
     "agent": {
         "anthropic": "claude-sonnet-5-5",
-        "bedrock": "us.anthropic.claude-sonnet-5-5-v1:0",  # unconfirmed until K2
+        "bedrock": "us.anthropic.claude-sonnet-5-5",  # unconfirmed until K2
     },
     "compose": {
         "anthropic": "claude-haiku-4-5-20251001",

@@ -127,7 +127,7 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 - **Reproducible setup:** `make setup` → `make data` (S3 sync with credentials from env/profile → pipeline → golden DB) → `make up`. Versions pinned (uv.lock, package-lock), seeds fixed.
 - **Environments:** Docker Compose layers `base / dev / test / prod / observability`.
-- **Deployment target: AWS** (decision-log ADR-017): one EC2 t3.xlarge in us-east-1 running the prod Compose layer, an IAM instance role for S3 and Bedrock, data read from our own S3 copy, and TLS on the public URL (K2). See [`08-deployment.md`](08-deployment.md).
+- **Deployment target: AWS** (decision-log ADR-017): one EC2 m7i-flex.large in us-east-2 (amended 2026-10-03; was a t3.xlarge in us-east-1) running the prod Compose layer, an IAM instance role for S3 and Bedrock, data read from our own S3 copy, and TLS on the public URL (K2). See [`08-deployment.md`](08-deployment.md).
 - **Capacity:** to be measured with the eval harness (turns/s per worker, DB size ≈ all 13 tables + indexes). `digital_events` (10M rows) dominates storage.
 - **Remaining work before real deployment** (kept honest for S6): a real IdP and fraud-grade authentication, security review / pentest, regulatory review of dispute handling, load testing, multi-region, human-agent workforce integration, real PT-BR market data.
 

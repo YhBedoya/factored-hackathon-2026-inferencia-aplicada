@@ -14,10 +14,10 @@ import { ME_QUERY_KEY, useLogout } from "./useLogout";
 // The one place every route renders through (`__root.tsx`). It owns the
 // chrome that's the same everywhere: the starfield, the language toggle
 // and, once `me()` resolves a customer, the greeting and logout. The header
-// is skipped on the landing, the banking home and the staff analytics page,
-// which render their own controls (the analytics page needs the full viewport
-// height); the home also swaps the static starfield for the slow drifting
-// one. Route content (landing, login, chat, home) is `children`.
+// is skipped on the landing, the banking home and the staff pages (inbox,
+// case, conversations and analytics), which render their own controls (the
+// analytics page needs the full viewport height); the home also swaps the
+// static starfield for the slow drifting one. Route content (landing, login, chat, home) is `children`.
 export function AppShell({ children }: { children: ReactNode }) {
 	const { t } = useI18n();
 	const pathname = useRouterState({
@@ -25,9 +25,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 	});
 	const isHome = pathname === "/home";
 	// The landing draws its own top-right controls (language, login); the
-	// analytics dashboard puts the language toggle in its own header line.
-	const ownsChrome =
-		pathname === "/" || isHome || pathname === "/staff/analytics";
+	// analytics dashboard puts the language toggle in its own header line and
+	// the other staff pages put it in `StaffNav`. Only the staff login keeps
+	// this header.
+	const isStaffPage =
+		pathname.startsWith("/staff") && !pathname.startsWith("/staff/login");
+	const ownsChrome = pathname === "/" || isHome || isStaffPage;
 	const { data: customer } = useQuery({
 		queryKey: ME_QUERY_KEY,
 		queryFn: me,

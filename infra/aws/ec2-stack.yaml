@@ -14,10 +14,11 @@ Parameters:
     Description: Second budget alert recipient.
   InstanceType:
     Type: String
-    Default: t3.xlarge
+    # Largest type the AWS Free plan allows (2 vCPU, 8 GiB; ADR-017 amended 2026-10-03).
+    Default: m7i-flex.large
   DataBucketName:
     Type: String
-    Description: Our us-east-1 data bucket (prefix data/).
+    Description: Our data bucket, in the stack's region (prefix data/).
   BedrockModelArns:
     Type: CommaDelimitedList
     Description: Inference-profile and foundation-model ARNs pinned in the core/llm registry.
@@ -29,7 +30,9 @@ Parameters:
     Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
   MonthlyBudgetUsd:
     Type: Number
-    Default: 150
+    # Below the Free plan's USD 100 credits. The ~USD 80/month forecast stays under it, so
+    # the forecast alert means real overspend (e.g. Bedrock) and the actual alert fires at USD 72.
+    Default: 90
 
 Resources:
   SecurityGroup:
