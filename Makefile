@@ -14,7 +14,7 @@ COMPOSE := docker compose --env-file .env -f docker/docker-compose.base.yml -f d
 COMPOSE_PROD := docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml
 STACK_NAME ?= swip-card-support
 
-.PHONY: langfuse-up langfuse-down eval eval-pii-check setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check
+.PHONY: langfuse-up langfuse-down eval eval-pii-check setup mcp-setup fill-secrets up down test check client data demo-reset seed-identity chat-sandbox chat-ui chat-api nlu-smoke graph-diagram test-integration infra-up infra-down deploy deploy-remote smoke-prod eval-paraphrase eval-mix eval-freeze eval-freeze-check intent-gen intent-train intent-compare analytics
 
 setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cp -n .env.example .env
@@ -24,10 +24,10 @@ setup: mcp-setup ## Toolchains + .env.example -> .env if missing.
 	cd frontend && npm ci
 	pre-commit install --hook-type pre-commit --hook-type commit-msg
 
-fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED / PII_VAULT_KEY (Fernet) in .env with random values (D21). Never prints a value.
+fill-secrets: ## Fill empty JWT_SECRET / IDENTITY_HMAC_KEY / CREDENTIALS_SEED / PII_VAULT_KEY (Fernet) / ANALYTICS_DB_PASSWORD in .env with random values (D21). Never prints a value.
 	python3 -c "\
 	import base64, os, re, secrets; \
-	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED', 'PII_VAULT_KEY']; \
+	keys = ['JWT_SECRET', 'IDENTITY_HMAC_KEY', 'CREDENTIALS_SEED', 'PII_VAULT_KEY', 'ANALYTICS_DB_PASSWORD']; \
 	gen = lambda k: base64.urlsafe_b64encode(os.urandom(32)).decode() if k == 'PII_VAULT_KEY' else secrets.token_urlsafe(32); \
 	lines = open('.env').read().splitlines(); \
 	matches = [re.match(r'^([A-Z_]+)=(.*)$$', l) for l in lines]; \
@@ -69,6 +69,10 @@ check: ## Lint + types + import-linter + unit tests.
 	uv run ruff format --check ingest load contracts tests && \
 	uv run pytest tests -q
 	cd frontend && npx biome ci .
+	uv run --project backend python -m ml.intent.check
+	uv run --project backend pytest ml/intent/tests -q
+	uv run --project backend ruff check --config backend/pyproject.toml ml
+	uv run --project backend ruff format --check --config backend/pyproject.toml ml
 
 client: ## Regenerate the OpenAPI client from the running backend (D19).
 	cd frontend && npx @hey-api/openapi-ts
@@ -79,6 +83,9 @@ data: ## Ingest (S3 or SOURCE=local:<path>) -> contracts -> dbt -> golden DB -> 
 
 demo-reset: ## Reset latam_app from latam_golden (03 §7).
 	cd pipeline && uv run python -m load.demo_reset
+
+analytics: ## One analytics pass over finished conversations (analytics worker, --once). Needs the stack up.
+	$(COMPOSE) run --rm analytics-worker uv run --no-sync python -m app.domains.analytics.worker --once
 
 seed-identity: ## Seed identity.accounts into latam_golden (D5), then reset latam_app from it.
 	cd backend && DATABASE_URL=$(GOLDEN_DATABASE_URL) uv run alembic upgrade head
@@ -99,8 +106,17 @@ chat-ui: ## Streamlit sandbox page on http://localhost:8501.
 nlu-smoke: ## Live NLU smoke set (needs ANTHROPIC_API_KEY).
 	cd backend && uv run python scripts/nlu_smoke.py
 
-eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] [DRIVER=scripted|simulator] [RUNS=1] [NLU=off|smoke|suite].
-	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES)) --driver $(or $(DRIVER),scripted) --runs $(or $(RUNS),1) --nlu $(or $(NLU),off)
+eval: ## Offline eval run: make eval SUITE=dev SYSTEM=both [CASES=a-] [DRIVER=scripted|simulator] [RUNS=1] [NLU=off|smoke|suite] [FAULTS=a,b].
+	uv run --project backend python -m eval.harness --suite $(or $(SUITE),dev) --system $(or $(SYSTEM),both) $(if $(CASES),--cases $(CASES)) --driver $(or $(DRIVER),scripted) --runs $(or $(RUNS),1) --nlu $(or $(NLU),off) $(if $(FAULTS),--faults $(FAULTS))
+
+intent-gen: ## Fill intent dataset cells up to 30 accepted: make intent-gen [LOCALE=es-mx] [CLASS=card_block].
+	uv run --project backend python -m ml.intent.generate $(if $(LOCALE),--locale $(LOCALE)) $(if $(CLASS),--class $(CLASS))
+
+intent-train: ## Train intent candidates: make intent-train [CANDIDATE=all] [SEED=42].
+	uv run --project backend python -m ml.intent.train --candidate $(or $(CANDIDATE),all) --seed $(or $(SEED),42)
+
+intent-compare: ## Compare candidates, write the report run, bundle and model.lock: make intent-compare [SEED=42].
+	uv run --project backend python -m ml.intent.compare --seed $(or $(SEED),42)
 
 eval-pii-check: ## PII scan of a run's LLM-call export (RUN=<folder>).
 	@test -n "$(RUN)" || { echo "usage: make eval-pii-check RUN=<run_id>"; exit 2; }

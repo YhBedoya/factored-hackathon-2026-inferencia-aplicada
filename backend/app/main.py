@@ -40,6 +40,7 @@ from app.core.llm import get_llm_client
 from app.core.logging import RequestIDMiddleware, configure_logging
 from app.core.telemetry import instrument_app
 from app.domains.audit.service import AuditLLMCallSink
+from app.domains.conversation.classifier import load_classifier
 from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.hosting import close_host, open_host
 from app.domains.policy.registry import get_policies
@@ -117,10 +118,22 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     bundle = get_policies()
     _logger.info("policy.loaded", hash=bundle.hash, files=bundle.files)
     load_card_select_policy()
+    # The app starts with or without a classifier; without one, a failing LLM
+    # still ends in the fixed fallback + handoff (ADR-032).
+    classifier, reason = load_classifier(settings.intent_model_dir)
+    if classifier is not None:
+        _logger.info(
+            "intent_classifier.loaded",
+            classifier_version=classifier.version,
+            label_set_version=classifier.label_set_version,
+        )
+    else:
+        _logger.error("intent_classifier.unavailable", reason=reason)
     app.state.turn_host = await open_host(
         settings.database_url,
         get_llm_client(sink=AuditLLMCallSink()),
         system=settings.agent_system,
+        classifier=classifier,
     )
     try:
         yield

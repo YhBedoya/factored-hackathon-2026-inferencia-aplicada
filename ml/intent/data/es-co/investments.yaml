@@ -1,0 +1,361 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: investments
+items:
+- text: ¿Qué opciones de inversión tienen para hacer crecer mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera conocer los productos de ahorro que ofrecen y cuánto rendimiento dan.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo puedo empezar a invertir una parte de mi dinero?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explican cómo funciona su cuenta de ahorros con rendimiento?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero saber qué alternativas tienen para invertir mis ahorros.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué producto ofrecen para guardar dinero y obtener ganancias?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿qué opciones de inversión tienen para poner a producir mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vos me contás qué alternativas de ahorro dan buenos rendimientos?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, quiero meter una platica en algo que me dé ganancias, ¿qué ofrecen?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oí, parce, ¿cómo hago para invertir una parte de mi plata con ustedes?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vos sabés qué producto de ahorro me sirve para que la plata me rente?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿qué opciones hay para guardar mis ahorros y que produzcan algo?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, q opciones hay pa invertir mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como hago pa q mi platica me de rendimientos?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tienen algun ahorro q rente? kiero empezar a invertir
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola, kiero meter algo de plata en una inversion, q ofrecen?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me cuentan como funciona lo de los ahorros con rendimiento? plis
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: busco donde poner mis ahorros pa q crezcan, q opciones tienen?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: En el movimiento aparece la palabra inversión; solo quiero saber por qué me hicieron ese cobro.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero hacer un pago desde mi plata disponible, pero a un producto de inversión; ¿qué opciones
+    tienen?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Veo un concepto de rendimientos en el extracto, pero necesito que me expliquen ese débito, no
+    un producto de ahorro.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me llegó un aviso sobre inversiones y quiero confirmar si es un mensaje legítimo; no estoy buscando
+    invertir.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cómo paso plata a una inversión de ustedes en vez de dejarla para pagar compras?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Busco poner parte de mi dinero en un producto de inversión, no usarlo para pagar con la tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy llenando un formulario de inversión, pero solo necesito ayuda para cambiar mi dirección.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿El cupo de mi tarjeta afecta cuánto puedo invertir en el fondo de ahorro?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: La palabra ahorro aparece en la pantalla, pero lo que quiero es reportar que no puedo entrar a
+    mi cuenta.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito información sobre inversiones; quiero saber cómo reemplazar mi tarjeta dañada.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Parce, ¿el límite de mi tarjeta cambia la plata que puedo meter en una inversión?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quisiera saber si el cupo disponible de mi tarjeta influye en cuánto puedo poner en un producto
+    de ahorro e inversión.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero invertir ni abrir un producto de ahorro, solo voy a dejar la plata en mi cuenta.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, quiero conocer las opciones para invertir mis ahorros.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Por ahora no me interesan las opciones de inversión, prefiero no poner mis ahorros a producir.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco una cuenta con rendimientos; quiero mantener mi dinero como está.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito bloquear la tarjeta; cuéntame qué alternativas de inversión tienen para mis ahorros.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No es para bloquear mi tarjeta, es para averiguar cómo puedo invertir la plata que tengo ahorrada.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, cuéntame
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, por favor
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Claro, me interesa
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

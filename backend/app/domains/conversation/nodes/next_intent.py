@@ -27,8 +27,18 @@ from app.domains.conversation.graph import _INTENT_NODES, _MANAGEMENT_INTENTS, G
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import RESET_FACTS
 from app.domains.conversation.templates import TemplateKind, template_variants
+from app.domains.policy.registry import get_policies
 
 __all__ = ["enqueue", "finish", "next_intent"]
+
+
+def _degraded_handoff(state: GraphState, head: str | None) -> bool:
+    """True when the LLM is down and the queue head must hand off (D7, ADR-032)."""
+    return (
+        bool(state.get("degraded"))
+        and head is not None
+        and head in get_policies().escalation.degraded_handoff_intents
+    )
 
 
 async def enqueue(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -36,6 +46,8 @@ async def enqueue(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     nlu = state.get("nlu")
     non_management = [] if nlu is None else [i for i in nlu.intents if i not in _MANAGEMENT_INTENTS]
     update: dict[str, Any] = {"intent_queue": non_management}
+    if _degraded_handoff(state, non_management[0] if non_management else None):
+        update["escalation_reason"] = "llm_unavailable"
 
     pending = state.get("pending")
     closing_open = pending is not None and pending["awaiting_slot"] == "anything_else"
@@ -78,6 +90,8 @@ def next_intent(state: GraphState) -> dict[str, Any]:
         return {}
     remaining = queue[1:]
     update: dict[str, Any] = {"intent_queue": remaining}
+    if _degraded_handoff(state, remaining[0] if remaining else None):
+        update["escalation_reason"] = "llm_unavailable"
     if remaining:
         update["facts"] = RESET_FACTS
     elif queue[0] in _INTENT_NODES and _closing_allowed({**state, "intent_queue": []}):

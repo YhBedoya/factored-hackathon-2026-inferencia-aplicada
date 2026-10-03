@@ -46,7 +46,7 @@ test("selecting the debit card shows its balance; chips filter; balances hide", 
 	await expect(page.getByTestId("home-tx-row")).toHaveCount(1);
 	await expect(page.getByTestId("home-tx-row")).toContainText("Comercio A2");
 
-	// A1/ADR-032: a debit card shows its available balance.
+	// A1/ADR-034: a debit card shows its available balance.
 	await page.getByTestId("home-card").nth(1).click();
 	await expect(page.getByTestId("home-balance-amount")).toHaveText("$820.50");
 	await expect(page.getByTestId("home-tx-row")).toHaveCount(2);

@@ -1,0 +1,36 @@
+{
+  "run_id": "dev-db8b7c5706",
+  "label": "offline evaluation",
+  "git_sha": "db8b7c570656f62e6abf47d261bae9129a3c9dce",
+  "dirty": true,
+  "system": "proposed",
+  "suite": "dev",
+  "cases_filter": "d-card_block-tool_failure-es-co-01,a-card_status-normal_resolution-es-co-01,d-pending_reversal_explain-normal_resolution-pt-br-01,d-decline_explain-normal_resolution-pt-br-01",
+  "suite_hash": "c0ff56af8315408aed201a25a97fcc4a93f28536e332b299a3c5005f7ccc9761",
+  "policy_hash": "1c39ad0961050c6ab206a2cdc804aec4fafaeb8dff5eed2818f6a932dd7508be",
+  "started": "2026-10-02T01:55:11.062490+00:00",
+  "finished": "2026-10-02T02:06:20.478404+00:00",
+  "runs": 1,
+  "provider": [
+    "anthropic"
+  ],
+  "clone_strategy": "FILE_COPY",
+  "clone_seconds": 642.8,
+  "resets": 4,
+  "reset_diffs": 0,
+  "models": {
+    "proposed": [
+      {
+        "step": "nlu",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "nlu@v4"
+      }
+    ]
+  },
+  "restore_count": 0,
+  "restore_diffs": 0,
+  "pii_hits": 0,
+  "driver": "scripted",
+  "nlu": null
+}

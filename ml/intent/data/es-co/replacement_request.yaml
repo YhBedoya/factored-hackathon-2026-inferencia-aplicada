@@ -1,0 +1,459 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: replacement_request
+items:
+- text: Se me dañó la tarjeta y necesito que me envíen una de reemplazo.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Mi tarjeta dejó de funcionar; quiero solicitar otra.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me pueden mandar una tarjeta nueva? La que tengo está rota.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Perdí mi tarjeta y necesito pedir una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Se me extravió la tarjeta, ¿cómo solicito que me envíen otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No encuentro mi tarjeta; necesito que me la repongan.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, se me perdió la tarjeta, ¿me ayudan a sacar otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, no encuentro mi tarjeta y necesito que me manden una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, parce, se me extravió la tarjeta; ¿me pueden dar otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, me robaron la tarjeta y necesito que me repongan una.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, me tumbaron la tarjeta; ¿me ayudan a pedir otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me robaron la tarjeta, parce, necesito que me manden una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: se me daño la tarjeta, necesito q me manden otra porfa
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mi tarjeta se partio, me pueden enviar una nueva?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: perdi la tarjeta y nesecito q me la repongan ya
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me robaron la tjt, como hago pa q me den otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: se me perdio la tarjeta, me mandan otra xfa?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: la tarjeta quedo dañada, necesito q me envien una nueva
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Solo quiero saber cuánto cuesta reemplazar una tarjeta dañada; por ahora no voy a pedir otra.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero reportar una compra como desconocida; el chip de mi tarjeta está dañado y necesito que
+    me la reemplacen.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy consultando el valor de reponer la tarjeta, pero no necesito que me manden una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cuál es el costo de reemplazo de una tarjeta? Solo estoy averiguando, no quiero solicitar otra.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: La compra sí la reconozco. Lo que necesito es otra tarjeta porque la mía se partió.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'No es un reclamo por un movimiento: mi tarjeta dejó de funcionar y quiero pedir una reposición.'
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy leyendo los requisitos para reemplazar una tarjeta perdida, pero la mía está conmigo y no
+    necesito otra.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Mi tarjeta se partió y ya no me pasan los pagos; necesito que me la repongan.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero conocer el proceso de reposición por robo, aunque no me han robado la tarjeta ni voy a
+    pedir una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi la opción de reemplazo de tarjeta en la información; solo la estoy revisando, no necesito reemplazar
+    la mía.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Se me quebró la tarjeta y las compras me salen rechazadas, ¿me envían otra?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: La tarjeta quedó partida y no puedo pagar con ella; quiero pedir una reposición.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero reemplazar mi tarjeta; solo necesito consultar el saldo.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquearla, necesito que me repongan la tarjeta porque se me perdió.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito que me envíen otra tarjeta, únicamente quiero revisar mis movimientos.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No deseo pedir un reemplazo de la tarjeta; solo quiero cambiar la clave.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es para bloquearla; perdí mi tarjeta y quiero pedir una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco cancelar la tarjeta, parce, se me extravió y necesito reposición.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, reemplácenla.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, una nueva.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Que la repongan.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Se me dañó la tarjeta de crédito, ¿me la pueden reemplazar?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito que me repongan la tarjeta de crédito porque se dañó.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero solicitar una tarjeta de reemplazo para mi tarjeta de crédito, que ya no funciona.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Se me dañó la tarjeta de débito, ¿me la pueden reemplazar?
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito que me repongan la tarjeta de débito porque se dañó.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero solicitar una tarjeta de reemplazo para mi tarjeta de débito, que ya no funciona.
+  intents:
+  - replacement_request
+  status: clear
+  topic: null
+  family: replacement_request-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

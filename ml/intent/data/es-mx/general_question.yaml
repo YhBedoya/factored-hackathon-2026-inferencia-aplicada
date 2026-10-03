@@ -1,0 +1,466 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: general_question
+items:
+- text: ¿Me puedes contar en general cómo funciona mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera saber qué ofrece mi tarjeta y cómo se usa en términos generales.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué debería saber sobre mi tarjeta y su funcionamiento?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué servicios incluye la cuenta y cómo funcionan?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me explicas qué ofrece el servicio en general?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero conocer qué puedo hacer con este servicio, en general.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye wey, ¿qué onda con mi tarjeta?, ¿cómo funciona en general?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, cuéntame en general qué puedo hacer con mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿cómo está el servicio de la tarjeta y qué ofrece?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿me explicas ahorita qué incluye el servicio de mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿qué trae el servicio de la tarjeta en general?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me cuentas ahorita cómo funciona el servicio y qué ofrece?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola, q cosas puedo hacer con mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Oye, mi tarjeta es de credito o de debito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: holaa, me explicas en gral como funciona mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q ofrece mi tarjeta y como se usa?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oye, k incluye el servicio de la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola, q trae el servicio y como funciona en general?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me dices q puedo hacer con este servicio?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito cambiar la dirección donde mandan mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿La tarjeta se puede usar antes de activarla o hasta que ya esté activada?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero actualizar el domicilio de entrega de mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me ayudan a modificar la dirección de envío de mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Puedo pagar con mi tarjeta antes de activarla, o primero tiene que quedar activa?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿La activación es necesaria para usar la tarjeta o funciona desde que llega?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero reemplazar mi tarjeta porque se dañó.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué opciones de seguridad tiene mi tarjeta, como el bloqueo temporal y las alertas?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Mi tarjeta se rompió; necesito que me manden otra.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cómo solicito una tarjeta nueva porque la mía ya no sirve?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quisiera saber qué medidas de seguridad ofrece mi tarjeta, por ejemplo, bloquearla por un rato
+    o recibir avisos.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Qué herramientas de seguridad incluye el servicio para mi tarjeta, además del bloqueo temporal?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito información general de mi tarjeta; solo quiero reportarla como robada.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta; solo quisiera saber qué beneficios incluye.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo dudas sobre cómo funciona mi tarjeta, nada más necesito reportar que me la robaron.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco información del servicio, solo quiero avisar que perdí mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco bloquearla, nada más quiero conocer las ventajas de mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito poner mi tarjeta en bloqueo; ¿qué beneficios ofrece?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero preguntar sobre el servicio; necesito aclarar un cargo que no reconozco.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No tengo preguntas generales sobre mi tarjeta, solo quiero reclamar un cargo desconocido.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No necesito que me expliquen el servicio; quiero reportar un movimiento que no hice.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué características tiene la tarjeta de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué ofrece en general la tarjeta de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué cosas debería saber sobre la tarjeta de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué características tiene la tarjeta de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué ofrece en general la tarjeta de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué cosas debería saber sobre la tarjeta de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

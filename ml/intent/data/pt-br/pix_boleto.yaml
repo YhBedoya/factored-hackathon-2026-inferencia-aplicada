@@ -1,0 +1,358 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: pix_boleto
+items:
+- text: Como faço para pagar um boleto pelo app?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero pagar um boleto usando o aplicativo. Como faço?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Onde encontro a opção para quitar meu boleto no app?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como faço um Pix pelo aplicativo?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero enviar um Pix pelo app. Como posso fazer?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Onde encontro a opção para fazer uma transferência via Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô querendo pagar um boleto pelo app, como é que faz?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me ajuda a quitar um boleto por aqui? Não achei essa opção.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero pagar meu boleto pelo aplicativo, onde fica isso?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero mandar um Pix pelo app, me mostra como faz?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô tentando fazer um Pix por aqui, onde eu clico?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como é que eu transfiro uma grana por Pix usando o aplicativo?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como q pago um boleto pelo app? n to achando
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria quita meu boleto pelo aplicativo, onde fica essa opçao?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me ajuda a pagar o boleto por aqui pf, nao achei
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como faço um pix pelo app? to meio perdido kk
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero manda um pix, onde acho isso no app?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me ensina a faze um pix por aqui pfv
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vi um Pix no extrato, mas não reconheço uma compra feita no meu cartão e quero contestá-la.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A fatura do meu cartão vence hoje. Posso pagar o boleto dela usando Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Apareceu um Pix no histórico, mas minha dúvida é sobre uma compra desconhecida no cartão que preciso
+    contestar.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tem um Pix listado no extrato, mas quero abrir uma contestação por uma compra que não fiz com
+    meu cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tem como quitar o boleto da fatura do cartão com um Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero pagar a fatura do cartão por boleto; dá pra fazer o pagamento via Pix?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Meu boleto aparece no extrato, mas preciso de ajuda para entender uma cobrança feita no meu cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Onde vejo o limite do meu cartão? Queria pagar um boleto pelo app.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi uma referência a boleto no histórico, mas quero esclarecer uma tarifa cobrada no cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O extrato mostra um boleto, porém minha dúvida é sobre uma cobrança que veio no cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Como confiro o limite do cartão e faço o pagamento de um boleto por aqui?
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso consultar o limite do meu cartão e pagar um boleto no aplicativo.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero pagar boleto nem fazer Pix; preciso consultar o limite do meu cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, preciso fazer um Pix.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não vou fazer Pix nem quitar boleto, só quero saber qual é o limite do cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não preciso de pagamento por Pix ou boleto; quero conferir o limite disponível no meu cartão.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é sobre bloquear o cartão; quero enviar um Pix.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Deixa o bloqueio do cartão de lado, preciso transferir por Pix.
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pagar boleto
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fazer um Pix
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quitar boleto
+  intents: []
+  status: out_of_market
+  topic: pix_boleto
+  family: pix_boleto-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

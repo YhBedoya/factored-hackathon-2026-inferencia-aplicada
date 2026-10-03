@@ -46,6 +46,7 @@ TemplateKind = Literal[
     "ask_what_else",
     "farewell",
     "pending_reminder",
+    "clarify_rephrase",
     "nothing_pending",
     "ask_which_card_status",
     "ask_which_card_balance",
@@ -466,6 +467,18 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
             "Obrigada por escrever para a Swip. Tudo de bom para você!",
             "Foi um prazer ajudar. Tenha um excelente dia.",
         ],
+    },
+    # D8: asked once when the no-LLM classifier can't tell what she meant. Never
+    # mentions the mode (D5): it only asks her to say it another way.
+    "clarify_rephrase": {
+        "es": (
+            "No termino de entender qué necesitas. ¿Me lo cuentas de otra forma? "
+            "Por ejemplo: bloquear tu tarjeta, ver su estado o revisar un cargo."
+        ),
+        "pt": (
+            "Não consegui entender direito o que você precisa. Pode me contar de outro jeito? "
+            "Por exemplo: bloquear seu cartão, ver o status dele ou revisar uma cobrança."
+        ),
     },
     # Small talk while a flow is still waiting on an answer (not OTP).
     "pending_reminder": {
@@ -1434,7 +1447,7 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
             "{min_payment} e vence em {due_date}."
         ),
     },
-    # ADR-032: a debit card's balance is the money available in it.
+    # ADR-034: a debit card's balance is the money available in it.
     "goal_debit_balance": {
         "es": "Tu tarjeta {card_kind} {card_mask} tiene {available_balance} disponible.",
         "pt": "Seu cartão {card_kind} {card_mask} tem {available_balance} disponível.",

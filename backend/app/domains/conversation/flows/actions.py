@@ -24,7 +24,7 @@ from app.core.errors import ConfirmationRequired, ToolUnavailable
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
-from app.domains.conversation.state import Fact, Pending
+from app.domains.conversation.state import Fact, Pending, mark_segment
 from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.ui import (
@@ -269,6 +269,7 @@ async def cancel(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "pending": None,
         "confirmation_token_id": None,
         "segments": [get_template("action_cancelled", state["language"])],
+        **mark_segment("cancelled"),
     }
 
 

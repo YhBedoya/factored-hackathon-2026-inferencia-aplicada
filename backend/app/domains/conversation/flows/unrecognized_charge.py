@@ -49,7 +49,7 @@ from app.domains.conversation.flows.card_select import (
     select_card,
 )
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import DisputeState, Fact
+from app.domains.conversation.state import DisputeState, Fact, mark_segment
 from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -169,6 +169,7 @@ async def _offer_candidates(
         return {
             "pending": None,
             "dispute": None,
+            **mark_segment("resolved"),
             "segments": [get_template("dispute_no_transactions", language)],
         }
 
@@ -221,7 +222,11 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
     dispute = state.get("dispute")
     selection = state.get("selection")
     if dispute is None or selection is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            **mark_segment("cancelled"),
+            "segments": [get_template("nothing_pending", language)],
+        }
 
     offered = set(dispute["offered_tx_ids"])
     picked = [tx_id for tx_id in selection.tx_ids if tx_id in offered]
@@ -264,7 +269,11 @@ async def _resume_possession(state: GraphState, config: RunnableConfig) -> dict[
     language = state["language"]
     dispute = state.get("dispute")
     if dispute is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            **mark_segment("cancelled"),
+            "segments": [get_template("nothing_pending", language)],
+        }
     outcome = decision(state)
     if outcome not in ("confirm", "cancel"):
         return {"segments": [get_template("pending_reminder", language)]}
@@ -290,7 +299,11 @@ async def _resume_question(state: GraphState, config: RunnableConfig) -> dict[st
     language = state["language"]
     dispute = state.get("dispute")
     if dispute is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            **mark_segment("cancelled"),
+            "segments": [get_template("nothing_pending", language)],
+        }
     outcome = decision(state)
     if outcome not in ("confirm", "cancel"):
         return {"segments": [get_template("pending_reminder", language)]}
@@ -472,6 +485,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
         return {
             "pending": None,
             "confirmation_token_id": None,
+            **mark_segment("cancelled"),
             "segments": [get_template("nothing_pending", language)],
         }
 

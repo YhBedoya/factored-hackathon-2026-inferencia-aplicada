@@ -14,6 +14,7 @@ export const Route = createFileRoute("/staff/")({
 		if (!agent) {
 			throw redirect({ to: "/staff/login" });
 		}
+		return { staff: agent };
 	},
 	component: StaffInboxPage,
 });
@@ -22,6 +23,7 @@ const HANDOFFS_QUERY_KEY = ["staff", "handoffs"] as const;
 
 function StaffInboxPage() {
 	const { t } = useI18n();
+	const { staff } = Route.useRouteContext();
 	const { data } = useQuery({
 		queryKey: HANDOFFS_QUERY_KEY,
 		queryFn: listStaffHandoffs,
@@ -38,6 +40,15 @@ function StaffInboxPage() {
 			<Link to="/staff/conversations" className="self-start text-sm underline">
 				{t("staff.conversations.nav_link")}
 			</Link>
+			{staff.role === "admin" && (
+				<Link
+					to="/staff/analytics"
+					data-testid="analytics-nav-link"
+					className="self-start text-sm underline"
+				>
+					{t("staff.analytics.nav_link")}
+				</Link>
+			)}
 			<InboxList items={data ?? []} />
 		</div>
 	);

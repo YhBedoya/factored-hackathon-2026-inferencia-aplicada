@@ -14,9 +14,10 @@ Input is a list of per-case verdict dicts. Keys read here (all optional except
 Nothing here imports ``app`` (D25, D34).
 """
 
+import random
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Sequence
-from math import ceil, sqrt
+from math import ceil, comb, sqrt
 from typing import Any
 
 from pydantic import BaseModel
@@ -44,6 +45,44 @@ def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     centre = (p + z2 / (2 * n)) / denom
     half = z * sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / denom
     return (max(0.0, centre - half), min(1.0, centre + half))
+
+
+def bootstrap_ci(
+    n_items: int,
+    statistic: Callable[[list[int]], float],
+    *,
+    resamples: int = 1000,
+    seed: int = 42,
+) -> tuple[float, float]:
+    """Percentile 95% CI of ``statistic`` over item-index resamples (with replacement).
+
+    ``statistic`` receives the resampled indices, so the caller recomputes the
+    metric (e.g. macro-F1) from its own gold and prediction lists.
+    """
+    if n_items <= 0:
+        return (0.0, 0.0)
+    rng = random.Random(seed)
+    stats = sorted(
+        statistic([rng.randrange(n_items) for _ in range(n_items)]) for _ in range(resamples)
+    )
+    lo = stats[int(0.025 * (resamples - 1))]
+    hi = stats[ceil(0.975 * (resamples - 1))]
+    return (lo, hi)
+
+
+def mcnemar(a_correct: Sequence[bool | int], b_correct: Sequence[bool | int]) -> dict[str, Any]:
+    """Exact two-sided McNemar test on paired per-item correctness.
+
+    ``b`` counts items only A got right, ``c`` items only B got right; ``p`` is
+    the two-sided binomial tail over the b + c discordant pairs (1.0 when none).
+    """
+    b = sum(1 for x, y in zip(a_correct, b_correct, strict=True) if x and not y)
+    c = sum(1 for x, y in zip(a_correct, b_correct, strict=True) if y and not x)
+    n = b + c
+    if n == 0:
+        return {"b": b, "c": c, "p": 1.0}
+    tail = sum(comb(n, i) for i in range(min(b, c) + 1)) / 2**n
+    return {"b": b, "c": c, "p": min(1.0, 2 * tail)}
 
 
 def rule_of_three(n: int) -> float | None:

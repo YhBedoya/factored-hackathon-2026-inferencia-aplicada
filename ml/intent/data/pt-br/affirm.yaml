@@ -1,0 +1,395 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: affirm
+items:
+- text: Sim, pode seguir.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Isso, pode continuar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode fazer, por favor.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Está certo, pode confirmar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tudo bem, pode prosseguir.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: De acordo, pode fazer isso.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fechou, pode mandar ver.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Bora, pode continuar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Demorô, pode tocar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Show, pode fazer isso aí.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Beleza, pode seguir com isso.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tranquilo, pode confirmar pra mim.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ss, pode seguir
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: simm, faz ai
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: blz, pode continuar
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: pode confirma, ta td certo
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: isso msm, pode ir em frente
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: uhum, pode fazer ai
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A opção “sim” aparece no app, mas não consigo tocar nela.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sim, pode consultar meu saldo como você sugeriu.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O botão escrito “sim” não responde quando eu aperto.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vejo a palavra “sim” na tela, só que a opção está travada.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Isso, pode seguir com a consulta do saldo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pode sim, quero ver o saldo que você mencionou.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero saber o que acontece se eu escolher “sim”, não estou confirmando nada.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sim, pode bloquear meu cartão como você sugeriu.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Apareceu uma pergunta com “sim”, mas só quero entender essa opção.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não selecionei “sim”; preciso primeiro saber o que essa confirmação faz.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Isso, pode seguir com o bloqueio do cartão.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pode sim, bloqueia meu cartão desse jeito.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não, prefiro deixar como está.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear o cartão; sim, pode continuar com isso.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero confirmar isso agora.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Melhor não, deixa pra lá.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear meu cartão, não. Pode seguir, sim.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Bloqueio não; pode continuar, tô de acordo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sim.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Isso aí.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

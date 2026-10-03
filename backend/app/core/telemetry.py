@@ -37,7 +37,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from app.core.config import get_settings
 
-__all__ = ["get_trace_id", "instrument_app"]
+__all__ = ["get_trace_id", "instrument_app", "setup_log_export"]
 
 _SERVICE_NAME = "card-support-backend"
 
@@ -113,6 +113,33 @@ class _StructlogAwareLoggingHandler(LoggingHandler):
         return log_record
 
 
+def _install_log_export(base: str, resource: Resource) -> None:
+    """Attach an OTLP log exporter and the structlog-aware handler to the root logger."""
+    logger_provider = LoggerProvider(resource=resource)
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(
+            OTLPLogExporter(endpoint=f"{base}/v1/logs", timeout=_EXPORT_TIMEOUT_SECONDS)
+        )
+    )
+    # Added after `configure_logging()` has already set the root logger's
+    # stdout handler, so this appends rather than replacing it: the same event
+    # (`request_id`/`trace_id`/etc.) goes to both stdout (as T3's untouched JSON
+    # line) and the collector (as a clean OTel record via
+    # `_StructlogAwareLoggingHandler`, see above).
+    logging.getLogger().addHandler(_StructlogAwareLoggingHandler(logger_provider=logger_provider))
+
+
+def setup_log_export(service_name: str) -> None:
+    """Ship this process's logs to the collector under `service_name`.
+
+    For processes with no FastAPI app (the analytics worker). A no-op with
+    `otel_exporter_otlp_endpoint` unset. Call after `configure_logging()`.
+    """
+    endpoint = get_settings().otel_exporter_otlp_endpoint
+    if endpoint:
+        _install_log_export(endpoint.rstrip("/"), Resource.create({SERVICE_NAME: service_name}))
+
+
 def instrument_app(app: FastAPI) -> None:
     """Install the SDK `TracerProvider` and wrap `app` in a request span.
 
@@ -145,20 +172,7 @@ def instrument_app(app: FastAPI) -> None:
         )
         metrics.set_meter_provider(meter_provider)
 
-        logger_provider = LoggerProvider(resource=resource)
-        logger_provider.add_log_record_processor(
-            BatchLogRecordProcessor(
-                OTLPLogExporter(endpoint=f"{base}/v1/logs", timeout=_EXPORT_TIMEOUT_SECONDS)
-            )
-        )
-        # Added after `configure_logging()` has already set the root
-        # logger's stdout handler, so this appends rather than replacing it:
-        # the same event (`request_id`/`trace_id`/etc.) goes to both stdout
-        # (as T3's untouched JSON line) and the collector (as a clean OTel
-        # record via `_StructlogAwareLoggingHandler`, see above).
-        logging.getLogger().addHandler(
-            _StructlogAwareLoggingHandler(logger_provider=logger_provider)
-        )
+        _install_log_export(base, resource)
 
         # `opentelemetry-instrumentation-asyncpg` 0.66b0 ships no `py.typed`
         # and its `__init__`/`instrument()` are unannotated upstream.

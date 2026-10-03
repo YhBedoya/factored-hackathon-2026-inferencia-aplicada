@@ -1,0 +1,465 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: card_status
+items:
+- text: Meu cartão está ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria saber se meu cartão está ativo.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qual é o status do meu cartão?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria saber se meu cartão está desbloqueado.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Meu cartão foi bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A minha tarjeta está bloqueada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Você pode confirmar se meu cartão está bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão tá funcionando, ou deu ruim?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Será que meu cartão tá ativo, gente?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria ver se meu cartão tá liberado pra usar.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão tá bloqueado ou tá de boa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá pra ver se meu cartão tá ativo, por favor?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão continua liberado ou bloquearam?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao ta ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ve ai se meu cartao ta liberado pfv
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria sabe se bloquearam meu cartao
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao foi bloqueado ou ta de boa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: da pra conf se meu cartao ta ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: meu cartao ainda ta funcionando?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão está ativo; queria aumentar o limite dele.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: 'Enquanto confiro a fatura, queria saber: meu cartão está ativo ou bloqueado?'
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já confirmei que meu cartão está desbloqueado, agora quero consultar a fatura.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Meu cartão está funcionando normalmente; como faço para trocar a senha?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A fatura já apareceu, mas não sei se meu cartão continua liberado para usar.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pode confirmar o status do meu cartão? Quero saber se está ativo, não conferir a fatura.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Meu cartão está bloqueado, mas quero saber como atualizar meu endereço.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Meu cartão está ativo ou bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sei que meu cartão está ativo; preciso alterar a data de vencimento da fatura.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Meu cartão foi desbloqueado, mas ainda preciso contestar uma compra.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria confirmar se meu cartão está liberado para uso ou se foi bloqueado.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Qual é a situação do meu cartão: ativo ou bloqueado?'
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero saber se meu cartão está ativo.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, só preciso saber se ele está ativo.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso consultar o status do meu cartão.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero verificar se bloquearam meu cartão.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear, quero apenas confirmar se meu cartão continua ativo.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Só quero consultar se o cartão está ativo; não quero fazer nenhum bloqueio.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Tá ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Foi bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qual o status?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Meu cartão de crédito está ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você pode confirmar se meu cartão de crédito está desbloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: 'Qual é o status do meu cartão de crédito: está ativo ou bloqueado?'
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Meu cartão de débito está ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Você consegue verificar se meu cartão de débito está desbloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Qual é a situação do meu cartão de débito, está ativo ou bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

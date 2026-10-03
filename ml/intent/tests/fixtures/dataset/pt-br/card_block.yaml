@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: card_block
+items:
+- text: bloqueia meu cartão
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: preciso bloquear meu cartão
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quero bloquear o cartão
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: quero bloquear o ⟨CARD_1⟩
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: bloqueia o ⟨CARD_1⟩, por favor
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: trava o ⟨CARD_1⟩ agora
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: bora bloquear o cartão aí
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: pô, trava meu cartão
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: bloqueia o plástico, valeu
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: roubaram meu cartão, bloqueia
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: perdi o cartão, bloqueia agora
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: furtaram meu cartão, bloqueia
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: blokeia meu cartao
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: bloquear cartao pfv
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: bloqueia o cartao urgente
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

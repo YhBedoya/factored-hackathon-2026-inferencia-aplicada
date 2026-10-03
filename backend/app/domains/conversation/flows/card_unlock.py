@@ -52,7 +52,7 @@ from app.domains.conversation.flows.card_select import (
     select_card,
 )
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import Fact
+from app.domains.conversation.state import Fact, mark_segment
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -185,6 +185,8 @@ async def _check_status_and_origin(
                 "awaiting_slot": "offer_replacement",
             },
             "segments": [no_undo, offer],
+            # PQ2: a permanent block can't be undone, so the unlock is not served.
+            **mark_segment("abstained"),
         }
 
     if origin.kind == "bank_side":
@@ -198,7 +200,11 @@ async def _check_status_and_origin(
         return handoff(side.customer_status, "bank_side_block", language)
 
     # "none": nothing to undo.
-    return {"pending": None, "segments": [get_template("not_blocked", language)]}
+    return {
+        "pending": None,
+        "segments": [get_template("not_blocked", language)],
+        **mark_segment("resolved"),
+    }
 
 
 async def _resume_otp(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -207,7 +213,11 @@ async def _resume_otp(state: GraphState, config: RunnableConfig) -> dict[str, An
     language = state["language"]
     card_id = state.get("selected_card_id")
     if card_id is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
+        }
     if await bank_write_tools.is_step_up_valid():
         return await _start_unlock_plan(state, config, card_id)
     # Still invalid: pause again, nothing issued (D1).
@@ -265,6 +275,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
             "pending": None,
             "confirmation_token_id": None,
             "segments": [get_template("nothing_pending", language)],
+            **mark_segment("cancelled"),
         }
 
     bank_tools: BankReadTools = config["configurable"]["bank_tools"]

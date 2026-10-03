@@ -13,7 +13,8 @@ repeat, raise-on-change semantics as before.
 turn (Q3) so a later `compose` node only ever sees facts a flow wrote this
 turn, not ones left over from an earlier one. `segments` (B3) gets the same
 treatment through `RESET_SEGMENTS`, so `finish` only ever joins the
-segments this turn's nodes actually wrote.
+segments this turn's nodes actually wrote; `intent_segments` (the per-intent
+record the runner audits) is reset the same way.
 
 `ui` (D16) is reset to `[]` here too: it is a graph-local, non-checkpointed
 channel, so a turn only ever reports the events an emitting node appended
@@ -27,7 +28,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.config import get_settings
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import RESET_FACTS, RESET_SEGMENTS
+from app.domains.conversation.state import RESET_FACTS, RESET_INTENT_SEGMENTS, RESET_SEGMENTS
 from app.domains.conversation.tools import BankReadTools, ToolContext
 
 __all__ = ["load_session"]
@@ -70,11 +71,14 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
 
     profile = await bank_tools.get_profile()
     # D10: the kill switch. Human mode is checked first by `_entry`, so a
-    # human-owned conversation never sees the reason. `actions_at_turn_start`
+    # human-owned conversation never sees the reason. With a classifier loaded
+    # the switch means the degraded path (spec D2: zero LLM calls, no handoff);
+    # without one the old `llm_unavailable` handoff stays. `actions_at_turn_start`
     # lets `fallback` tell an action verified this turn from an older one.
-    reason = (
-        "llm_unavailable" if get_settings().llm_disabled and state.get("mode") != "human" else None
-    )
+    kill_switch = get_settings().llm_disabled and state.get("mode") != "human"
+    has_classifier = configurable.get("classifier") is not None
+    degraded = kill_switch and has_classifier
+    reason = "llm_unavailable" if kill_switch and not has_classifier else None
     update: dict[str, Any] = {
         "actions_at_turn_start": len(state.get("actions", [])),
         "write_failed": False,
@@ -84,8 +88,11 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "customer_name": profile.first_name,
         "facts": RESET_FACTS,
         "segments": RESET_SEGMENTS,
+        "intent_segments": RESET_INTENT_SEGMENTS,
+        "segment_deferred": None,
         "nlu": None,
         "escalation_reason": reason,
+        "degraded": degraded,
         # `understand` never runs under the kill switch, and `handoff_summary`
         # reads `language`: keep the previous one; on a first turn detect it
         # in code from the customer's own text (no LLM).

@@ -11,7 +11,7 @@ customer's card exists.
 Display strings (masks, money, dates) are built here, in code, from
 `app.domains.localization` (R4); the frontend only renders them. The view
 builders are pure module-level functions so a unit test can call them. A
-debit card's `current_balance` is its available balance (A1, ADR-032); its
+debit card's `current_balance` is its available balance (A1, ADR-034); its
 credit-only fields stay `null`.
 
 See `docs/specs/landing-home-bienvenida.md` "Contracts (delta only)", D7-D9, A1.
@@ -116,7 +116,7 @@ def _money(amount: Decimal | None, currency: str, country: Country) -> str | Non
 
 
 def card_details_view(details: CardDetails, country: Country) -> CardDetailsView:
-    # A1, ADR-032: a debit card shows its balance (the money available in
+    # A1, ADR-034: a debit card shows its balance (the money available in
     # it), never the credit-only fields.
     is_debit = details.kind == "debit"
     limit = None if is_debit else details.credit_limit
