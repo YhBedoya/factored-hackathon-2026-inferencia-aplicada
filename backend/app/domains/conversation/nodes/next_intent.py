@@ -26,7 +26,7 @@ from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.graph import _INTENT_NODES, _MANAGEMENT_INTENTS, GraphState
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import RESET_FACTS
-from app.domains.conversation.templates import TemplateKind, template_variants
+from app.domains.conversation.templates import TemplateKind, get_template, template_variants
 from app.domains.policy.registry import get_policies
 
 __all__ = ["enqueue", "finish", "next_intent"]
@@ -74,6 +74,7 @@ async def enqueue(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         update["pending"] = None
         update["confirmation_token_id"] = None
         update["clarification_failures"] = 0
+        update["non_answer_failures"] = 0
     return update
 
 
@@ -117,7 +118,20 @@ def finish(state: GraphState) -> dict[str, Any]:
         update = _closing_update(state)
         segments += update["segments"]
     reply = "\n\n".join(segments)
+    language = state.get("language", "es")
+    if not reply and state.get("mode") != "human":
+        # R11: a bot turn never ends with an empty reply.
+        reply = get_template("fallback", language)
     update["reply"] = reply
+    pending = state.get("pending")
+    if pending is None or pending["awaiting_slot"] == "anything_else":
+        update["open_question"] = None
+    else:
+        asked_ui = state.get("asked_ui")
+        if asked_ui is not None and segments:
+            update["open_question"] = {"text": segments[-1], "ui": list(asked_ui)}
+    if not state.get("non_answer_counted"):
+        update["non_answer_failures"] = 0
     if reply and state.get("mode") != "human":
         update["introduced"] = True
         update["history"] = [*(state.get("history") or []), {"role": "cardy", "text": reply}]

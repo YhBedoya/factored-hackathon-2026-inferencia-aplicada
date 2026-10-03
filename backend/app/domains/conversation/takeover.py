@@ -84,6 +84,8 @@ async def return_to_bot(host: TurnHost, conversation_id: UUID, language: Languag
                 "handoff_open_questions": [],
                 "handoff_request": "",
                 "clarification_failures": 0,
+                "non_answer_failures": 0,
+                "open_question": None,
                 "unauthorized_attempts": 0,
             },
         )

@@ -14,10 +14,13 @@ as `docs/plans/d2-b-card-info-block.md` §"Graph shape" pins it:
 3. A `pending` continuation whose answer fits goes straight to that flow's
    own node (`_FLOW_NODES`) -- an unregistered flow name (no flow shipped
    for it yet) falls back to `unsupported` (P3).
-4. A turn made only of conversation-management intents (`greeting`,
+4. A non-answer (`intents == []`, not degraded) goes to the paused flow's node
+   when a flow question is open (its wrapper re-asks, then hands off), else to
+   `smalltalk` (`clarify_rephrase`).
+5. A turn made only of conversation-management intents (`greeting`,
    `thanks_close`, `affirm`, `deny`) goes to `smalltalk`, whether or not a
    pause is still open: `smalltalk` decides which template that pause needs.
-5. Anything else is a fresh (or replacing) card action, so it goes to
+6. Anything else is a fresh (or replacing) card action, so it goes to
    `enqueue` (D20, P1).
 """
 
@@ -98,6 +101,13 @@ def route(state: GraphState) -> str:
         and "deny" not in nlu.intents
     ):
         return "enqueue"
+
+    # A non-answer (no intent, nothing that fits): keep an open flow question and
+    # let the paused flow's wrapper re-ask it; otherwise ask to rephrase.
+    if not degraded and not nlu.intents:
+        if pending is not None and pending["awaiting_slot"] != "anything_else":
+            return _FLOW_NODES.get(pending["flow"], "unsupported")
+        return "smalltalk"
 
     if nlu.intents and all(intent in _MANAGEMENT_INTENTS for intent in nlu.intents):
         return "smalltalk"
