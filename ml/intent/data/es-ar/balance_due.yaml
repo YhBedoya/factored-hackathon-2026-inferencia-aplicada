@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: balance_due
+items:
+- text: ¿Cuánto tengo que pagar este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera saber cuál es el saldo que debo.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me decís cuánto tengo pendiente de pago?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuál es la fecha de vencimiento de mi resumen?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Hasta qué día puedo pagar la tarjeta sin atrasarme?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito saber cuándo vence el pago de este mes.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me decís cuánto debo de la tarjeta?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuándo vence el resumen, vos sabés?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero ver cuál es el total que tengo que pagar.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos me podés decir hasta cuándo tengo para pagar?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿cuánto me quedó pendiente este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me averiguás qué día vence el resumen?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: cuanto debo pagar este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me decis cual es el saldo pendientee?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: cuando vence el pago de la tarjetaa?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q monto me toca pagar?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tenes idea hasta q dia puedo pagar?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: cuanto me quedo debiendo al final?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ya sé cuánto debo; ¿cómo puedo pagar el saldo en cuotas?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Che, después de las compras que hice con mi tarjeta, ¿cuánto me queda por pagar este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Tengo claro el monto pendiente, pero quiero dividirlo en varios pagos. ¿Cómo hago?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ya revisé la fecha de vencimiento; ahora necesito saber cómo financiar el saldo.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me decís cuánto debo en total por las compras de la tarjeta?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Con todos los gastos que hice, ¿cuál es el monto que tengo que pagar del resumen?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sé cuál es el total adeudado, pero quiero pagar desde otra cuenta. ¿Cómo lo hago?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de reclamar esa compra pendiente, ¿me decís cuánto tengo que pagar de la tarjeta este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ya vi cuánto debo; ¿me explicás cómo hacer el pago por transferencia?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tengo presente el saldo pendiente y quiero cambiar el medio de pago. ¿Qué opciones hay?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me aparece una compra sin confirmar; ¿cuál es el total que debo abonar en el resumen?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero revisar esa compra pendiente después, pero primero decime cuánto debo pagar este mes.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito consultar cuánto debo; quiero actualizar mi domicilio.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, solo saber cuánto tengo que pagar este mes.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero saber la fecha de vencimiento, necesito cambiar mi teléfono.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy buscando el saldo pendiente; quiero desconocer un consumo.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es para dar de baja la tarjeta; decime cuánto debo del resumen.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito frenar la tarjeta, quiero consultar el total que tengo que abonar.
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Saldo adeudado
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Total a pagar
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fecha de vencimiento
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuánto tengo que pagar de mi tarjeta de crédito este mes?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué saldo me vino en el resumen de la tarjeta de crédito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Cuándo vence el pago de mi tarjeta de crédito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Cuánto tengo pendiente para pagar de mi tarjeta de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué saldo me quedó para pagar en el resumen de la tarjeta de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Cuál es la fecha de vencimiento del pago de mi tarjeta de débito?
+  intents:
+  - balance_due
+  status: clear
+  topic: null
+  family: balance_due-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

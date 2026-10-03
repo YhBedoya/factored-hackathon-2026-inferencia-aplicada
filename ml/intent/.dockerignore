@@ -1,0 +1,9 @@
+# Named build context `intent` (compose additional_contexts): only
+# `model.lock` and `models/` are meant to reach the backend image.
+data/
+runs/
+tests/
+prompts/
+.cache/
+**/*.py
+**/__pycache__/

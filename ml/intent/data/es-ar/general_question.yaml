@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: general_question
+items:
+- text: ¿Qué incluye el servicio de mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué prestaciones ofrece el servicio de la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quería saber qué viene incluido con mi tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo funciona en general el servicio de la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me contás cómo es el servicio de mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera entender cómo funciona el servicio en líneas generales.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿qué beneficios tengo con mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué ventajas me da mi tarjeta, che?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, contame qué beneficios incluye el servicio de la tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo funciona el servicio de mi tarjeta, che?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me explicás cómo es el servicio de la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos sabés cómo funciona, en general, el servicio de mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, q cosas puedo hacer con mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: buenas, q incluye el servicio de la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: che, me contas q opciones tengo con mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tengo una duda, como funciona en gral mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me explicas mas o menos como es el servicio d la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q onda el servicio q viene con mi tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero cambiar el límite de mi tarjeta, no saber qué servicios incluye.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Che, ¿qué otras cosas puedo hacer con mi tarjeta además de pagar?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito modificar el límite de la tarjeta, no consultar sus beneficios.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vengo a pedir un cambio en el límite de mi tarjeta, no información sobre el servicio.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Para qué más sirve la tarjeta, aparte de hacer pagos?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Qué funciones tiene mi tarjeta además de pagar compras?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito activar mi tarjeta, no consultar qué incluye el servicio.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Mi tarjeta sirve para pagar facturas de servicios o es solo para compras?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero poner en funcionamiento mi tarjeta, no saber qué prestaciones ofrece.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ayudame a activar la tarjeta; no estoy preguntando por sus beneficios.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Puedo usar la tarjeta también para abonar servicios, además de hacer compras?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Che, ¿con la tarjeta se pueden pagar las facturas de luz y gas?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo ninguna consulta sobre mi tarjeta; solo quería agradecer.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta; solo quería saber qué beneficios tiene.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito información sobre el servicio de la tarjeta, gracias.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No tengo dudas sobre mi tarjeta; ya está todo claro.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es para bloquearla, quería consultar qué ventajas ofrece la tarjeta.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito bloquearla; me contás qué beneficios vienen con la tarjeta?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Tengo una duda
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Una consulta
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quería preguntar
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué características tiene la tarjeta de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quería saber qué ofrece la tarjeta de crédito.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me cuentan un poco sobre la tarjeta de crédito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Qué características tiene la tarjeta de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quería saber qué ofrece la tarjeta de débito.
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me cuentan un poco sobre la tarjeta de débito?
+  intents:
+  - general_question
+  status: clear
+  topic: null
+  family: general_question-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

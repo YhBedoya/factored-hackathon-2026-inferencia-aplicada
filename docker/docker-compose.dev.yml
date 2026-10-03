@@ -7,7 +7,9 @@ services:
       # set on the command line (`FAULTS=bedrock_timeout make up`), never prod.
       FAULTS: ${FAULTS:-}
       LLM_DISABLED: ${LLM_DISABLED:-false}
-    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # --no-sync: the image is synced without the `ml` group, and a start-time
+    # sync would try to fetch it (no network in the offline proof).
+    command: uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ../backend/app:/app/app
       # `card_select.py`'s `_REPO_ROOT` is `parents[5]` of its own path,

@@ -44,3 +44,15 @@ def test_one_backend_per_fault_set() -> None:
         ("bedrock_timeout", "c"),
         ("cards_write_error", "d"),
     ]
+
+
+def test_cli_faults_merge() -> None:
+    cases: list[Case] = [
+        _Case("a", []),  # type: ignore[list-item]
+        _Case("b", ["cards_write_error"]),  # type: ignore[list-item]
+    ]
+    groups = fault_groups(cases, frozenset({"bedrock_timeout"}))
+
+    assert groups
+    assert all("bedrock_timeout" in faults for faults, _ in groups)
+    assert {c.case_id for _, g in groups for c in g} == {"a", "b"}

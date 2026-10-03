@@ -22,6 +22,7 @@ from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
 from app.main import create_app
 from tests.conftest import ScriptedLLM, make_session
+from tests.stub_classifier import make_stub_classifier
 
 
 @pytest.fixture
@@ -47,18 +48,34 @@ def test_faults_refused_in_prod(monkeypatch: pytest.MonkeyPatch, reset_settings:
         get_settings()
 
 
-def test_llm_disabled_every_turn_falls_back(
+def test_kill_switch_degraded(
     monkeypatch: pytest.MonkeyPatch, reset_settings: None, fakebank_dir: Path
 ) -> None:
-    """D10: under LLM_DISABLED a typed turn and a button confirmation both get the
-    failure text and a handoff, with zero LLM calls and nothing written."""
+    """D2/D10: under LLM_DISABLED a stub classifier serves card status with zero
+    LLM calls; with no classifier a typed turn and a button confirmation both get
+    the failure text and a handoff, zero LLM calls and nothing written."""
     failure = get_template("failure_handoff", "es")
     transfer_prefix = get_template("handoff_transfer", "es").split("{queue_label}")[0]
 
     async def run() -> None:
-        # (1) typed turn
         monkeypatch.setenv("LLM_DISABLED", "true")
         get_settings.cache_clear()
+        # (0) classifier loaded: served degraded, no LLM call, no handoff
+        stub_llm = ScriptedLLM()
+        served = make_session(
+            "CLI-TFSINGLE0002",
+            fakebank_dir,
+            stub_llm,
+            classifier=make_stub_classifier({"como esta mi tarjeta": {"card_status": 0.95}}),
+        )
+        reply0, debug0 = await run_turn(served.graph, "como esta mi tarjeta", config=served.config)
+        assert stub_llm.calls == []
+        assert debug0.degraded
+        assert debug0.route == "card_info"
+        assert not reply0.startswith(failure)
+        assert served.handoff_tools.created == []
+
+        # (1) typed turn, no classifier: today's fallback
         llm = ScriptedLLM()
         session = make_session("CLI-TFSINGLE0002", fakebank_dir, llm)
         reply, _ = await run_turn(session.graph, "bloquea mi tarjeta", config=session.config)

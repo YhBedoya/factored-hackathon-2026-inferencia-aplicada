@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: decline_explain
+items:
+- text: ¿Por qué rechazaron una compra que intenté hacer con mi tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera saber por qué no pasó el pago con mi tarjeta.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuál fue el motivo de que declinaran mi compra?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me pueden decir por qué se rechazó el pago de mi tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito saber por qué mi tarjeta no fue aceptada al pagar.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué no autorizó mi tarjeta esta compra?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿por qué no pasó mi compra con la tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué me rechazaron el pago de la tarjeta, parce?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ahorita intenté pagar y no pasó mi tarjeta, ¿qué onda, por qué?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿por qué declinaron el pago de mi tarjeta, wey?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué pasó, parce? No me aceptaron la tarjeta al pagar.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ahorita quise comprar con mi tarjeta y la rechazaron, ¿por qué será?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: xq rechazaron mi pago con la tarj?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oye xq no paso mi compra con la tarjeta??
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: no me acepto la tarj al pagar, sabes xq?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me declinaron la compra 😩 saben xq fue?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mi tarjeta no paso y no se xq, q onda
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: xq salio rechazado el pago de mi tarj?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: La compra salió rechazada; ¿cómo cambio el NIP de mi tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: En mis movimientos aparece una compra rechazada, ¿por qué no pasó el pago?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me aparece un pago declinado, pero necesito descargar el comprobante.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi que rechazaron mi compra; ¿dónde consulto el límite de la tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Por qué sale como rechazada en mis movimientos la compra que intenté hacer?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi en el historial que mi pago no pasó; ¿qué hizo que rechazaran la compra?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Mi tarjeta fue rechazada en la tienda; ¿cómo actualizo mis datos de contacto?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Mi saldo sí alcanza, pero ¿por qué rechazaron mi compra con la tarjeta?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Aparece un pago declinado en el historial, ¿me ayudan a encontrar el recibo?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: La compra quedó rechazada, pero solo quiero cambiar la dirección de envío de mi tarjeta.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tengo dinero disponible; aun así, ¿por qué no pasó el pago de mi compra?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Por qué declinó la tarjeta mi compra si tengo saldo suficiente?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero saber por qué rechazaron el pago; solo necesito cancelar la compra.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta; solo necesito saber por qué rechazaron mi compra.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me expliquen el motivo del rechazo, por favor; quiero revisar mis movimientos.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito saber por qué no pasó mi tarjeta, solo quiero cambiar mi clave.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco cancelar la tarjeta, quiero entender por qué no pasó el pago.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero reportar mi tarjeta; dime por qué se rechazó la compra que intenté hacer.
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Por qué se rechazó?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué declinó?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué no pasó?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué rechazaron mi compra con la tarjeta de crédito?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: No pasó el pago con mi tarjeta de crédito, ¿me pueden decir por qué?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿A qué se debió que declinaran el cobro de mi tarjeta de crédito?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Por qué rechazaron mi compra con la tarjeta de débito?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: false
+- text: No pasó el pago con mi tarjeta de débito, ¿me pueden explicar por qué?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿A qué se debió que declinaran el cobro de mi tarjeta de débito?
+  intents:
+  - decline_explain
+  status: clear
+  topic: null
+  family: decline_explain-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

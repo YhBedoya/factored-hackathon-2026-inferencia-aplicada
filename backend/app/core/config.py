@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # line only; the guard in `main.py` refuses it under APP_ENV=prod.
     faults: Annotated[frozenset[Fault], NoDecode] = frozenset()
     llm_disabled: bool = False
+    # Learned intent classifier bundle dir (ADR-032). The image sets
+    # INTENT_MODEL_DIR to /app/ml/intent/models; this default is the repo path
+    # the host-run eval backend uses.
+    intent_model_dir: Path = Path(__file__).resolve().parents[3] / "ml" / "intent" / "models"
     tool_timeout_s: float = 3.0
     turn_cap_per_conversation: int = 40
     turn_cap_per_account_day: int = 150

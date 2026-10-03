@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: card_status
+items:
+- text: ¿cómo está mi tarjeta?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quiero ver el estado de mi tarjeta
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: decime el estado de la tarjeta
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: ¿la tarjeta que tengo sigue habilitada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: consulto si la ⟨CARD_1⟩ está activa
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: ¿sigue activa la ⟨CARD_1⟩?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: che, ¿la tarjeta anda bien?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: ¿cómo viene mi tarjeta, che?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: decime si la tarjeta funciona
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: fijate si mi tarjeta está bloqueada
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: ¿la tarjeta está bloqueada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: ¿mi plástico está habilitado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: estdo de mi tarjta
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: q estado tiene mi tarjeta
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: como esta la tarjeta xfa
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

@@ -1,3 +1,4 @@
+# Relabeled under ADR-032: the degraded path (bedrock_timeout) serves this read-only intent; reviewer/reviewed_at reset for re-review.
 seed_id: h-pending_reversal_explain-tool_failure-pt-br-03
 intent: pending_reversal_explain
 category: tool_failure
@@ -12,16 +13,13 @@ setup:
 labels:
   expected_intents:
   - pending_reversal_explain
-  expected_outcome: handoff:atencion
-  required_tools: []
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
   forbidden_tools: []
   expected_db_state: []
-  required_handoff_fields:
-  - handoff_id
-  - queue
-  - reason
-  - request
-  eligible_for_automation: false
+  required_handoff_fields: []
+  eligible_for_automation: true
 cases:
 - case_id: h-pending_reversal_explain-tool_failure-pt-br-03.s
   language_variant: pt-BR

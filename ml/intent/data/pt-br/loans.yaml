@@ -1,0 +1,359 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: loans
+items:
+- text: Quero solicitar um empréstimo pessoal. Como faço?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tenho interesse em pedir um empréstimo. Quais são os próximos passos?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gostaria de contratar um crédito pessoal. Como posso solicitar?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quais são as opções de empréstimo disponíveis para mim?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero saber que tipos de empréstimo posso contratar.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode me informar quais linhas de crédito pessoal estão disponíveis?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô precisando de uma grana emprestada. Como faço pra pedir um empréstimo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero pegar um dinheiro emprestado por aqui, como que eu faço?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô precisando de um empréstimo, dá pra solicitar pelo app?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô querendo um crédito pessoal pra dar uma ajeitada nas contas. Como consigo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso de uma grana pra organizar as contas, rola pedir um empréstimo por aqui?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria pegar um crédito pra aliviar as contas. Como faço pra conseguir?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oi, queria ve se consigo pega um emprestimo por ai
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem como pedi um credito pessoal pelo app?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria saber como faz pra solicita emprestimo, to precisando
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: preciso de uma grana, como peço um emprestimo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: da pra consegui um credito pessoal por aqui?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: to querendo pega emprestimo, quais os passo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vi a oferta de empréstimo no app, mas preciso mesmo é desbloquear meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria consultar o saldo que ainda falta pagar do meu empréstimo.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Apareceu uma propaganda de crédito pessoal, só que quero ajuda pra trocar a senha do cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi a opção de empréstimo, mas o que preciso resolver é a fatura do meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Onde vejo quanto ainda devo do empréstimo que contratei?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me passa o valor que falta quitar do meu empréstimo, por favor.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A linha de crédito pessoal aparece na tela, mas quero atualizar o endereço da minha conta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero fazer uma compra parcelada, mas em vez de usar meu cartão, queria contratar um empréstimo
+    pessoal. Como solicito?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Encontrei a oferta de empréstimo, mas preciso corrigir meus dados cadastrais.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O app mostra crédito pessoal, mas estou tentando entender uma compra no cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tô pensando em parcelar uma compra, só que preciso de um empréstimo pessoal, não do cartão. Como
+    faço pra pedir?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso dividir um valor em parcelas e queria contratar crédito pessoal, sem usar o limite do
+    meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero empréstimo; só preciso consultar a fatura do meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, quero saber se posso contratar um empréstimo pessoal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho interesse em crédito pessoal, quero apenas desbloquear meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Empréstimo não, obrigada. Preciso trocar a senha do cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; queria ver se tenho opção de empréstimo pessoal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso bloquear meu cartão, só quero consultar a possibilidade de pegar um empréstimo pessoal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não estou procurando uma linha de crédito, só quero saber como atualizar meus dados.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não quero pedir empréstimo, preciso apenas conferir uma compra no cartão.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Crédito pessoal não me interessa; quero resolver a cobrança da minha fatura.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

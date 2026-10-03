@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic
-version: 4
+version: 6
 customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card]}
 bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
 rules:
@@ -19,3 +19,6 @@ unauthorized_access:  {attempts_before_handoff: 2}
 legal_keywords:       # initial list; Dev B reviews it in the PR
   es: [demanda, demandar, abogado, abogada, condusef, superfinanciera, "superintendencia financiera", sic, bcra, "defensa del consumidor", denuncia]
   pt: [processo, processar, advogado, advogada, procon, "banco central", "reclame aqui", denúncia]
+# ADR-032: when the LLM is unavailable (degraded turn), these queued intents have no
+# safe keyword answer (decline_explain: the canned reply would not explain the decline), so they hand off with llm_unavailable instead of guessing.
+degraded_handoff_intents: [transaction_search, general_question, decline_explain]

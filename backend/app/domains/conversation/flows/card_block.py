@@ -84,11 +84,11 @@ _BLOCK_EFFECT: dict[Language, str] = {
 # `ui.quick_replies` labels for `clarify_lock_vs_block` (D4, R4). Worded from
 # the lock/block lexicon above, never "cancelar": `card_cancel` (Stretch) and
 # `deny` are separate intents, and the word would collide with them.
-_TEMPORARY_LOCK_LABEL: dict[Language, str] = {
+TEMPORARY_LOCK_LABEL: dict[Language, str] = {
     "es": "Bloqueo temporal",
     "pt": "Bloqueio temporário",
 }
-_PERMANENT_BLOCK_LABEL: dict[Language, str] = {
+PERMANENT_BLOCK_LABEL: dict[Language, str] = {
     "es": "Reportar pérdida o robo",
     "pt": "Reportar perda ou roubo",
 }
@@ -189,8 +189,8 @@ def _ask_block_kind(state: GraphState, *, failures: int) -> dict[str, Any]:
             "clarification_failures": 0,
         }
     options = [
-        PickerOption(label=_TEMPORARY_LOCK_LABEL[language]),
-        PickerOption(label=_PERMANENT_BLOCK_LABEL[language]),
+        PickerOption(label=TEMPORARY_LOCK_LABEL[language]),
+        PickerOption(label=PERMANENT_BLOCK_LABEL[language]),
     ]
     return {
         "pending": {"flow": "card_block", "node": "block_kind", "awaiting_slot": "block_kind"},

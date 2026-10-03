@@ -1,0 +1,425 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: affirm
+items:
+- text: Sí, por favor.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, está bien.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Claro, adelante.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: De acuerdo, hagámoslo.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, me parece bien.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, así está bien.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Está bien, acepto.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Claro que sí, puedes continuar.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Simón, ahorita le damos.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Va, wey, tú dime.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, jalo, parce no; aquí sí decimos órale.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Órale, sí va.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Simón, dale, está chido.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Va que va, ahorita lo hacemos.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: sii, dale xfa
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: vaaa, jalo
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: simón, si kiero
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: simon, de unaa
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: sii, esta bn
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: va, aslo xfa
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Por qué el bot me pone «sí, claro» si todavía no he aceptado?
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, confirmo que quiero bloquear mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: false
+- text: Sí, confirmo que bloquees mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En el chat aparece «de acuerdo», pero yo no confirmé nada.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero saber si responder «sí» autoriza el cargo; no estoy diciendo que sí.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Así es, quiero que bloquees mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Correcto, sí quiero bloquearla.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿La opción «claro que sí» confirma el cambio automáticamente?
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sí, adelante con el bloqueo de mi tarjeta.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me salió el mensaje «sí, por favor», pero no lo elegí.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué significa «de acuerdo» en la pantalla? Aún no acepto.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: De acuerdo, bloquéala por favor.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, procede a bloquearla.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No, prefiero dejarlo así.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero cancelar mi tarjeta; sí, adelante con lo que me propusiste.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No acepto, gracias.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero confirmar eso por ahora.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco dar de baja mi tarjeta. Sí, continúa con esa opción.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Cancelar no; está bien, haz lo que me comentaste.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Por supuesto.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Así es.
+  intents:
+  - affirm
+  status: clear
+  topic: null
+  family: affirm-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

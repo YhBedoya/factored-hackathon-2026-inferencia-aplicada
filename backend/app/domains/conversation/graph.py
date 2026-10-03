@@ -72,6 +72,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.errors import AccessDenied
 from app.domains.audit.schemas import NullAuditRecorder
+from app.domains.conversation.intent_registry import intent_nodes, management_intents
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import TurnState, _reduce_segments
 from app.domains.conversation.templates import get_template
@@ -189,6 +190,7 @@ class GraphState(TurnState):
     grounding: NotRequired[str]
     actions_at_turn_start: NotRequired[int]
     write_failed: NotRequired[bool]
+    degraded: NotRequired[bool]
 
 
 class DebugInfo(BaseModel):
@@ -204,6 +206,7 @@ class DebugInfo(BaseModel):
     tools_called: list[str]
     pending: str | None
     ui: list[str]
+    degraded: bool = False
 
 
 _BRANCH_NODES = (
@@ -223,23 +226,13 @@ _BRANCH_NODES = (
     "relay_to_agent",
 )
 
-_MANAGEMENT_INTENTS: frozenset[Intent] = frozenset({"greeting", "thanks_close", "affirm", "deny"})
+_MANAGEMENT_INTENTS: frozenset[Intent] = cast("frozenset[Intent]", management_intents())
 """Conversation-management intents (`02` §1): they never start or continue a
 flow on their own, so `route` sends a turn made only of these to `smalltalk`,
 and `enqueue` (P1, D20) strips them out of the intent queue.
 """
 
-_INTENT_NODES: dict[Intent, str] = {
-    "card_status": "card_info",
-    "balance_due": "card_info",
-    "card_block": "card_block",
-    "card_unlock": "card_unlock",
-    "replacement_request": "replacement",
-    "unrecognized_charge": "unrecognized_charge",
-    "decline_explain": "decline_explain",
-    "transaction_search": "tx_search",
-    "pending_reversal_explain": "tx_explain",
-}
+_INTENT_NODES: dict[Intent, str] = cast("dict[Intent, str]", intent_nodes())
 """Intent -> flow node, read by `_dispatch` (D20, P3). An intent with no
 entry here (every Stretch intent, and every card-action intent this card
 doesn't ship a flow for yet) falls through to `unsupported`'s fixed
@@ -315,6 +308,9 @@ def _dispatch(state: GraphState) -> str:
     queue's head decides the flow node through `_INTENT_NODES`; an empty
     queue (nothing left to answer) ends the turn at `finish`.
     """
+    # ADR-032 D7: an LLM failure on a degraded turn ends in the fixed fallback.
+    if state.get("escalation_reason") == "llm_unavailable":
+        return "fallback"
     queue = state.get("intent_queue") or []
     if not queue:
         return "finish"
@@ -521,6 +517,7 @@ def build_graph(
             "tx_search": "tx_search",
             "tx_explain": "tx_explain",
             "unsupported": "unsupported",
+            "fallback": "fallback",
             "finish": "finish",
         },
     )
@@ -647,6 +644,7 @@ def build_graph(
             "tx_search": "tx_search",
             "tx_explain": "tx_explain",
             "unsupported": "unsupported",
+            "fallback": "fallback",
             "finish": "finish",
         },
     )
@@ -721,6 +719,7 @@ async def run_turn(
         tools_called=tools_called,
         pending=pending_str,
         ui=ui_kinds,
+        degraded=bool(final_state.values.get("degraded", False)),
     )
     return reply, debug
 

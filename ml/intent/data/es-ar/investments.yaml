@@ -1,0 +1,357 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: investments
+items:
+- text: ¿Qué opciones de inversión ofrecen para hacer crecer mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera saber qué productos tienen para invertir mis ahorros.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué alternativas de inversión hay disponibles?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedo abrir un plazo fijo desde la app?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero constituir un plazo fijo, ¿cómo lo hago?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Se puede invertir en un plazo fijo desde acá?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿qué opciones tenés para que invierta mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me contás, che, qué productos de inversión puedo sacar?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero poner mis ahorros a trabajar, ¿qué me ofrecés?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedo armar un plazo fijo desde la app, che?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Decime, ¿cómo hago para invertir en un plazo fijo?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿tienen alguna opción para ahorrar y ganar intereses?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q opciones d inversion tienen pa poner mis ahorros?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quiero invertir unos pesos, q productos hay?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como hago un plazo fijo desde la app?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, puedo meter mis ahorros en algun fondo d inversion?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tienen fondos para invertir? kiero arrancar con poquito
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me decis como poner plata en un fondo?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero cambiar el nombre del objetivo de ahorro que armé, ¿dónde lo edito?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué opciones de inversión tengo para hacer rendir el saldo de mi cuenta?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Cómo renombro mi meta de ahorro en la app?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Necesito editar el título de mi objetivo de inversión, no encuentro la opción.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿En qué puedo invertir los pesos que tengo disponibles en la cuenta?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero poner a trabajar mis ahorros, ¿qué alternativas de inversión ofrecen?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Cómo saco de la pantalla principal el acceso a inversiones?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quería consultar el saldo de mi tarjeta, pero lo que necesito saber es cuánto están rindiendo
+    las inversiones.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero ocultar la sección de inversiones de la app, ¿se puede?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Dónde cambio el orden de los accesos para que no aparezca ahorro primero?
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Más que el saldo de la tarjeta, me interesa ver qué rendimiento tienen las opciones para invertir.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Estoy mirando el resumen de la tarjeta y me surgió otra duda: ¿cuánto rinde el ahorro en inversiones?'
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero invertir ni abrir un plazo fijo; solo consultaba qué significaba esa opción.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar el saldo de mi tarjeta; quiero saber qué opciones tengo para invertir.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Por ahora no quiero poner mis ahorros en ninguna inversión.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No me interesa contratar un producto para ahorrar, gracias.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy buscando ver cuánto debo, sino conocer las alternativas de inversión disponibles.
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Dejemos de lado el saldo de la tarjeta: ¿qué opciones hay para poner mis ahorros a invertir?'
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Un plazo fijo
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Plazo fijo
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, plazo fijo
+  intents: []
+  status: out_of_scope
+  topic: investments
+  family: investments-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

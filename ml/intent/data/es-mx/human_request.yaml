@@ -1,0 +1,457 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: human_request
+items:
+- text: ¿Me pueden comunicar con una persona de soporte?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero hablar con un asesor, por favor.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Podrían pasarme con alguien del equipo de atención?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito que me atienda una persona, no el chat automático.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me ayudan a contactar a un agente de servicio?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Prefiero que alguien del equipo me atienda directamente.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿me pasas con alguien de soporte? Ya no quiero seguir con el bot, wey.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿me comunicas con una persona de atención?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me echas la mano para hablar con un asesor ahorita?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me puedes pasar con un agente ahorita? Ya me hice bolas con el bot, la neta.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿me conectas con alguien del equipo de soporte?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, prefiero que me atienda una persona, ¿me pasas con alguien?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me pasan con una persona de soporte pls? ya no kiero hablar con el bot
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: pueden comunicarme con un asesor? el bot no me resuelve nada :/
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero q me atienda alguien real porfa, no el chat automatico
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oye necesito hablar con alguien d atencion, me conectan?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me transfieren con un agente xfa? no puedo con el bot
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: necesito una persona ya, alguien me puede ayudar?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuál es el horario de atención de un agente? No necesito que me transfieran, solo quiero saber
+    cuándo está disponible.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero consultar mi saldo con una persona, no con el bot.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Los asesores atienden los fines de semana? No quiero hablar con uno, solo estoy consultando el
+    horario.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿A qué hora empieza el turno del equipo de soporte? No hace falta que me comuniquen con nadie.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me puede atender un agente para revisar cuánto tengo disponible?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Prefiero que alguien del equipo me ayude a ver el saldo de mi tarjeta.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi la opción para hablar con un asesor, pero solo quiero consultar mi saldo por aquí.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero hablar con una persona para revisar un cargo que no reconozco en mi tarjeta.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito que me pasen con un agente; ¿dónde veo los movimientos de mi tarjeta?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Sé que hay atención con personas, pero solo quiero cambiar mi contraseña desde la app.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me comunican con un asesor? Necesito consultar una compra desconocida.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Prefiero que alguien de atención me ayude con un movimiento que no hice.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero hablar con un agente; prefiero resolverlo por aquí con las opciones automáticas.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco una respuesta a una pregunta frecuente; quiero hablar con una persona.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me comuniquen con una persona, quiero seguir usando el chat automático.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito que me atienda un asesor; voy a intentar solucionarlo desde la app.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito consultar las preguntas comunes, pásame con un agente, por favor.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No vengo por información de ayuda; prefiero que me atienda alguien del equipo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Con alguien
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Una persona, porfa
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Con un asesor
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero hablar con una persona sobre mi tarjeta de crédito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me puedes comunicar con un asesor? Es por mi tarjeta de crédito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito que me atienda alguien para consultar algo de mi tarjeta de crédito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero hablar con una persona sobre mi tarjeta de débito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me puedes comunicar con un asesor? Es por mi tarjeta de débito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito que me atienda alguien para consultar algo de mi tarjeta de débito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
