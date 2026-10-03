@@ -98,6 +98,9 @@ class ReplyFact:
     route: str | None
     degraded: bool
     segments: Sequence[dict[str, Any]]
+    # D24: the path that wrote the reply. A payload without the key (pre-agent
+    # rows) reads as `pipeline`.
+    path: str = "pipeline"
 
 
 @dataclass(frozen=True)
@@ -176,6 +179,8 @@ class InteractionRow:
     cost_nlu_usd: Decimal
     cost_compose_usd: Decimal
     cost_handoff_summary_usd: Decimal
+    cost_agent_usd: Decimal
+    served_by: str  # agent | pipeline | mixed (D24)
     llm_call_count: int
     computed_at: datetime
     metrics_version: int
@@ -304,6 +309,14 @@ def compute_interaction(
     def step_cost(step: str) -> Decimal:
         return costs[step].cost_usd if step in costs else Decimal(0)
 
+    paths = {r.path for r in facts.replies}
+    if paths == {"agent"}:
+        served_by = "agent"
+    elif paths <= {"pipeline"}:  # also no replies at all
+        served_by = "pipeline"
+    else:
+        served_by = "mixed"
+
     row = InteractionRow(
         conversation_id=facts.conversation_id,
         source="real",
@@ -334,6 +347,8 @@ def compute_interaction(
         cost_nlu_usd=step_cost("nlu"),
         cost_compose_usd=step_cost("compose"),
         cost_handoff_summary_usd=step_cost("handoff_summary"),
+        cost_agent_usd=step_cost("agent"),
+        served_by=served_by,
         llm_call_count=sum(c.calls for c in costs.values()),
         computed_at=now,
         metrics_version=METRICS_VERSION,

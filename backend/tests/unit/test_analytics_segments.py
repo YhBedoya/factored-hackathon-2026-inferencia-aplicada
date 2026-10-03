@@ -5,9 +5,18 @@ runner does, with a scripted LLM.
 """
 
 import asyncio
+from datetime import UTC, datetime
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from app.domains.analytics.worker import (
+    ConversationFacts,
+    MessageFact,
+    ReplyFact,
+    StepCost,
+    compute_interaction,
+)
 from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots
@@ -102,3 +111,29 @@ def test_segments_write_flow(fakebank_dir: Path) -> None:
         assert [(s["intent"], s["status"]) for s in unverified] == [("card_block", "handoff")]
 
     asyncio.run(run())
+
+
+def test_served_by_agent_and_agent_cost() -> None:
+    """D24: replies all written by the agent give `served_by == "agent"` and its step cost."""
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    facts = ConversationFacts(
+        conversation_id="c1",
+        status="closed",
+        language="es",
+        channel="web",
+        country_label=None,
+        messages=[
+            MessageFact("customer", "t1", now, "hola"),
+            MessageFact("bot", "t1", now, "hola"),
+        ],
+        replies=[ReplyFact("card_status", False, [], path="agent")],
+        handoffs=[],
+        step_costs={"agent": StepCost(Decimal("0.012"), 2)},
+    )
+
+    computed = compute_interaction(facts, now=now, idle_minutes=30)
+
+    assert computed is not None
+    row, _ = computed
+    assert row.served_by == "agent"
+    assert row.cost_agent_usd == Decimal("0.012")

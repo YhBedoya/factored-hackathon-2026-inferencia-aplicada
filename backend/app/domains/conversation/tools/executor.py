@@ -69,7 +69,13 @@ from app.domains.policy.confirmation import (
     args_hash,
 )
 
-__all__ = ["ConfirmedWriteTools", "IntentAllowlist", "StepUpRule", "call_with_timeout"]
+__all__ = [
+    "ConfirmedWriteTools",
+    "HasPreconditions",
+    "IntentAllowlist",
+    "StepUpRule",
+    "call_with_timeout",
+]
 
 _logger = structlog.get_logger()
 
@@ -83,6 +89,13 @@ IntentAllowlist = Callable[[str, str], bool]
 """`(intent, tool) -> allowed`, built by `policy.tools_policy.tool_allowed`
 from `policies/tools.yaml` (D3). No default, for the same reason as
 `StepUpRule`.
+"""
+
+HasPreconditions = Callable[[str], bool]
+"""`(tool) -> has a preconditions block`, built by
+`policy.tools_policy.has_preconditions`. It gates `issue_plan(intent=None)`
+(D10): the agent path has no intent, so a tool is allowed only if the policy
+file states its preconditions.
 """
 
 _GET_BLOCK_ORIGIN_TOOL = "cards.get_block_origin"
@@ -120,6 +133,7 @@ class ConfirmedWriteTools:
         *,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         timeout_s: float | None = None,
+        has_preconditions: HasPreconditions | None = None,
     ) -> None:
         self._sleep = sleep
         self._timeout_s = timeout_s
@@ -129,10 +143,21 @@ class ConfirmedWriteTools:
         self._requires_step_up = requires_step_up
         self._allowed = allowed
         self._audit = audit
+        self._has_preconditions = has_preconditions
 
-    async def issue_plan(self, steps: Sequence[PlanStep], intent: Intent) -> ConfirmationPlan:
+    async def issue_plan(
+        self, steps: Sequence[PlanStep], intent: Intent | None
+    ) -> ConfirmationPlan:
         for step in steps:
-            if not self._allowed(intent, step.tool):
+            if intent is None:
+                # Agent path (D10): no intent to allowlist, so the tool must carry
+                # preconditions; a missing lookup denies, never allows.
+                permitted = self._has_preconditions is not None and self._has_preconditions(
+                    step.tool
+                )
+            else:
+                permitted = self._allowed(intent, step.tool)
+            if not permitted:
                 await self._record(
                     "rule_hit",
                     {"rule_id": "tool_not_allowed", "tool": step.tool, "intent": intent},

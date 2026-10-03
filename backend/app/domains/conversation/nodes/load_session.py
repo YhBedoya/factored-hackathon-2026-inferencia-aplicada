@@ -16,6 +16,9 @@ treatment through `RESET_SEGMENTS`, so `finish` only ever joins the
 segments this turn's nodes actually wrote; `intent_segments` (the per-intent
 record the runner audits) is reset the same way.
 
+`agent_enabled` is the `AGENT_ENABLED` flag read once per turn (S1 D1); `agent_labels`
+and `agent_code_text` are the agent's per-turn channels and start empty.
+
 `ui` (D16) is reset to `[]` here too: it is a graph-local, non-checkpointed
 channel, so a turn only ever reports the events an emitting node appended
 this turn, never a stale one from an earlier turn.
@@ -85,6 +88,10 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "suggestion_accepted": False,
         "asked_ui": None,
         "non_answer_counted": False,
+        # S1: the flag as read this turn (D1); the agent's per-turn channels start empty.
+        "agent_enabled": get_settings().agent_enabled,
+        "agent_labels": None,
+        "agent_code_text": None,
         "customer_id": session.customer_id,
         "country": profile.country,
         "customer_name": profile.first_name,

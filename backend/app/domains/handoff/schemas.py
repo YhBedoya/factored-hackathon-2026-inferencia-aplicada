@@ -41,6 +41,7 @@ HandoffReason = Literal[
     "tool_failure",
     "llm_unavailable",
     "priority_claim",
+    "agent_round_cap",
 ]
 Priority = Literal["high", "normal"]
 HandoffStatus = Literal["queued", "claimed", "returned"]

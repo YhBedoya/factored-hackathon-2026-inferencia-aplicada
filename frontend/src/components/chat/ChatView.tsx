@@ -22,6 +22,7 @@ import {
 	conversationStore,
 	createConversation,
 	me,
+	postCardSelection,
 	postConfirmation,
 	postMessage,
 	postSelection,
@@ -42,6 +43,7 @@ const KNOWN_ERROR_CODES = new Set([
 	"conversation_closed",
 	"otp_invalid",
 	"confirmation_invalid",
+	"selection_required",
 ]);
 
 // D12: 429 and 5xx are mapped by HTTP status, ahead of the `code` (detail)
@@ -107,10 +109,23 @@ export function ChatView({
 		mode: "bot",
 		agent_display_name: null,
 	});
+	// The multi-card picker is open until its message is answered (D39): the
+	// last `card_picker` is `multi` and not the one the customer submitted.
+	const [usedPickerId, setUsedPickerId] = useState<string | null>(null);
 	const [sessionExpiredOpen, setSessionExpiredOpen] = useState(false);
 	// D8: captured once, on mount, so a later re-login is checked against who
 	// the chat started as, not against a display name that could since change.
 	const [identity, setIdentity] = useState<MeResponse | null>(null);
+
+	const lastPickerMessage = [...messages]
+		.reverse()
+		.find((m) => m.ui.some((e) => e.kind === "card_picker"));
+	const pickerOpen =
+		!!lastPickerMessage &&
+		lastPickerMessage.id !== usedPickerId &&
+		lastPickerMessage.ui.some(
+			(e) => e.kind === "card_picker" && e.payload.multi === true,
+		);
 
 	const connectStream = useCallback((id: string) => {
 		streamCleanupRef.current?.();
@@ -170,6 +185,7 @@ export function ChatView({
 		});
 	}, []);
 
+	const declinedOnMountRef = useRef(false);
 	const createRef = useRef<Promise<string> | null>(null);
 
 	// D2: one create (with the welcome) per empty conversation. The promise is
@@ -213,6 +229,12 @@ export function ChatView({
 	useEffect(() => {
 		if (conversationIdRef.current) {
 			connectStream(conversationIdRef.current);
+			// A reload loses an open multi picker, so the pending offer is
+			// declined once (D39); 409/429 mean there was nothing to decline.
+			if (!declinedOnMountRef.current) {
+				declinedOnMountRef.current = true;
+				postCardSelection(conversationIdRef.current, []).catch(() => {});
+			}
 		} else {
 			startConversation(true).catch(() => {
 				// The lazy `ensureConversation` retries on the first send.
@@ -244,7 +266,25 @@ export function ChatView({
 		setErrorStatus(null);
 	}
 
-	function handleTurnError(err: unknown) {
+	function handleTurnError(err: unknown, typedBubbleId?: string) {
+		if (
+			err instanceof ApiError &&
+			err.status === 409 &&
+			err.code === "selection_required"
+		) {
+			// A typed answer at the picker is refused: drop the bubble. A page
+			// with no picker of its own (second tab) declines the offer.
+			if (typedBubbleId) {
+				setMessages((prev) => prev.filter((m) => m.id !== typedBubbleId));
+			}
+			setComposerDisabled(false);
+			if (!pickerOpen && conversationIdRef.current) {
+				postCardSelection(conversationIdRef.current, []).catch(() => {});
+			}
+			setErrorCode("selection_required");
+			setErrorStatus(409);
+			return;
+		}
 		if (err instanceof ApiError && err.code === "session_replay_dropped") {
 			// D8: `SessionExpiredModal`'s mismatch branch already reset the chat.
 			return;
@@ -263,9 +303,10 @@ export function ChatView({
 	}
 
 	async function handleSend(text: string) {
+		const bubbleId = newId();
 		setMessages((prev) => [
 			...prev,
-			{ id: newId(), role: "customer", text, ui: [] },
+			{ id: bubbleId, role: "customer", text, ui: [] },
 		]);
 		setComposerDisabled(true);
 		clearError();
@@ -273,7 +314,7 @@ export function ChatView({
 			const id = await ensureConversation();
 			await postMessage(id, text);
 		} catch (err) {
-			handleTurnError(err);
+			handleTurnError(err, bubbleId);
 		}
 	}
 
@@ -299,6 +340,22 @@ export function ChatView({
 			setComposerDisabled(true);
 			await postSelection(id, txIds);
 		} catch (err) {
+			handleTurnError(err);
+		}
+	}
+
+	// Like the transaction pick: never a customer bubble. An empty list is the
+	// "No, gracias" decline. A failed post reopens the picker.
+	async function handleCardSelect(cardIds: string[]) {
+		clearError();
+		const pickerId = lastPickerMessage?.id ?? null;
+		setUsedPickerId(pickerId);
+		try {
+			const id = await ensureConversation();
+			setComposerDisabled(true);
+			await postCardSelection(id, cardIds);
+		} catch (err) {
+			setUsedPickerId(null);
 			handleTurnError(err);
 		}
 	}
@@ -361,6 +418,7 @@ export function ChatView({
 				onWidgetSelect={handleSend}
 				onConfirmDecision={handleConfirmDecision}
 				onTransactionSelect={handleTransactionSelect}
+				onCardSelect={handleCardSelect}
 			/>
 			{reconnecting && (
 				<div
@@ -401,7 +459,7 @@ export function ChatView({
 				onMismatch={handleSessionMismatch}
 			/>
 			<Composer
-				disabled={composerDisabled || closed}
+				disabled={composerDisabled || closed || pickerOpen}
 				onSend={handleSend}
 				prefill={prefill}
 			/>

@@ -27,6 +27,7 @@ __all__ = [
     "RESET_FACTS",
     "RESET_INTENT_SEGMENTS",
     "RESET_SEGMENTS",
+    "AgentPlanStep",
     "DeclineState",
     "DisputeState",
     "Fact",
@@ -262,8 +263,19 @@ class TxOfferState(TypedDict):
     `DeclineState.offered_tx_ids`.
     """
 
-    flow: Literal["tx_search", "tx_explain"]
+    flow: Literal["tx_search", "tx_explain", "agent"]
     offered_tx_ids: list[str]
+
+
+class AgentPlanStep(TypedDict):
+    """One step of the agent's open plan, kept so a click on Acepto can rebuild the calls.
+
+    Holds the card id code resolved from a reference (never the model's text) and the
+    action; the block reason is set by code when the call is built (S1 D8).
+    """
+
+    action: Literal["lock", "block"]
+    card_id: str
 
 
 class TurnState(TypedDict):
@@ -289,6 +301,11 @@ class TurnState(TypedDict):
     # The open flow question as it was asked, replayed on a non-answer.
     open_question: NotRequired[OpenQuestion | None]
     confirmation_token_id: NotRequired[str | None]
+    # The agent's open plan, in order (S1 D11); set with the token, cleared with it.
+    agent_plan_steps: NotRequired[list[AgentPlanStep] | None]
+    # Offered ids while paused at `replacement_cards`, then the selected eligible ids;
+    # cleared when the flow ends.
+    replacement_card_ids: NotRequired[list[str] | None]
     facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
     actions: NotRequired[Annotated[list[ActionResult], add]]
     escalation_reason: NotRequired[str | None]

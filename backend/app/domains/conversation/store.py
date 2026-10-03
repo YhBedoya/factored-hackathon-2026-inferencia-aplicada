@@ -56,6 +56,7 @@ class MessageRow(BaseModel):
     turn_id: UUID | None
     role: str
     content: str
+    content_masked: str | None = None
     ui_payload: dict[str, Any] | list[dict[str, Any]] | None
     created_at: datetime
 
@@ -174,7 +175,8 @@ async def list_messages(conversation_id: UUID) -> list[MessageRow]:
         result = await conn.execute(
             text(
                 """
-                SELECT id, conversation_id, turn_id, role, content, ui_payload, created_at
+                SELECT id, conversation_id, turn_id, role, content, content_masked, ui_payload,
+                       created_at
                 FROM app.messages
                 WHERE conversation_id = :conversation_id
                 ORDER BY created_at
@@ -190,6 +192,7 @@ async def list_messages(conversation_id: UUID) -> list[MessageRow]:
             turn_id=row["turn_id"],
             role=row["role"],
             content=decrypt_text(row["content"]),
+            content_masked=row["content_masked"],
             ui_payload=row["ui_payload"],
             created_at=row["created_at"],
         )

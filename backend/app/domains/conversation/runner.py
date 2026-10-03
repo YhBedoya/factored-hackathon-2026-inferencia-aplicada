@@ -54,10 +54,22 @@ from app.core.logging import bind_conversation_id, bind_turn_id
 from app.core.redis import get_redis
 from app.domains.audit.schemas import AuditType
 from app.domains.conversation import fact_values, store
-from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TurnInput, TxSelection
+from app.domains.conversation.graph import (
+    CardSelection,
+    ConfirmationDecision,
+    DebugInfo,
+    TurnInput,
+    TxSelection,
+)
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
-from app.domains.conversation.state import DeclineState, DisputeState, Pending, TxOfferState
+from app.domains.conversation.state import (
+    DeclineState,
+    DisputeState,
+    HistoryMessage,
+    Pending,
+    TxOfferState,
+)
 from app.domains.conversation.tools import registry
 from app.domains.conversation.tools.handoff import ServiceHandoffTools
 from app.domains.conversation.ui import UIEvent
@@ -77,7 +89,8 @@ _LOCK_TTL_SECONDS = 120
 # Mirrors `graph._BRANCH_NODES`, not imported (same "mirror, not import"
 # convention `registry.RecordingBankTools` set for the sandbox's recorder):
 # this module's job is to drive a hosted graph, not to reach into another
-# module's private constant.
+# module's private constant. `agent` is not in it on purpose: an agent turn's
+# route is `agent_labels["route"]`, read from the node's update below.
 _BRANCH_NODES = (
     "card_info",
     "card_block",
@@ -97,16 +110,28 @@ _BRANCH_NODES = (
 
 async def _introduced_seed(
     graph: Any, config: RunnableConfig, conversation_id: UUID
-) -> dict[str, bool]:
-    """D10: `{"introduced": True}` when the welcome (a stored bot message, kept
-    out of the graph's history, D8) already introduced Cardy and the checkpoint
-    hasn't recorded it yet; `{}` otherwise.
+) -> dict[str, Any]:
+    """D10: on a conversation's first graph turn, when the welcome (a stored bot
+    message) already introduced Cardy, seed `introduced=True` and put the
+    welcome's masked text at the head of `history`, so the model sees how the
+    conversation opened (amends naturalidad-cardy D8). `{}` otherwise.
     """
     checkpoint = await graph.aget_state(config)
     if "introduced" in checkpoint.values:
         return {}
     rows = await store.list_messages(conversation_id)
-    return {"introduced": True} if any(row.role == "bot" for row in rows) else {}
+    welcome: list[HistoryMessage] = []
+    for row in rows:
+        if row.role != "bot":
+            break
+        if row.content_masked:
+            welcome.append({"role": "cardy", "text": row.content_masked})
+    if not any(row.role == "bot" for row in rows):
+        return {}
+    seed: dict[str, Any] = {"introduced": True}
+    if welcome:
+        seed["history"] = [*welcome, *(checkpoint.values.get("history") or [])]
+    return seed
 
 
 _RELEASE_LOCK_SCRIPT = """
@@ -133,17 +158,24 @@ async def start_turn(
     resume: Literal["step_up"] | None = None,
     confirmation: ConfirmationDecision | None = None,
     selection: TxSelection | None = None,
+    card_selection: CardSelection | None = None,
 ) -> UUID:
     """Take the turn lock, persist the customer message (only when `text` is
     set, D6), and schedule the turn task. Exactly one of `text`, `resume`,
-    `confirmation` or `selection` must be set -- `ValueError` otherwise.
-    `selection` (D4-B D7) is never persisted as a message, same as `resume`
-    and `confirmation`: the route's own D7 gate is the injection guard, not
-    this function. Raises `TurnInProgress` (nothing persisted) if the lock
-    is already held.
+    `confirmation`, `selection` or `card_selection` must be set -- `ValueError`
+    otherwise. `selection` (D4-B D7) and `card_selection` (replacement picker)
+    are never persisted as a message, same as `resume` and `confirmation`:
+    the route's own D7 gate is the injection guard, not this function.
+    Raises `TurnInProgress` (nothing persisted) if the lock is already held.
     """
-    if sum(value is not None for value in (text, resume, confirmation, selection)) != 1:
-        raise ValueError("start_turn takes exactly one of text, resume, confirmation or selection")
+    if (
+        sum(value is not None for value in (text, resume, confirmation, selection, card_selection))
+        != 1
+    ):
+        raise ValueError(
+            "start_turn takes exactly one of text, resume, confirmation, selection, "
+            "or card_selection"
+        )
 
     turn_id = uuid4()
     lock_key = f"turn:{conversation_id}"
@@ -184,6 +216,7 @@ async def start_turn(
             resume=resume,
             confirmation=confirmation,
             selection=selection,
+            card_selection=card_selection,
             trace_id=trace_id,
         )
     )
@@ -223,7 +256,7 @@ async def checkpointed_offer(
     "is a transaction list actually open", "what ids did it offer" and "how
     many can be picked". Reads `decline` (multi `False`) when
     `pending["flow"] == "decline_explain"`, `tx_offer` (multi `False`, this
-    card's B1) when the flow is `tx_search` or `tx_explain`, else `dispute`
+    card's B1) when the flow is `tx_search`, `tx_explain` or `agent`, else `dispute`
     (multi `True`, D4-B's shape) -- none of these flows ever share a
     checkpoint slot (`state.py`'s `DeclineState`/`DisputeState`/
     `TxOfferState`). `(None, set(), True)` on a conversation with no
@@ -235,13 +268,27 @@ async def checkpointed_offer(
         decline: DeclineState | None = state.values.get("decline")
         offered = set(decline["offered_tx_ids"]) if decline is not None else set()
         return pending, offered, False
-    if pending is not None and pending["flow"] in {"tx_search", "tx_explain"}:
+    if pending is not None and pending["flow"] in {"tx_search", "tx_explain", "agent"}:
         tx_offer: TxOfferState | None = state.values.get("tx_offer")
         offered = set(tx_offer["offered_tx_ids"]) if tx_offer is not None else set()
         return pending, offered, False
     dispute: DisputeState | None = state.values.get("dispute")
     offered = set(dispute["offered_tx_ids"]) if dispute is not None else set()
     return pending, offered, True
+
+
+async def checkpointed_replacement_offer(
+    host: TurnHost, conversation_id: UUID
+) -> tuple[Pending | None, set[str]]:
+    """This conversation's last-checkpointed `pending` and the card ids its
+    replacement picker offered (`replacement_card_ids`; empty when the offer
+    was a single card or nothing is offered). The route's gate for a
+    `card_selection` body and for typed text at the `replacement_cards`
+    pause, same read as `checkpointed_offer`.
+    """
+    state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
+    pending: Pending | None = state.values.get("pending")
+    return pending, set(state.values.get("replacement_card_ids") or [])
 
 
 _GROUNDING_RANK = {"ok": 0, "regenerated": 1, "template": 2}
@@ -278,6 +325,7 @@ async def _run_turn(
     confirmation: ConfirmationDecision | None,
     selection: TxSelection | None,
     trace_id: str,
+    card_selection: CardSelection | None = None,
 ) -> None:
     lock_key = f"turn:{conversation_id}"
     # `text` is the raw typed text (relay echo only); the graph gets `graph_text`.
@@ -333,6 +381,11 @@ async def _run_turn(
         # text) marks the whole turn (ADR-032).
         degraded = False
         nlu_degraded = False
+        # `path` of `reply_sent`: "agent" when the agent node ran and `understand`
+        # did not (a pass or a degraded agent turn falls through to the pipeline).
+        agent_ran = False
+        agent_plan_ran = False
+        understand_ran = False
 
         grounding_outcome: str | None = None
         # This turn's fact provenance (`Fact.source`), recorded on
@@ -347,9 +400,13 @@ async def _run_turn(
                 "confirmation": confirmation,
                 "resume": resume,
                 "selection": selection,
+                "card_selection": card_selection,
             }
-            if await _introduced_seed(host.graph, config, conversation_id):
+            seed = await _introduced_seed(host.graph, config, conversation_id)
+            if seed.get("introduced"):
                 graph_input["introduced"] = True
+            if "history" in seed:
+                graph_input["history"] = seed["history"]
             async for update in host.graph.astream(
                 graph_input,
                 config=config,
@@ -375,7 +432,34 @@ async def _run_turn(
                         degraded = True
                     if node_name == "handoff" and values.get("handoff_id") is not None:
                         handed_off = True
-                    if node_name == "understand":
+                    if node_name == "agent_plan":
+                        # A button turn (Acepto / No acepto, or a stale click). It
+                        # carries no labels: `agent` follows with them, or the turn
+                        # ends in `finish` / `handoff` (see after the loop).
+                        agent_ran = True
+                        agent_plan_ran = True
+                    elif node_name == "agent":
+                        agent_ran = True
+                        labels = values.get("agent_labels")
+                        if labels:
+                            language = (
+                                labels["language"]
+                                if labels["language"] in ("es", "pt")
+                                else language
+                            )
+                            await _record(
+                                "nlu_result",
+                                {
+                                    "language": labels["language"],
+                                    "status": labels["status"],
+                                    "intents": list(labels["intents"]),
+                                    "source": "agent",
+                                },
+                            )
+                            if route_taken is None:
+                                route_taken = labels["route"]
+                    elif node_name == "understand":
+                        understand_ran = True
                         nlu = values.get("nlu")
                         nlu_degraded = bool(values.get("degraded"))
                         language = values.get("language", language)
@@ -402,11 +486,18 @@ async def _run_turn(
                     escalation_reason = values.get("escalation_reason")
                     if escalation_reason is not None:
                         await _record("rule_hit", {"rule_id": escalation_reason})
-                if node_name == "compose":
-                    outcome = values.get("grounding")
+                if node_name in ("compose", "agent"):
+                    outcome = (values or {}).get("grounding")
                     if outcome is not None:
                         # Worst of the turn (D32); the channel is last-write-wins.
                         grounding_outcome = _worse_grounding(grounding_outcome, outcome)
+
+        if agent_ran and handed_off:
+            route_taken = "handoff"
+        elif agent_plan_ran and route_taken is None:
+            # Stale click (old token): `agent_plan` -> `finish`, no labels. The
+            # plan is a card-block plan, so the turn is recorded as that route.
+            route_taken = "card_block"
 
         for event in ui:
             await events.publish(conversation_id, "ui", event.model_dump(mode="json"))
@@ -434,6 +525,7 @@ async def _run_turn(
             "reply_sent",
             {
                 "route": route_taken or "fallback",
+                "path": "agent" if agent_ran and not understand_ran else "pipeline",
                 "ui_kinds": [event.kind for event in ui],
                 "length": len(reply),
                 "degraded": degraded,

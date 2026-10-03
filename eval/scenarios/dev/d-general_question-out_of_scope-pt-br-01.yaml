@@ -1,0 +1,32 @@
+seed_id: d-general_question-out_of_scope-pt-br-01
+intent: general_question
+category: unsupported
+persona: CLI-H24P25YVOAJY
+goal: Perguntar sobre algo fora do escopo de cartões
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools:
+  - cards.lock_card
+  - cards.block_card
+  - cards.unlock_card
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-general_question-out_of_scope-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Qual a previsão do tempo para amanhã?
+  reviewer: null
+  reviewed_at: null

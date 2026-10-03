@@ -15,6 +15,7 @@ The PT texts are team-generated and pending review by a native speaker.
 """
 
 import random
+import re
 from typing import Literal, Protocol
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "TemplateKind",
     "get_template",
     "template_variants",
+    "without_closing_question",
 ]
 
 Language = Literal["es", "pt"]
@@ -63,6 +65,12 @@ TemplateKind = Literal[
     "not_blocked",
     "block_permanent_no_undo",
     "offer_replacement",
+    "offer_replacement_multi",
+    "replacement_card_not_eligible",
+    "replacement_declined_multi",
+    "address_confirm_multi",
+    "address_ask_multi",
+    "action_confirm_multi",
     "offer_unlock",
     "offer_human",
     "replacement_needs_block",
@@ -674,6 +682,48 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
         "pt": "Enviamos seu novo cartão para {address_masked}?",
     },
     # D4/D13: asks for a new delivery address; the raw text never reaches the LLM.
+    # D37: replacement for several blocked cards.
+    "offer_replacement_multi": {
+        "es": (
+            "¿Quieres pedir una tarjeta nueva para alguna de las que bloqueamos? "
+            "Elige las que quieras reemplazar."
+        ),
+        "pt": (
+            "Quer pedir um cartão novo para algum dos que bloqueamos? "
+            "Escolha os que quer substituir."
+        ),
+    },
+    "replacement_card_not_eligible": {
+        "es": (
+            "La tarjeta {card_mask} no cumple las condiciones para reemplazarla; "
+            "sigo con las demás."
+        ),
+        "pt": (
+            "O cartão {card_mask} não cumpre as condições para ser substituído; sigo com os demais."
+        ),
+    },
+    "replacement_declined_multi": {
+        "es": ("Entendido, no pido tarjetas nuevas por ahora. Aquí estoy si cambias de idea."),
+        "pt": ("Entendido, não peço cartões novos por enquanto. Estou aqui se mudar de ideia."),
+    },
+    "address_confirm_multi": {
+        "es": ("¿Enviamos tus tarjetas nuevas a {address_masked}?"),
+        "pt": ("Enviamos seus cartões novos para {address_masked}?"),
+    },
+    "address_ask_multi": {
+        "es": ("Cuéntame la dirección completa a la que quieres que enviemos tus tarjetas nuevas."),
+        "pt": ("Me diga o endereço completo para onde quer que enviemos seus cartões novos."),
+    },
+    "action_confirm_multi": {
+        "es": (
+            "Voy a pedir una tarjeta nueva para cada una de las tarjetas de abajo. "
+            "Las vas a recibir en los próximos días en la dirección que confirmamos. ¿Confirmas?"
+        ),
+        "pt": (
+            "Vou pedir um cartão novo para cada um dos cartões abaixo. "
+            "Você vai recebê-los nos próximos dias no endereço que confirmamos. Confirma?"
+        ),
+    },
     "address_ask": {
         "es": "Cuéntame la dirección completa a la que quieres que enviemos tu tarjeta nueva.",
         "pt": "Me diga o endereço completo para onde quer que enviemos seu novo cartão.",
@@ -1543,3 +1593,13 @@ def get_template(kind: TemplateKind, language: Language, rng: _Rng | None = None
     if isinstance(value, str):
         return value
     return (rng or _RNG).choice(value)
+
+
+# Cardy's last sentence when it is a question ("¿Te ayudo con algo más?").
+_TRAILING_QUESTION = re.compile(r"\s*(?:(?<=[.!?\n])|^)\s*¿?[^.!?¿\n]*\?\s*$")
+
+
+def without_closing_question(text: str) -> str:
+    """Drop a trailing question sentence; code appends its own closing question next."""
+    stripped = _TRAILING_QUESTION.sub("", text).rstrip()
+    return stripped or text

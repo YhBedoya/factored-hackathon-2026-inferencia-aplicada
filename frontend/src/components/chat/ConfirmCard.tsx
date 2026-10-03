@@ -25,6 +25,7 @@ type ConfirmCardProps = {
 export function ConfirmCard({ payload, onDecide }: ConfirmCardProps) {
 	const { t } = useI18n();
 	const [disabled, setDisabled] = useState(false);
+	const acceptDecline = payload.labels === "accept_decline";
 
 	function handleDecide(decision: ConfirmationDecision) {
 		setDisabled(true);
@@ -60,7 +61,7 @@ export function ConfirmCard({ payload, onDecide }: ConfirmCardProps) {
 					disabled={disabled}
 					onClick={() => handleDecide("confirm")}
 				>
-					{t("confirm.confirm")}
+					{t(acceptDecline ? "confirm.accept" : "confirm.confirm")}
 				</Button>
 				<Button
 					type="button"
@@ -69,7 +70,7 @@ export function ConfirmCard({ payload, onDecide }: ConfirmCardProps) {
 					disabled={disabled}
 					onClick={() => handleDecide("cancel")}
 				>
-					{t("confirm.cancel")}
+					{t(acceptDecline ? "confirm.decline" : "confirm.cancel")}
 				</Button>
 			</CardFooter>
 		</Card>

@@ -64,7 +64,7 @@ from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
 from app.domains.policy.registry import get_policies
-from app.domains.policy.tools_policy import step_up_rule, tool_allowed
+from app.domains.policy.tools_policy import has_preconditions, step_up_rule, tool_allowed
 from app.domains.safety.vault import InMemoryPiiVault, PiiVault
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
@@ -237,6 +237,7 @@ def _build_session(customer_id: str, data_dir: Path) -> _SandboxSession:
         step_up_rule(bundle.tools),
         tool_allowed(bundle.tools),
         NullAuditRecorder(),
+        has_preconditions=has_preconditions(bundle.tools),
     )
 
     llm: LLMClient = get_llm_client()

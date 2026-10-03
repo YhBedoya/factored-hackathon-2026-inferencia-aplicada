@@ -4,7 +4,7 @@ These are the only exceptions callers of `LLMClient.structured` need to
 handle; a provider's own exception types never escape `core/llm`.
 """
 
-__all__ = ["LLMError", "LLMInvalidOutput", "LLMUnavailable", "LLMUnmaskedInput"]
+__all__ = ["LLMError", "LLMInvalidOutput", "LLMRoundCap", "LLMUnavailable", "LLMUnmaskedInput"]
 
 
 class LLMError(Exception):
@@ -21,3 +21,7 @@ class LLMInvalidOutput(LLMError):
 
 class LLMUnmaskedInput(LLMError):
     """R5: the prompt still held raw PII, so no provider call was made. See D8."""
+
+
+class LLMRoundCap(LLMError):
+    """`tool_loop` used up `max_rounds` and the model still asked for another tool."""

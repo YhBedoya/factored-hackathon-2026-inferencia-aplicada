@@ -9,9 +9,9 @@
 | R3 | The bot never reports an action as done without a verified read-back | D2.5 | `ActionResult.verified` required by the composer + eval check |
 | R4 | Money, dates and card masks are formatted in code and inserted through placeholders. The LLM never writes them | Correctness, localization | Composer grounding check (every number must come from facts) |
 | R5 | Only tokenized text goes to the LLM provider (Anthropic API during the build, then Bedrock; ADR-028) or Langfuse | B3 | `core/llm` client refuses un-masked input (`app.core.pii` detectors, `find_pii`) + Langfuse `mask` hook + unit tests |
-| R6 | Tool output enters prompts only inside data fences, and LLM nodes that read tool output have **no write tools** | Injection | Graph construction test + adversarial eval suite |
+| R6 | Tool output enters prompts only inside data fences, and an LLM node that reads tool output may propose a plan and never executes a write; it holds no executing tool and never sees a token | Injection | Graph construction test + adversarial eval suite |
 | R7 | Every LLM call pins the model ID, prompt version and temperature (where the model accepts one), and is traced (Langfuse + audit `llm_calls`) | E2, D6.1 | `core/llm` is the only way to call an LLM provider (import-linter) |
-| R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions | B7, D3.4 | Startup validation + code review |
+| R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions. The agent path is gated by a tool's `preconditions` and passes no intent; `allowed_intents` stays for the flows | B7, D3.4 | Startup validation + code review |
 | R9 | The held-out suite is frozen. Nobody tunes prompts or flows against it | D5.1, D4.8 | Suite hash in the repo + CI check that held-out files are unchanged |
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
 | R11 | Bounded retries only: 2 retries with backoff, then the degraded path, then safe fallback + handoff (ADR-032). Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |

@@ -14,12 +14,13 @@ import httpx
 import pytest
 from anthropic import APIConnectionError, BadRequestError
 from langchain_aws import ChatBedrockConverse
+from langchain_core.messages import AIMessage
 from pydantic import BaseModel, ConfigDict
 from structlog.testing import capture_logs
 
 from app.core.config import get_settings
-from app.core.llm.client import StructuredLLMClient, build_chat_model
-from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable
+from app.core.llm.client import LoopMessage, LoopTool, StructuredLLMClient, build_chat_model
+from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable, LLMUnmaskedInput
 from app.core.llm.registry import MODEL_REGISTRY, PromptRef
 from app.core.llm.settings import LLMSettings
 from app.core.llm.sink import LLMCallRecord
@@ -257,3 +258,46 @@ def test_provider_switch_is_local(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert isinstance(model, ChatBedrockConverse)
     assert model.model_id == MODEL_REGISTRY["nlu"]["bedrock"]
+
+
+class _Lookup(BaseModel):
+    q: str
+
+
+class _ToolStubChatModel:
+    """Chat model for `tool_loop`: replays AI messages and counts provider calls."""
+
+    def __init__(self, replies: list[AIMessage]) -> None:
+        self.replies = list(replies)
+        self.calls = 0
+
+    def bind_tools(self, tools: Any, **kwargs: Any) -> "_ToolStubChatModel":
+        return self
+
+    async def ainvoke(self, messages: Any) -> AIMessage:
+        self.calls += 1
+        return self.replies.pop(0)
+
+
+def test_r5_tool_loop_refuses_unmasked_tool_result() -> None:
+    """R5: a raw email in a tool result stops the loop before the second provider call."""
+    ask = AIMessage(content="", tool_calls=[{"name": "lookup", "args": {"q": "x"}, "id": "t1"}])
+    stub = _ToolStubChatModel([ask, ask])
+
+    async def leak(_: BaseModel) -> str:
+        return "contact: ana.perez@example.com"
+
+    client = StructuredLLMClient(_settings(), chat_model_factory=lambda s, step: stub)  # type: ignore[arg-type]
+    with pytest.raises(LLMUnmaskedInput):
+        asyncio.run(
+            client.tool_loop(
+                step="agent",
+                prompt=PromptRef("agent", 1),
+                system="sys",
+                messages=[LoopMessage("user", "hola")],
+                tools=[LoopTool("lookup", "look up", _Lookup, leak)],
+                schema=_Echo,
+                max_rounds=3,
+            )
+        )
+    assert stub.calls == 1

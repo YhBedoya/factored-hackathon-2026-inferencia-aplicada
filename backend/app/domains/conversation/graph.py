@@ -77,6 +77,7 @@ from app.domains.conversation.fact_values import record
 from app.domains.conversation.intent_registry import intent_nodes, management_intents
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import (
+    HistoryMessage,
     IntentSegment,
     SegmentStatus,
     TurnState,
@@ -87,10 +88,11 @@ from app.domains.conversation.state import (
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import UIEvent
 from app.domains.handoff.schemas import HandoffReason
-from app.domains.policy.escalation import rule_queue
+from app.domains.policy.escalation import legal_hit, rule_queue
 from app.domains.policy.registry import get_policies
 
 __all__ = [
+    "CardSelection",
     "ConfirmationDecision",
     "DebugInfo",
     "GraphState",
@@ -123,6 +125,26 @@ class TxSelection(BaseModel):
         return value
 
 
+class CardSelection(BaseModel):
+    """The replacement picker's input: which cards the customer chose to replace.
+
+    Empty is allowed ("none of these"). The route checks the ids against the
+    offered ones (`409 selection_invalid`) and the flow checks them again; this
+    model only enforces the input's own shape: at most 10 ids, no duplicate.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    card_ids: list[str] = Field(max_length=10)
+
+    @field_validator("card_ids")
+    @classmethod
+    def _unique(cls, value: list[str]) -> list[str]:
+        if len(set(value)) != len(value):
+            raise ValueError("card_ids must be unique")
+        return value
+
+
 class ConfirmationDecision(BaseModel):
     """The button-resume input for a paused plan (D17, `04` §3).
 
@@ -149,14 +171,18 @@ class TurnInput(TypedDict):
     `unrecognized_charge`'s pick step: every caller passes it explicitly
     (`None` otherwise), and when it is set (and the checkpoint is actually
     paused on it) `_entry` skips `understand` too -- the pick is never run
-    through NLU, and never saved as a customer message.
+    through NLU, and never saved as a customer message. `card_selection` is the
+    same again for the replacement picker: passed explicitly every turn (`None`
+    otherwise), never run through NLU.
     """
 
     user_text: str
     confirmation: NotRequired[ConfirmationDecision | None]
     resume: NotRequired[Literal["step_up"] | None]
     selection: NotRequired[TxSelection | None]
+    card_selection: NotRequired[CardSelection | None]
     introduced: NotRequired[bool]
+    history: NotRequired[list[HistoryMessage]]
 
 
 class TurnOutput(TypedDict):
@@ -201,6 +227,7 @@ class GraphState(TurnState):
     confirmation: NotRequired[ConfirmationDecision | None]
     resume: NotRequired[Literal["step_up"] | None]
     selection: NotRequired[TxSelection | None]
+    card_selection: NotRequired[CardSelection | None]
     ui: NotRequired[list[UIEvent]]
     segments: NotRequired[Annotated[list[str], _reduce_segments]]
     intent_segments: NotRequired[Annotated[list[IntentSegment], _reduce_intent_segments]]
@@ -219,6 +246,18 @@ class GraphState(TurnState):
     # `finish` doesn't reset `non_answer_failures` on that turn. Never checkpointed state.
     asked_ui: NotRequired[list[UIEvent] | None]
     non_answer_counted: NotRequired[bool]
+    # S1 agent: per-turn, reset by `load_session`, never checkpointed state.
+    # `agent_enabled` is the flag as read this turn; `agent_labels` is the agent
+    # turn's `{language, status, intents, route}` for the runner's audit;
+    # `agent_code_text` is code text that replaces Cardy's reply.
+    agent_enabled: NotRequired[bool]
+    agent_labels: NotRequired[dict[str, Any] | None]
+    agent_code_text: NotRequired[str | None]
+    # Written with `agent_code_text` by `agent_plan`; read only on that same turn.
+    agent_plan_result: NotRequired[dict[str, Any] | None]
+    # Written by `agent_plan` on a verified Acepto turn, read and cleared by the agent
+    # node; only meaningful when `agent_code_text` is set. Not reset in `load_session`.
+    agent_offer: NotRequired[dict[str, Any] | None]
 
 
 class DebugInfo(BaseModel):
@@ -252,6 +291,7 @@ _BRANCH_NODES = (
     "abstain",
     "handoff_summary",
     "relay_to_agent",
+    "agent",
 )
 
 _MANAGEMENT_INTENTS: frozenset[Intent] = cast("frozenset[Intent]", management_intents())
@@ -292,6 +332,80 @@ def _entry(state: GraphState) -> str:
 
     A conversation in human mode goes to `relay_to_agent` before any other
     check (D7): the bot stays silent while an agent owns the conversation.
+    Then the kill switch's failure reason (D10) beats everything else.
+
+    With `AGENT_ENABLED` on, `_routes_to_agent` decides the rest (S1 D6, D7):
+    a typed turn it accepts goes to `summarize` and on to `agent`, and a pick on
+    a list the agent offered goes straight to `agent`. Everything else is
+    `_pipeline_entry`, where a button or step-up with no pipeline pause open is
+    `smalltalk`'s stale click: no LLM runs on a turn without text.
+    """
+    if state.get("mode") == "human":
+        return "relay_to_agent"
+    if state.get("escalation_reason") == "llm_unavailable":
+        return "fallback"
+    if _agent_plan_click(state):
+        return "agent_plan"
+    if _routes_to_agent(state):
+        return "agent" if state.get("selection") is not None else "summarize"
+    return _pipeline_entry(state)
+
+
+def _agent_plan_click(state: GraphState) -> bool:
+    """A button decision while an agent plan is open (S1 D12): only a click reaches
+    `agent_plan`; a typed "si" goes to the agent like any text."""
+    pending = state.get("pending")
+    return bool(
+        state.get("agent_enabled")
+        and state.get("confirmation") is not None
+        and pending is not None
+        and pending["flow"] == "agent"
+        and pending["awaiting_slot"] == "confirmation"
+    )
+
+
+def _legal_hit(state: GraphState) -> bool:
+    return legal_hit(state.get("user_text", ""), get_policies().escalation)
+
+
+def _pipeline_question(state: GraphState) -> bool:
+    """A flow question a pipeline flow left open (S0 D1): not the agent's pause and
+    not the `anything_else` closing."""
+    pending = state.get("pending")
+    return (
+        pending is not None
+        and pending["flow"] != "agent"
+        and pending["awaiting_slot"] != "anything_else"
+    )
+
+
+def _routes_to_agent(state: GraphState) -> bool:
+    """True when this turn is the agent's (S1 D6, D7; `02` §3 routing table).
+
+    Not with the flag off, on a degraded turn (`LLM_DISABLED` never enters the
+    agent, D4), on a legal keyword (today's handoff path), or while a pipeline
+    flow's question is open (every later turn skips the agent, D7). A pick
+    counts only on the list the agent offered; a button or a step-up resume
+    never does yet.
+    """
+    if not state.get("agent_enabled") or state.get("degraded"):
+        return False
+    if _legal_hit(state) or _pipeline_question(state):
+        return False
+    if state.get("selection") is not None:
+        pending = state.get("pending")
+        return (
+            pending is not None
+            and pending["flow"] == "agent"
+            and pending["awaiting_slot"] == "transactions"
+        )
+    if state.get("confirmation") is not None or state.get("resume") is not None:
+        return False
+    return bool(state.get("user_text"))
+
+
+def _pipeline_entry(state: GraphState) -> str:
+    """Today's routing after the human-mode and kill-switch checks.
 
     Four of this turn's shapes skip `understand` entirely (no LLM call): a
     transaction pick, a button confirmation, a step-up resume, and (once a
@@ -304,14 +418,24 @@ def _entry(state: GraphState) -> str:
     resume. `_FLOW_NODES[pending["flow"]]` (D5-B, generalized from a
     hard-coded `unrecognized_charge`) is what lets `decline_explain`'s own
     single-pick share this same routing.
+
+    S1 D27: a pause the agent left (`flow: "agent"`) is no pause here, so with
+    the flag off (or a turn the agent does not take) a button or pick is a
+    stale click and a typed message goes to `understand`.
+
+    Replacement picker: a `card_selection` with the `replacement_cards` pause
+    open goes to that flow's node, any other one is `smalltalk`'s (stale). A
+    typed turn at that pause also goes to the flow node (it re-sends the offer
+    and keeps the pause; no LLM call).
     """
-    if state.get("mode") == "human":
-        return "relay_to_agent"
-    # D10: the kill switch (or a failure `load_session` already saw) beats
-    # steps 0-3, so typed, button, step-up and pick turns all fall back.
-    if state.get("escalation_reason") == "llm_unavailable":
-        return "fallback"
     pending = state.get("pending")
+    if pending is not None and pending["flow"] == "agent":
+        pending = None
+    awaiting_cards = pending is not None and pending["awaiting_slot"] == "replacement_cards"
+    if state.get("card_selection") is not None:
+        if pending is not None and awaiting_cards:
+            return _FLOW_NODES[pending["flow"]]
+        return "smalltalk"
     selection = state.get("selection")
     if selection is not None:
         if pending is not None and pending["awaiting_slot"] == "transactions":
@@ -328,7 +452,40 @@ def _entry(state: GraphState) -> str:
         return "smalltalk"
     if pending is not None and pending["awaiting_slot"] == "address":
         return _FLOW_NODES[pending["flow"]]
+    if pending is not None and awaiting_cards:
+        return _FLOW_NODES[pending["flow"]]
     return "understand"
+
+
+def _after_summarize(state: GraphState) -> str:
+    """Conditional edge after `summarize`: the agent when `_routes_to_agent` says so,
+    else `understand`, exactly as the plain edge did."""
+    return "agent" if _routes_to_agent(state) else "understand"
+
+
+def _after_agent(state: GraphState) -> str:
+    """Conditional edge after `agent` (S1 D3, D4, D7, R11): a handoff reason goes to
+    `handoff_summary`, a tool failure to `fallback`; a reply (a segment) ends the
+    turn; no reply is a passed turn or a degraded one, and the pipeline takes it.
+    """
+    reason = state.get("escalation_reason")
+    if reason == "agent_round_cap" or state.get("handoff_queue") is not None:
+        return "handoff_summary"
+    if reason in _FAILURE_REASONS:
+        return "fallback"
+    return "finish" if state.get("segments") else "understand"
+
+
+def _after_agent_plan(state: GraphState) -> str:
+    """Conditional edge after `agent_plan` (S1 D14, D15): a failed step is a handoff
+    (or a tool failure) exactly as a flow's; otherwise the agent words the result,
+    and a stale click just ends the turn with the reminder and the card."""
+    reason = state.get("escalation_reason")
+    if reason in _FAILURE_REASONS:
+        return "fallback"
+    if reason is not None or state.get("handoff_queue") is not None:
+        return "handoff_summary"
+    return "agent" if state.get("agent_code_text") is not None else "finish"
 
 
 def _dispatch(state: GraphState) -> str:
@@ -648,6 +805,8 @@ def build_graph(
     `compose`, `handoff_summary` and `abstain`'s wording -- for LLM-free
     ones. Tools, policy, flows and graph shape stay identical.
     """
+    from app.domains.conversation.agent.confirm import agent_plan
+    from app.domains.conversation.agent.node import agent
     from app.domains.conversation.baseline.template_compose import (
         baseline_abstain,
         baseline_compose,
@@ -687,7 +846,31 @@ def build_graph(
     # The baseline never summarizes (D17): it has no LLM and no memory.
     if not baseline:
         graph.add_node("summarize", summarize)
-        graph.add_edge("summarize", "understand")
+        graph.add_node("agent", _guard_access(agent))
+        graph.add_node("agent_plan", _guard_access(agent_plan))
+        graph.add_conditional_edges(
+            "agent_plan",
+            _after_agent_plan,
+            {
+                "agent": "agent",
+                "finish": "finish",
+                "fallback": "fallback",
+                "handoff_summary": "handoff_summary",
+            },
+        )
+        graph.add_conditional_edges(
+            "summarize", _after_summarize, {"agent": "agent", "understand": "understand"}
+        )
+        graph.add_conditional_edges(
+            "agent",
+            _after_agent,
+            {
+                "finish": "finish",
+                "understand": "understand",
+                "fallback": "fallback",
+                "handoff_summary": "handoff_summary",
+            },
+        )
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
     graph.add_node(
@@ -753,6 +936,10 @@ def build_graph(
         _entry,
         {
             "understand": "understand" if baseline else "summarize",
+            # The agent exists on the proposed system only (D17 baseline has no LLM).
+            "summarize": "understand" if baseline else "summarize",
+            "agent": "understand" if baseline else "agent",
+            "agent_plan": "smalltalk" if baseline else "agent_plan",
             "relay_to_agent": "relay_to_agent",
             "fallback": "fallback",
             "smalltalk": "smalltalk",
@@ -943,6 +1130,7 @@ async def run_turn(
     confirmation: ConfirmationDecision | None = None,
     resume: Literal["step_up"] | None = None,
     selection: TxSelection | None = None,
+    card_selection: CardSelection | None = None,
 ) -> tuple[str, DebugInfo]:
     """Run one turn and build its debug line (D9, D20, `07` §1).
 
@@ -962,11 +1150,21 @@ async def run_turn(
     ui_kinds: list[str] = []
 
     async for update in graph.astream(
-        {"user_text": text, "confirmation": confirmation, "resume": resume, "selection": selection},
+        {
+            "user_text": text,
+            "confirmation": confirmation,
+            "resume": resume,
+            "selection": selection,
+            "card_selection": card_selection,
+        },
         config=config,
         stream_mode="updates",
     ):
         for node_name, values in update.items():
+            # A passed or degraded agent turn is not the agent's: the pipeline that
+            # takes it names the route. Only a replying agent turn does.
+            if node_name == "agent" and not (values or {}).get("agent_labels"):
+                continue
             # A node whose returned update is empty (e.g. `next_intent` with
             # nothing left to pop) streams as `None`, not `{}` (D20).
             # `relay_to_agent` returns `{}` too, and it is still the route.

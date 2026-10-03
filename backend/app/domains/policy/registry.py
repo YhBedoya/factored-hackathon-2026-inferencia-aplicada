@@ -2,8 +2,8 @@
 each one and combines them into a single hash that reaches every downstream
 decision (spec D1, D2, R8).
 
-`tools`, `escalation`, `min_payment`, `scope`, `disputes`, `decline_codes`
-and `transaction_states` are validated against their own domain models --
+`tools`, `escalation`, `min_payment`, `scope`, `playbooks`, `disputes`,
+`decline_codes` and `transaction_states` are validated against their own domain models --
 the same ones their existing per-file loaders (`tools_policy.py`,
 `escalation.py`, `min_payment.py`, `scope.py`, `disputes.py`,
 `decline_codes.py`, `transaction_states.py`) use. This module doesn't
@@ -30,6 +30,7 @@ from app.domains.policy.decline_codes import DeclineCodesPolicy
 from app.domains.policy.disputes import DisputesPolicy
 from app.domains.policy.escalation import EscalationPolicy
 from app.domains.policy.min_payment import MinPaymentPolicy
+from app.domains.policy.playbooks import PlaybooksPolicy
 from app.domains.policy.scope import ScopePolicy
 from app.domains.policy.tools_policy import ToolsPolicy
 from app.domains.policy.transaction_states import TransactionStatesPolicy
@@ -54,6 +55,7 @@ _MODELS_BY_STEM: dict[str, type[BaseModel]] = {
     "disputes": DisputesPolicy,
     "decline_codes": DeclineCodesPolicy,
     "transaction_states": TransactionStatesPolicy,
+    "playbooks": PlaybooksPolicy,
 }
 
 
@@ -84,6 +86,7 @@ class PolicyBundle(BaseModel):
     escalation: EscalationPolicy
     min_payment: MinPaymentPolicy
     scope: ScopePolicy
+    playbooks: PlaybooksPolicy
     files: list[str]
 
 
@@ -119,11 +122,13 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
     escalation = validated.get("escalation")
     min_payment = validated.get("min_payment")
     scope = validated.get("scope")
+    playbooks = validated.get("playbooks")
     if (
         not isinstance(tools, ToolsPolicy)
         or not isinstance(escalation, EscalationPolicy)
         or not isinstance(min_payment, MinPaymentPolicy)
         or not isinstance(scope, ScopePolicy)
+        or not isinstance(playbooks, PlaybooksPolicy)
     ):
         missing = [
             stem
@@ -132,6 +137,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
                 ("escalation", escalation),
                 ("min_payment", min_payment),
                 ("scope", scope),
+                ("playbooks", playbooks),
             )
             if value is None
         ]
@@ -143,6 +149,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
         escalation=escalation,
         min_payment=min_payment,
         scope=scope,
+        playbooks=playbooks,
         files=[path.stem for path in paths],
     )
 
