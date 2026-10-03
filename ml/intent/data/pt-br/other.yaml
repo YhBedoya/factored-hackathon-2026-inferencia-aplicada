@@ -1,0 +1,356 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: other
+items:
+- text: Você pode traduzir este parágrafo para português?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode passar esse texto para português, por favor?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria que você traduzisse este trecho para português.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me passa uma receita simples de sopa de legumes?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Você tem uma receita fácil de sopa de legumes?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como faço uma sopa de legumes bem simples?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ô, cê sabe uma receita boa de pão de queijo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me indica aí uma receita gostosa de pão de queijo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cê pode me ensinar a fazer pão de queijo em casa?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô querendo pegar um cineminha, qual filme cê me recomenda?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me indica um filme legal pra ver hoje à noite?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cê tem alguma dica de filme bom pra assistir?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me indica um filme bom pra hj?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q filme legal da pra ver hj a noite?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem alguma dica de filme? to sem ideia kkk
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: vai chover amanha? ve a previsao pra mim pfv
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: consegue ver o tempo de amanha pra mim?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como vai ta o clima amanha? n achei aqui
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Na frase “o cartão bloqueou”, a vírgula está no lugar certo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me ajuda a escrever uma mensagem bonita pra colocar num cartão de aniversário?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estou revisando um texto que fala de cartão bloqueado; essa frase está bem escrita?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A palavra “cartão” leva til? Estou corrigindo uma redação.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Que frase legal posso escrever no cartão de aniversário da minha irmã?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Queria uma mensagem carinhosa pra pôr num cartão de parabéns.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estou escrevendo uma história em que alguém perde o cartão; me ajuda a pensar num título?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Qual é o limite de temperatura do forno pra assar pão sem queimar?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Numa cena do meu conto, a personagem bloqueia o cartão. Que nome posso dar ao capítulo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero desenhar um cartão para um jogo de tabuleiro; que cor combina com azul?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Até quantos graus posso deixar o forno pra fazer pão?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Que temperatura máxima o forno pode atingir pra assar pão direitinho?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não precisa consultar a previsão do tempo; só comentei que o céu está nublado.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero ajuda com meu cartão, só uma receita simples de pão de queijo, por favor.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero saber se vai chover, só estava falando do tempo fechado.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não precisa olhar o clima pra mim; já sei que hoje está nublado.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é sobre cartão; me passa uma receita fácil de pão de queijo?
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Deixa meu cartão de lado, queria saber como fazer pão de queijo em casa.
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Previsão do tempo
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Uma receita de bolo
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tradução do texto
+  intents: []
+  status: out_of_scope
+  topic: other
+  family: other-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

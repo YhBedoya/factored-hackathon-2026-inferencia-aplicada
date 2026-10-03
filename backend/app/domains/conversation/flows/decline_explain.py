@@ -47,7 +47,7 @@ from app.domains.conversation.flows.card_select import (
     select_card,
 )
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import DeclineState, Fact
+from app.domains.conversation.state import DeclineState, Fact, mark_segment
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.ui import (
@@ -146,6 +146,7 @@ async def _resolve_declines(
         return {
             "pending": None,
             "decline": None,
+            **mark_segment("resolved"),
             "segments": [get_template("decline_none", language)],
         }
 
@@ -234,7 +235,11 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
     decline = state.get("decline")
     selection = state.get("selection")
     if decline is None or selection is None:
-        return {"pending": None, "segments": [get_template("nothing_pending", language)]}
+        return {
+            "pending": None,
+            **mark_segment("cancelled"),
+            "segments": [get_template("nothing_pending", language)],
+        }
 
     offered = set(decline["offered_tx_ids"])
     if len(selection.tx_ids) != 1 or selection.tx_ids[0] not in offered:
@@ -257,6 +262,7 @@ async def _resume_pick(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {
             "pending": None,
             "decline": None,
+            **mark_segment("cancelled"),
             "segments": [get_template("nothing_pending", language)],
         }
     return await _explain(state, config, details, tx)
@@ -280,6 +286,7 @@ async def _explain(
         return {
             "pending": None,
             "decline": None,
+            **mark_segment("resolved"),
             "segments": [get_template("decline_unknown", language)],
         }
     except ToolUnavailable:

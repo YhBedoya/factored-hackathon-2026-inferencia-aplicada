@@ -40,11 +40,12 @@ never deleted out from under that later turn.
 
 import asyncio
 from collections.abc import Sequence
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 import structlog
 from langchain_core.runnables import RunnableConfig
+from opentelemetry import trace
 from pydantic import JsonValue
 
 from app.core import events
@@ -157,7 +158,7 @@ async def start_turn(
             raise
 
     task = asyncio.create_task(
-        _run_turn(
+        _run_turn_traced(
             host,
             session=session,
             conversation_id=conversation_id,
@@ -174,6 +175,15 @@ async def start_turn(
     host.tasks.add(task)
     task.add_done_callback(host.tasks.discard)
     return turn_id
+
+
+async def _run_turn_traced(host: TurnHost, **kwargs: Any) -> None:
+    """Run the turn inside its own span. The request's span ends (202) before
+    the background task finishes, so a per-turn attribute like `cardy.degraded`
+    needs a span that lives as long as the turn. The task copied the request's
+    context, so this span is a child in the same trace."""
+    with trace.get_tracer(__name__).start_as_current_span("cardy.turn"):
+        await _run_turn(host, **kwargs)
 
 
 async def checkpointed_confirmation_token(host: TurnHost, conversation_id: UUID) -> str | None:
@@ -226,6 +236,18 @@ def _worse_grounding(current: str | None, new: str) -> str:
     if current is None or _GROUNDING_RANK.get(new, 0) > _GROUNDING_RANK.get(current, 0):
         return new
     return current
+
+
+def _nlu_source(degraded: bool, host: TurnHost) -> dict[str, JsonValue]:
+    """`nlu_result` provenance (ADR-032): the classifier answered when the
+    understand update was degraded. Versions are code-set identifiers."""
+    if degraded and host.classifier is not None:
+        return {
+            "source": "classifier",
+            "classifier_version": host.classifier.version,
+            "label_set_version": host.classifier.label_set_version,
+        }
+    return {"source": "llm"}
 
 
 async def _run_turn(
@@ -282,6 +304,7 @@ async def _run_turn(
                 "vault": vault,
                 "handoff_tools": ServiceHandoffTools(ctx),
                 "audit": audit,
+                "classifier": host.classifier,
             }
         }
 
@@ -291,11 +314,18 @@ async def _run_turn(
         reply = ""
         ui: list[UIEvent] = []
         handed_off = False
+        # Any node reporting `degraded` (classifier-served NLU or baseline
+        # text) marks the whole turn (ADR-032).
+        degraded = False
+        nlu_degraded = False
 
         grounding_outcome: str | None = None
         # This turn's fact provenance (`Fact.source`), recorded on
         # `reply_sent` so the staff timeline's "why" lists sources (D7-A D20).
         fact_sources: list[str] = []
+        # Per-intent record of the turn (analytics D14): each node update carries
+        # only its own delta, and `load_session`'s reset marker streams as `[]`.
+        intent_segments: list[JsonValue] = []
         with fact_values.collecting() as collected_values:
             async for update in host.graph.astream(
                 {
@@ -323,10 +353,13 @@ async def _run_turn(
                     # with nothing left to pop) streams as `None`, not `{}`.
                     if values is None:
                         continue
+                    if values.get("degraded"):
+                        degraded = True
                     if node_name == "handoff" and values.get("handoff_id") is not None:
                         handed_off = True
                     if node_name == "understand":
                         nlu = values.get("nlu")
+                        nlu_degraded = bool(values.get("degraded"))
                         language = values.get("language", language)
                         if nlu is not None:
                             await _record(
@@ -335,11 +368,13 @@ async def _run_turn(
                                     "language": language,
                                     "status": nlu.status,
                                     "intents": [intent for intent in nlu.intents],
+                                    **_nlu_source(nlu_degraded, host),
                                 },
                             )
                     elif route_taken is None and node_name in _BRANCH_NODES:
                         route_taken = node_name
                     fact_sources.extend(fact.source for fact in values.get("facts") or [])
+                    intent_segments.extend(values.get("intent_segments") or [])
                     reply_value = values.get("reply")
                     if reply_value is not None:
                         reply = reply_value
@@ -383,12 +418,15 @@ async def _run_turn(
                 "route": route_taken or "fallback",
                 "ui_kinds": [event.kind for event in ui],
                 "length": len(reply),
+                "degraded": degraded,
+                "segments": intent_segments,
                 # Deduplicated in order; only code-written values, never raw PII.
                 "fact_values": list(dict.fromkeys(collected_values)),
                 **({"grounding": {"outcome": grounding_outcome}} if grounding_outcome else {}),
             },
             list(dict.fromkeys(fact_sources)),
         )
+        trace.get_current_span().set_attribute("cardy.degraded", degraded)
         await events.publish(
             conversation_id, "message", {"role": "bot", "text": reply, "sources": []}
         )
@@ -408,6 +446,8 @@ async def _run_turn(
                 tools_called=tools.calls,
                 pending=f"{pending['flow']}.{pending['awaiting_slot']}" if pending else None,
                 ui=[event.kind for event in ui],
+                # The same per-turn value `reply_sent` and `cardy.degraded` carry.
+                degraded=degraded,
             )
             await events.publish(conversation_id, "debug", debug.model_dump(mode="json"))
 

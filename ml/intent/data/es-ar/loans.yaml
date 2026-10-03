@@ -1,0 +1,364 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: loans
+items:
+- text: Quisiera solicitar un préstamo personal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo puedo pedir un préstamo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me interesa sacar un crédito personal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué opciones de crédito ofrecen?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero consultar por una línea de crédito.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito información para pedir un préstamo.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me contás cómo puedo sacar un préstamo?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Tenés alguna línea de crédito que pueda pedir?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, quiero averiguar qué créditos ofrecen.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me decís qué necesito para pedir un crédito, che?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero sacar un préstamo, ¿cómo hago?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Tenés préstamos personales disponibles para mí?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero pedir un prestamo, como hago?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me decis como saco un credito personal?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: necesito info pa pedir un prestamo
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: hay alguna linea de credito q pueda sacar?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me interesa un prestamo, q requisitos piden?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como hago pa pedir un credito?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: En el resumen aparece la palabra préstamo, pero no quiero pedir uno; necesito entender un cargo
+    de mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy viendo una compra en mi tarjeta, pero lo que necesito es pedir un préstamo personal. ¿Cómo
+    hago?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi una oferta de crédito, pero no me interesa solicitarlo; quiero consultar por el límite de mi
+    tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: El mensaje menciona un préstamo, aunque mi consulta es cómo cambiar la fecha de vencimiento de
+    la tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me apareció un gasto en la tarjeta y aprovecho para consultar cómo solicito un préstamo.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero financiarme con un préstamo personal; ¿dónde inicio la solicitud aunque haya entrado por
+    una consulta de compra?
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy buscando una línea de crédito; quiero saber cómo actualizar mis datos de contacto.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar el límite de mi tarjeta; quiero saber qué monto de préstamo personal me ofrecen.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Me llegó publicidad de un préstamo, pero solo necesito ayuda para recuperar el acceso a mi cuenta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero información sobre créditos, estoy consultando por una compra desconocida en mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: 'Dejemos de lado el límite de la tarjeta: ¿cuánto me podrían prestar con un crédito personal?'
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy preguntando por el tope de mi tarjeta, sino por el monto disponible para sacar un préstamo.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero pedir un préstamo ni sacar un crédito.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar el saldo de mi tarjeta; quiero saber qué requisitos piden para sacar un préstamo
+    personal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Por ahora no necesito ninguna línea de crédito.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy buscando financiamiento.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito ver cuánto debo en la tarjeta, sino averiguar qué hace falta para pedir un préstamo
+    personal.
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Che, no estoy preguntando por el saldo de la tarjeta: quiero conocer los requisitos para solicitar
+    un préstamo personal.'
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Un préstamo personal
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Línea de crédito
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Crédito personal
+  intents: []
+  status: out_of_scope
+  topic: loans
+  family: loans-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

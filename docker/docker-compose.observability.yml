@@ -8,6 +8,11 @@ services:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
+  # Logs only: the worker ships no traces/metrics. Endpoint is not a secret.
+  analytics-worker:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
   otel-collector:
     # Core distribution: the config only uses the `otlp` receiver,
     # `memory_limiter`/`batch` processors and `otlphttp` exporters, all

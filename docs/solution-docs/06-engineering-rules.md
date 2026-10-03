@@ -14,7 +14,7 @@
 | R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions | B7, D3.4 | Startup validation + code review |
 | R9 | The held-out suite is frozen. Nobody tunes prompts or flows against it | D5.1, D4.8 | Suite hash in the repo + CI check that held-out files are unchanged |
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
-| R11 | Bounded retries only: 2 retries with backoff, then safe fallback + handoff. Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
+| R11 | Bounded retries only: 2 retries with backoff, then the degraded path, then safe fallback + handoff (ADR-032). Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
 | R12 | Provided tables are changed only through domain services: an in-place update always writes a history row in the same transaction, and appended rows carry `origin='app'` | Lineage, audit | Repository layer + review |
 | R13 | Every non-public route declares its role through a router-level dependency, and every `/conversations/{id}/…` route loads the conversation through `get_owned_conversation` (another customer's conversation → `404`). The graph gets the session only from the route, via the run config (ADR-025) | B5, B6 | Route-introspection unit test over `app.routes` + cross-customer integration test (customer B posts, confirms and streams on A's conversation → `404`) |
 
@@ -36,7 +36,8 @@ backend/
     api/            router registration, deps
     core/           config, db, security, logging, telemetry, llm/, crud base
     domains/        identity, customers, cards, transactions, disputes, handoff,
-                    policy, safety, localization, conversation, audit
+                    policy, safety, localization, conversation, audit,
+                    analytics (worker, own SQL, no conversation import)
     alembic/        migrations (all schemas)
   tests/unit/…  tests/integration/…  (integration = ephemeral DB)
 frontend/
@@ -46,6 +47,8 @@ policies/           *.yaml (team-generated synthetic)
 eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, judges/, reports/
                     (also eval/harness/: runner, checks, report (A); eval/driver/: B's, read-only for A)
                     (the keyword baseline lives in backend/app/domains/conversation/baseline/, not eval/)
+ml/intent/          intent classifier training (ADR-032): data/, prompts/, runs/, tests/, model.lock; models/ is git-ignored
+                    (inference lives in backend/app/domains/conversation/classifier/; the registry is conversation/intents.yaml)
 docker/             docker-compose.{base,dev,test,prod,observability}.yml, nginx/
 infra/aws/          ec2-stack.yaml (CloudFormation), render-env.sh, deploy.sh, smoke.sh (08)
 notebooks/          EDA (aggregates only, no PII printed)

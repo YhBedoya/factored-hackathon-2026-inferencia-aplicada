@@ -1,0 +1,155 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: card_status
+items:
+- text: como está meu cartão?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: quero ver o status do cartão
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: me diz o status do cartão
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: meu cartão está ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: consulto se o ⟨CARD_1⟩ está ativo
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: o ⟨CARD_1⟩ continua ativo?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: e aí, meu cartão tá de boa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: como tá o cartão, pô?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: me fala se o cartão funciona
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: vê se meu cartão está bloqueado
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: o cartão está bloqueado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: meu cartão está liberado?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: status do meu cartao
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: fixture
+  accepted: true
+- text: q status tem meu cartao
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true
+- text: como esta o cartao pfv
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: fixture
+  accepted: true

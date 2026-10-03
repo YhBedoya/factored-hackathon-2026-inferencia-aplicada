@@ -14,7 +14,7 @@ decision, not `conversation/deps.py`, which does not exist).
 
 D4-B D5 adds two role-shape checks beyond "every non-public route has a
 `RoleGuard`": every `/api/v1/staff/...` route is agent+admin (D22: the
-`/staff/personas...` routes are admin only), and
+`/staff/personas...` and `/staff/analytics...` routes are admin only), and
 `/auth/logout` (moved off `router` onto its own `logout_router`) accepts
 both roles, since it is the one route a staff session also reaches.
 
@@ -124,8 +124,8 @@ def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch
         for ctx in contexts:
             if ctx.path is None:
                 continue
-            if ctx.path.startswith("/api/v1/staff/personas"):
-                # D22: persona catalog and credentials are admin only.
+            if ctx.path.startswith(("/api/v1/staff/personas", "/api/v1/staff/analytics")):
+                # D22: persona catalog, credentials and analytics are admin only.
                 assert _role_guard_roles(ctx) == [("admin",)], ctx.path
             elif ctx.path.startswith("/api/v1/staff/"):
                 assert ("agent", "admin") in _role_guard_roles(ctx), ctx.path

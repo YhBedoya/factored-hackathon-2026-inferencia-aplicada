@@ -1,0 +1,368 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: insurance
+items:
+- text: Quiero conocer los seguros que ofrecen para mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué seguros puedo contratar con mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me interesa saber qué cobertura de seguro tienen para mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedo adquirir un seguro de protección para las compras que hago con mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera contratar un seguro que cubra mis compras con la tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué seguro ofrecen para proteger las compras hechas con mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿qué seguro le puedo meter a mi tarjeta para proteger mis compras?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, contame qué seguros hay para cuidar las compras que hago con mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Vos qué seguro me recomendás para las compras con mi tarjeta, parce?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ¿puedo sacar un seguro de viaje con mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué seguro de viaje puedo conseguir con mi tarjeta, parce?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, contame si puedo contratar un seguro para cuando viaje y pague con mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q seguros tienen pa mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero saber si hay algun seguro pa proteger mi tarjeta
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me cuentan q seguro puedo agregarle a mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: busco un seguro pa mis compras con la tarjeta, q opciones hay?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: hay seguro pa cubrir compras hechas con mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quiero cotizar un seguro pa la tarjeta, como hago?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: El seguro de viaje ya lo compré; ¿cómo reviso los movimientos de mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué seguros puedo contratar para proteger mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ya tengo seguro para el viaje, pero necesito saber cuánto gasté con mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Compré un seguro de viaje; ahora quiero consultar el saldo de mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quisiera conocer las opciones de seguro para mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Qué seguro ofrecen para cuidar mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ya tengo seguro para mis compras; necesito cambiar el PIN de mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cuánto me cobran al mes por el seguro de mi tarjeta? Lo quiero revisar junto con el saldo del
+    extracto.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El seguro de compras ya está listo; ¿cómo actualizo la dirección de entrega de mi tarjeta?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito otro seguro, solo quiero saber cuándo llega mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cuál es el valor mensual del seguro de mi tarjeta? Estoy mirando los pagos que aparecen en el
+    extracto.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quisiera saber cuánto vale el seguro de la tarjeta, porque estoy revisando el saldo y los cobros
+    del mes.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero contratar ningún seguro para mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, quiero saber qué seguros ofrecen para protegerla.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me interesa agregarle un seguro a mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Por ahora descarto cualquier seguro asociado a mi tarjeta.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito congelar la tarjeta; cuéntame qué opciones de seguro tienen para ella.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco reportar mi tarjeta, sino conocer los seguros que puedo tener con ella.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Seguro de viaje
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué seguros ofrecen?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Seguro para compras
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Protección de tarjeta
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

@@ -1,0 +1,356 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: insurance
+items:
+- text: Quais seguros estão disponíveis para o meu cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Que opções de seguro vocês oferecem para o cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gostaria de conhecer os seguros que posso contratar para o meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria saber o que o seguro do cartão cobre.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode me explicar quais situações são cobertas pelo seguro do cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quais são as coberturas incluídas no seguro para o cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oi, tô querendo ver que seguro dá pra pegar pro meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: E aí, quais seguros vocês têm pra colocar no cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Queria dar uma olhada nas opções de seguro pro meu cartão, pode ser?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô pensando em fazer um seguro pro cartão, como é que funciona?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me conta aí como funciona o seguro do cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Como que é esse seguro pra cartão, o que ele cobre?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria sabe quais seguro vcs tem pro cartao
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: q tipo de seguro da pra contratar pro meu cartao?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: vcs oferece seguro pro cartao? queria ver as opcoes
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem seguro pro meu cartao? oq ele cobre
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: como vejo as cobertura do seguro do cartao?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: queria sabe oq o seguro do cartao cobre, pfv
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem uma cobrança escrita “seguro” na fatura; queria só saber em que dia ela vence.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero saber se o seguro do meu cartão cobre compras acima do limite diário.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A fatura veio com uma linha de seguro, mas minha dúvida é qual é a data de vencimento.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi a cobrança de seguro na fatura e só quero confirmar quando preciso pagar.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: O seguro da minha tarjeta cobre uma compra que passou do limite diário?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso conferir a cobertura do seguro para compras que ultrapassam meu limite.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Vi “seguro” no contrato, mas minha dúvida é como altero o vencimento da fatura.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Qual é o limite de cobertura do seguro do meu cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O contrato menciona seguro, mas preciso mudar a data de vencimento da minha fatura.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Tem a palavra seguro no documento; como faço pra trocar o dia de vencimento da fatura?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Queria consultar até quanto o seguro do cartão cobre.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Onde vejo o valor máximo de indenização do seguro do meu cartão?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho interesse em contratar seguro para o meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, só queria saber quanto custa o seguro dele.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero nenhum seguro pro meu cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Prefiro não contratar seguro para o cartão.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; quero ver o preço do seguro.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Pode deixar meu cartão ativo, só me fala o valor do seguro, por favor.
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero saber mais
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me explica melhor
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode explicar?
+  intents: []
+  status: out_of_scope
+  topic: insurance
+  family: insurance-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

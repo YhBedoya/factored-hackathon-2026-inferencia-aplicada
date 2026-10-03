@@ -1,0 +1,405 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: thanks_close
+items:
+- text: Muchas gracias por la ayuda, eso era todo. Hasta luego.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gracias por resolverlo, ya no necesito nada más. Que tengas buen día.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Te agradezco mucho la atención, ya quedó todo. Adiós.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gracias por tu apoyo, ya quedó resuelto. Que estés bien.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Te agradezco la ayuda, con eso termino. Hasta pronto.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Muchas gracias, ya no tengo más dudas. Que tengas una buena tarde.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Órale, muchas gracias, wey. Ya quedó todo, ahí nos vemos.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Va, gracias por echarme la mano, ya quedó. Cuídate, ¿sale?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gracias, ya quedó al cien; nos vemos al rato, ¿va?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gracias, ya quedó todo, ¿sale? Ahí nos vemos, cuídate.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Va que va, gracias por la ayuda. Ya estuvo, nos vemos al rato.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Órale, ya quedó resuelto. Muchas gracias, cuídate un buen.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: grx x la ayuda, ya no ocupo nada. nos vemos
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mil grax, ya kedo resuelto, ahi nos vemos
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ya estuvo, gracias x todo, cuidate mucho
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: grax por ayudarme, ya quedo todo. bye no, adios jaja
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: gracias x la atencion, ya no tengo dudas. cuidate
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: listo, mil grax, ya me voy. nos vemos
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué frase puedo poner para darle las gracias al vendedor por el reembolso?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Gracias por ayudarme a bloquear mi tarjeta; ya quedó todo listo. ¡Hasta luego!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Me ayudas a redactar un mensaje de agradecimiento para el comercio?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero escribirle al vendedor para agradecerle el apoyo, ¿qué le digo?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Te agradezco que me ayudaras con el bloqueo de la tarjeta, ya quedó resuelto. Que estés bien.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Listo lo de bloquear la tarjeta, muchas gracias por el apoyo. Me despido.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El correo termina con «hasta luego»; ¿esa frase suena formal?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Gracias por ayudarme con el pago de mi tarjeta. Ya quedó, hasta luego.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En el recibo aparece «gracias por tu compra», ¿qué significa?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Decir «adiós» en un mensaje de reclamo se oye muy cortante?
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Te agradezco que me aclararas lo del pago; con eso ya estoy. ¡Adiós!
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Muchas gracias por revisar mi pago, ya no necesito nada más. Que estés bien.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me estoy despidiendo ni dando las gracias; todavía necesito revisar otro cargo.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No tengo más dudas sobre mi saldo, gracias por aclarármelo. Que estés bien.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero cerrar el chat todavía, me falta consultar un movimiento.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es un agradecimiento ni una despedida, aún tengo otra duda.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ya no necesito consultar cuánto debo; muchas gracias por la ayuda, hasta luego.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me queda ninguna pregunta sobre el saldo. Gracias, que tengas buen día.
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Gracias, igualmente
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hasta luego
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Gracias, adiós
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Muchas gracias
+  intents:
+  - thanks_close
+  status: clear
+  topic: null
+  family: thanks_close-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true

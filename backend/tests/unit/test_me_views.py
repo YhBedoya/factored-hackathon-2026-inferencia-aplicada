@@ -1,6 +1,6 @@
 """`/me` view builders: every display string is the `localization.format`
 output (R4), and a debit card shows its balance but no credit-only field
-(A1, ADR-032).
+(A1, ADR-034).
 """
 
 from datetime import UTC, date, datetime

@@ -112,6 +112,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
 | `GET /staff/conversations/{id}/timeline` | agent, admin | `ConversationTimeline{conversation: ConversationSummary, turns: [TurnTimeline]}`: per turn the masked customer and bot text, the NLU result, rule hits, tool calls, sources, policy version, LLM calls, latency, cost and a Langfuse link. Read-only, masked data only. `404 not_found` if the conversation doesn't exist |
 | `GET /staff/system` | agent, admin | `SystemInfo{git_sha, app_env, llm_provider, llm_disabled, steps: [{step, model_id, temperature, prompt_version}], policy_hash, policies: [{file, sha256}]}`, read from code and config |
 | `GET /staff/personas` · `GET /staff/personas/{persona_id}/credentials` | admin | Persona catalog `[PersonaEntry{customer_id, split, traits, notes}]` and credential lookup `PersonaCredentials{customer_id, document_type, document_number, password}`. `persona_id` is the catalog persona's id; the path doesn't use the name `customer_id` because of the R1 route guard (D7-A D22, amended). The credentials response carries `Cache-Control: no-store`; `404 not_found` when the id isn't in the catalog |
+| `GET /staff/analytics/summary?date_from=&date_to=&language=&country=&source=` | admin | `AnalyticsSummary` for the interaction analytics dashboard. Reads only the `analytics` schema, under a 5 s statement timeout, and counts only interactions with `ended_at <= now()`. `date_from`/`date_to` are inclusive local dates (`ANALYTICS_TIMEZONE`), default the last 7 days, at most 92; `language` is `es`/`pt`, `country` is `MX`/`CO`/`AR`, `source` is `all` (default)/`real`/`mock`. Errors: `403 forbidden_role` (agent), `422` on a bad filter or window, `503 analytics_timeout`. Shape and rules: `docs/specs/interaction-analytics-dashboard.md` §"Contracts" |
 | `POST /admin/demo/reset` | admin | Restore from the golden DB → `{status: "reset", duration_ms}` |
 | `POST /test-idp/sessions` | eval only (router included under `/api/v1` only when `APP_ENV=eval`) | Mint a session for any customer |
 
@@ -152,7 +153,7 @@ class ConversationTimeline(BaseModel):  conversation: ConversationSummary; turns
 
 **Login and `/me` (D2-A, ADR-008 amended):** `POST /auth/login` is customer-only. It takes `{document_type: DNI | CC | CE | Pasaporte, document_number, password}` and returns `MeResponse` plus the `session` (httpOnly) and `csrf_token` cookies. Errors: `401 invalid_credentials` (unknown identifier and wrong password look the same), `429 too_many_attempts` (5 failures in 15 min per HMAC `login_key`; the counter is not reset by a successful login). `POST /auth/refresh` has no role dependency but requires the session cookie and CSRF. It re-issues both cookies and returns `MeResponse`, and the old token is not revoked (it expires at its own `exp`). `GET /auth/me` returns `MeResponse{role: "customer", login_hint, display_name (first name only), country, customer_status}`. `login_hint` is masked (`"DNI ••••462"`, last 3 characters, always 4 bullets). No full document number is ever returned or logged. **Staff (D4-A, ADR-008 amended):** seeded staff accounts log in with `POST /auth/staff/login {username, password}` and get the same cookie + CSRF session with role `agent` or `admin` and no `customer_id`. The `/staff/*` routers require `agent` or `admin`, `/admin/*` requires `admin`. `/staff/*` routers require `agent` or `admin` plus CSRF; a customer session on `/staff/*` or `/admin/*`, or a staff session on `/conversations/*`, `/auth/me` or `/auth/refresh`, gets `403 forbidden_role` (the refresh rule is D4-B D5). Every `/staff/conversations/{id}/…` route depends on `get_claimed_conversation`: the conversation must have an open handoff claimed by the caller, otherwise `404 not_found`. **One exception (D7-A D16):** `GET /staff/conversations/{id}/timeline` depends on `get_any_conversation` instead. It needs no claim, is read-only and is open to `agent` and `admin`; the conversation must still exist, else `404 not_found`. Every other `/staff/conversations/{id}/…` route keeps `get_claimed_conversation`. The timeline's `created_at` is filled from `app.conversations.started_at` (the table has no `created_at`). Shapes (`app/domains/handoff/schemas.py`, frozen): `HandoffSummary{handoff_id, reference, conversation_id, queue, priority: high | normal, reason: HandoffReason, status: queued | claimed | returned, language: es | pt, created_at, claimed_by: str | null}` (`claimed_by` is the agent's `display_name`); `HandoffDetail{summary: HandoffSummary, packet: HandoffPacket}`. `reference` is `"HO-"` + the first 8 hex digits of `handoff_id`, uppercased.
 
-**SSE events:** `status {step}` · `message {role: bot | customer | agent | system, text, sources[], agent_display_name?}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
+**SSE events:** `status {step}` · `message {role: bot | customer | agent | system, text, sources[], agent_display_name?}` · `ui {kind: card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed, payload}` · `mode {bot | human, agent_display_name}` · `error {code}` · `done {turn_id}` · `debug {language, status, intents, slots, route, tools_called, degraded}` (**only when `APP_ENV != prod`**; the sandbox `DebugInfo` fields, used by `make chat-api`).
 
 The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up. `ui.transaction_list` is `{options: [{tx_id, label}], multi: bool}`, each label `merchant · money · day-first date · •••• last4`, built in code (R4). The `•••• last4` part is left out when the row's product is not a card, for example a savings account (D7-B D19); `multi` is `true` for `unrecognized_charge`'s multi-select and `false` for `decline_explain`'s single-pick offer (D5-B D3) -- the frontend renders radio inputs instead of checkboxes when it is `false`, and the selection gate (above) accepts exactly one id. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}` (D4-A D12, D4-B D13).
 
@@ -236,7 +237,7 @@ priority:
 min_payment: {percent_of_balance: "0.05", floors: {USD: "10", COP: "40000", ARS: "5000"}}
 due_date:    {due_day_of_month: 10}
 
-# policies/escalation.yaml v4 (D4-A D3-D6; D6-A D8 adds tool_failure, llm_unavailable; D7-B D5-D9 adds priority_claim)
+# policies/escalation.yaml v6 (D4-A D3-D6; D6-A D8 adds tool_failure, llm_unavailable; D7-B D5-D9 adds priority_claim; ADR-032 adds degraded_handoff_intents, then decline_explain)
 customer_not_active: {statuses: [Closed, Suspended, Inactive], allowed: [lock_card, block_card]}
 bank_side_queues:    {past_due: cobranza, fraud: fraudes, bank_status: fraudes, customer_status: atencion}
 rules:               # queue null = resolved from context (bank_side_queues, human_request_queues)
@@ -252,6 +253,7 @@ rules:               # queue null = resolved from context (bank_side_queues, hum
   llm_unavailable:         {queue: null,     priority: normal}   # D6-A D8
   priority_claim:          {queue: reclamos, priority: high}     # D7-B D5-D9
 human_request_queues: {default: atencion, by_flow: {unrecognized_charge: fraudes}}
+degraded_handoff_intents: [transaction_search, general_question, decline_explain]   # ADR-032: degraded turns (LLM failed or LLM_DISABLED) on these intents hand off as llm_unavailable
 unauthorized_access:  {attempts_before_handoff: 2}
 legal_keywords:      {es: [demanda, abogado, condusef, superfinanciera, bcra, ...], pt: [processo, advogado, procon, "banco central", ...]}
 
@@ -280,6 +282,26 @@ Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml`, `dispute
 A `tool_result` for a failed tool attempt carries `{tool, error, attempt}` (1-based; D6-A D5), so retries are countable per tool. LLM attempts are counted in `audit.llm_calls.attempt`.
 
 `reply_sent` payload adds two keys. `grounding: {outcome: ok | regenerated | template}` is the worst compose outcome of the turn (`template` > `regenerated` > `ok`) and is absent when `compose` didn't run. `fact_values: [str]` lists, deduplicated in order, every value code wrote into the turn's reply (masked card numbers, money, dates, labels; never raw PII and never `customer_name`); the eval `grounding` check reads it.
+
+`reply_sent` payload also carries `degraded: bool`, always present: `true` when the turn ran on the no-LLM path (the trained classifier and fixed templates, ADR-032). The same per-turn value is set on the turn's OTel span as the attribute `cardy.degraded`. `nlu_result` payload carries `source: "llm" | "classifier"`. When the source is `classifier` it also carries `classifier_version` and `label_set_version`, so every degraded decision names the model that made it.
+
+`reply_sent` payload also carries `segments`, always present: one entry per real intent the turn worked on, in order. A turn that worked on no real intent has `segments: []`. A turn relayed to an agent writes no `reply_sent`, so it has no segments.
+
+```json
+"segments": [{"intent": "card_block", "route": "card_block", "status": "awaiting", "awaiting_slot": "confirmation"}]
+```
+
+- `intent` is a non-management member of `Intent`. On a resume turn (card pick, confirmation, OTP, selection) it is the paused flow's intent.
+- `route` is the branch node that served it, or `handoff_summary`.
+- `status` is one of `resolved`, `awaiting`, `handoff`, `abstained`, `cancelled`. On a write flow that performs a write, `resolved` is written only on the turn whose `ActionResult.verified` read-back succeeded. Endings that need no write (`already_in_state` in `card_block`, `not_blocked` in `card_unlock`) are `resolved` without one.
+- `awaiting_slot` is present only when `status` is `awaiting`: the value of `pending.awaiting_slot` at the end of the turn (`confirmation`, `otp`, or a flow's own slot such as `card_id`). When a flow asks without pausing, code sets the slot name.
+- `bot_offered: true` is present only on a segment whose flow the bot offered, not the customer (the replacement offer after a permanent block or after `card_unlock`'s `block_permanent_no_undo` answer). It is absent otherwise.
+
+- A turn that `route` sends straight to `handoff_summary` writes one `handoff` segment per non-management intent in its NLU result, in order, with `route = handoff_summary`. The degraded queue-head handoff (head intent in `degraded_handoff_intents`) writes one `handoff` segment for the head intent only.
+- An `unsupported` turn flagged `injection_suspected` writes no segment.
+- When `compose` fails after the flow ran and the turn hands off, an `awaiting` segment and any explicitly marked segment keep their status. Only a read-flow segment whose `resolved` depended on the composed answer becomes `handoff`.
+
+The analytics worker reads `segments` to build `analytics.interaction_intents` (`03` §6).
 
 ## 7. Confirmation token
 

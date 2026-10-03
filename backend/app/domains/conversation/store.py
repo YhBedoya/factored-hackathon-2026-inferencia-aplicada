@@ -86,7 +86,10 @@ async def close_conversation(conversation_id: UUID) -> None:
     """
     async with get_engine().begin() as conn:
         await conn.execute(
-            text("UPDATE app.conversations SET status = 'closed' WHERE id = :conversation_id"),
+            text(
+                "UPDATE app.conversations SET status = 'closed', closed_at = now() "
+                "WHERE id = :conversation_id"
+            ),
             {"conversation_id": conversation_id},
         )
 

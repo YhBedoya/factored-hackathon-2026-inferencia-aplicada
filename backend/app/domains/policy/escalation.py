@@ -1,5 +1,5 @@
 """ADR-021 handoff queues and escalation rules, loaded from
-`policies/escalation.yaml` v4 (spec D2-D7, B2, R8).
+`policies/escalation.yaml` v5 (spec D2-D7, B2, R8).
 
 `rules.<reason>` is the single source of each handoff reason's queue and
 priority (`queue: null` means the caller picks it: bank-side origin, human
@@ -133,6 +133,9 @@ class EscalationPolicy(BaseModel):
     human_request_queues: HumanRequestQueuesPolicy
     unauthorized_access: UnauthorizedAccessPolicy
     legal_keywords: LegalKeywordsPolicy
+    # Intent names (plain str: `policy` must not import the conversation `Intent`
+    # literal, `06` §2). Defaults empty so other YAMLs still load (ADR-032).
+    degraded_handoff_intents: list[str] = []
 
     @model_validator(mode="after")
     def _all_reasons_have_a_rule(self) -> "EscalationPolicy":

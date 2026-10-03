@@ -1,0 +1,459 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-ar
+class: card_unlock
+items:
+- text: Quiero desbloquear mi tarjeta, que quedó bloqueada temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me pueden desbloquear la tarjeta? La bloquearon por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito volver a habilitar mi tarjeta porque está bloqueada temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Por favor, desbloqueen mi tarjeta; ya quiero volver a usarla.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito que reactiven mi tarjeta, que quedó bloqueada.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Pueden quitarle el bloqueo temporal a mi tarjeta?
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿me desbloqueás la tarjeta? Me quedó bloqueada un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dale, ¿me habilitás de nuevo la tarjeta? La tengo bloqueada temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, necesito que me saques el bloqueo de la tarjeta para volver a usarla.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me das una mano y me desbloqueás la tarjeta? Quedó bloqueada, che.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Che, ¿podés reactivarme la tarjeta? La bloquearon por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dale, fijate si me podés quitar el bloqueo temporal de la tarjeta.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me desbloquean la tarje? kedo bloqueada un rato
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: necesito q me activen d nuevo la tarjeta, esta bloqeada
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holi, pueden sacar el bloqueo d mi tarjeta? quiero usarla ya
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: desbloqueenme la tarjeta xfa, no puedo usarla
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me la habilitan d nuevo? la bloquearon temporalmente
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: che me sacan el blokeoo de la tarje?
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Qué significa la opción «desbloquear tarjeta»? Solo quiero entenderla, no necesito hacer nada.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de revisar el saldo, necesito que me desbloqueen la tarjeta; quedó bloqueada por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero saber dónde aparece el botón para desbloquear la tarjeta, pero no quiero tocarlo.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me explican qué pasa al desbloquear una tarjeta? No necesito desbloquear la mía.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Estoy por consultar cuánto tengo disponible, pero primero quiero desbloquear mi tarjeta, que quedó
+    temporalmente bloqueada.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Che, después veo el saldo: ahora necesito que habiliten de nuevo mi tarjeta bloqueada por un
+    rato.'
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy escribiendo instrucciones sobre cómo desbloquear una tarjeta; no quiero cambiar el estado
+    de la mía.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ya revisé el saldo de la cuenta; ahora necesito desbloquear mi tarjeta, que quedó bloqueada temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito traducir el texto «desbloquear tarjeta», no pedir que desbloqueen la mía.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cómo se describe el proceso para desbloquear una tarjeta? Solo estoy consultando para un trabajo.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Después de mirar cuánto tengo disponible, quiero volver a habilitar mi tarjeta porque se bloqueó
+    por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El saldo ya lo consulté. ¿Me ayudan a desbloquear la tarjeta que me quedó temporalmente bloqueada?
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero desbloquear mi tarjeta por ahora; prefiero dejarla bloqueada.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, quiero desbloquearla porque quedó bloqueada temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No me habiliten la tarjeta, quiero que siga bloqueada.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Por el momento no necesito que le saquen el bloqueo a mi tarjeta.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No la quiero bloquear; necesito que me habiliten de nuevo la tarjeta, que se bloqueó por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco bloquearla, che, quiero sacar el bloqueo temporal de mi tarjeta.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, desbloqueala.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sí, por favor.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dale, hacelo.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero desbloquear mi tarjeta de crédito, que quedó bloqueada por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me pueden desbloquear la tarjeta de crédito? La había bloqueado temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito volver a habilitar mi tarjeta de crédito, que está bloqueada por ahora.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero desbloquear mi tarjeta de débito, que quedó bloqueada por un rato.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me pueden desbloquear la tarjeta de débito? La había bloqueado temporalmente.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito volver a habilitar mi tarjeta de débito, que está bloqueada por ahora.
+  intents:
+  - card_unlock
+  status: clear
+  topic: null
+  family: card_unlock-es-ar-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

@@ -1,0 +1,469 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: pending_reversal_explain
+items:
+- text: Tengo un cobro en mi tarjeta que sigue pendiente, ¿me explican cuándo se confirma?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me aparece un cargo pendiente en la tarjeta y quisiera saber cuándo se verá reflejado.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hay un cobro de mi tarjeta que todavía no se confirma. ¿Me pueden ayudar a entender qué pasa?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me hicieron una reversión, pero todavía no aparece en mi saldo. ¿Cuánto tarda?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: La devolución del cobro aún no se refleja en mi tarjeta, ¿me explican por qué?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Estoy esperando que aparezca una reversión en el saldo de mi tarjeta. ¿Me ayudan a revisarla?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, tengo un cobro pendiente en la tarjeta y no sé cuándo se va a reflejar, ¿me ayudan?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, parce, me aparece un cargo sin confirmar en mi tarjeta. ¿Cuándo queda listo?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, ese cobro sigue pendiente y no me sale en el saldo. ¿Qué pasó ahí?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ve, parce, me hicieron una reversión y todavía no me aparece en la tarjeta, ¿qué hago?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, la devolución del cobro no se me ha reflejado todavía, ¿me cuentan cuánto demora?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, parce, estoy esperando que entre una reversión a mi saldo y no aparece. ¿Me colaboran?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me sale un cobro pendient en la tarjeta, saben cuando se confirma?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tengo un cargo q aun no aparece como confirmado, me ayudan a mirar?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ese cobro sigue en pendiente y no se refleja en mi saldo, q paso?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me hicieron la reversa pero aun no aparece en mi saldo, cuanto se demora?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: la devolucion todavia no me sale en la tarjeta, me ayudan plis?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: estoy esperando una reversión y no aparece aun, saben q paso?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: La reversión que estaba pendiente ya apareció en mi saldo; solo necesito descargar el comprobante.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero poner un reclamo por esta compra, pero el reverso sigue pendiente. ¿Por qué no se ha reflejado?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El cobro pendiente ya quedó confirmado y no espero ninguna reversión; quiero cambiar el PIN de
+    mi tarjeta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Ya se reflejó la reversión en mi tarjeta. ¿Cómo actualizo mis datos de contacto?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Voy a reclamar este cobro, aunque lo que necesito saber es por qué la reversión aún no aparece
+    en mi tarjeta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: 'Tengo una queja por la compra: el comercio hizo el reverso, pero todavía figura pendiente. ¿Qué
+    pasó?'
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Veo el registro de una reversión en el historial, pero ya se abonó; necesito saber cómo descargar
+    el extracto.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero desconocer la compra; necesito saber por qué la reversión todavía aparece pendiente
+    y no se refleja en mi tarjeta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: El cobro que figuraba pendiente ya se confirmó. ¿Cómo puedo cambiar la dirección de mi cuenta?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: La reversión ya llegó a mi saldo; solo quiero consultar cómo reemplazar mi tarjeta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy intentando disputar ese cobro. ¿Por qué sigue pendiente la reversión y aún no la veo
+    en la tarjeta?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito abrir un reclamo por la compra; quiero saber cuándo se va a reflejar la reversión
+    que sigue pendiente.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo ningún cobro pendiente ni una reversión por aparecer; quiero cambiar el PIN de mi tarjeta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, parce; necesito saber por qué el reverso de una compra sigue pendiente
+    y no me aparece.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No estoy esperando que se refleje ningún cargo ni devolución; necesito actualizar mis datos.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No hay una reversión pendiente en mi caso. Solo quiero saber cómo pedir una tarjeta nueva.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No es para bloquear la tarjeta, solo quiero entender cuándo se va a reflejar la devolución que
+    todavía está pendiente.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No busco bloquear nada; ¿me explican por qué aún no aparece la plata de la compra reversada?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Aún pendiente
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Todavía no aparece
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cobro sin confirmar
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tengo una reversión pendiente en mi tarjeta de crédito y todavía no se refleja. ¿Me pueden explicar
+    qué pasó?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: La reversión de un cobro en mi tarjeta de crédito sigue pendiente y no aparece aún, ¿a qué se
+    debe?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: En mi tarjeta de crédito aparece un cobro pendiente de reversar, pero todavía no veo la devolución.
+    ¿Me explican por qué?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Tengo una reversión pendiente en mi tarjeta de débito y todavía no se refleja. ¿Me pueden explicar
+    qué pasó?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: La reversión de un cobro en mi tarjeta de débito sigue pendiente y no aparece aún, ¿a qué se debe?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: En mi tarjeta de débito aparece un cobro pendiente de reversar, pero todavía no veo la devolución.
+    ¿Me explican por qué?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

@@ -1,0 +1,31 @@
+# Intent registry (ADR-032, D13). One row per member of the `Intent` Literal (26).
+# `node` is the flow node `_dispatch` routes to (null = unsupported, or never a flow);
+# the Literal in schemas.py and the nlu@v5 prompt list are check-only (test_registry_consistency).
+label_set_version: 1
+intents:
+  - {intent: card_status, node: card_info, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: card_status}
+  - {intent: balance_due, node: card_info, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: balance_due}
+  - {intent: decline_explain, node: decline_explain, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: decline_explain}
+  - {intent: transaction_search, node: tx_search, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: transaction_search}
+  - {intent: pending_reversal_explain, node: tx_explain, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: null}
+  - {intent: card_block, node: card_block, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: card_block}
+  - {intent: card_unlock, node: card_unlock, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: card_unlock}
+  - {intent: unrecognized_charge, node: unrecognized_charge, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: unrecognized_charge}
+  - {intent: replacement_request, node: replacement, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: replacement_request}
+  - {intent: human_request, node: null, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: human_request}
+  - {intent: general_question, node: null, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: null}
+  - {intent: greeting, node: smalltalk, tier: management, classifier: true, training_dir: ml/intent/data, lexicon_key: greeting}
+  - {intent: thanks_close, node: smalltalk, tier: management, classifier: true, training_dir: ml/intent/data, lexicon_key: thanks_close}
+  - {intent: affirm, node: smalltalk, tier: management, classifier: true, training_dir: ml/intent/data, lexicon_key: null}
+  - {intent: deny, node: smalltalk, tier: management, classifier: true, training_dir: ml/intent/data, lexicon_key: null}
+  - {intent: travel_notice, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: spending_limits, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: card_doctor, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: expiry_renewal, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: benefits_info, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: card_activation, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: pin_reset, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: card_cancel, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: limit_increase, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: card_finder, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: prequalification, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}

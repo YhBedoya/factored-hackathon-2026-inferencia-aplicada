@@ -1,0 +1,455 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: human_request
+items:
+- text: Quero falar com um atendente, por favor.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode me passar para uma pessoa do atendimento?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Gostaria de conversar com um agente humano.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Preciso de ajuda de um atendente humano.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero conversar com alguém da equipe de atendimento.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pode chamar uma pessoa para me ajudar?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pô, me passa pra alguém do atendimento aí?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Dá uma força e me põe pra falar com uma pessoa, por favor.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero trocar uma ideia com um atendente, beleza?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô precisando falar com uma pessoa de verdade, viu?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me coloca pra conversar com alguém do suporte, por favorzinho.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem como me encaminhar pra um atendente aí?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero fala com um atendente pfv
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me passa pra uma pessoa do suporte, por favorzinho
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: preciso flar com alguem do atendimento agr
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem como me por pra fala c uma pessoa?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: quero um atendente humano pra me ajuda pf
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me encaminha pra alguem do suporte, pfv
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: O atendente já me explicou como consultar o limite; agora só quero ver meu saldo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero conferir meu saldo, mas prefiro falar com uma pessoa. Pode me passar pra um atendente?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Já conversei com uma pessoa do atendimento sobre o limite, mas preciso apenas conferir o saldo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A explicação do atendente sobre meu limite foi suficiente; quero só consultar o saldo agora.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Preciso ver quanto tenho na conta; me coloca em contato com alguém do atendimento, por favor.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Em vez de consultar o saldo pelo app, quero conversar com um atendente.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quero saber onde fica no app a opção para falar com um atendente.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero consultar meu saldo, mas prefiro falar com uma pessoa do atendimento.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Só preciso encontrar no aplicativo o botão de atendimento humano.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Onde aparece a opção de conversar com uma pessoa? Quero apenas localizar o menu.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Pode me passar para um atendente? Preciso tirar uma dúvida sobre o saldo da conta.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero consultar isso pelo aplicativo; quero conversar com alguém sobre meu saldo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero falar com um atendente; só preciso consultar meu saldo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero bloquear meu cartão, quero falar com um atendente.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Prefiro não conversar com uma pessoa do suporte, quero apenas ver meu saldo.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não preciso de atendimento humano, só quero conferir quanto tenho na conta.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não é pra bloquear o cartão; preciso conversar com uma pessoa do suporte.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero fazer bloqueio, só queria ser atendido por alguém.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Um atendente, por favor
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero uma pessoa
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Falar com alguém
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quero falar com um atendente sobre meu cartão de crédito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Pode me passar para uma pessoa para conversar sobre o cartão de crédito?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Preciso ser atendido por alguém a respeito do meu cartão de crédito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quero falar com um atendente sobre meu cartão de débito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Pode me passar para uma pessoa para conversar sobre o cartão de débito?
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Preciso ser atendido por alguém a respeito do meu cartão de débito.
+  intents:
+  - human_request
+  status: clear
+  topic: null
+  family: human_request-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

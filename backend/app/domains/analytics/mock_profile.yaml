@@ -1,0 +1,97 @@
+provenance: team-generated-synthetic
+# Mock interaction profile (REQ-interaction-analytics-pipeline R5, spec D15).
+# Apart from the unit costs, every value is invented to look plausible. Nothing
+# here is derived from data and none of it claims a trend.
+metrics_version: 1            # stamped on mock rows; keep equal to the worker's METRICS_VERSION
+
+volume:
+  weekday: 120
+  weekend: 70
+  noise: 0.15                 # +-15% uniform daily noise
+  # Two peaks (late morning, early evening) over a flat base. Minutes of the local day.
+  base_share: 0.2
+  peaks:
+    - {mean_min: 660, sd_min: 100, weight: 0.5}    # 11:00
+    - {mean_min: 1140, sd_min: 90, weight: 0.5}    # 19:00
+
+language: {es: 0.8, pt: 0.2}
+country: {MX: 0.45, CO: 0.30, AR: 0.25}
+channel: web
+
+# The 11 core-tier intents of conversation/intents.yaml (copied by eye; this
+# module must not import `conversation`). `weight` is the draw weight and
+# `resolve` the per-intent resolution rate, used to pick which intent fails
+# when an interaction does not resolve.
+intents:
+  balance_due:              {weight: 0.22, kind: read,   resolve: 0.92}
+  card_status:              {weight: 0.20, kind: read,   resolve: 0.90}
+  transaction_search:       {weight: 0.16, kind: read,   resolve: 0.88}
+  decline_explain:          {weight: 0.14, kind: read,   resolve: 0.85}
+  pending_reversal_explain: {weight: 0.06, kind: read,   resolve: 0.86}
+  general_question:         {weight: 0.04, kind: read,   resolve: 0.85}
+  card_block:               {weight: 0.06, kind: action, resolve: 0.85}
+  card_unlock:              {weight: 0.04, kind: action, resolve: 0.80}
+  replacement_request:      {weight: 0.04, kind: action, resolve: 0.75}
+  unrecognized_charge:      {weight: 0.03, kind: action, resolve: 0.20}   # mostly handed to fraud
+  human_request:            {weight: 0.01, kind: action, resolve: 0.0}    # always handed off
+# Intents per interaction, mean about 1.3.
+intent_count: {1: 0.75, 2: 0.20, 3: 0.05}
+needed_clarification: 0.12    # per intent occurrence
+# Weight multiplier for unrecognized_charge when the interaction is not a fraud handoff.
+unrecognized_charge_outside_fraud: 0.2
+
+# Interaction outcome shares (D15: only these four exist in the mock).
+outcomes: {resolved: 0.72, escalated: 0.16, abandoned: 0.08, abstained: 0.04}
+
+# Shares of ALL interactions; they add up to the escalated share.
+escalation_causes:
+  by_design: 0.08
+  customer_choice: 0.04
+  bot_failure: 0.03
+  security: 0.01
+# Handoff reason -> queue, per cause group (equal weights inside a group).
+escalation_reasons:
+  by_design:
+    suspected_fraud: fraudes
+    priority_claim: reclamos
+    legal_regulator: reclamos
+    customer_not_active: atencion
+    bank_side_block: atencion
+  customer_choice:
+    human_request: atencion
+  bot_failure:
+    clarification_exhausted: atencion
+    tool_failure: atencion
+    llm_unavailable: atencion
+    action_unverified: atencion
+  security:
+    unauthorized_access: fraudes
+second_handoff_share: 0.05
+time_to_claim_s: {min: 20, max: 900}
+
+end_reason:
+  resolved: {customer_closed: 0.85, idle: 0.15}
+  abstained: {customer_closed: 0.70, idle: 0.30}
+
+messages:
+  median: 6
+  sigma: 0.5                  # lognormal spread
+  min: 2
+  max: 20
+  agent_max: 4                # agent messages on an escalated interaction
+seconds_per_turn: {min: 25, max: 90}
+
+# Measured unit costs times the turns.
+unit_cost_usd:
+  nlu: 0.017
+  compose: 0.005
+  handoff_summary: 0.005      # invented: no measured value in R5; same order as a compose call
+
+degraded_share: 0.02
+
+sentiment:
+  overall: {negative: 0.18, neutral: 0.55, positive: 0.27}
+  end_better: 0.30
+  end_worse: 0.10
+  model: mock
+  prompt_version: mock

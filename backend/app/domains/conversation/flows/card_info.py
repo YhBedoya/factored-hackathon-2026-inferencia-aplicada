@@ -151,7 +151,7 @@ async def _facts(
     intent: Intent, details: CardDetails, bank_tools: BankReadTools, state: GraphState
 ) -> list[Fact]:
     """This turn's facts; the reply itself always goes through `compose`
-    (R4, R6). ADR-032 retired the fixed `credit_only` text a debit card got
+    (R4, R6). ADR-034 retired the fixed `credit_only` text a debit card got
     on `balance_due`.
     """
     if intent == "balance_due" and details.kind == "credit":
@@ -200,7 +200,7 @@ def _card_status_facts(details: CardDetails) -> list[Fact]:
 async def _debit_balance_facts(
     details: CardDetails, bank_tools: BankReadTools, *, country: Literal["MX", "CO", "AR"]
 ) -> list[Fact]:
-    """`balance_due` on a debit card (ADR-032): mask, kind, status and its
+    """`balance_due` on a debit card (ADR-034): mask, kind, status and its
     available balance (`current_balance`, as `available_balance`), plus the
     hidden `currency` (and MXN-estimate facts) that format it. Due date and
     minimum payment are credit-only.

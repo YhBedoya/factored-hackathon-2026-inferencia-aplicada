@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from app.core.actions import ActionResult
 from app.core.llm import LLMClient
+from app.domains.conversation.classifier import IntentClassifier
 from app.domains.conversation.graph import (
     ConfirmationDecision,
     GraphState,
@@ -101,6 +102,8 @@ class TurnHost:
     graph: CompiledStateGraph[GraphState, Any, TurnInput, TurnOutput]
     pool: AsyncConnectionPool[AsyncConnection[DictRow]]
     llm: LLMClient
+    # Learned fallback loaded once at startup (ADR-032); None = not loaded.
+    classifier: IntentClassifier | None = None
     tasks: set[asyncio.Task[None]] = field(default_factory=set)
 
 
@@ -108,6 +111,7 @@ async def open_host(
     database_url: str,
     llm: LLMClient,
     system: Literal["proposed", "baseline"] = "proposed",
+    classifier: IntentClassifier | None = None,
 ) -> TurnHost:
     """Open the checkpointer pool, run its one-time `setup()`, and compile
     the graph over it (D16). `search_path=langgraph` keeps the checkpoint
@@ -129,7 +133,7 @@ async def open_host(
     saver = AsyncPostgresSaver(pool, serde=checkpoint_serde())
     await saver.setup()
     graph = build_graph(saver, system=system)
-    return TurnHost(graph=graph, pool=pool, llm=llm)
+    return TurnHost(graph=graph, pool=pool, llm=llm, classifier=classifier)
 
 
 async def close_host(host: TurnHost) -> None:

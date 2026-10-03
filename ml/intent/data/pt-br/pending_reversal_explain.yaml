@@ -1,0 +1,460 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: pending_reversal_explain
+items:
+- text: O estorno de uma compra cancelada ainda não apareceu na minha fatura. Pode me explicar o que aconteceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cancelei uma compra, mas o valor ainda não voltou para o cartão. Por que o estorno não apareceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: O estorno está pendente há alguns dias e não vejo o crédito na fatura. Você pode esclarecer?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem uma cobrança no meu cartão que continua pendente. Por que ela ainda não foi confirmada?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Uma compra aparece como pendente no cartão e não mudou de status. O que está acontecendo?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A cobrança ainda não foi lançada na fatura. Pode explicar por que segue pendente?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cancelei a compra, mas o estorno ainda não caiu no meu cartão. Cê sabe por quê?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: O valor da compra cancelada não voltou ainda, tá pendente faz dias. Pode me dizer o que rolou?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô esperando o estorno aparecer na fatura e até agora nada. Por que tá demorando?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Fiz uma compra e ela ficou pendente no cartão. Por que ainda não confirmaram isso?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A cobrança tá presa como pendente faz um tempão. Cê pode explicar o que tá pegando?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: A compra não saiu do status pendente até agora. Sabe me dizer por que tá demorando?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: cancelei a compra e o estorno ainda n caiu no cartao, sabe pq?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: o valor da compra cancelada n voltou pra fatura ainda, oq aconteceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: to esperando o estorno aparecer faz dias e nada, tem como explicar?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem uma cobranca pendente no meu cartao faz dias, pq n confirmou ainda?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: a compra ta aparecendo como pendente e n muda, sabe oq rolou?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: minha cobrança continua pendente e ainda n foi lançada, pode ver pq?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vi que o estorno ainda não apareceu, mas minha dúvida é como alterar a senha do cartão.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Na minha fatura, a compra cancelada ainda aparece sem o estorno. Quando esse valor volta?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: O valor cancelado segue sem voltar, mas quero saber como atualizar meu endereço no cadastro.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Aparece um estorno pendente na fatura, mas preciso de ajuda para trocar meu telefone cadastrado.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Cancelei uma compra, mas o crédito do estorno não entrou na fatura ainda. Tem previsão?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A cobrança da compra cancelada continua lá e não recebi o estorno. Quando ele aparece?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Minha compra está como pendente, mas só quero saber como atualizar meu endereço de entrega.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero contestar essa compra, mas o estorno prometido ainda não apareceu na minha conta. O que
+    aconteceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: A cobrança ainda aparece pendente, mas minha dúvida é como mudar a senha do aplicativo.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi que o pagamento continua pendente; quero apenas saber como pedir um cartão novo.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vou abrir uma contestação, só que a reversão da cobrança continua sem aparecer. Por que ainda
+    está pendente?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso reclamar dessa compra, mas queria entender por que o estorno ainda não caiu.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não quero saber por que o estorno ainda não apareceu; só preciso atualizar meu endereço.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero contestar a compra, só entender por que o estorno ainda não apareceu no meu cartão.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não preciso de explicação sobre a cobrança pendente, quero apenas trocar a senha do cartão.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero entender o atraso do estorno, só quero saber como pedir uma segunda via do cartão.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não estou querendo abrir uma disputa; queria saber quando o estorno pendente vai cair.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não é uma contestação, só preciso entender por que ainda não recebi o valor de volta.
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ainda não caiu
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Segue pendente
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não voltou ainda
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Por que a compra no meu cartão de crédito ainda aparece como pendente depois do estorno?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Fizeram o estorno de uma cobrança no meu cartão de crédito, mas o valor ainda não voltou. O que
+    aconteceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: A reversão de uma compra no cartão de crédito ainda não apareceu na minha conta. Por que está
+    demorando?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Por que a compra no meu cartão de débito ainda aparece como pendente depois do estorno?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Fizeram o estorno de uma cobrança no meu cartão de débito, mas o valor ainda não voltou. O que
+    aconteceu?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: A reversão de uma compra no cartão de débito ainda não apareceu na minha conta. Por que está demorando?
+  intents:
+  - pending_reversal_explain
+  status: clear
+  topic: null
+  family: pending_reversal_explain-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
