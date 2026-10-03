@@ -6,6 +6,7 @@ import {
 	type ConversationSearchFilters,
 } from "@/components/staff/ConversationFilters";
 import { ConversationTable } from "@/components/staff/ConversationTable";
+import { StaffNav } from "@/components/staff/StaffNav";
 import { listStaffConversations, staffMe } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -52,15 +53,18 @@ function ConversationListPage() {
 	});
 
 	return (
-		<div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-10">
-			<h1 className="font-heading text-2xl text-foreground">
-				{t("staff.conversations.title")}
-			</h1>
-			<ConversationFilters
-				value={search}
-				onChange={(next) => void navigate({ search: next })}
-			/>
-			<ConversationTable items={data?.items ?? []} />
-		</div>
+		<>
+			<StaffNav />
+			<div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-6 py-10">
+				<h1 className="font-heading text-2xl text-foreground">
+					{t("staff.conversations.title")}
+				</h1>
+				<ConversationFilters
+					value={search}
+					onChange={(next) => void navigate({ search: next })}
+				/>
+				<ConversationTable items={data?.items ?? []} />
+			</div>
+		</>
 	);
 }
