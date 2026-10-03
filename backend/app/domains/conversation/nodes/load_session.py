@@ -82,6 +82,7 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
     update: dict[str, Any] = {
         "actions_at_turn_start": len(state.get("actions", [])),
         "write_failed": False,
+        "suggestion_accepted": False,
         "customer_id": session.customer_id,
         "country": profile.country,
         "customer_name": profile.first_name,

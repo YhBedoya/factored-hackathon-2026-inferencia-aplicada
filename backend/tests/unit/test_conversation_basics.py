@@ -169,7 +169,7 @@ def test_block_then_balance_in_order(fakebank_dir: Path) -> None:
         assert "quedó bloqueada temporalmente a las" in parts[0]
         assert parts[1] == due_date_text
         assert parts[2] == get_template("synthetic_footnote", "es")
-        assert parts[3] == get_template("closing_question", "es")
+        assert parts[3] == get_template("closing_suggest_transaction_search", "es")
         assert debug3.pending == "smalltalk.anything_else"
         state3 = await session.graph.aget_state(session.config)
         assert state3.values["intent_queue"] == []
@@ -178,15 +178,14 @@ def test_block_then_balance_in_order(fakebank_dir: Path) -> None:
     asyncio.run(run())
 
 
-async def _closing_chips(session: Any) -> list[str]:
+async def _assert_no_closing_chips(session: Any) -> None:
     state = await session.graph.aget_state(session.config)
     chips = [e for e in state.values["ui"] if e.kind == "quick_replies"]
-    assert [e.payload.slot for e in chips] == ["closing"]
-    return [o.label for o in chips[0].payload.options]
+    assert not [e for e in chips if e.payload.slot == "closing"]
 
 
 def test_cancelled_confirmation_ends_with_closing_es(fakebank_dir: Path) -> None:
-    """A cancelled confirmation card still closes the flow with the question and chips."""
+    """A cancelled confirmation card still closes the flow with the closing text and no chips."""
 
     async def run() -> None:
         llm = ScriptedLLM(
@@ -214,14 +213,14 @@ def test_cancelled_confirmation_ends_with_closing_es(fakebank_dir: Path) -> None
         )
         assert strip_closing(reply, "es") == get_template("action_cancelled", "es")
         assert debug.pending == "smalltalk.anything_else"
-        assert await _closing_chips(session) == ["Algo más", "Terminar"]
+        await _assert_no_closing_chips(session)
         assert session.overlay.locked == set()
 
     asyncio.run(run())
 
 
 def test_answered_status_query_ends_with_closing_pt(fakebank_dir: Path) -> None:
-    """An answered read-only query closes the flow with the question and chips."""
+    """An answered read-only query closes the flow with the closing text and no chips."""
 
     async def run() -> None:
         llm = ScriptedLLM(
@@ -240,6 +239,6 @@ def test_answered_status_query_ends_with_closing_pt(fakebank_dir: Path) -> None:
         )
         assert strip_closing(reply, "pt") == "Seu cartao Crédito •••• 2222 esta Ativo."
         assert debug.pending == "smalltalk.anything_else"
-        assert await _closing_chips(session) == ["Mais alguma coisa", "Encerrar"]
+        await _assert_no_closing_chips(session)
 
     asyncio.run(run())

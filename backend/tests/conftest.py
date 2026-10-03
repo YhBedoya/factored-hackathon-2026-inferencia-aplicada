@@ -105,11 +105,18 @@ def _first_template_variant(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def strip_closing(reply: str, language: str) -> str:
-    """Assert `reply` ends with the closing question and return it without that
-    last segment (variant 0 under tests), so a flow's own text is asserted alone."""
-    closing = "\n\n" + templates.get_template("closing_question", cast(Any, language))
-    assert reply.endswith(closing)
-    return reply[: -len(closing)]
+    """Assert `reply` ends with a closing (generic or one of the two suggestions,
+    variant 0 under tests) and return it without that last segment, so a flow's
+    own text is asserted alone."""
+    for kind in (
+        "closing_generic",
+        "closing_suggest_transaction_search",
+        "closing_suggest_unrecognized_charge",
+    ):
+        closing = "\n\n" + templates.get_template(cast(Any, kind), cast(Any, language))
+        if reply.endswith(closing):
+            return reply[: -len(closing)]
+    raise AssertionError(f"reply does not end with a closing: {reply!r}")
 
 
 @pytest.fixture(autouse=True)

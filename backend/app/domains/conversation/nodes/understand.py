@@ -22,7 +22,7 @@ from app.domains.conversation.state import Pending
 
 __all__ = ["run_nlu", "understand"]
 
-_PROMPT = PromptRef("nlu", 6)
+_PROMPT = PromptRef("nlu", 7)
 # D8: the second ambiguous turn in a row hands off (ADR-004: escalate after 2 failures).
 _MAX_REPHRASE_FAILURES = 2
 

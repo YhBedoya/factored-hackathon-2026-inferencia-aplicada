@@ -171,7 +171,7 @@ def test_single_charge_questions_claim(fakebank_dir: Path, language: Language) -
             confirmation=ConfirmationDecision(token_id=token_id, decision="confirm"),
         )
         assert debug5.pending == "smalltalk.anything_else"
-        assert reply5.endswith(get_template("closing_question", language))
+        assert reply5.endswith(get_template("closing_generic", language))
         assert re.search(r"CLM-[0-9A-F]+", reply5)
         assert "Fraudes" not in reply5
         assert session.handoff_tools.created == []
@@ -195,7 +195,7 @@ def test_no_transactions_writes_nothing(fakebank_dir: Path) -> None:
         )
         assert strip_closing(reply, "es") == get_template("dispute_no_transactions", "es")
         assert debug.pending == "smalltalk.anything_else"
-        assert debug.ui == ["quick_replies"]
+        assert debug.ui == []
         assert session.handoff_tools.created == []
 
     asyncio.run(run())

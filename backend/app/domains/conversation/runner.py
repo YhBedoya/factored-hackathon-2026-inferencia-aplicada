@@ -54,7 +54,7 @@ from app.core.logging import bind_conversation_id, bind_turn_id
 from app.core.redis import get_redis
 from app.domains.audit.schemas import AuditType
 from app.domains.conversation import fact_values, store
-from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TxSelection
+from app.domains.conversation.graph import ConfirmationDecision, DebugInfo, TurnInput, TxSelection
 from app.domains.conversation.hosting import TurnHost
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.state import DeclineState, DisputeState, Pending, TxOfferState
@@ -93,6 +93,21 @@ _BRANCH_NODES = (
     "abstain",
     "handoff",
 )
+
+
+async def _introduced_seed(
+    graph: Any, config: RunnableConfig, conversation_id: UUID
+) -> dict[str, bool]:
+    """D10: `{"introduced": True}` when the welcome (a stored bot message, kept
+    out of the graph's history, D8) already introduced Cardy and the checkpoint
+    hasn't recorded it yet; `{}` otherwise.
+    """
+    checkpoint = await graph.aget_state(config)
+    if "introduced" in checkpoint.values:
+        return {}
+    rows = await store.list_messages(conversation_id)
+    return {"introduced": True} if any(row.role == "bot" for row in rows) else {}
+
 
 _RELEASE_LOCK_SCRIPT = """
 if redis.call("get", KEYS[1]) == ARGV[1] then
@@ -327,13 +342,16 @@ async def _run_turn(
         # only its own delta, and `load_session`'s reset marker streams as `[]`.
         intent_segments: list[JsonValue] = []
         with fact_values.collecting() as collected_values:
+            graph_input: TurnInput = {
+                "user_text": graph_text or "",
+                "confirmation": confirmation,
+                "resume": resume,
+                "selection": selection,
+            }
+            if await _introduced_seed(host.graph, config, conversation_id):
+                graph_input["introduced"] = True
             async for update in host.graph.astream(
-                {
-                    "user_text": graph_text or "",
-                    "confirmation": confirmation,
-                    "resume": resume,
-                    "selection": selection,
-                },
+                graph_input,
                 config=config,
                 stream_mode="updates",
             ):

@@ -61,10 +61,10 @@ def test_replacement_active_card_offers_block(fakebank_dir: Path) -> None:
 
 
 def test_closing_after_action_unlock_replacement(fakebank_dir: Path) -> None:
-    """A verified unlock and a verified replacement each end with the closing question."""
+    """A verified unlock and a verified replacement each end with the generic closing."""
 
     async def run() -> None:
-        closing_texts = template_variants("closing_question", "es")
+        closing_texts = template_variants("closing_generic", "es")
 
         # Unlock of a lock made in this session: step-up, then confirm.
         llm = ScriptedLLM(
@@ -86,9 +86,7 @@ def test_closing_after_action_unlock_replacement(fakebank_dir: Path) -> None:
         )
         assert any(text in reply for text in closing_texts)
         assert debug.pending == "smalltalk.anything_else"
-        assert debug.ui == ["quick_replies"]
-        final = await session.graph.aget_state(session.config)
-        assert final.values["ui"][0].payload.slot == "closing"
+        assert "quick_replies" not in debug.ui
 
         # Replacement on the file address.
         llm2 = ScriptedLLM(
@@ -107,7 +105,6 @@ def test_closing_after_action_unlock_replacement(fakebank_dir: Path) -> None:
         reply2, debug2 = await run_turn(session2.graph, "sí", config=session2.config)
         assert any(text in reply2 for text in closing_texts)
         assert debug2.pending == "smalltalk.anything_else"
-        final2 = await session2.graph.aget_state(session2.config)
-        assert final2.values["ui"][0].payload.slot == "closing"
+        assert "quick_replies" not in debug2.ui
 
     asyncio.run(run())

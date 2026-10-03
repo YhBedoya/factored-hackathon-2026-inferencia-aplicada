@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.domains.cards.schemas import CardSummary
 from app.domains.conversation.fact_values import record
+from app.domains.conversation.schemas import Intent
 from app.domains.conversation.templates import TemplateKind, get_template
 from app.domains.conversation.ui import CardPickerEvent, CardPickerPayload, PickerOption
 from app.domains.localization import kind_label, mask_card, status_label
@@ -96,6 +97,19 @@ class CardSelectPolicy(BaseModel):
     card_block: CardBlockPolicy
     replacement: ReplacementPolicy
     next_step_offer: dict[OriginKind, OfferKind]
+    closing_suggestion: dict[Intent, Intent]
+
+    @field_validator("closing_suggestion")
+    @classmethod
+    def _suggestions_are_resolvable(cls, value: dict[Intent, Intent]) -> dict[Intent, Intent]:
+        # Cardy may only suggest an intent it can run (R1.2); `graph` imports
+        # lazily here because the flows are loaded by the graph builder.
+        from app.domains.conversation.graph import _INTENT_NODES
+
+        unknown = [v for v in value.values() if v not in _INTENT_NODES]
+        if unknown:
+            raise ValueError(f"closing_suggestion targets with no flow: {unknown}")
+        return value
 
 
 class Selected(BaseModel):
@@ -273,10 +287,35 @@ def select_card(
             return Selected(card_id=focus_card_id)
         hint = None
 
+    # "the other one" (D8): every card but the focus one, over every status
+    # (D12). A missing or foreign focus can't define "other", so it acts as no
+    # hint and counts no failure (R1: a foreign id never matches).
+    others: tuple[CardSummary, ...] | None = None
+    if hint == "other":
+        if focus_card_id is not None and any(c.card_id == focus_card_id for c in cards):
+            others = tuple(c for c in cards if c.card_id != focus_card_id)
+            if len(others) == 1:
+                return Selected(card_id=others[0].card_id)
+        if not others:
+            hint = None
+
     if candidate_ids is not None:
         eligible = tuple(c for c in cards if c.card_id in candidate_ids)
     else:
         eligible = tuple(c for c in cards if c.status in policy.card_status.eligible_statuses)
+
+    if others:
+        # Two or more candidates: ask among the eligible ones minus the focus card.
+        options = tuple(c for c in eligible if c.card_id != focus_card_id)
+        if options:
+            return Ask(
+                options=options,
+                card_options=_build_card_options(options, language),
+                failures=failures,
+            )
+        # Nothing eligible besides the focus card (e.g. all Closed): no hint, no
+        # failure, never an empty picker.
+        hint = None
 
     if hint is not None:
         match = _resolve_hint(cards, hint)

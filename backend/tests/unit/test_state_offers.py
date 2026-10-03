@@ -143,12 +143,12 @@ def test_closing_after_action_lock(fakebank_dir: Path) -> None:
         reply, debug = await run_turn(session.graph, "si", config=session.config)
 
         assert "PRD-TFM1CRED0001" in session.overlay.locked
-        assert any(v in reply for v in template_variants("closing_question", "es"))
+        assert any(v in reply for v in template_variants("closing_generic", "es"))
         assert debug.pending == "smalltalk.anything_else"
         chips = [e for e in await _ui(session) if e.kind == "quick_replies"]
-        assert chips[-1].payload.slot == "closing"
+        assert not [e for e in chips if e.payload.slot == "closing"]
 
-        _reply, debug3 = await run_turn(session.graph, "Terminar", config=session.config)
+        _reply, debug3 = await run_turn(session.graph, "no, gracias", config=session.config)
         assert "conversation_closed" in debug3.ui
 
     asyncio.run(run())
@@ -203,9 +203,9 @@ def test_block_no_eligible_card_closes(fakebank_dir: Path) -> None:
         )
 
         assert _has_variant(reply, "block_none_eligible", "es")
-        assert _has_variant(reply, "closing_question", "es")
+        assert _has_variant(reply, "closing_generic", "es")
         assert debug.pending == "smalltalk.anything_else"
         chips = [e for e in await _ui(session) if e.kind == "quick_replies"]
-        assert chips[-1].payload.slot == "closing"
+        assert not [e for e in chips if e.payload.slot == "closing"]
 
     asyncio.run(run())

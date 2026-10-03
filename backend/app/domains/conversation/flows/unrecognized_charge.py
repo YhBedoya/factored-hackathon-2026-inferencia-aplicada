@@ -113,7 +113,9 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
-    outcome = select_card(cards, hint, failures, policy, language)
+    outcome = select_card(
+        cards, hint, failures, policy, language, focus_card_id=state.get("selected_card_id")
+    )
 
     if isinstance(outcome, Ask):
         record(outcome.card_options)

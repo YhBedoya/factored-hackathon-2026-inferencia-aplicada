@@ -38,7 +38,11 @@ _VARIED: tuple[TemplateKind, ...] = (
     "replacement_not_eligible",
     "replacement_needs_block",
     "new_card_not_available",
-    "closing_question",
+    "closing_suggest_transaction_search",
+    "closing_suggest_unrecognized_charge",
+    "closing_generic",
+    "greeting_again",
+    "greeting_again_plain",
     "abstain_fallback",
     "anything_else",
     "ask_what_else",
@@ -92,3 +96,13 @@ def test_no_ask_which_card_variant_carries_the_options() -> None:
         for language in _LANGUAGES:
             text = ask_which_card_text(action, ask, language)
             assert all(line not in text for line in options.split("\n")), (action, language)
+
+
+def test_no_procedural_closing_in_templates() -> None:
+    """personalidad-cardy: no variant of any kind announces the conversation as over."""
+    for kind in get_args(TemplateKind):
+        for language in _LANGUAGES:
+            for text in template_variants(kind, language):
+                lowered = text.lower()
+                assert "terminada" not in lowered, (kind, language)
+                assert "encerrar a conversa" not in lowered, (kind, language)

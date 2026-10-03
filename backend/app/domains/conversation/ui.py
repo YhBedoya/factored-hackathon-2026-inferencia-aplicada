@@ -144,13 +144,11 @@ class QuickRepliesPayload(BaseModel):
     `"abstain"` ADR-026's closest action, and `"next_step"` (D5-B D7) is
     `decline_explain`'s self-service replacement offer -- tapping its one
     option sends the label as text, so NLU routes it as `replacement_request`.
-    `"closing"` is the "Algo más" / "Terminar" pair under the closing question;
-    both labels go back as text into the open `anything_else` pause.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    slot: Literal["block_kind", "abstain", "next_step", "closing"]
+    slot: Literal["block_kind", "abstain", "next_step"]
     options: list[PickerOption]
 
 
