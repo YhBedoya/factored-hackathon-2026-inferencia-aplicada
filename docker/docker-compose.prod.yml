@@ -9,7 +9,7 @@ services:
     environment:
       APP_ENV: prod
       LLM_PROVIDER: bedrock
-      AWS_REGION: us-east-1
+      AWS_REGION: ${AWS_REGION:-us-east-2}
     volumes:
       # The image has no `policies/`; `card_select.py` resolves them at `/policies`.
       - ../policies:/policies:ro
@@ -19,7 +19,7 @@ services:
     environment:
       APP_ENV: prod
       LLM_PROVIDER: bedrock
-      AWS_REGION: us-east-1
+      AWS_REGION: ${AWS_REGION:-us-east-2}
     restart: unless-stopped
 
   nginx:

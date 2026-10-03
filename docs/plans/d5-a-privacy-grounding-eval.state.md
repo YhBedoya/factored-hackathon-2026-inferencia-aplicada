@@ -266,6 +266,8 @@ Verify: see the orchestrator's run of the T27 Verify command.
 
 #### Runbook (human runs it; every `<PLACEHOLDER>` is a value the human supplies)
 
+> **Amended 2026-10-03 (ADR-017):** the target is the Free plan project in **us-east-2** (`<TEAM_PROFILE>` = `swip-hackathon`), on an m7i-flex.large with a $90 budget. Every `--region` below is us-east-2. The `make` targets default to it (`DEPLOY_REGION`); run them with `AWS_PROFILE=<TEAM_PROFILE>` set. Create `<OUR_BUCKET>` in us-east-2.
+
 **Step 0. Release PR.** Only after the whole D5-A card (including the eval-runner tasks T17–T26) and D5-B, if merged, have landed on `develop`: open the `develop → main` release PR, get the green check, merge. Deploy `main`, never a branch.
 
 **Step 1. Data copy (08 §5), from a laptop.** Never sync the repo's `data/` (it holds `data/secrets/credentials.csv`); always upload from a clean staging folder outside the repo.
@@ -285,7 +287,7 @@ Keep `src.txt` (key, size, copy date) as provenance for 03 §1. Keep the organiz
 **Step 2. SSM parameters under `/swip/prod/` (08 §9), SecureString.**
 ```bash
 P=/swip/prod
-put() { aws ssm put-parameter --name "$P/$1" --type SecureString --overwrite --value "$2" --profile <TEAM_PROFILE> --region us-east-1 >/dev/null; }
+put() { aws ssm put-parameter --name "$P/$1" --type SecureString --overwrite --value "$2" --profile <TEAM_PROFILE> --region us-east-2 >/dev/null; }
 put POSTGRES_USER <PG_USER>
 put POSTGRES_PASSWORD <PG_PASSWORD>            # not the dev default
 put JWT_SECRET <JWT_SECRET>
@@ -297,17 +299,18 @@ put PUBLIC_HOST <EIP_WITH_DASHES>.sslip.io     # after step 3 gives the Elastic 
 # NEW (D21): a Fernet key. Generate it locally, put it, and keep a copy in the team vault.
 put PII_VAULT_KEY "$(python3 -c 'import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
 ```
-Losing `PII_VAULT_KEY` makes old vault rows and message content unreadable (demo-reset clears them). The backend refuses to start with it empty. Verify names only: `aws ssm get-parameters-by-path --path /swip/prod/ --query 'Parameters[].Name' --profile <TEAM_PROFILE> --region us-east-1` lists all nine.
+Losing `PII_VAULT_KEY` makes old vault rows and message content unreadable (demo-reset clears them). The backend refuses to start with it empty. Verify names only: `aws ssm get-parameters-by-path --path /swip/prod/ --query 'Parameters[].Name' --profile <TEAM_PROFILE> --region us-east-2` lists all nine.
 
 **Step 3. Template check, Bedrock ARNs, stack.**
 ```bash
-aws cloudformation validate-template --template-body file://infra/aws/ec2-stack.yaml --region us-east-1 --profile <TEAM_PROFILE>
+aws cloudformation validate-template --template-body file://infra/aws/ec2-stack.yaml --region us-east-2 --profile <TEAM_PROFILE>
 # ARNs: the profile ARN plus the foundation-model ARN in every region it routes to
 aws bedrock get-inference-profile --inference-profile-identifier us.anthropic.claude-haiku-4-5-20251001-v1:0 \
-  --region us-east-1 --profile <TEAM_PROFILE> --query '[inferenceProfileArn, models[].modelArn]' --output text
-# (confirm the id equals backend/app/core/llm/registry.py before running)
+  --region us-east-2 --profile <TEAM_PROFILE> --query '[inferenceProfileArn, models[].modelArn]' --output text
+# repeat for the Sonnet 5.5 profile (nlu, agent): us.anthropic.claude-sonnet-5-5
+# (confirm both ids equal backend/app/core/llm/registry.py before running)
 make infra-up ALERT_EMAIL_1=<EMAIL_1> ALERT_EMAIL_2=<EMAIL_2> DATA_BUCKET=<OUR_BUCKET> BEDROCK_ARNS=<PROFILE_ARN>,<MODEL_ARN_1>,<MODEL_ARN_2>,...
-aws cloudformation describe-stacks --stack-name <STACK_NAME> --query 'Stacks[0].Outputs' --region us-east-1 --profile <TEAM_PROFILE>   # InstanceId, PublicIp
+aws cloudformation describe-stacks --stack-name <STACK_NAME> --query 'Stacks[0].Outputs' --region us-east-2 --profile <TEAM_PROFILE>   # InstanceId, PublicIp
 ```
 Set `PUBLIC_HOST` (step 2) to the Elastic IP with dashes + `.sslip.io`.
 

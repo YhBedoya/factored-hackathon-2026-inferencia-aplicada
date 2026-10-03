@@ -2,6 +2,8 @@
 
 The deployment strategy for the public URL (K2). It was decided on 2026-09-28 and is recorded in ADR-017. Cards that build on it: **D4-A5** (deploy v0), **D6** (cost guard: turn caps and kill switch) and **D8** (final deploy and demo reset).
 
+**Amended 2026-10-03 (ADR-017):** the deployment moves to the team's AWS project (the "new AWS experience"), which allows Regional resources **only in us-east-2** and is on the **Free plan** (USD 100 in credits). The Free plan allows only small EC2 types, so the box is an **m7i-flex.large** (2 vCPU, 8 GiB). §2 keeps the original us-east-1 comparison as the record of the 2026-09-28 decision.
+
 Anything marked **(proposed)** is a default this doc picks that the team has not confirmed yet. The D4-A5 spec confirms or changes it. Anything marked **OPEN** is listed in §15.
 
 ---
@@ -11,20 +13,20 @@ Anything marked **(proposed)** is a default this doc picks that the team has not
 | Topic | Decision |
 |---|---|
 | Shape | **One EC2 instance running the prod Docker Compose layer** (Option A in §2) |
-| Region | **us-east-1** for everything: EC2, our S3 bucket and Bedrock |
-| Instance | **t3.xlarge** (4 vCPU, 16 GiB), default VPC public subnet **(proposed)**, Elastic IP |
+| Region | **us-east-2** for everything: EC2, our S3 bucket, SSM and Bedrock (the project allows no other Region). `make` targets read `DEPLOY_REGION` (default `us-east-2`) |
+| Instance | **m7i-flex.large** (2 vCPU, 8 GiB), the largest type the Free plan allows; default VPC public subnet, Elastic IP. `INSTANCE_TYPE` overrides it on a paid plan |
 | OS | Ubuntu 24.04 LTS **(proposed)**. Docker's apt repository ships the Engine, Compose and Buildx plugins, and the SSM Agent comes preinstalled |
 | Disk | One 80 GB gp3 root volume **(proposed)**, sized in §6 |
-| Data source | **Our own S3 bucket** in us-east-1, holding a one-time copy of the organizers' `data/` prefix (§5). The deployment never reads the organizers' bucket |
+| Data source | **Our own S3 bucket** in us-east-2, holding a one-time copy of the organizers' `data/` prefix (§5). The deployment never reads the organizers' bucket |
 | Golden DB | Built **on the box** with `make data` from our bucket, so the date shift lands on the deploy date (§6) |
 | AWS access | An **IAM instance role** (S3 read, Bedrock invoke, SSM). No long-lived AWS keys on the box |
-| LLM | `LLM_PROVIDER=bedrock` in us-east-1, through a `us.` cross-region inference profile (ADR-028) |
+| LLM | `LLM_PROVIDER=bedrock` from us-east-2, through a `us.` cross-region inference profile (ADR-028) |
 | DNS / TLS | `<ip-with-dashes>.sslip.io` with a Let's Encrypt certificate. **Fallback: a Route 53 domain** pointed at the same Elastic IP (§8) |
 | Secrets | SSM Parameter Store SecureStrings, written to a `0600` `.env` on the box at deploy time (§9) |
 | Operator access | SSM Session Manager. **No SSH port open** |
 | Observability | The OTel → Victoria → Grafana overlay runs on the box. It isn't exposed publicly and is reached through SSM port forwarding |
 | Langfuse | **Not on the public deployment** (ADR-006 decided). `audit.llm_calls` stays the public record of every call, and Langfuse stays local |
-| Cost | About **$131/month** (about $4.4/day) plus Bedrock usage (§12) |
+| Cost | About **$80/month** (about $2.6/day) plus Bedrock usage, paid from the Free plan's USD 100 credits (§12) |
 
 ## 2. Why this option (evidence)
 
@@ -71,7 +73,7 @@ Why A: it deploys the same artifact the judges can reproduce, keeps demo-reset a
                          Internet
                             │  443 (TLS), 80 (ACME challenge + redirect)
                  ┌──────────▼───────────────────────────────────────────┐
-                 │ EC2 t3.xlarge · us-east-1 · Elastic IP · SG: 80/443   │
+                 │ EC2 m7i-flex.large · us-east-2 · EIP · SG: 80/443     │
                  │                                                       │
                  │  nginx ── static SPA (frontend build)                 │
                  │    └── /api/ ──► backend (FastAPI, APP_ENV=prod) ──────┼──► Bedrock (us. inference profile)
@@ -80,7 +82,7 @@ Why A: it deploys the same artifact the judges can reproduce, keeps demo-reset a
                  │         (latam_app, latam_golden)                     │
                  │  otel-collector ─► VictoriaMetrics/Logs/Traces ◄─ grafana (127.0.0.1 only)
                  │                                                       │
-                 │  host: uv pipeline (make data) ◄──────────────────────┼──► S3 (our bucket, us-east-1)
+                 │  host: uv pipeline (make data) ◄──────────────────────┼──► S3 (our bucket, us-east-2)
                  └───────────────────────────────────────────────────────┘
    Operators: SSM Session Manager (shell + port forwarding). Secrets: SSM Parameter Store.
 ```
@@ -89,21 +91,21 @@ Why A: it deploys the same artifact the judges can reproduce, keeps demo-reset a
 
 | Resource | Configuration |
 |---|---|
-| **S3 bucket** (our data) | us-east-1, Block Public Access on, SSE-S3 default encryption. Prefix `data/` mirrors the organizers' layout. It outlives the instance stack (retain on delete). The bucket name lives in `.env` and SSM, never in the repo **(proposed, same treatment as the organizers' bucket)** |
-| **EC2 instance** | t3.xlarge, Ubuntu 24.04, **IMDSv2 required with hop limit 2** (the backend container needs role credentials, and the extra network hop from Docker's bridge network needs a hop limit of 2), termination protection on during judging |
+| **S3 bucket** (our data) | us-east-2, Block Public Access on, SSE-S3 default encryption. Prefix `data/` mirrors the organizers' layout. It outlives the instance stack (retain on delete). The bucket name lives in `.env` and SSM, never in the repo **(proposed, same treatment as the organizers' bucket)** |
+| **EC2 instance** | m7i-flex.large, Ubuntu 24.04, **IMDSv2 required with hop limit 2** (the backend container needs role credentials, and the extra network hop from Docker's bridge network needs a hop limit of 2), termination protection on during judging |
 | **EBS** | 80 GB gp3 root volume |
 | **Elastic IP** | Fixed IP, so the sslip.io name and any fallback DNS record stay stable across stop/start |
 | **Security group** | Inbound TCP 80 and 443 from `0.0.0.0/0` only. Outbound: all |
 | **IAM role + instance profile** | See the policy below |
 | **SSM Parameter Store** | SecureStrings under `/swip/prod/` **(proposed path)** (§9) |
-| **AWS Budgets** | A monthly cost budget with an actual and a forecast alert to both team members (ADR-023). Threshold **(proposed)**: $150 |
+| **AWS Budgets** | A monthly cost budget with an actual and a forecast alert to both team members (ADR-023). Threshold: **$90** (above the ≈ $80 forecast, below the Free plan's USD 100 credits; `MONTHLY_BUDGET_USD` overrides it) |
 | **Route 53** | Only if the sslip.io fallback is triggered (§8) |
 
 **Instance role policy (least privilege)**
 - `AmazonSSMManagedInstanceCore` (the managed policy), for Session Manager and `send-command`.
 - `s3:ListBucket` on our bucket with an `s3:prefix` condition of `data/*`, and `s3:GetObject` on `arn:aws:s3:::<bucket>/data/*`. Read-only.
 - `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` on:
-  - the `us.` **inference-profile** ARNs in us-east-1 for exactly the model IDs pinned in the `core/llm` registry, and
+  - the `us.` **inference-profile** ARNs in us-east-2 for exactly the model IDs pinned in the `core/llm` registry, and
   - the matching **foundation-model** ARNs in every region the profile routes to.
 
   Newer Claude models such as Haiku 4.5 are invoked through a cross-region inference profile, so a policy that only covers the foundation model fails with `AccessDeniedException`. The exact model IDs are deferred to the dev benchmark (decision log), so the policy is updated whenever the registry changes.
@@ -129,10 +131,10 @@ Why A: it deploys the same artifact the judges can reproduce, keeps demo-reset a
 
 `make data` runs on the host (through `uv`, not inside a container) against our bucket: ingest → contracts → dbt → load → `seed-identity` → golden snapshot → demo reset (03 §2).
 
-- **First deploy order:** start only `postgres` and `redis`, run `make data`, then start the full prod stack. That keeps DuckDB's memory away from a running app on the 16 GiB box. Set a DuckDB `memory_limit` if a run gets OOM-killed **(OPEN, measure on the first run)**.
+- **First deploy order:** start only `postgres` and `redis`, run `make data`, then start the full prod stack. That keeps DuckDB's memory away from a running app on the 8 GiB box. DuckDB is already capped at `memory_limit = 3GB` (`pipeline/dbt/profiles.yml`, `pipeline/load/postgres.py`) and spills to disk, so the run fits next to Postgres's 2 GB `shared_buffers`. Measure the run time on the first deploy.
 - **Date shift:** the whole-week offset is computed from the load date (ADR-010, 03 §5). Re-run `make data` on the box on **D8, before the code freeze**, so the data ends in submission week. After that the data ages with the real clock, which the app already handles.
 - **Persona passwords stay stable:** passwords come from `CREDENTIALS_SEED` (03 §8). The box must use **the same seed** as the credentials sent to the judges. That's why the seed lives in SSM (§9): a rebuilt instance produces the same passwords.
-- **Burst credits:** t3 instances run in *unlimited* mode by default. A long pipeline run above the 40% per-vCPU baseline is billed at $0.05 per vCPU-hour of surplus, which is cents per run.
+- **CPU:** m7i-flex instances have no CPU credits to run out of. They give a 40% baseline per vCPU and can use the full core most of the time, so a long pipeline run is slower than on 4 vCPU but costs nothing extra.
 
 **Disk budget (80 GB):** Postgres 15.5 GB (+ WAL and growth) · DuckDB 6.2 GB · Parquet 1.4 GB · CSV temp files (one at a time) · Docker images and build cache ≈ 5–8 GB · Victoria data · OS ≈ 5 GB. That leaves more than 35 GB free for a second golden rebuild or a temporary eval database (7.8 GB each).
 
@@ -142,7 +144,7 @@ New file `docker/docker-compose.prod.yml`, already expected by 01 §9 and 06 §3
 
 | Service | Prod settings |
 |---|---|
-| `backend` | No `--reload`. `APP_ENV=prod` (disables `/test-idp`, which `test_r1_routes.py` asserts, and turns on `Secure` cookies). `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-1`. **Mounts `../policies:/policies:ro`** exactly as dev does: the image doesn't contain `policies/`, and `card_select.py` resolves them at `/policies`. `restart: unless-stopped`. Uvicorn worker count **(OPEN)**: start with 1 and measure |
+| `backend` | No `--reload`. `APP_ENV=prod` (disables `/test-idp`, which `test_r1_routes.py` asserts, and turns on `Secure` cookies). `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-2`. **Mounts `../policies:/policies:ro`** exactly as dev does: the image doesn't contain `policies/`, and `card_select.py` resolves them at `/policies`. `restart: unless-stopped`. Uvicorn worker count **(OPEN)**: start with 1 and measure |
 | `nginx` | A **prod image** **(proposed: `docker/nginx/Dockerfile.prod`, multi-stage)** that runs `npm ci && npm run build` on `node:22`, then copies `dist/` into `nginx:1.27-alpine`. Config `docker/nginx/prod.conf`: port 80 serves `/.well-known/acme-challenge/` and redirects everything else to 443. Port 443 terminates TLS, serves the SPA with `try_files $uri /index.html`, and proxies `/api/` with SSE-safe settings: `proxy_http_version 1.1`, `proxy_set_header Connection ""`, `proxy_buffering off`, `proxy_cache off`, and a `proxy_read_timeout` well above the `: ping` interval. Adds HSTS and basic security headers |
 | `postgres` | Port bound to **`127.0.0.1:5432`** only (the host pipeline needs it). Data in the named volume on EBS. Memory tuning such as `shared_buffers` **(proposed: 2 GB)** |
 | `redis` | No published port |
@@ -175,7 +177,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
 | `ANALYTICS_DB_PASSWORD` | SSM SecureString at `/swip/prod/ANALYTICS_DB_PASSWORD`. Password of the Postgres role `analytics_worker`; migration `0009` reads it to set the role's password. `ANALYTICS_DATABASE_URL` is built from it in Compose |
 | `S3_BUCKET` | SSM (our bucket) |
-| `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-1`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
+| `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-2`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE`, `ANTHROPIC_API_KEY`, organizer credentials | **Absent.** The instance role supplies AWS credentials, and the Anthropic API isn't used in prod (ADR-028) |
 
 ## 10. Provisioning and deploy workflow
@@ -212,24 +214,23 @@ A laptop-side wrapper **(proposed: `make deploy-remote`)** runs the same thing t
 - Cost guard (ADR-023): a Budgets alarm here, and the turn caps and `LLM_DISABLED` kill switch on D6.
 - Staff panel protection: **decided (D4-A, ADR-008 amended 2026-09-28).** Seeded staff accounts (one agent per handoff queue plus one admin) log in with `POST /auth/staff/login`, get the same httpOnly cookie + CSRF session with role `agent` or `admin`, and every `/staff/*` and `/admin/*` router declares `require_role` (R13). Staff passwords derive from `CREDENTIALS_SEED`, so a rebuilt box keeps them.
 
-## 12. Cost (us-east-1 on-demand)
+## 12. Cost (us-east-2 on-demand, checked 2026-10-03 with the AWS Pricing API)
 
 | Item | Monthly |
 |---|---|
-| EC2 t3.xlarge ($0.1664/h × 730 h) | $121.47 |
+| EC2 m7i-flex.large ($0.09576/h × 730 h) | $69.90 |
 | EBS gp3, 80 GB × $0.08 | $6.40 |
 | Public IPv4 (Elastic IP), $0.005/h | $3.65 |
 | S3, 5.35 GB | $0.12 |
 | SSM Parameter Store (standard), Session Manager | $0 |
-| **Infrastructure total** | **≈ $131.6/month ≈ $4.4/day** |
-| t3 unlimited surplus credits | $0.05 per vCPU-hour above baseline (pipeline runs only) |
+| **Infrastructure total** | **≈ $80.1/month ≈ $2.6/day**. The USD 100 Free plan credits cover about 5 weeks of uptime |
 | Bedrock | Per token, bounded by ADR-023's caps and kill switch. Reported per case and per resolution in the eval (E9) |
 
 Stopping the instance outside the judging window stops the EC2 charge. EBS and the Elastic IP (≈ $10/month) keep billing.
 
 ## 13. Capacity, recovery and retention (D6.5)
 
-- **Capacity:** one instance and one AZ. Throughput (turns/s) and p50/p95 latency are measured by the eval harness against the deployed stack. Bedrock throughput is capped by the account's tokens-per-minute quota for the model (check Service Quotas on D4). The prod services currently use ≈ 1.1 GiB of 16 GiB.
+- **Capacity:** one instance and one AZ. Throughput (turns/s) and p50/p95 latency are measured by the eval harness against the deployed stack. Bedrock throughput is capped by the account's tokens-per-minute quota for the model (check Service Quotas on D4). The prod services currently use ≈ 1.1 GiB of 8 GiB.
 - **Recovery:** if the instance is lost, the rebuild is `make infra-up` + `make data` + the certificate, from our bucket and SSM. Recovery time is to be measured on the first deploy. The app DB is **disposable by design**: it is synthetic and demo-reset restores it, so there's no backup job. The only state lost is what was changed in the app since the last reset.
 - **Retention:** conversation and audit rows live in `latam_app` until the next demo reset. The Victoria stores use their default retention on the instance's disk. No customer data is real (B1).
 
@@ -251,10 +252,10 @@ Every item below, and every **(proposed)** default in §1–§10, was **confirme
 |---|---|
 | Staff panel protection before the URL is public | **Decided:** seeded staff accounts + `POST /auth/staff/login`, roles `agent`/`admin` (ADR-008 amended 2026-09-28, §11) |
 | Uvicorn worker count | **Confirmed:** 1 to start, measured with the eval harness |
-| DuckDB `memory_limit` for `make data` on 16 GiB | **Confirmed:** only if the first run is OOM-killed |
+| DuckDB `memory_limit` for `make data` on 16 GiB | **Confirmed:** only if the first run is OOM-killed. **Superseded 2026-10-03:** the pipeline already caps DuckDB at 3 GB, which the 8 GiB box relies on (§6) |
 | Deploy ref | **Confirmed:** `main` for D4, a release tag for the D8 freeze |
 | CloudFormation vs. a scripted AWS CLI setup | **Confirmed:** CloudFormation (§10) |
-| Budget threshold | **Confirmed:** $150/month |
+| Budget threshold | **Confirmed:** $150/month. **Amended 2026-10-03:** $90/month: above the ≈ $80 forecast, below the Free plan credits |
 | Bedrock model IDs in the IAM policy | **Confirmed:** follow the `core/llm` registry (deferred to the dev benchmark) |
 
 ## Sources

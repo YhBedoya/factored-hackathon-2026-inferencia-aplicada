@@ -15,7 +15,7 @@ _HAIKU_4_5 = (Decimal("1.00"), Decimal("5.00"))
 
 PRICE_PER_MTOK: dict[str, tuple[Decimal, Decimal]] = {
     "claude-sonnet-5-5": _SONNET_5_5,
-    "us.anthropic.claude-sonnet-5-5-v1:0": _SONNET_5_5,
+    "us.anthropic.claude-sonnet-5-5": _SONNET_5_5,
     "claude-haiku-4-5-20251001": _HAIKU_4_5,
     "us.anthropic.claude-haiku-4-5-20251001-v1:0": _HAIKU_4_5,
 }
