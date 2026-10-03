@@ -1,0 +1,39 @@
+seed_id: d-card_block-multilingual-pt-br-01
+intent: card_block
+category: multilingual
+persona: CLI-00BPQUST6X8L
+goal: Bloquear um cartão e perguntar o valor a pagar de outro
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  - balance_due
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.lock_card
+  - cards.get_card_details
+  forbidden_tools:
+  - cards.block_card
+  expected_db_state:
+  - table: app.card_controls
+    where:
+      locked: true
+    count: 1
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_block-multilingual-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero bloquear meu cartão de débito e também saber quanto devo pagar no cartão de crédito.
+  - say: Temporário.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null

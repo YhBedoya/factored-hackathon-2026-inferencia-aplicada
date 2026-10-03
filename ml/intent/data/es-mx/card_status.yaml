@@ -1,0 +1,456 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: card_status
+items:
+- text: ¿Me confirman si mi tarjeta está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quisiera saber si mi tarjeta sigue activa.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Podrían decirme si mi tarjeta está habilitada para usarla?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: '¿En qué estado está mi tarjeta: activa o bloqueada?'
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Mi tarjeta está activa o ya la bloquearon?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito saber si mi tarjeta sigue habilitada o está bloqueada.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿mi tarjeta sigue activa ahorita?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿me dices si todavía está activa mi tarjeta?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Ahorita sí puedo usar mi tarjeta o ya quedó bloqueada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, ¿qué onda con mi tarjeta, sigue activa o ya la bloquearon?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, ¿mi tarjeta todavía está habilitada para usarla?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Me checas si ahorita mi tarjeta está activa o bloqueada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: oye mi tarjeta sigue activa o ya la bloqearon?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me confirman si mi tarjeta aun esta activa pls
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mi tarjeta sta habilitada todavia o nel?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: kiero saber en q estado esta mi tarjeta, activa o bloqueada
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: mi tarjeta sigue activa? avisen xfa
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me dicen si ya bloqearon mi tarjeta o aun jala
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Sé que mi tarjeta está activa; ¿cómo le cambio el NIP?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Mi tarjeta ya quedó activa para hacer compras o todavía aparece pendiente?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ya confirmé que mi tarjeta sigue habilitada, pero necesito actualizar el NIP.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No está bloqueada mi tarjeta; lo que quiero es cambiar mi NIP.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero hacer una compra, pero antes dime si mi tarjeta ya está activa.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Para pagar en tiendas ya está habilitada mi tarjeta o sigue pendiente de activación?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Mi tarjeta aparece activa, ¿cómo reviso el saldo disponible?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de consultar mis movimientos, ¿me confirmas si mi tarjeta está activa o bloqueada?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ya sé que mi tarjeta está habilitada; necesito consultar cuánto saldo tengo.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Mi tarjeta no está bloqueada, pero quiero revisar mis últimos movimientos.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: 'Quiero revisar mis compras después, pero primero dime en qué estado está mi tarjeta: ¿activa
+    o bloqueada?'
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Mi tarjeta sigue activa? Necesito saberlo antes de ver los movimientos.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito consultar si mi tarjeta está activa; quiero cambiar el NIP.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta, solo saber si sigue activa.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero saber el estado de mi tarjeta, solo necesito actualizar mi NIP.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy preguntando si está bloqueada; quiero modificar mi clave.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No busco bloquearla; ¿me dicen si mi tarjeta está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero hacer un bloqueo, nada más confirmar si todavía puedo usar mi tarjeta.
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Sigue activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Aún está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Mi tarjeta de crédito está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me puedes decir si está bloqueada mi tarjeta de crédito?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿En qué estado aparece mi tarjeta de crédito?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Mi tarjeta de débito está activa?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me confirmas si está bloqueada mi tarjeta de débito?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿En qué estado aparece mi tarjeta de débito?
+  intents:
+  - card_status
+  status: clear
+  topic: null
+  family: card_status-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

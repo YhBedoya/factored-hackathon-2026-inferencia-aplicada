@@ -1,0 +1,56 @@
+# Pre-commit hooks (D20, 06 §4-5). Mirrors `make check` + gitleaks + a
+# Conventional Commits message check. mypy and lint-imports run as local
+# `uv run` hooks because they need the project's own resolved venv
+# (dependencies, plugins); ruff and Biome resolve their own toolchains and
+# pick up each project's config by file location.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.9
+    hooks:
+      - id: ruff-check
+        name: ruff check (backend)
+        files: ^backend/
+      - id: ruff-format
+        name: ruff format (backend)
+        files: ^backend/
+      - id: ruff-check
+        name: ruff check (pipeline)
+        files: ^pipeline/
+      - id: ruff-format
+        name: ruff format (pipeline)
+        files: ^pipeline/
+
+  - repo: local
+    hooks:
+      - id: mypy-backend
+        name: mypy (backend)
+        entry: bash -c 'cd backend && uv run mypy app'
+        language: system
+        files: ^backend/app/
+        pass_filenames: false
+
+      - id: lint-imports-backend
+        name: lint-imports (backend, D21 import boundaries)
+        entry: bash -c 'cd backend && uv run lint-imports'
+        language: system
+        files: ^backend/
+        pass_filenames: false
+
+      - id: biome-frontend
+        name: biome ci (frontend)
+        entry: bash -c 'cd frontend && npx biome ci .'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []

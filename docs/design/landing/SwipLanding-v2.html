@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<!--
+  Swip landing v2 — design reference exported from Claude Design ("SwipLanding v2.dc.html", 2026-09-30).
+  This is the decoded __bundler/template of the export. The embedded base64 font blobs
+  (Inter 400/600, Plus Jakarta Sans 700) were replaced by the equivalent Google Fonts link;
+  markup, inline styles and the component logic are unchanged.
+  Notes from the export:
+  - The "#cardy" section markup ends after the heading row; the component state still carries a
+    slider/demo ("#demo") that has no markup in this version.
+  - The footer contains "[Nombre del integrante]" placeholders.
+  - Anchors (#login, #abrir, #demo) are design placeholders, not app routes.
+-->
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Plus+Jakarta+Sans:wght@700&display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#070B1A;scroll-behavior:smooth}*{box-sizing:border-box}a{color:#3DD6E0;text-decoration:none}a:hover{color:#F2F4FF}</style>
+</head>
+<body>
+<x-dc>
+<div style="container-type:inline-size;background:#070B1A;color:#F2F4FF;font-family:Inter,system-ui,sans-serif;font-size:16px;line-height:1.55;min-height:100vh">
+
+<nav style="position:{{ navPosition }};top:0;z-index:20;background:rgba(7,11,26,0.94);backdrop-filter:blur(10px);border-bottom:1px solid #26385A">
+  <div style="max-width:1200px;margin:0 auto;padding:0 clamp(16px,4cqi,48px);height:68px;display:flex;align-items:center;gap:20px">
+    <a href="#inicio" style="flex:none;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:24px;color:#F2F4FF;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:#3DD6E0"></span>Swip</a>
+    <div style="flex:1 1 auto;min-width:0;height:68px;overflow:hidden;display:flex;flex-wrap:wrap;justify-content:center;align-items:center">
+      <div style="width:1px;height:68px"></div>
+      <div style="display:flex;gap:28px;align-items:center;height:68px">
+        <a href="#cardy" style="color:#A9B4CC;font-size:15px;font-weight:600;white-space:nowrap" style-hover="color:#F2F4FF">Ayuda con Cardy</a>
+      </div>
+    </div>
+    <div style="flex:none;display:flex;gap:8px;align-items:center">
+      <a href="#login" style="color:#F2F4FF;font-weight:600;font-size:15px;padding:9px 18px;border-radius:999px;border:1px solid #26385A;white-space:nowrap;transition:border-color 250ms ease" style-hover="border-color:#A9B4CC;color:#F2F4FF">Iniciar sesión</a>
+      <a href="#abrir" style="background:#3DD6E0;color:#070B1A;font-weight:600;font-size:15px;padding:10px 18px;border-radius:999px;white-space:nowrap;transition:transform 250ms ease" style-hover="transform:translateX(3px);color:#070B1A">Abre tu cuenta</a>
+    </div>
+  </div>
+</nav>
+
+<header id="inicio" style="max-width:1200px;margin:0 auto;padding:clamp(40px,7cqi,104px) clamp(16px,4cqi,48px) clamp(48px,7cqi,96px);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:clamp(40px,5cqi,72px);align-items:center">
+  <div style="display:flex;flex-direction:column;gap:24px;align-items:flex-start">
+    <span style="color:#A9B4CC;font-size:14px;font-weight:600">Tarjetas de crédito y débito · México, Colombia y Argentina</span>
+    <h1 style="margin:0;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:clamp(38px,5.4cqi,66px);line-height:1.06;letter-spacing:-0.025em;text-wrap:balance">Tus tarjetas, claras y en tus manos.</h1>
+    <p style="margin:0;color:#A9B4CC;font-size:clamp(17px,1.5cqi,19px);max-width:540px;text-wrap:pretty">Con Swip pagas, bloqueas y revisas tus movimientos desde el celular. Y si algo sale mal, Cardy te ayuda a resolverlo sin esperas ni vueltas.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
+      <a href="#abrir" style="background:#3DD6E0;color:#070B1A;font-weight:600;font-size:16px;padding:14px 28px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;transition:transform 250ms ease" style-hover="transform:translateX(4px);color:#070B1A">Pide tu tarjeta</a>
+      <a href="#cardy" style="border:1px solid #A9B4CC;color:#F2F4FF;font-weight:600;font-size:16px;padding:13px 27px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;transition:transform 250ms ease,border-color 250ms ease" style-hover="transform:translateX(4px);border-color:#F2F4FF;color:#F2F4FF">Conoce a Cardy</a>
+    </div>
+  </div>
+  <div style="position:relative;width:100%;aspect-ratio:1.15/1">
+    <sc-if value="{{ stars }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;left:6%;top:3%;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.7"></div>
+      <div style="position:absolute;left:30%;top:6%;width:3px;height:3px;border-radius:50%;background:#F5C66B;opacity:.9"></div>
+      <div style="position:absolute;left:62%;top:2%;width:1px;height:1px;border-radius:50%;background:#fff;opacity:.8"></div>
+      <div style="position:absolute;left:88%;top:9%;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.45"></div>
+      <div style="position:absolute;left:80%;top:20%;width:3px;height:3px;border-radius:50%;background:#F5C66B;opacity:.6"></div>
+      <div style="position:absolute;left:2%;top:40%;width:1px;height:1px;border-radius:50%;background:#fff;opacity:.6"></div>
+      <div style="position:absolute;left:4%;top:78%;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.5"></div>
+      <div style="position:absolute;left:18%;top:95%;width:1px;height:1px;border-radius:50%;background:#fff;opacity:.8"></div>
+      <div style="position:absolute;left:97%;top:55%;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.4"></div>
+    </sc-if>
+    <div style="position:absolute;left:2%;top:10%;width:70%;aspect-ratio:1.586/1;border-radius:16px;background:#122038;border:1px solid #26385A;box-shadow:0 24px 48px rgba(0,0,0,.45);padding:6% 7%;display:flex;flex-direction:column;justify-content:space-between;transform:rotate(-6deg)">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:clamp(16px,1.8cqi,22px)">Swip</span><span style="font-size:12px;font-weight:600;color:#A9B4CC;letter-spacing:.08em;text-transform:uppercase">Crédito</span></div>
+      <div style="width:17%;aspect-ratio:1.3/1;border-radius:6px;background:#F5C66B;display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px"><span style="border:1px solid rgba(7,11,26,.35);border-radius:3px"></span><span style="border:1px solid rgba(7,11,26,.35);border-radius:3px"></span></div>
+      <div style="font-weight:600;font-size:clamp(15px,1.6cqi,20px);letter-spacing:.12em">•••• 4417</div>
+    </div>
+    <div style="position:absolute;left:4%;top:44%;width:14%;height:2px;border-radius:2px;background:#3DD6E0;opacity:.5"></div>
+    <div style="position:absolute;left:8%;top:52%;width:10%;height:2px;border-radius:2px;background:#3DD6E0;opacity:.35"></div>
+    <div style="position:absolute;left:12%;top:60%;width:7%;height:2px;border-radius:2px;background:#3DD6E0;opacity:.2"></div>
+    <div style="position:absolute;left:26%;top:32%;width:70%;aspect-ratio:1.586/1;border-radius:16px;background:#3DD6E0;box-shadow:0 28px 56px rgba(0,0,0,.5);padding:6% 7%;display:flex;flex-direction:column;justify-content:space-between;color:#070B1A;transform:rotate(3deg)">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:clamp(16px,1.8cqi,22px)">Swip</span><span style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Débito</span></div>
+      <div style="width:17%;aspect-ratio:1.3/1;border-radius:6px;border:1.5px solid #070B1A"></div>
+      <div style="font-weight:600;font-size:clamp(15px,1.6cqi,20px);letter-spacing:.12em">•••• 0821</div>
+    </div>
+    <div style="position:absolute;right:0;bottom:0;width:min(300px,80%);background:#122038;border:1px solid #26385A;border-radius:16px;padding:14px 16px;box-shadow:0 20px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:10px">
+      <span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px"><span style="width:26px;height:26px;border-radius:50%;background:#0F3440;border:1px solid #3DD6E0;color:#3DD6E0;display:grid;place-items:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px">C</span>Cardy · Ayuda Swip</span>
+      <div style="font-size:14px;line-height:1.5">Hola, soy Cardy. ¿Te ayudo con alguna de tus tarjetas?</div>
+    </div>
+  </div>
+</header>
+
+<section id="cardy" style="background:#0B1328;border-top:1px solid #26385A;border-bottom:1px solid #26385A">
+  <div style="max-width:1200px;margin:0 auto;padding:clamp(56px,7cqi,104px) clamp(16px,4cqi,48px);display:flex;flex-direction:column;gap:56px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:32px;align-items:end">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <h2 style="margin:0;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:clamp(30px,4.2cqi,52px);line-height:1.08;letter-spacing:-0.02em;text-wrap:balance">Cardy, tu asesor personal las 24 horas</h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:20px;align-items:flex-start">
+        <p style="margin:0;color:#A9B4CC;font-size:17px;text-wrap:pretty">Cardy resuelve por sí solo lo que es seguro resolver, te pide confirmación antes de cualquier acción irreversible y te conecta con una persona, con todo el contexto, cuando hace falta.</p>
+        <a href="#demo" style="background:#3DD6E0;color:#070B1A;font-weight:600;font-size:16px;padding:14px 28px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;transition:transform 250ms ease" style-hover="transform:translateX(4px);color:#070B1A">Probar Cardy</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="border-top:1px solid #26385A">
+  <div style="max-width:1200px;margin:0 auto;padding:48px clamp(16px,4cqi,48px) 96px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:32px">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:22px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:#3DD6E0"></span>Swip</span>
+      <p style="margin:0;color:#A9B4CC;font-size:14px;text-wrap:pretty">Swip es una fintech ficticia creada para el Factored AI &amp; Data Hackathon 2026 sobre el dataset sintético LATAM Bank.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+      <span style="color:#A9B4CC;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px">Swip</span>
+      <a href="#cardy" style="color:#F2F4FF">Ayuda con Cardy</a><a href="#login" style="color:#F2F4FF">Iniciar sesión</a>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+      <span style="color:#A9B4CC;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px">Equipo</span>
+      <span>[Nombre del integrante]</span><span>[Nombre del integrante]</span><span>[Nombre del integrante]</span>
+    </div>
+  </div>
+</footer>
+
+<div style="position:fixed;right:clamp(12px,3cqi,28px);bottom:clamp(12px,3cqi,28px);z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+  <sc-if value="{{ chatOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="width:min(320px,calc(100vw - 24px));background:#122038;border:1px solid #26385A;border-radius:16px;padding:16px;box-shadow:0 20px 48px rgba(0,0,0,.55);display:flex;flex-direction:column;gap:12px">
+      <span style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px"><span style="width:26px;height:26px;border-radius:50%;background:#0F3440;border:1px solid #3DD6E0;color:#3DD6E0;display:grid;place-items:center;font-family:'Plus Jakarta Sans',sans-serif;font-size:13px">C</span>Cardy</span>
+      <span style="font-size:15px">Hola, soy Cardy. Puedo ayudarte a bloquear una tarjeta, revisar un cargo o reclamar una compra.</span>
+      <a href="#demo" style="align-self:flex-start;border:1px solid #3DD6E0;color:#3DD6E0;font-weight:600;font-size:14px;padding:8px 16px;border-radius:999px">Abrir el chat</a>
+    </div>
+  </sc-if>
+  <button type="button" sc-camel-on-click="{{ toggleChat }}" style="display:flex;align-items:center;gap:10px;background:#122038;border:1px solid #3DD6E0;color:#F2F4FF;font:600 15px Inter,sans-serif;padding:8px 18px 8px 8px;border-radius:999px;cursor:pointer;white-space:nowrap;box-shadow:0 12px 32px rgba(0,0,0,.5)"><span style="width:32px;height:32px;border-radius:50%;background:#0F3440;color:#3DD6E0;display:grid;place-items:center;font-family:'Plus Jakarta Sans',sans-serif">C</span>{{ chatLabel }}</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props='{"stars":{"editor":"boolean","default":true,"tsType":"boolean"},"stickyNav":{"editor":"boolean","default":true,"tsType":"boolean"}}'>
+class Component extends DCLogic {
+  state = { x: 0, dragging: false, done: false, chatOpen: false };
+  trackRef = React.createRef();
+  maxX() { const t = this.trackRef.current; return t ? t.clientWidth - 50 : 200; }
+  onThumbDown = (e) => {
+    e.preventDefault();
+    const start = e.clientX - this.state.x, max = this.maxX();
+    this.setState({ dragging: true });
+    const move = (ev) => this.setState({ x: Math.max(0, Math.min(max, ev.clientX - start)) });
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      if (this.state.x >= max * 0.9) this.setState({ dragging: false, x: max, done: true });
+      else this.setState({ dragging: false, x: 0 });
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  };
+  onThumbKey = (e) => { if (e.key === 'Enter' || e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); this.setState({ done: true }); } };
+  renderVals() {
+    const { x, dragging, done, chatOpen } = this.state;
+    return {
+      stars: this.props.stars ?? true,
+      navPosition: (this.props.stickyNav ?? true) ? 'sticky' : 'relative',
+      trackRef: this.trackRef,
+      thumbLeft: (3 + x) + 'px',
+      thumbTransition: dragging ? 'none' : 'left 250ms ease',
+      onThumbDown: this.onThumbDown, onThumbKey: this.onThumbKey,
+      done, notDone: !done,
+      reset: () => this.setState({ done: false, x: 0 }),
+      chatOpen, chatLabel: chatOpen ? 'Cerrar' : '¿Ayuda? Pregúntale a Cardy',
+      toggleChat: () => this.setState(s => ({ chatOpen: !s.chatOpen })),
+    };
+  }
+}
+</script>
+</body></html>

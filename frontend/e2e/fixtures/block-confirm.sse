@@ -1,0 +1,12 @@
+event: status
+data: {"step":"plan"}
+
+event: ui
+data: {"kind":"confirm","payload":{"token_id":"tok-e2e-001","steps":[{"tool":"lock_card","summary_key":"lock_card","facts":[{"key":"card_mask","value":"•••• 6475","source":"card"}]}]}}
+
+event: message
+data: {"role":"bot","text":"Confirma que quer bloquear temporariamente o cartão terminado em 6475?","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-102"}
+

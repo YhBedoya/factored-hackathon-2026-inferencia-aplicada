@@ -1,0 +1,47 @@
+seed_id: h-card_status-multilingual-mixed-05
+intent: card_status
+category: multilingual
+persona: CLI-00WAXO79YRHL
+goal: Entender el estado de su tarjeta, en un mensaje bien portuñol con tono rioplatense.
+fact_sheet:
+  register: portunhol_rioplatense
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-card_status-multilingual-mixed-05.s
+  language_variant: mixed
+  expected_language: es
+  source: seed
+  turns:
+  - say: Che Cardy, minha tarjeta de débito, ¿sabés cuál es su status?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-multilingual-mixed-05.p1
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oi Cardy, ¿sabés cómo va el status de mi tarjeta de débito?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-card_status-multilingual-mixed-05.p2
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Che Cardy, você sabe qual é o status da minha tarjeta de débito?
+  reviewer: null
+  reviewed_at: null

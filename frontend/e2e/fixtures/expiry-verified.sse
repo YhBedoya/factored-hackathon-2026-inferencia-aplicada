@@ -1,0 +1,9 @@
+event: status
+data: {"step":"execute"}
+
+event: message
+data: {"role":"bot","text":"Listo, la tarjeta terminada en 5772 quedó bloqueada temporalmente.","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-302"}
+

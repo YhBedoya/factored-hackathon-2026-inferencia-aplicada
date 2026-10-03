@@ -1,0 +1,46 @@
+seed_id: h-transaction_search-bad_data-mixed-05
+intent: transaction_search
+category: bad_data
+persona: CLI-040S627SFJSV
+goal: Buscar una compra rara que no reconoce.
+fact_sheet:
+  note: comercio inventado, 0 resultados esperados
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - transaction_search
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-transaction_search-bad_data-mixed-05.s
+  language_variant: mixed
+  expected_language: es
+  source: seed
+  turns:
+  - say: Cardy, busca uma compra de valor estranho que não reconheço, ¿la puedes encontrar?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-transaction_search-bad_data-mixed-05.p1
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, ¿puedes localizar una compra de valor estranho que não reconheço?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-transaction_search-bad_data-mixed-05.p2
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, ¿me ayudas a encontrar uma compra com valor estranho que não reconheço?
+  reviewer: null
+  reviewed_at: null

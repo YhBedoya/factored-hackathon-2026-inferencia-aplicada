@@ -1,0 +1,53 @@
+# Relabeled under ADR-032: the degraded path (bedrock_timeout) hands off decline_explain (human decision at the verify gate); reviewer/reviewed_at reset for re-review.
+seed_id: h-decline_explain-tool_failure-pt-br-05
+intent: decline_explain
+category: tool_failure
+persona: CLI-00K5DRIG1GZT
+goal: Entender uma recusa enquanto o modelo de linguagem falha.
+fact_sheet:
+  card_hint: last4:0374
+setup:
+  faults:
+  - bedrock_timeout
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  expected_outcome: handoff:atencion
+  required_tools: []
+  forbidden_tools:
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  eligible_for_automation: false
+cases:
+- case_id: h-decline_explain-tool_failure-pt-br-05.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Cardy, minha última compra no cartão não passou, por quê?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-decline_explain-tool_failure-pt-br-05.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, por que a minha compra mais recente no cartão foi recusada?
+  reviewer: null
+  reviewed_at: null
+- case_id: h-decline_explain-tool_failure-pt-br-05.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, por que não aprovaram minha última compra no cartão?
+  reviewer: null
+  reviewed_at: null

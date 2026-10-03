@@ -1,0 +1,459 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: pt-br
+class: unrecognized_charge
+items:
+- text: Tem uma cobrança no meu cartão que não reconheço. Pode verificar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Apareceu um débito que não fiz no meu cartão. Preciso de ajuda para identificar.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não sei de onde veio essa compra lançada no meu cartão. Podem conferir?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Há um lançamento no meu cartão que não reconheço. O que devo fazer?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vi uma cobrança na fatura que não é minha. Podem me ajudar a descobrir do que se trata?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem uma compra no meu cartão que não lembro de ter feito. Quero verificar isso.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oi, apareceu uma cobrança no meu cartão que não faço ideia do que seja. Dá uma olhada pra mim?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tô vendo um lançamento estranho na fatura, não reconheço essa compra. Você confere pra mim?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Pintou um débito no meu cartão que não é meu, consegue ver o que rolou?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Opa, tem uma compra na fatura que não reconheço, vê isso pra mim, por favor?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Surgiu uma cobrança aqui no cartão que não sei de onde veio. Dá pra dar uma conferida?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Apareceu um valor que eu não gastei no meu cartão, me ajuda a descobrir o que é?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem uma cobranca no cartao q eu nao fiz, consegue ver?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: apareceu uma compra estranha na fatura, n reconheço isso nao
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: veio um debito no meu cartao q nao sei de onde saiu, ajuda ai
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: n faço ideia dessa compra q caiu no meu cartao, pode conf?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: tem um lancamento q nao é meu na fatura, da uma olhada pfv
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: cobraram algo no meu cartao e eu nem fiz essa compra, me ajuda
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Reconheço a cobrança da assinatura; só quero saber como cancelar as próximas.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero pedir estorno de uma compra na minha fatura que eu não fiz e não reconheço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sei que essa compra no cartão é minha. Como faço para parcelar o valor?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A cobrança da mensalidade está certa, só queria entender a data em que ela cai na fatura.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Como faço pra receber de volta o valor de uma cobrança que apareceu no cartão e não é minha?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Preciso contestar uma compra desconhecida; não reconheço esse lançamento no meu cartão.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Essa compra no meu cartão é minha; quero apenas saber como consultar o comprovante.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quero saber se dá pra parcelar essa compra, porque apareceu uma cobrança na fatura que eu não
+    reconheço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Reconheço o débito da loja, mas preciso do endereço para pedir a troca do produto.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: A cobrança está correta, só quero alterar a data de vencimento da fatura.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de pensar em parcelar, preciso entender uma cobrança que apareceu no meu cartão e não sei
+    de onde veio.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Essa compra está na fatura, mas não reconheço; queria conferir do que se trata antes de dividir
+    o valor.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não tenho nenhuma cobrança que não reconheça; só quero consultar meu limite.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não quero consultar meu saldo, só entender uma cobrança no cartão que não reconheço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Não apareceu nenhuma compra desconhecida no meu cartão. Quero apenas atualizar meu endereço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não há lançamento estranho na fatura; preciso saber quando vence a próxima parcela.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Não tô perguntando quanto tenho na conta; preciso saber de onde veio esse lançamento que não reconheço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Saldo não é o que eu preciso agora. Quero identificar uma compra no meu cartão que não fiz ou
+    reconheço.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Compra desconhecida
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Não reconheço
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cobrança estranha
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tem uma cobrança no meu cartão de crédito que eu não reconheço. Pode verificar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Apareceu um lançamento no cartão de crédito que não reconheço. Conseguem conferir?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Não reconheço essa compra que veio na fatura do meu cartão de crédito. Podem verificar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Tem uma cobrança no meu cartão de débito que eu não reconheço. Podem conferir?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Apareceu um lançamento no cartão de débito que não sei do que é. Conseguem verificar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Não reconheço essa compra feita no meu cartão de débito. Podem checar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-pt-br-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

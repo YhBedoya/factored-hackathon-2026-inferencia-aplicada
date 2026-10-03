@@ -1,0 +1,111 @@
+# CI (D20, 06 §4-5). No caching anywhere (If-behind cut) — every job starts
+# clean so a stale cache never hides a real dependency-resolution failure.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+      - main
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+      - name: uv sync
+        working-directory: backend
+        run: uv sync
+      - name: eval freeze-check (D5-B B3, D11/D12)
+        run: make eval-freeze-check
+      - name: ruff check
+        working-directory: backend
+        run: uv run ruff check app tests
+      - name: ruff format --check
+        working-directory: backend
+        run: uv run ruff format --check app tests
+      - name: mypy
+        working-directory: backend
+        run: uv run mypy app
+      - name: lint-imports
+        working-directory: backend
+        run: uv run lint-imports
+      - name: pytest
+        working-directory: backend
+        run: uv run pytest tests/unit -q
+
+  pipeline:
+    name: pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: false
+      - name: uv sync
+        working-directory: pipeline
+        run: uv sync
+      - name: ruff check
+        working-directory: pipeline
+        run: uv run ruff check ingest load tests
+      - name: ruff format --check
+        working-directory: pipeline
+        run: uv run ruff format --check ingest load tests
+      - name: pytest
+        working-directory: pipeline
+        run: uv run pytest tests -q
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: biome ci
+        working-directory: frontend
+        run: npx biome ci .
+      - name: build
+        working-directory: frontend
+        run: npm run build
+
+  # D3-B B5/D7: the two Playwright specs, against the built frontend
+  # (`preview`) with the API mocked — no real backend, no LLM. The image tag
+  # must track `@playwright/test` in package.json (plan §Risks 8).
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+      - name: build
+        working-directory: frontend
+        run: npm run build
+      - name: playwright test
+        working-directory: frontend
+        run: npx playwright test
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks detect (full history)
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source /repo --redact -v

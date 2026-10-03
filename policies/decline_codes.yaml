@@ -1,0 +1,7 @@
+provenance: team-generated-synthetic   # REQUIRED on every policy file
+version: 1
+codes:
+  "51": {cause_key: insufficient_funds, next_step_key: pay_or_use_other_card, self_service: false}
+  "14": {cause_key: invalid_card_number, next_step_key: check_card_number, self_service: false}
+  "05": {cause_key: do_not_honor, next_step_key: contact_or_retry, self_service: false}
+  "54": {cause_key: expired_card, next_step_key: offer_replacement, self_service: true}

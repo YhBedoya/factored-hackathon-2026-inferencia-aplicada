@@ -1,0 +1,95 @@
+[project]
+name = "card-support-backend"
+version = "0.1.0"
+description = "Swip card-support backend (Cardy)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pydantic>=2",
+    "pydantic-settings>=2.4",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlmodel>=0.0.22",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "redis>=5.0",
+    "structlog>=24.4",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+    "opentelemetry-instrumentation-asyncpg>=0.48b0",
+    "opentelemetry-instrumentation-redis>=0.48b0",
+    "langgraph>=0.2",
+    "langchain-anthropic>=0.2",
+    "langchain-aws>=0.2",
+    "duckdb>=1",
+    "pyyaml>=6",
+    "babel>=2.16",
+    "pyjwt>=2.15.0",
+    "langgraph-checkpoint-postgres>=3.1.2",
+    "psycopg[binary,pool]>=3.3.6",
+    "cryptography>=50.0.1",
+    "langchain-openai>=1.6.6",
+    "langfuse>=4.15.6",
+    # Learned intent classifier served at runtime (D15; winner C2 = TF-IDF + LR joblib head).
+    "scikit-learn>=1.6",
+    "joblib>=1.4",
+    "numpy>=2",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8",
+    "httpx>=0.27",
+    "import-linter>=2.15",
+    "types-PyYAML",
+    "streamlit>=1.38",
+]
+# Learned intent classifier training/eval only (REQ-learned-intent-fallback).
+# The served winner's deps (scikit-learn, joblib, numpy) are runtime deps (D15).
+ml = [
+    "fastembed>=0.4",
+    "onnxruntime>=1.18",
+    "matplotlib>=3.9",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "ml"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+warn_unused_configs = true
+warn_redundant_casts = true
+
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "fastembed.*", "onnxruntime.*", "joblib.*", "matplotlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.core.*", "app.domains.conversation.*", "app.domains.policy.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

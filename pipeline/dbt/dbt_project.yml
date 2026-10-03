@@ -1,0 +1,35 @@
+name: "card_support_pipeline"
+version: "1.0.0"
+config-version: 2
+
+# Matches the top-level key in profiles.yml.
+profile: "card_support_pipeline"
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets:
+  - "target"
+  - "logs"
+
+models:
+  card_support_pipeline:
+    staging:
+      # Read once, cast once: staging tables are read by their own
+      # `__rejects` sibling and, from T11 on, by the serving layer.
+      +materialized: table
+    serving:
+      # Must be a table, not a view: the naive-to-timestamptz cast (D1) is
+      # only correct under this project's pinned `TimeZone: UTC` DuckDB
+      # session setting (profiles.yml). A view re-runs that cast under
+      # whatever session later queries it (e.g. T12's loader), so the same
+      # row would silently resolve to a different UTC instant depending on
+      # the reading connection's time zone (verified empirically: the same
+      # `srv_transactions` view returned two different absolute instants for
+      # two connections with different `TimeZone` settings). Materializing
+      # as a table freezes the correct instant once, at dbt build time.
+      +materialized: table
+
+vars:
+  raw_root: "../../data/raw"
+  column_aliases: {}

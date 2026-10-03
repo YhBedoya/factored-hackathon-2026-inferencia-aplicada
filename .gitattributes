@@ -1,0 +1,4 @@
+# D12: the held-out freeze hashes raw bytes (`eval/scenarios/freeze.py`).
+# `-text` stops Git from normalizing line endings in this tree, so a hash
+# taken on a Windows checkout matches the one CI (Linux) recomputes.
+eval/scenarios/** -text

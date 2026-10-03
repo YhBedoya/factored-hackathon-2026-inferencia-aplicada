@@ -2,7 +2,7 @@
 
 ## 1. Problem and scope
 
-**Workflow:** card-service support for LATAM Bank customers in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). The build is split into **Core** (built and evaluated first) and **if-time** items taken in a fixed order (decision-log ADR-019). This document covers the MVP items and leaves room for the Stretch items.
+**Workflow:** card-service support for Swip customers (the LATAM Bank dataset) in Mexico, Colombia and Argentina, in Spanish (MX/CO/AR variants) and Brazilian Portuguese. The feature shortlist lives in [`features-list.md`](features-list.md). The build is split into **Core** (built and evaluated first) and **if-time** items taken in a fixed order (decision-log ADR-019). This document covers the MVP items and leaves room for the Stretch items.
 
 **The three mandatory behaviors (S3a–c):**
 
@@ -95,22 +95,22 @@ Latency target **(proposed)**: p50 ≤ 3 s, p95 ≤ 8 s end-to-end per turn, wit
 
 ## 6. Security and privacy (P1, B3–B6, D6.5)
 
-- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Email + password gives a JWT in an httpOnly cookie with CSRF double-submit. A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
+- **Identity (B5):** mock IdP. Credentials are generated for every customer at load time (low-cost hash, exported only to a git-ignored file and the admin-only persona lookup). Document type + document number + password (ADR-008, amended; staff log in separately with a seeded username + password, roles `agent`/`admin`, D4-A) gives a JWT in an httpOnly cookie with CSRF double-submit. The document number is never logged or used as a key in plain text (HMAC `login_key`). A step-up OTP is required for step-up actions: address change, activation, unlock, travel notice. For the prototype it is a **fixed 4-digit code** from an env var, shared with judges in the submission email. It marks where stronger step-up authentication goes, while the tool registry still enforces the gate (ADR-008). A document number or customer ID alone never authenticates anyone.
 - **Login enforcement (ADR-025):** the whole chat requires login; there is no anonymous mode. Three layers: (1) router-level FastAPI dependencies (`get_session`, `require_role`, `get_owned_conversation`) reject a missing or expired session (`401`), the wrong role (`403`) and another customer's conversation (`404`) before the graph runs; (2) the session travels into the graph through the run config, `load_session` binds `customer_id` read-only, and the tool registry builds `ToolContext` from it; (3) step-up is checked per tool by the registry against `session.step_up_at`. Rule R13 and its route-introspection test keep new routes from skipping layer 1.
 - **Customer status precedence:** a Closed, Suspended or Inactive customer's cards are read-only (block still allowed), with no unlock or replacement, and the case goes to a handoff (ADR-021).
 - **Record isolation (B6):** tools never accept `customer_id`. The registry binds it from the session. Every repository query filters by it. A request for another customer's card returns a refusal and writes an `access_denied` audit event.
-- **PII minimization (B3):** only tokenized text goes to the LLM provider and Langfuse. The Langfuse SDK `mask` hook redacts again as a second line of defense. Sensitive columns (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.
+- **PII minimization (B3):** only tokenized text goes to the LLM provider and Langfuse. The runner masks the customer's text before it becomes graph input, so the checkpoint never holds raw `user_text`; the reply is unmasked only after the grounding check. The detectors (`app/core/pii.py`) are regex plus checksum, with no NER: Luhn-valid card numbers of 13–19 digits, emails, phones (`+52`/`+57`/`+54` prefixed or 10-digit national), a digit or alphanumeric run after a document keyword (`DNI`, `cédula`, `CC`, `CE`, `pasaporte`, `CPF`, `RG`, matched only when the run contains at least one digit), and exact whole-word matches of the session customer's own document number, first name and last names. Tokens are `⟨KIND_n⟩`, stored Fernet-encrypted in `app.pii_vault` (`PII_VAULT_KEY`). `StructuredLLMClient` refuses any input where a detector still hits (`LLMUnmaskedInput`), and every attempt is ledgered in `audit.llm_calls` with the masked input. The Langfuse SDK `mask` hook redacts again as a second line of defense. **Known limit:** third-party names typed freely ("mi esposa María") and unlabelled third-party document numbers reach the LLM. **Staff view:** staff see unmasked text (the handoff transcript decrypts `app.messages.content`, and the live customer echo carries the typed text); only the LLM provider, Langfuse and `audit.llm_calls` get masked text. Agent and system messages are masked through the conversation's vault with the pattern detectors only (card, email, phone, document), with no customer-name matching. `app.messages.content` is Fernet-encrypted with the same key. Sensitive columns of `bank.customers` (document number, email, phone, address) are Fernet-encrypted at rest **(proposed)**.
 - **Prompt injection:** user text only selects a flow, and flows enforce policy on their own. Tool output (e.g., `merchant_name`, complaint text) goes into prompts inside explicit data fences, and **LLM nodes that read tool output have no write tools**. An adversarial suite covers direct and data-field injection.
 - **Secrets:** AWS access through an IAM role / profile, never keys in code. `.env` stays local, with `.env.example` committed. The official data-dictionary PDF is git-ignored.
-- **Cost guard (ADR-023):** turn caps per conversation and per account per day, a login rate limit, an AWS Budgets alarm, and an `LLM_DISABLED` kill switch that routes every turn to the safe fallback + handoff.
+- **Cost guard (ADR-023):** turn caps per conversation and per account per day, a login rate limit, an AWS Budgets alarm, and an `LLM_DISABLED` kill switch that routes every turn to the degraded path (ADR-032), with zero LLM calls, and hands off when no classifier is loaded (D6-A): the caps are 40 bot-mode turns per conversation and 150 per account per UTC day (Settings), counted in Redis on `/messages` and `/confirmations`; over either cap the route returns `429 turn_cap_reached` and schedules no turn. `LLM_DISABLED` is a Settings flag (restart to change) checked at graph entry; it makes zero LLM calls.
 - **Retention (proposed):** vault entries are purged 24 h after a conversation closes. Conversations and audit are kept 30 days in the demo environment. Langfuse project retention is set to 30 days. The eval DB clones are dropped after each run.
 
 ## 7. Reliability (D6.2, D6.3)
 
-- **Bounded retries:** Bedrock and tool calls get 2 retries with exponential backoff and jitter, plus per-call timeouts **(proposed: LLM 20 s, tools 3 s)**. Write tools carry idempotency keys, so retries can't double-apply.
-- **Safe fallback:** when retries are exhausted, a template message in the customer's language (no LLM involved) plus a handoff packet with `reason = tool_failure | llm_unavailable`. The system never invents an answer.
+- **Bounded retries:** LLM and tool calls get 2 retries with exponential backoff and jitter, plus per-call timeouts (LLM 20 s, tools 3 s; decided D6-A D4). LLM retries live in `StructuredLLMClient`, not the provider SDK, so each attempt is its own `audit.llm_calls` row; tool retries live in the read wrapper and in `ConfirmedWriteTools` (one `tool_result {attempt}` per failed attempt). Write tools retry with the same idempotency key, so retries can't double-apply. A read-back mismatch is never retried: it hands off as `action_unverified`.
+- **Safe fallback:** when retries are exhausted, a template message in the customer's language (no LLM involved) plus a handoff packet with `reason = tool_failure | llm_unavailable`. The queue is resolved like `human_request` (by flow, default Atención), priority normal. The system never invents an answer.
 - **Verification:** "done" only after a read-back matches the expected state.
-- **Tool-failure fixtures:** fault injection via a config flag (`FAULTS=bedrock_timeout,cards_write_error`) for eval scenarios.
+- **Tool-failure fixtures:** fault injection via a config flag (`FAULTS=bedrock_timeout,cards_write_error,readback_mismatch`) for the demo and eval scenarios; startup refuses any fault under `APP_ENV=prod`. The eval runner starts one backend per distinct `setup.faults` set (D6-A D16).
 
 ## 8. Observability and audit (D6.1, D6.6)
 
@@ -127,7 +127,7 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 
 - **Reproducible setup:** `make setup` → `make data` (S3 sync with credentials from env/profile → pipeline → golden DB) → `make up`. Versions pinned (uv.lock, package-lock), seeds fixed.
 - **Environments:** Docker Compose layers `base / dev / test / prod / observability`.
-- **Deployment target: AWS** (decision-log ADR-017). The concrete setup is decided at the sprint midpoint (~2026-09-30 / 10-01), after an AWS smoke test on day 1–2. Must provide a public URL (K2) and Bedrock access through an IAM role.
+- **Deployment target: AWS** (decision-log ADR-017): one EC2 t3.xlarge in us-east-1 running the prod Compose layer, an IAM instance role for S3 and Bedrock, data read from our own S3 copy, and TLS on the public URL (K2). See [`08-deployment.md`](08-deployment.md).
 - **Capacity:** to be measured with the eval harness (turns/s per worker, DB size ≈ all 13 tables + indexes). `digital_events` (10M rows) dominates storage.
 - **Remaining work before real deployment** (kept honest for S6): a real IdP and fraud-grade authentication, security review / pentest, regulatory review of dispute handling, load testing, multi-region, human-agent workforce integration, real PT-BR market data.
 
@@ -141,14 +141,13 @@ MCP servers (VictoriaLogs, VictoriaTraces, Playwright, DeepWiki) in `.mcp.json` 
 - All Mexican cards are denominated in **USD**. MXN is shown only as a labeled estimate.
 - Observed values deviate from the dictionary: Spanish enum values ("Tarjeta Crédito"), missing transcript columns, row counts 84–156% of documented.
 - Dates are shifted at load (whole weeks) so the data ends on deploy day. All "now" behavior is simulated.
+- `process_date` follows UTC−6 in all three countries, including CO and AR: rows stamped 00:00–05:59 carry the previous day (D1.3, D1-A D1).
 
 ## 11. Open items
 
 | ID | Item | Blocks |
 |---|---|---|
-| ADR-017 | Concrete AWS setup, decided at the sprint midpoint | K2 |
 | — | Exact Bedrock model IDs per step (benchmark on the dev set) | Latency/cost numbers |
-| — | Time zone semantics of `transaction_date` (EDA saw a UTC-vs-local `process_date` shift) | Relative-date search correctness |
 | — | Suspected-compromise rule and threshold for `unrecognized_charge` | Fraud triage path |
 | — | Numeric targets for the D1.5 outcome metrics, set after the first dev eval run | D1.5 |
 

@@ -8,13 +8,13 @@
 | R2 | No side-effecting tool runs without a server-issued, single-use confirmation token (plus OTP step-up where `tools.yaml` says so). A token may cover an ordered plan of steps; each call must match the next step exactly (ADR-027) | D3.2 | Tool executor + unit tests (reordered, extra, replayed and cross-customer steps are rejected) |
 | R3 | The bot never reports an action as done without a verified read-back | D2.5 | `ActionResult.verified` required by the composer + eval check |
 | R4 | Money, dates and card masks are formatted in code and inserted through placeholders. The LLM never writes them | Correctness, localization | Composer grounding check (every number must come from facts) |
-| R5 | Only tokenized text goes to the LLM provider (Anthropic API during the build, then Bedrock; ADR-028) or Langfuse | B3 | `core/llm` client refuses un-masked input (vault check) + Langfuse `mask` hook + unit tests |
-| R6 | Tool output enters prompts only inside data fences, and LLM nodes that read tool output have **no write tools** | Injection | Graph construction test + adversarial eval suite |
-| R7 | Every LLM call pins the model ID, prompt version and temperature, and is traced (Langfuse + audit `llm_calls`) | E2, D6.1 | `core/llm` is the only way to call an LLM provider (import-linter) |
-| R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions | B7, D3.4 | Startup validation + code review |
+| R5 | Only tokenized text goes to the LLM provider (Anthropic API during the build, then Bedrock; ADR-028) or Langfuse | B3 | `core/llm` client refuses un-masked input (`app.core.pii` detectors, `find_pii`) + Langfuse `mask` hook + unit tests |
+| R6 | Tool output enters prompts only inside data fences, and an LLM node that reads tool output may propose a plan and never executes a write; it holds no executing tool and never sees a token | Injection | Graph construction test + adversarial eval suite |
+| R7 | Every LLM call pins the model ID, prompt version and temperature (where the model accepts one), and is traced (Langfuse + audit `llm_calls`) | E2, D6.1 | `core/llm` is the only way to call an LLM provider (import-linter) |
+| R8 | Policy lives in versioned YAML with a `provenance` header. The model never decides eligibility, limits, escalation or permissions. The agent path is gated by a tool's `preconditions` and passes no intent; `allowed_intents` stays for the flows | B7, D3.4 | Startup validation + code review |
 | R9 | The held-out suite is frozen. Nobody tunes prompts or flows against it | D5.1, D4.8 | Suite hash in the repo + CI check that held-out files are unchanged |
 | R10 | Never commit secrets, raw data, credentials exports or the official dictionary PDF | B3, K1 | `.gitignore`, pre-commit secret scan (gitleaks), CI |
-| R11 | Bounded retries only: 2 retries with backoff, then safe fallback + handoff. Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
+| R11 | Bounded retries only: 2 retries with backoff, then the degraded path, then safe fallback + handoff (ADR-032). Never an invented answer | D6.2, D6.3 | `core/llm` and tool executor wrappers |
 | R12 | Provided tables are changed only through domain services: an in-place update always writes a history row in the same transaction, and appended rows carry `origin='app'` | Lineage, audit | Repository layer + review |
 | R13 | Every non-public route declares its role through a router-level dependency, and every `/conversations/{id}/…` route loads the conversation through `get_owned_conversation` (another customer's conversation → `404`). The graph gets the session only from the route, via the run config (ADR-025) | B5, B6 | Route-introspection unit test over `app.routes` + cross-customer integration test (customer B posts, confirms and streams on A's conversation → `404`) |
 
@@ -24,7 +24,8 @@ Contracts in `backend/.importlinter`, run in pre-commit and CI:
 - **Layers:** `app.api` → `app.domains` → `app.core`. Core never imports domains.
 - **Independence:** bank domains (`cards`, `transactions`, `disputes`, `customers`) don't import each other's repositories. They can only call each other through their `service` modules.
 - `app.domains.conversation` may reach bank data **only** through `app.domains.conversation.tools` (the registry). It may not import any bank `repository`.
-- Only `app.core.llm` may import LLM SDKs: `anthropic` / `langchain_anthropic` (during the build, ADR-028), `boto3` / `aioboto3` Bedrock clients and `langchain_aws`.
+- Only `app.core.llm` may import LLM SDKs: `anthropic` / `langchain_anthropic` (during the build, ADR-028), `boto3` / `aioboto3` Bedrock clients, `langchain_aws`, and `openai` / `langchain_openai` (eval paraphrase, simulator and judge only, ADR-030).
+- `langfuse` is importable only from `app.core.llm` (the tracing hook, ADR-006).
 - `app.core.llm` does not import `app.domains.*.repository` (LLM code can't touch the DB).
 
 ## 3. Repository layout
@@ -35,15 +36,21 @@ backend/
     api/            router registration, deps
     core/           config, db, security, logging, telemetry, llm/, crud base
     domains/        identity, customers, cards, transactions, disputes, handoff,
-                    policy, safety, localization, conversation, audit
+                    policy, safety, localization, conversation, audit,
+                    analytics (worker, own SQL, no conversation import)
     alembic/        migrations (all schemas)
   tests/unit/…  tests/integration/…  (integration = ephemeral DB)
 frontend/
   src/pages/ components/{ui,common,layout,<domain>}/ hooks/ routes/ lib/ client/ (generated)
 pipeline/           ingest/, contracts/ (Pandera), dbt/ (dbt-duckdb project), load/, fixtures/, tests/
 policies/           *.yaml (team-generated synthetic)
-eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, baseline/, judges/, reports/
+eval/               scenarios/{dev,heldout}/, nlu/, personas.yaml, simulator/, judges/, reports/
+                    (also eval/harness/: runner, checks, report (A); eval/driver/: B's, read-only for A)
+                    (the keyword baseline lives in backend/app/domains/conversation/baseline/, not eval/)
+ml/intent/          intent classifier training (ADR-032): data/, prompts/, runs/, tests/, model.lock; models/ is git-ignored
+                    (inference lives in backend/app/domains/conversation/classifier/; the registry is conversation/intents.yaml)
 docker/             docker-compose.{base,dev,test,prod,observability}.yml, nginx/
+infra/aws/          ec2-stack.yaml (CloudFormation), render-env.sh, deploy.sh, smoke.sh (08)
 notebooks/          EDA (aggregates only, no PII printed)
 docs/solution-docs/ this design
 Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json  .env.example
@@ -61,9 +68,9 @@ Makefile  CLAUDE.md (+ backend/, frontend/, pipeline/, eval/ scoped)  .mcp.json 
 
 ## 5. Git workflow
 
-- Short-lived feature branches off `main` (`feat/<domain>-<topic>`), a PR for every change, green CI required, **squash merge**. The author may self-merge after green CI. The other team member reviews safety-critical PRs (tool registry, policy, identity) before merge (ADR-018).
+- Short-lived feature branches off `develop` (`feat/<domain>-<topic>`), a PR into `develop` for every change, green CI required, **squash merge**. The author may self-merge after green CI. The other team member reviews safety-critical PRs (tool registry, policy, identity) before merge (ADR-018).
 - CI: Ruff, Biome, mypy, import-linter, unit tests, integration tests (ephemeral DB), gitleaks, the held-out freeze check, `dbt build` on a sample fixture.
-- `main` must always be deployable. Nobody commits directly to `main`.
+- `main` must always be deployable. Nobody commits directly to `main` or `develop`.
 
 ## 6. Testing standards
 

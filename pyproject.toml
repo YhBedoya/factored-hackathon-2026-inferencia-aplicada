@@ -1,7 +1,7 @@
 [project]
 name = "latam-bank-cs"
 version = "0.1.0"
-description = "Factored AI & Data Hackathon 2026 - AI-first banking customer service (LATAM Bank)"
+description = "Factored AI & Data Hackathon 2026 - AI-first card support for Swip (Cardy), on the LATAM Bank dataset"
 requires-python = ">=3.11"
 dependencies = [
     "duckdb>=1.1",

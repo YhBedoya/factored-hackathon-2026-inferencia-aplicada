@@ -1,0 +1,47 @@
+seed_id: d-card_status-ambiguous-mixed-01
+intent: card_status
+category: ambiguous
+persona: CLI-1BQ0JRB6CMK7
+goal: Saber el estado de una tarjeta sin decir cuál, entre varias
+fact_sheet:
+  note: 4 tarjetas de crédito activas, sin pista clara de cuál
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_status
+  expected_outcome: clarified
+  required_tools:
+  - cards.list_cards
+  forbidden_tools:
+  - cards.get_card_details
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_status-ambiguous-mixed-01.s
+  language_variant: mixed
+  expected_language: es
+  source: seed
+  turns:
+  - say: Quiero ver el estado de mi tarjeta, mas não sei qual.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_status-ambiguous-mixed-01.p1
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Queria ver el estado de mi tarjeta, pero não sei cuál.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-card_status-ambiguous-mixed-01.p2
+  language_variant: mixed
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Quiero saber en qué estado está meu cartão, mas no sé qual.
+  reviewer: null
+  reviewed_at: null

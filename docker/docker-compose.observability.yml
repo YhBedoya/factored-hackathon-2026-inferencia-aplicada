@@ -1,0 +1,220 @@
+# Observability overlay (D5, T18): OTel collector + VictoriaMetrics/Logs/
+# Traces + Grafana. Cuttable (spec D5) — if dropped, don't add
+# `-f docker/docker-compose.observability.yml` to the Makefile's `COMPOSE`.
+# Modest resource defaults throughout: this is a single dev box (15 GiB),
+# not a sized deployment.
+services:
+  backend:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+  # Logs only: the worker ships no traces/metrics. Endpoint is not a secret.
+  analytics-worker:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+  otel-collector:
+    # Core distribution: the config only uses the `otlp` receiver,
+    # `memory_limiter`/`batch` processors and `otlphttp` exporters, all
+    # shipped in core — no contrib-only component needed (T17's refined
+    # exporter now emits a plain-string log body itself, so the `transform`
+    # processor this used to need is gone; see `docker/otel/collector.yaml`).
+    image: otel/opentelemetry-collector:0.161.0
+    command: ["--config=/etc/otel-collector/collector.yaml"]
+    volumes:
+      - ./otel/collector.yaml:/etc/otel-collector/collector.yaml:ro
+    # OTLP in only; no ports published (compose-network only, per D5).
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.152.0
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+      # OTel metric names/labels use dots (`http.server.duration`) by
+      # default; this sanitizes them to Prometheus-style underscores
+      # (`http_server_duration`) on ingest, across all protocols.
+      - "--usePromCompatibleNaming"
+    volumes:
+      - victoriametrics_data:/storage
+    ports:
+      - "8428:8428"
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:v1.52.0
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+    volumes:
+      - victorialogs_data:/storage
+    ports:
+      - "9428:9428"
+
+  victoriatraces:
+    image: victoriametrics/victoria-traces:v0.9.4
+    command:
+      - "--storageDataPath=/storage"
+      - "--memory.allowedPercent=20"
+    volumes:
+      - victoriatraces_data:/storage
+    ports:
+      - "10428:10428"
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    environment:
+      # Anonymous dev access (D5 acceptance: no new `.env` variable). Viewer
+      # is the lowest basic role that still carries the RBAC
+      # `datasources:read` permission needed to list provisioned
+      # datasources (`GET /api/datasources`).
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_INSTALL_PLUGINS: victoriametrics-logs-datasource
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - victoriametrics
+      - victorialogs
+      - victoriatraces
+
+  # --- Self-hosted Langfuse v4 (D10) -----------------------------------------
+  # Opt-in: `make langfuse-up`. `make up` never starts these (profile). Dev only:
+  # every secret below defaults to a throwaway value and every port is bound to
+  # 127.0.0.1. Web is on 3100 because Grafana owns 3000. Shape follows Langfuse's
+  # official docker-compose (v4 line): web + worker + Postgres + ClickHouse +
+  # Redis + MinIO, each with its own store so it never touches `latam_app`.
+  langfuse-web:
+    image: docker.langfuse.com/langfuse/langfuse:4
+    profiles: [langfuse]
+    depends_on: &langfuse-depends
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-minio:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3100:3000"
+    environment: &langfuse-env
+      DATABASE_URL: postgresql://postgres:${LANGFUSE_DB_PASSWORD:-langfuse}@langfuse-postgres:5432/postgres
+      SALT: ${LANGFUSE_SALT:-dev-only-salt}
+      # 64 hex chars; dev-only default.
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-clickhouse}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      LANGFUSE_USE_AZURE_BLOB: "false"
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-miniosecret}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:-miniosecret}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:9090
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:-myredissecret}
+      REDIS_TLS_ENABLED: "false"
+      NEXTAUTH_URL: http://localhost:3100
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-dev-only-secret}
+
+  langfuse-worker:
+    image: docker.langfuse.com/langfuse/langfuse-worker:4
+    profiles: [langfuse]
+    depends_on: *langfuse-depends
+    ports:
+      - "127.0.0.1:3130:3030"
+    environment: *langfuse-env
+
+  langfuse-postgres:
+    image: postgres:17
+    profiles: [langfuse]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:-langfuse}
+      POSTGRES_DB: postgres
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  langfuse-clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:25.12
+    profiles: [langfuse]
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:-clickhouse}
+    volumes:
+      - langfuse_clickhouse_data:/var/lib/clickhouse
+      - langfuse_clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 1s
+
+  langfuse-redis:
+    image: redis:7
+    profiles: [langfuse]
+    command: >
+      --requirepass ${LANGFUSE_REDIS_PASSWORD:-myredissecret}
+      --maxmemory-policy noeviction
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $${LANGFUSE_REDIS_PASSWORD:-myredissecret} ping | grep PONG"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+  langfuse-minio:
+    image: cgr.dev/chainguard/minio
+    profiles: [langfuse]
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:-miniosecret}
+    ports:
+      # The browser fetches media from this endpoint (LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT).
+      - "127.0.0.1:9090:9000"
+    volumes:
+      - langfuse_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+      start_period: 1s
+
+volumes:
+  victoriametrics_data:
+  victorialogs_data:
+  victoriatraces_data:
+  grafana_data:
+  langfuse_postgres_data:
+  langfuse_clickhouse_data:
+  langfuse_clickhouse_logs:
+  langfuse_minio_data:

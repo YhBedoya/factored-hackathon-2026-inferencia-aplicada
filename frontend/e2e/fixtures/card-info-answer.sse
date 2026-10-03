@@ -1,0 +1,9 @@
+event: status
+data: {"step":"compose"}
+
+event: message
+data: {"role":"bot","text":"Tu tarjeta de crédito •••• 6475 tiene un saldo de $1,250.00 MXN.","sources":[]}
+
+event: done
+data: {"turn_id":"turn-e2e-002"}
+

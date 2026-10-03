@@ -1,0 +1,30 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 4
+card_status:
+  # Closed excluded from card_select's own options; a hint may still resolve
+  # to a Closed card (D12, backend/app/domains/conversation/flows/card_select.py).
+  eligible_statuses: [Active, Blocked, Suspended]
+card_block:
+  # The block picker lists only these cards (a hint still resolves over every
+  # card, D12), and a temporarily locked card is left out too.
+  eligible_statuses: [Active]
+  exclude_locked: true
+replacement:
+  # Block origins that make a card replaceable (D1). An expired card is also
+  # replaceable, but "expired" is checked in code against the card's expiration date.
+  eligible_origins: [customer_block]
+next_step_offer:
+  # Offer shown after a card_status answer, by block origin (D1).
+  customer_block: replacement
+  customer_lock: unlock
+  bank_side: human
+  suspended: human
+  closed: human
+closing_suggestion:
+  # One suggestion per situation (D1): intent that just finished -> intent Cardy
+  # suggests next. A missing key gets the generic closing. Values must be
+  # intents with a flow (validated by the loader).
+  card_status: transaction_search
+  balance_due: transaction_search
+  transaction_search: unrecognized_charge
+  pending_reversal_explain: unrecognized_charge

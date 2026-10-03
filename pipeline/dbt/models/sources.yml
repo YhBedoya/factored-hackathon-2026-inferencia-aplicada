@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      The 13 provided bank tables, ingested by `pipeline/ingest` as
+      all-VARCHAR Parquet under `data/raw/<table>/...` (D10): a single file
+      per unpartitioned table, or `year=.../month=.../day=.../*.parquet` per
+      partitioned table. `union_by_name` tolerates any column reordering
+      across partitions; `hive_partitioning` is turned off so the read
+      doesn't add `year`/`month`/`day` columns that aren't in the source
+      CSVs. Staging casts every real column by name and never selects `*`
+      from a source, so no hive column reaches a staging model either way.
+    meta:
+      external_location: >-
+        read_parquet('{{ var("raw_root") }}/{name}/**/*.parquet',
+        hive_partitioning = false, union_by_name = true)
+    tables:
+      - name: branches
+      - name: customers
+      - name: daily_exchange_rates
+      - name: marketing_campaigns
+      - name: products
+      - name: service_agents
+      - name: call_center_interactions
+      - name: call_transcripts
+      - name: campaign_sends
+      - name: complaints
+      - name: digital_events
+      - name: satisfaction_surveys
+      - name: transactions

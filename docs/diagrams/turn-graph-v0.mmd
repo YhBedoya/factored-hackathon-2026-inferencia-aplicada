@@ -1,0 +1,153 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	load_session(load_session)
+	understand(understand)
+	summarize(summarize)
+	agent(agent)
+	agent_plan(agent_plan)
+	smalltalk(smalltalk)
+	enqueue(enqueue)
+	card_info(card_info)
+	card_block(card_block)
+	card_unlock(card_unlock)
+	replacement(replacement)
+	unrecognized_charge(unrecognized_charge)
+	decline_explain(decline_explain)
+	tx_search(tx_search)
+	tx_explain(tx_explain)
+	unsupported(unsupported)
+	fallback(fallback)
+	compose(compose)
+	next_intent(next_intent)
+	finish(finish)
+	abstain(abstain)
+	handoff_summary(handoff_summary)
+	handoff(handoff)
+	relay_to_agent(relay_to_agent)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> load_session;
+	abstain -.-> finish;
+	abstain -.-> next_intent;
+	agent -.-> fallback;
+	agent -.-> finish;
+	agent -.-> handoff_summary;
+	agent -.-> understand;
+	agent_plan -.-> agent;
+	agent_plan -.-> fallback;
+	agent_plan -.-> finish;
+	agent_plan -.-> handoff_summary;
+	card_block -.-> compose;
+	card_block -.-> fallback;
+	card_block -.-> finish;
+	card_block -.-> handoff_summary;
+	card_block -.-> next_intent;
+	card_info -.-> compose;
+	card_info -.-> fallback;
+	card_info -.-> finish;
+	card_info -.-> handoff_summary;
+	card_info -.-> next_intent;
+	card_unlock -.-> compose;
+	card_unlock -.-> fallback;
+	card_unlock -.-> finish;
+	card_unlock -.-> handoff_summary;
+	card_unlock -.-> next_intent;
+	compose -.-> fallback;
+	compose -.-> finish;
+	compose -.-> next_intent;
+	decline_explain -.-> compose;
+	decline_explain -.-> fallback;
+	decline_explain -.-> finish;
+	decline_explain -.-> handoff_summary;
+	decline_explain -.-> next_intent;
+	enqueue -.-> card_block;
+	enqueue -.-> card_info;
+	enqueue -.-> card_unlock;
+	enqueue -.-> decline_explain;
+	enqueue -.-> fallback;
+	enqueue -.-> finish;
+	enqueue -.-> replacement;
+	enqueue -.-> tx_explain;
+	enqueue -.-> tx_search;
+	enqueue -.-> unrecognized_charge;
+	enqueue -.-> unsupported;
+	fallback -.-> finish;
+	fallback -.-> handoff_summary;
+	fallback -.-> next_intent;
+	handoff --> finish;
+	handoff_summary --> handoff;
+	load_session -.-> agent;
+	load_session -.-> agent_plan;
+	load_session -.-> card_block;
+	load_session -.-> card_info;
+	load_session -.-> card_unlock;
+	load_session -.-> decline_explain;
+	load_session -.-> fallback;
+	load_session -.-> relay_to_agent;
+	load_session -.-> replacement;
+	load_session -.-> smalltalk;
+	load_session -.-> summarize;
+	load_session -.-> tx_explain;
+	load_session -.-> tx_search;
+	load_session -.-> unrecognized_charge;
+	next_intent -.-> card_block;
+	next_intent -.-> card_info;
+	next_intent -.-> card_unlock;
+	next_intent -.-> decline_explain;
+	next_intent -.-> fallback;
+	next_intent -.-> finish;
+	next_intent -.-> replacement;
+	next_intent -.-> tx_explain;
+	next_intent -.-> tx_search;
+	next_intent -.-> unrecognized_charge;
+	next_intent -.-> unsupported;
+	relay_to_agent --> finish;
+	replacement -.-> compose;
+	replacement -.-> fallback;
+	replacement -.-> finish;
+	replacement -.-> handoff_summary;
+	replacement -.-> next_intent;
+	smalltalk --> finish;
+	summarize -.-> agent;
+	summarize -.-> understand;
+	tx_explain -.-> compose;
+	tx_explain -.-> fallback;
+	tx_explain -.-> finish;
+	tx_explain -.-> handoff_summary;
+	tx_explain -.-> next_intent;
+	tx_search -.-> compose;
+	tx_search -.-> fallback;
+	tx_search -.-> finish;
+	tx_search -.-> handoff_summary;
+	tx_search -.-> next_intent;
+	understand -.-> abstain;
+	understand -.-> card_block;
+	understand -.-> card_info;
+	understand -.-> card_unlock;
+	understand -.-> decline_explain;
+	understand -.-> enqueue;
+	understand -.-> fallback;
+	understand -.-> handoff_summary;
+	understand -.-> replacement;
+	understand -.-> smalltalk;
+	understand -.-> tx_explain;
+	understand -.-> tx_search;
+	understand -.-> unrecognized_charge;
+	understand -.-> unsupported;
+	unrecognized_charge -.-> compose;
+	unrecognized_charge -.-> fallback;
+	unrecognized_charge -.-> finish;
+	unrecognized_charge -.-> handoff_summary;
+	unrecognized_charge -.-> next_intent;
+	unsupported -.-> finish;
+	unsupported -.-> handoff_summary;
+	unsupported -.-> next_intent;
+	finish --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc
+

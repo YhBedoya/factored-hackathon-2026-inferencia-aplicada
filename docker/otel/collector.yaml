@@ -1,0 +1,46 @@
+# OTel Collector (D5): receives OTLP from the backend on 4317 (gRPC) / 4318
+# (HTTP) and fans each signal out to its own Victoria* component, over that
+# component's OTLP HTTP ingest path (confirmed against the pinned image
+# versions in docker-compose.observability.yml, 2026-09-27):
+#   - VictoriaTraces v0.9.4: /insert/opentelemetry/v1/traces
+#   - VictoriaLogs   v1.52.0: /insert/opentelemetry/v1/logs
+#   - VictoriaMetrics v1.152.0: /opentelemetry/v1/metrics (no `/insert/` prefix)
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Caps the collector's own memory instead of letting an export backlog grow
+  # unbounded; modest limits since this is a single dev-box collector.
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 200
+  batch: {}
+
+exporters:
+  # Plain `http://` endpoints; no `tls:` block needed (compose-network only).
+  otlp_http/traces:
+    traces_endpoint: http://victoriatraces:10428/insert/opentelemetry/v1/traces
+  otlp_http/logs:
+    logs_endpoint: http://victorialogs:9428/insert/opentelemetry/v1/logs
+  otlp_http/metrics:
+    metrics_endpoint: http://victoriametrics:8428/opentelemetry/v1/metrics
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/traces]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/logs]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [otlp_http/metrics]

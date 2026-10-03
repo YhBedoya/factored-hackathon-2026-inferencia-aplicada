@@ -1,0 +1,38 @@
+seed_id: a-card_block-normal_resolution-es-co-01
+intent: card_block
+category: normal_resolution
+persona: CLI-5RJITZ5VLJGY
+goal: Bloquear temporalmente la tarjeta y confirmar
+fact_sheet:
+  card_last4: '5772'
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.lock_card
+  forbidden_tools:
+  - cards.block_card
+  expected_db_state:
+  - table: app.card_controls
+    where:
+      locked: true
+    count: 1
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: a-card_block-normal_resolution-es-co-01.s
+  language_variant: es-CO
+  expected_language: es
+  source: seed
+  turns:
+  - say: Quiero bloquear mi tarjeta de forma temporal, por favor.
+  - say: La que termina en 5772.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null

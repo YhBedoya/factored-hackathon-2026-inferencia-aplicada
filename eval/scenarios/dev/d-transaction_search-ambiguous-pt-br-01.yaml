@@ -1,0 +1,47 @@
+seed_id: d-transaction_search-ambiguous-pt-br-01
+intent: transaction_search
+category: ambiguous
+persona: CLI-1EOUF8Y7UJ5M
+goal: Encontrar uma compra antiga sem lembrar quando foi
+fact_sheet:
+  note: Fecha demasiado vaga para resolver en código
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - transaction_search
+  expected_outcome: clarified
+  required_tools: []
+  forbidden_tools:
+  - transactions.search
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-transaction_search-ambiguous-pt-br-01.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Quero ver uma compra que fiz há um tempo, não lembro quando.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-transaction_search-ambiguous-pt-br-01.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Queria consultar uma compra que fiz faz um tempo, mas não lembro quando.
+  reviewer: null
+  reviewed_at: null
+- case_id: d-transaction_search-ambiguous-pt-br-01.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Gostaria de encontrar uma compra que realizei há algum tempo, só não me recordo
+      quando.
+  reviewer: null
+  reviewed_at: null

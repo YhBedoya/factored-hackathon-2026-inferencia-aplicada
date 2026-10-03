@@ -1,0 +1,10 @@
+provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
+version: 2
+step_up_window_minutes: 5
+tools:
+  cards.lock_card:         {requires_confirmation: true,  step_up: never,                allowed_intents: [card_block], preconditions: {status_not_in: [Blocked, Closed], locked: false}}
+  cards.unlock_card:       {requires_confirmation: true,  step_up: always,               allowed_intents: [card_unlock]}
+  cards.block_card:        {requires_confirmation: true,  step_up: never,                allowed_intents: [card_block, unrecognized_charge], preconditions: {status_not_in: [Blocked, Closed]}}
+  cards.order_replacement: {requires_confirmation: true,  step_up: when_address_changed, allowed_intents: [replacement_request]}
+  cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_status, card_block, card_unlock, replacement_request]}
+  disputes.create_claim:   {requires_confirmation: true,  step_up: never,                allowed_intents: [unrecognized_charge]}

@@ -1,0 +1,22 @@
+# Grafana datasource provisioning (D5): Prometheus/Jaeger types ship in
+# Grafana core; the VictoriaLogs datasource is a plugin, installed via the
+# `grafana` service's `GF_INSTALL_PLUGINS` env var (no separate volume/init
+# container needed).
+apiVersion: 1
+
+datasources:
+  - name: VictoriaMetrics
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    isDefault: true
+
+  - name: VictoriaLogs
+    type: victoriametrics-logs-datasource
+    access: proxy
+    url: http://victorialogs:9428
+
+  - name: VictoriaTraces
+    type: jaeger
+    access: proxy
+    url: http://victoriatraces:10428/select/jaeger

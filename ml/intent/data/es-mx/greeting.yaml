@@ -1,0 +1,405 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: greeting
+items:
+- text: Hola, buen día. ¿Me pueden ayudar?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hola, buenas tardes. Necesito hacer una consulta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Buenas, ¿me podrían orientar con algo?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hola, ¿cómo están? Quería hacerles una pregunta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Buenas noches, ¿me ayudan con una duda?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qué tal, vengo a consultar algo.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qué onda, ¿me echas la mano con una consulta?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hola, wey, ¿me ayudas con una duda?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Buenas, ¿me haces paro con una pregunta?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiúbole, ¿me ayudan tantito?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hola, ¿me atienden ahorita? Tengo una consulta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qué onda, ¿me podrían ayudar un momentito?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaa, q tal? nececito preguntar algo
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola, buenas! me pueden ayudar cn una duda?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holi, como andan? kiero hacer una consulta
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: buenas, me ayudan xfa? tengo una preguntita
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: holaaa, alguien me puede orientar?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ola! queria consultarles algo rapidin
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: El saludo de bienvenida me aparece cortado; quiero saber cómo cambiar mis datos.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Hola, antes de revisar mi saldo, quería saludarte.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: La frase de bienvenida sale incompleta en la app. ¿Dónde actualizo mi información?
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: El mensaje que dice «hola» se ve a medias; necesito modificar mis datos personales.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Qué tal, primero paso a saludarte y luego vemos lo de mi saldo.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Hola, solo quería darte los buenos días antes de consultar cuánto tengo.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: En la pantalla aparece «buenos días», pero no puedo ver el saldo de mi tarjeta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Hola, buen día. Solo pasaba a saludar; ya revisé mi saldo.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: La app muestra «hola», aunque no me carga el saldo de la tarjeta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me sale el mensaje de bienvenida, pero sigo sin poder consultar cuánto tengo disponible.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Qué tal, buen día. Quería saludarlos por aquí; mi saldo ya está checado.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Hola, ¿cómo están? Me asomé a saludar, ya vi cuánto tengo disponible.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No hace falta que me saludes; quiero revisar un cargo de mi tarjeta.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No vengo a consultar mi saldo, solo quería saludar. ¡Hola!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito una bienvenida, solo quiero consultar un movimiento.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Prefiero que no me saluden; necesito ayuda con un cobro.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito revisar cuánto debo; nomás paso a decir hola.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo dudas sobre mi saldo, solo quería saludarlos. ¡Buenas!
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Hola
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Hola, ¿cómo están? Solo pasaba a saludarlos.
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Buenas tardes
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Qué tal
+  intents:
+  - greeting
+  status: clear
+  topic: null
+  family: greeting-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true

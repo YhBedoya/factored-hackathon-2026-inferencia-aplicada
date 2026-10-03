@@ -1,0 +1,132 @@
+version: 2
+
+models:
+  - name: srv_branches
+    columns:
+      - name: branch_id
+        tests: [unique, not_null]
+
+  - name: srv_customers
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+      - name: country
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Argentina", "Colombia", "México"]
+      - name: customer_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Active", "Closed", "Inactive", "Suspended"]
+
+  - name: srv_daily_exchange_rates
+    tests:
+      - unique_combination:
+          arguments:
+            combination_of_columns:
+              - date
+              - source_currency
+              - target_currency
+
+  - name: srv_marketing_campaigns
+    columns:
+      - name: campaign_id
+        tests: [unique, not_null]
+
+  - name: srv_products
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
+      - name: product_type
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - "Cuenta Ahorro"
+                  - "Cuenta Corriente"
+                  - "Inversión"
+                  - "Préstamo Hipotecario"
+                  - "Préstamo Personal"
+                  - "Seguro"
+                  - "Tarjeta Crédito"
+                  - "Tarjeta Débito"
+      - name: product_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Active", "Blocked", "Closed", "Suspended"]
+
+  - name: srv_service_agents
+    columns:
+      - name: agent_id
+        tests: [unique, not_null]
+
+  - name: srv_call_center_interactions
+    columns:
+      - name: interaction_id
+        tests: [unique, not_null]
+
+  - name: srv_call_transcripts
+    columns:
+      - name: transcript_id
+        tests: [unique, not_null]
+
+  - name: srv_campaign_sends
+    columns:
+      - name: send_id
+        tests: [unique, not_null]
+
+  - name: srv_complaints
+    columns:
+      - name: complaint_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
+
+  - name: srv_digital_events
+    columns:
+      - name: event_id
+        tests: [unique, not_null]
+
+  - name: srv_satisfaction_surveys
+    columns:
+      - name: survey_id
+        tests: [unique, not_null]
+
+  - name: srv_transactions
+    columns:
+      - name: transaction_id
+        tests: [unique, not_null]
+      - name: product_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_products')
+                field: product_id
+              config: {severity: warn}
+      - name: customer_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('srv_customers')
+                field: customer_id
+              config: {severity: warn}
+      - name: transaction_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["Approved", "Declined", "Pending", "Reversed"]

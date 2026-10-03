@@ -1,0 +1,62 @@
+# Dev overlay: hot reload for the backend, the Vite dev server (HMR) for the
+# frontend, and the dev Nginx config that fronts both.
+services:
+  backend:
+    environment:
+      # Fault injection and the LLM kill switch (D6-A). Dev overlay only,
+      # set on the command line (`FAULTS=bedrock_timeout make up`), never prod.
+      FAULTS: ${FAULTS:-}
+      LLM_DISABLED: ${LLM_DISABLED:-false}
+    # --no-sync: the image is synced without the `ml` group, and a start-time
+    # sync would try to fetch it (no network in the offline proof).
+    command: uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ../backend/app:/app/app
+      # `card_select.py`'s `_REPO_ROOT` is `parents[5]` of its own path,
+      # which in the container is `/` (WORKDIR `/app`, code under
+      # `/app/app/...`), so `policies/card_select.yaml` only resolves when
+      # `policies/` is mounted at the container's `/policies`, not
+      # `/app/policies` (T14).
+      - ../policies:/policies:ro
+      - ../eval/personas.yaml:/app/eval/personas.yaml:ro
+
+  analytics-worker:
+    environment:
+      LLM_DISABLED: ${LLM_DISABLED:-false}
+    volumes:
+      - ../backend/app:/app/app
+
+  redis:
+    # Loopback-only, dev overlay only (never base/prod): lets
+    # `backend/tests/integration/` reach Redis from the host, same as
+    # Postgres's own host port mapping (T5 repair, D19).
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  frontend:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - ../frontend:/app
+      # Anonymous volume: shadows the bind mount above so the container's own
+      # `npm ci` install isn't overwritten by (or doesn't overwrite) whatever
+      # is on the host at `frontend/node_modules`.
+      - /app/node_modules
+    command: sh -c "npm ci && npm run dev"
+    healthcheck:
+      # `curl` ships in the (non-slim) `node` image. `start_period` covers
+      # the container's own `npm ci` (~6s cold, per T14 verify) plus Vite's
+      # boot; a later failure only flips the reported health status, same as
+      # the backend's (T5 repair).
+      test: ["CMD", "curl", "-f", "http://localhost:5173/"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  nginx:
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy

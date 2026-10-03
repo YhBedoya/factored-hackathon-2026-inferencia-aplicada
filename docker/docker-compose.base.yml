@@ -1,0 +1,107 @@
+# Base layer: the services every profile needs (dev and, later, prod-like).
+# `docker-compose.dev.yml` overlays hot reload; `docker-compose.observability.yml`
+# (T17-T18) overlays the OTel/Victoria/Grafana stack. Fixed project name so
+# containers are `latam-cs-<service>-1` regardless of the checkout directory
+# name (plan-wide convention).
+name: latam-cs
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: latam_app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d latam_app"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ../backend
+      additional_contexts:
+        eval: ../eval
+        intent: ../ml/intent
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    env_file:
+      - ../.env
+    environment:
+      # The host `.env` points DATABASE_URL/GOLDEN_DATABASE_URL at
+      # `localhost` for host-side tools (psql, alembic); inside the compose
+      # network the backend reaches Postgres by its service name instead.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/latam_app
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # No curl in python:3.12-slim; urllib is stdlib. A non-2xx status (the
+      # 503 `degraded` body) or a refused connection raises, so a plain
+      # unhandled exception is already "unhealthy" — no try/except needed.
+      # `start_period` covers the cold reload-server boot; a later failure
+      # (e.g. T4's Redis-down 503 check) only flips the reported health
+      # status, it never restarts or kills the container.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  # Interaction analytics worker (ADR-033): same image as the backend, its own
+  # long-lived process. Both URLs point at the least-privilege `analytics_worker`
+  # role, so nothing in this process can connect as the superuser. An empty
+  # ANALYTICS_DB_PASSWORD is a start-up error, never a fallback.
+  analytics-worker:
+    build:
+      context: ../backend
+      additional_contexts:
+        eval: ../eval
+        intent: ../ml/intent
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
+    # No `env_file`: the worker gets only what it reads, never the whole `.env`
+    # (POSTGRES_PASSWORD, PII_VAULT_KEY, JWT_SECRET stay out of this process).
+    environment:
+      ANALYTICS_DATABASE_URL: postgresql+asyncpg://analytics_worker:${ANALYTICS_DB_PASSWORD}@postgres:5432/latam_app
+      DATABASE_URL: postgresql+asyncpg://analytics_worker:${ANALYTICS_DB_PASSWORD}@postgres:5432/latam_app
+      ANALYTICS_IDLE_MINUTES: ${ANALYTICS_IDLE_MINUTES:-30}
+      ANALYTICS_WORKER_INTERVAL_S: ${ANALYTICS_WORKER_INTERVAL_S:-120}
+      ANALYTICS_TIMEZONE: ${ANALYTICS_TIMEZONE:-America/Bogota}
+      ANALYTICS_MOCK_ENABLED: ${ANALYTICS_MOCK_ENABLED:-false}
+      ANALYTICS_MOCK_BACKFILL_DAYS: ${ANALYTICS_MOCK_BACKFILL_DAYS:-30}
+      # Sentiment scoring goes through app.core.llm (R7).
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    command: uv run --no-sync python -m app.domains.analytics.worker
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

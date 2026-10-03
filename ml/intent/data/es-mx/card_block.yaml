@@ -1,0 +1,475 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-mx
+class: card_block
+items:
+- text: Quiero bloquear mi tarjeta porque no la encuentro.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Por favor, bloquea mi tarjeta; se me perdió.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Necesito que canceles temporalmente el uso de mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me robaron la tarjeta, ayúdame a bloquearla.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero que bloqueen mi tarjeta cuanto antes.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Puedes ponerle un bloqueo a mi tarjeta?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Wey, no encuentro mi tarjeta, bloquéala porfa.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, se me perdió la tarjeta; échame la mano bloqueándola.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ahorita necesito bloquear mi tarjeta porque no sé dónde quedó.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, me robaron la tarjeta, ¿me ayudas a bloquearla?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oye, bloquea mi tarjeta ya, no la encuentro por ningún lado.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Ahorita ponle bloqueo a mi tarjeta, porfa.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: se me perdio la tarjetaa, blokéala pls
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me robaron mi tarjeta, ayudame a bloqearla ya
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: no encuentro mi tarjeta, la puedes bloquiar xfa?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: urge blokear mi tarjeta, no se donde la deje
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me kitaron la tarjeta, bloqueala plis
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: perdi mi tarjeta, ponle blokeo cuanto antes
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cómo puedo desbloquear mi tarjeta?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de revisar cuánto saldo debo, bloquea mi tarjeta; no encuentro mi cartera.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Mi tarjeta aparece bloqueada, ¿cómo la vuelvo a activar?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Cuánto tarda en quitarse el bloqueo de mi tarjeta?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Luego veo el saldo, ahorita necesito que bloquees mi tarjeta porque la perdí.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Me ayudas a bloquear la tarjeta? Después checo cuánto debo, se me extravió.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: ¿Qué compras se rechazan si bloqueo mi tarjeta?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Me apareció un cargo que no reconozco; no necesito aclararlo ahorita, quiero bloquear mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero saber qué pasa si bloqueo mi tarjeta, pero no la bloquees.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿El bloqueo de la tarjeta también detiene los cargos recurrentes?
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Vi una compra rara en los movimientos, pero lo que necesito es que bloqueen mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ese cargo no me suena; en vez de reclamarlo, ayúdenme a dejar bloqueada mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No quiero bloquear mi tarjeta, solo revisar los movimientos.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero consultar mi saldo; necesito bloquear mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No bloquees mi tarjeta; todavía la estoy usando.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No necesito poner mi tarjeta en bloqueo, gracias.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: El saldo no es lo que busco, quiero que bloqueen mi tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No necesito saber cuánto debo; ayúdenme a bloquear la tarjeta.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí, bloquéala.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Bloquea mi tarjeta
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Bloquéala ya.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Porfa, bloquéala.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Quiero bloquearla
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quiero bloquear mi tarjeta de crédito porque la perdí.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Me ayudan a bloquear la tarjeta de crédito? No la encuentro.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito ponerle un bloqueo temporal a mi tarjeta de crédito.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Quiero bloquear mi tarjeta de débito porque me la robaron.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: ¿Pueden bloquear mi tarjeta de débito? Se me perdió.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Necesito bloquear temporalmente la tarjeta de débito.
+  intents:
+  - card_block
+  status: clear
+  topic: null
+  family: card_block-es-mx-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

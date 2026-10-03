@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-AI-first **card-support** service for the synthetic LATAM Bank (Factored AI & Data Hackathon 2026), in Spanish (MX/CO/AR) and Brazilian Portuguese. The repo is **public**.
+AI-first **card-support** service for **Swip**, a fictional card fintech built on the synthetic LATAM Bank dataset (Factored AI & Data Hackathon 2026). The assistant is **Cardy**; voice and visual identity live in [`docs/brand.md`](docs/brand.md). It speaks Spanish (MX/CO/AR) and Brazilian Portuguese. The repo is **public**.
 
-**Status:** design complete, implementation not started. The commands below are planned and don't exist yet.
+**Status:** implementation in progress. The D1-A platform (`make setup`, `up`, `down`, `data`, `demo-reset`, `client`, `check`, `test`) exists — see [`README.md`](README.md) for the steps to run it. `make eval` is still planned.
 
 ## Read first
 - Design index: [`docs/solution-docs/README.md`](docs/solution-docs/README.md)
@@ -21,6 +21,7 @@ AI-first **card-support** service for the synthetic LATAM Bank (Factored AI & Da
 FastAPI + SQLModel/asyncpg + Alembic + Redis · LangGraph (Postgres checkpointer) + Amazon Bedrock (Anthropic API until Bedrock is set up, ADR-028) · React 19 + Vite + TanStack · dbt-duckdb + Pandera · Docker Compose + Nginx · OTel → VictoriaMetrics/Logs/Traces · Langfuse self-hosted in Docker (not needed to start, ADR-006).
 
 ## Planned commands
+See [`README.md`](README.md) for prerequisites, `.env` setup and what each command does.
 ```bash
 make setup      # install toolchains, pre-commit
 make data       # S3 → pipeline → Postgres → golden DB (AWS creds from env/profile)
@@ -30,7 +31,7 @@ make eval SUITE=dev SYSTEM=proposed
 ```
 
 ## Development flow
-Build work runs through `/wave-run <card>` (`.claude/skills/wave-run/`). A card is a task row (`D1-A5`) or a day track (`D2-B`) of [`07-execution-plan.md`](docs/solution-docs/07-execution-plan.md). The flow is spec (gate) → plan → one fresh implementer per task → independent verifier (gate), with specs in `docs/specs/` and plans in `docs/plans/`.
+Build work runs through `/wave-run <card>` (`.claude/skills/wave-run/`). A card is a task row (`D1-A5`) or a day track (`D2-B`) of [`07-execution-plan.md`](docs/solution-docs/07-execution-plan.md). The flow is spec (gate) → plan → one fresh implementer per task → independent verifier (gate), with specs in `docs/specs/` and plans in `docs/plans/`. To reproduce the dev environment a task runs against, see [`README.md`](README.md).
 - **Keep tests minimal.** We need to pivot fast. Test only the safety rules a change touches (R1–R6, R11, R13) and the card's "Done when" lines, plus one ES and one PT happy path per flow, always with a fake LLM. Each task runs only its own tests. The full suite runs once per card.
 - When a choice isn't settled by the docs, ask. Don't pick the plausible option.
 

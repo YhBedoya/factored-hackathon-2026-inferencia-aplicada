@@ -1,0 +1,481 @@
+provenance: ai-generated-human-audited
+version: 1
+locale: es-co
+class: unrecognized_charge
+items:
+- text: Veo un cobro en mi tarjeta que no reconozco. ¿Me ayudan a revisarlo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-01
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Apareció un cargo en mi tarjeta que no identifico, ¿pueden verificarlo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Hay un cobro en mi tarjeta que no hice y quisiera que lo revisaran.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-01
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Me salió un cobro que no reconozco en la tarjeta. ¿Qué puedo hacer?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-02
+  slot: plain
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Tengo un cargo en mi tarjeta que no sé de dónde salió, ¿me ayudan?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: No identifico uno de los cobros de mi tarjeta y necesito revisarlo.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-02
+  slot: plain
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, me apareció un cobro en la tarjeta que no reconozco, ¿me colaboran revisándolo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-03
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vea, tengo un cargo en mi tarjeta que no sé de dónde salió. ¿Me ayudan a averiguar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, hay un cobro que no hice en mi tarjeta y quisiera que me ayudaran a revisarlo.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-03
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Oiga, me salió un cobro raro en la tarjeta y no lo reconozco, ¿qué hago?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-04
+  slot: regional
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Parce, veo un cargo en mi tarjeta que no me suena, ¿me ayudan a revisarlo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Vea pues, apareció un cobro en mi tarjeta que no identifiqué. ¿Cómo lo puedo aclarar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-04
+  slot: regional
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me salio un cobro en la tarjeta q no reconozco, me ayudan a revisar?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-05
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: hay un cargo q no hice en mi tarjeta, saben de donde salio?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me aparecio un cobro raro y no se q es, pueden mirar xfa
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-05
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: no reconosco este cobro de mi tarjeta, alguien me ayuda a ver q paso?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-06
+  slot: typo_informal
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: me cobraron algo q no ubico en la tarjeta, pueden revisarlo pls?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ese cargo no es mio creo, no lo reconosco, q puedo hacer?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-06
+  slot: typo_informal
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: ¿Cuál es el proceso cuando alguien encuentra un cobro que no reconoce? Solo estoy consultando
+    para orientar a otra persona.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Me ayudan a revisar cuánto debo? En los movimientos me aparece un cobro que no hice ni reconozco.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Quisiera saber qué pasos debe seguir una persona si ve un cargo que no identifica; es una consulta
+    general.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: ¿Qué recomienda la ayuda para alguien que no reconoce un cobro? No me pasó a mí, solo quiero conocer
+    el procedimiento.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero consultar el saldo pendiente, pero también veo un cargo que no autorizo y no sé de dónde
+    salió.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Estoy mirando lo que debo pagar y encontré una compra en la tarjeta que no hice; no reconozco
+    ese cobro.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-07
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Sí reconozco el cobro de mi tarjeta; solo quiero saber cuándo se verá reflejado el comprobante.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Quiero solicitar un reembolso, pero primero necesito reportar un cobro que no reconozco en mi
+    tarjeta.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Ese cargo de mi tarjeta sí es mío. ¿Me indican cuándo aparece el recibo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Identifico el cobro y está bien, pero quisiera consultar cuándo queda disponible el comprobante.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Antes de pedir que me devuelvan la plata, quiero aclarar un cargo de mi tarjeta que no hice.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Necesito reclamar un reembolso por un débito que aparece en mi tarjeta y no sé de dónde salió.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-08
+  slot: hard_negative
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No tengo ningún cobro en mi tarjeta que no reconozca; solo quería confirmar que sigue activa.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No quiero bloquear mi tarjeta; necesito revisar un cobro que no reconozco.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No veo cargos desconocidos en mi tarjeta, únicamente quiero saber si está habilitada.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No hay ningún cobro que no identifique; mi consulta es solo sobre la fecha de corte.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No estoy reportando la tarjeta como perdida, sino un cargo que no me suena.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No es para bloquear la tarjeta, parce; quiero saber de dónde salió este cobro desconocido.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-09
+  slot: negation
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No lo reconozco
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: Cobro desconocido
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-10
+  slot: short_answer
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: No es mío
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: false
+- text: No lo identifico
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v1
+  accepted: true
+- text: Cargo desconocido
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-10
+  slot: short_answer
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v2
+  accepted: true
+- text: Veo un cobro en mi tarjeta de crédito que no reconozco, ¿me ayudan a revisarlo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-11
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Me apareció un cargo que no identifico en la tarjeta de crédito, ¿de dónde salió?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Hay un movimiento en mi tarjeta de crédito que no reconozco y quisiera que lo revisaran.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-11
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Tengo un cobro en mi tarjeta de débito que no reconozco, ¿me pueden ayudar a revisarlo?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-12
+  slot: card_type
+  origin: seed
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Me apareció un cargo que no identifico en la tarjeta de débito, ¿saben de qué es?
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true
+- text: Veo un movimiento en mi tarjeta de débito que no reconozco y quisiera saber de dónde salió.
+  intents:
+  - unrecognized_charge
+  status: clear
+  topic: null
+  family: unrecognized_charge-es-co-12
+  slot: card_type
+  origin: paraphrase
+  generator: gpt-6-luna:intent_gen@v3
+  accepted: true

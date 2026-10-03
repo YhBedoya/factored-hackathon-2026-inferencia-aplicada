@@ -1,0 +1,33 @@
+# B3 mix targets (spec `d5-b-decline-explainer-test-sets.md` D18; plan
+# §"Mix targets" -- the human confirmed these tolerances at the spec gate).
+# Read by `eval/scenarios/mix_report.py`; not a `policies/*.yaml` R8 policy
+# (it governs test-set composition, not product behavior).
+
+language_variant_shares:
+  es-MX: 16.7
+  es-CO: 16.7
+  es-AR: 16.7
+  pt-BR: 35
+  mixed: 15
+  tolerance_pp: 5
+
+es_total_share: 50
+es_total_tolerance_pp: 5
+
+categories:
+  - normal_resolution
+  - ambiguous
+  - unsupported
+  - human_required
+  - bad_data
+  - expired_session
+  - unauthorized
+  - injection
+  - tool_failure
+  - multilingual
+
+suite_size:
+  dev: {min: 60, max: 100}
+  heldout: {min: 120, max: 170}
+
+heldout_min_per_category: 8

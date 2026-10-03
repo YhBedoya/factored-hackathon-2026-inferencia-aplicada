@@ -1,0 +1,56 @@
+seed_id: h-general_question-human_required-es-mx-01
+intent: general_question
+category: human_required
+persona: CLI-063FKU0GAEE4
+goal: Avisar que ya puso una queja ante el regulador.
+fact_sheet:
+  trigger: legal_regulator
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: handoff:reclamos
+  required_tools: []
+  forbidden_tools:
+  - cards.block_card
+  - disputes.create_claim
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  - escalation_rules_hit
+  eligible_for_automation: false
+cases:
+- case_id: h-general_question-human_required-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: Voy a poner una queja ante la Condusef por este rechazo que no me explican
+      bien.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-general_question-human_required-es-mx-01.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Voy a presentar una queja ante la Condusef porque no me explican bien este
+      rechazo.
+  reviewer: null
+  reviewed_at: null
+- case_id: h-general_question-human_required-es-mx-01.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Pienso levantar una queja ante la Condusef por este rechazo, que no me han
+      explicado claramente.
+  reviewer: null
+  reviewed_at: null

@@ -1,0 +1,45 @@
+seed_id: d-unrecognized_charge-human_required-es-ar-01
+intent: unrecognized_charge
+category: human_required
+persona: CLI-070BYEV7ZYHC
+goal: Reportar un cargo no reconocido y terminar en la cola de Reclamos por reincidencia
+fact_sheet:
+  transaction_id: TRX-UEH8OCMKQKC0AWRUU8AR
+  merchant: Tienda Don José
+  amount_ars: '27288.00'
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - unrecognized_charge
+  expected_outcome: handoff:reclamos
+  required_tools:
+  - transactions.search
+  - disputes.get_priority_signals
+  - disputes.create_claim
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields:
+  - handoff_id
+  - queue
+  - reason
+  - request
+  - escalation_rules_hit
+  eligible_for_automation: false
+cases:
+- case_id: d-unrecognized_charge-human_required-es-ar-01.s
+  language_variant: es-AR
+  expected_language: es
+  source: seed
+  turns:
+  - say: No reconozco un cargo de Tienda Don José por 27288 pesos en mi tarjeta de
+      crédito.
+  - select:
+    - TRX-UEH8OCMKQKC0AWRUU8AR
+  - say: Sí, la tarjeta la tengo conmigo.
+  - say: No, no contacté al comercio.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null

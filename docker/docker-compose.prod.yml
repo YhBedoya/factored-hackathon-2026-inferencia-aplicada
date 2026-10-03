@@ -1,0 +1,84 @@
+# Prod layer (08 §7): base + prod + observability, no dev overlay. Only nginx
+# publishes on 0.0.0.0 (80, 443). Everything else that publishes a port is
+# rebound to 127.0.0.1 with `!override`, because Docker's port publishing
+# bypasses host firewalls such as ufw and a plain list would append to the
+# base list, not replace it (Compose >= 2.24).
+services:
+  backend:
+    # No --reload; the image CMD runs a single uvicorn worker (08 §15, measure first).
+    environment:
+      APP_ENV: prod
+      LLM_PROVIDER: bedrock
+      AWS_REGION: us-east-1
+    volumes:
+      # The image has no `policies/`; `card_select.py` resolves them at `/policies`.
+      - ../policies:/policies:ro
+    restart: unless-stopped
+
+  analytics-worker:
+    environment:
+      APP_ENV: prod
+      LLM_PROVIDER: bedrock
+      AWS_REGION: us-east-1
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/nginx/Dockerfile.prod
+    environment:
+      # Read by the image's envsubst step over prod.conf.
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports: !override
+      - "80:80"
+      - "443:443"
+    # Renewed certificates reach nginx without deploy.sh: a background loop
+    # reloads it every 6h (08 §8), then the stock entrypoint (which renders
+    # the envsubst templates) starts nginx in the foreground.
+    command: ["/bin/sh", "-c", "(while :; do sleep 6h; nginx -s reload; done) & exec /docker-entrypoint.sh nginx -g 'daemon off;'"]
+    volumes:
+      - certbot_webroot:/var/www/certbot:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    # HTTP-01 webroot shared with nginx (08 §8). Renews twice a day; nginx
+    # reloads itself on an interval (see its `command`).
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"]
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+
+  postgres:
+    # Host-side pipeline (`make data`) needs it; nothing else may reach it.
+    ports: !override
+      - "127.0.0.1:5432:5432"
+    command: ["postgres", "-c", "shared_buffers=2GB"]
+    restart: unless-stopped
+
+  redis:
+    # No published port.
+    restart: unless-stopped
+
+  victoriametrics:
+    ports: !override
+      - "127.0.0.1:8428:8428"
+
+  victorialogs:
+    ports: !override
+      - "127.0.0.1:9428:9428"
+
+  victoriatraces:
+    ports: !override
+      - "127.0.0.1:10428:10428"
+
+  grafana:
+    # Reached only through an SSM port-forward (08 §7).
+    ports: !override
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  certbot_webroot:
+  letsencrypt:
