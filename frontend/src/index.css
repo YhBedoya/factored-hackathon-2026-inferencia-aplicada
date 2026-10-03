@@ -89,6 +89,11 @@
 	--sidebar-accent-foreground: var(--foreground);
 	--sidebar-border: oklch(1 0 0 / 12%);
 	--sidebar-ring: var(--color-cyan);
+	--chart-1: var(--color-cyan);
+	--chart-2: var(--color-alert);
+	--chart-3: var(--color-gold);
+	--chart-4: color-mix(in oklab, var(--color-cyan) 45%, var(--color-bg));
+	--chart-5: var(--muted-foreground);
 }
 
 @layer base {

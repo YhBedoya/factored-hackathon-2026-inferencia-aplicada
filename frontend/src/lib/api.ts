@@ -1,10 +1,13 @@
 import {
+	type AnalyticsSummary,
 	type CardDetailsView,
 	type CardView,
 	type ConversationPage,
 	type ConversationTimeline,
 	claimHandoffApiV1StaffHandoffsHandoffIdClaimPost,
 	createConversationApiV1ConversationsPost,
+	type GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetData,
+	getAnalyticsSummaryApiV1StaffAnalyticsSummaryGet,
 	getCardApiV1MeCardsCardIdGet,
 	getConversationTimelineApiV1StaffConversationsConversationIdTimelineGet,
 	getHandoffApiV1StaffHandoffsHandoffIdGet,
@@ -23,6 +26,8 @@ import {
 	meApiV1AuthMeGet,
 	postConversationMessageApiV1StaffConversationsConversationIdMessagesPost,
 	postMessageApiV1ConversationsConversationIdMessagesPost,
+	type Rate,
+	type RecentInteraction,
 	refreshApiV1AuthRefreshPost,
 	returnHandoffApiV1StaffHandoffsHandoffIdReturnPost,
 	type StaffLoginRequest,
@@ -471,3 +476,20 @@ export const conversationStore = {
 		window.sessionStorage.removeItem(CONVERSATION_STORAGE_KEY);
 	},
 };
+
+/** `GET /staff/analytics/summary` query: every filter is optional and ANDed. */
+export type AnalyticsQuery = NonNullable<
+	GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetData["query"]
+>;
+
+// Re-exported so the analytics blocks import their data types from one place.
+export type { AnalyticsSummary, Rate, RecentInteraction };
+
+export async function getAnalyticsSummary(
+	query: AnalyticsQuery,
+): Promise<AnalyticsSummary> {
+	const result = await withStaffAuth(() =>
+		getAnalyticsSummaryApiV1StaffAnalyticsSummaryGet({ query }),
+	);
+	return unwrap(result);
+}
