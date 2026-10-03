@@ -15,6 +15,7 @@ returns SQL `NULL`, not `false`, so both aggregates are wrapped in `COALESCE`
 -- the spec's "NULL treated as false".
 """
 
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import RowMapping, bindparam, text
@@ -23,7 +24,13 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
 
-__all__ = ["fetch_claims_by_ids", "fetch_claims_by_keys", "fetch_priority_signals", "insert_claims"]
+__all__ = [
+    "fetch_claims_by_ids",
+    "fetch_claims_by_keys",
+    "fetch_priority_signals",
+    "fetch_recent_claims",
+    "insert_claims",
+]
 
 _SELECT = """
     SELECT complaint_id, conversation_id, customer_id, transaction_id,
@@ -51,6 +58,14 @@ _PRIORITY_SIGNALS_SQL = text(
     WHERE customer_id = :customer_id
     """
 ).bindparams(bindparam("open_statuses", expanding=True))
+
+_RECENT_CLAIMS_SQL = text(
+    f"""{_SELECT}
+    WHERE customer_id = :customer_id AND creation_date >= :since
+    ORDER BY creation_date DESC
+    LIMIT :limit
+    """
+)
 
 _INSERT_SQL = text(
     """
@@ -108,6 +123,19 @@ async def fetch_priority_signals(customer_id: str, open_statuses: list[str]) -> 
                 {"customer_id": customer_id, "open_statuses": open_statuses},
             )
             return result.mappings().one()
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"complaints query failed: {exc}") from exc
+
+
+async def fetch_recent_claims(customer_id: str, since: datetime, limit: int) -> list[RowMapping]:
+    """Own rows only (R1), newest first, from `since` -- the handoff history read."""
+    try:
+        async with get_engine().connect() as conn:
+            result = await conn.execute(
+                _RECENT_CLAIMS_SQL,
+                {"customer_id": customer_id, "since": since, "limit": limit},
+            )
+            return list(result.mappings().all())
     except (SQLAlchemyError, OSError) as exc:
         raise ToolUnavailable(f"complaints query failed: {exc}") from exc
 

@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { HandoffSummary } from "@/client";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,23 @@ const STATUS_PILL: Record<HandoffSummary["status"], string> = {
 	returned: "border-border text-muted-foreground",
 };
 
+// Time in queue (AS7): from `created_at` to now, frozen at `claimed_at` once
+// claimed. Computed client-side so it ticks between polls and SSE updates.
+function queueClock(item: HandoffSummary, now: number): string {
+	const end = item.claimed_at ? Date.parse(item.claimed_at) : now;
+	const total = Math.max(
+		0,
+		Math.floor((end - Date.parse(item.created_at)) / 1000),
+	);
+	const hours = Math.floor(total / 3600);
+	const minutes = Math.floor((total % 3600) / 60);
+	const seconds = total % 60;
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return hours > 0
+		? `${hours}:${pad(minutes)}:${pad(seconds)}`
+		: `${pad(minutes)}:${pad(seconds)}`;
+}
+
 /**
  * `GET /staff/handoffs` rows (D20). `queue` and `status` are each a closed,
  * fixed-value catalog translated through the dictionary
@@ -48,6 +65,12 @@ export function InboxList({ items, freshIds }: InboxListProps) {
 	const queryClient = useQueryClient();
 	const [claimingId, setClaimingId] = useState<string | null>(null);
 	const [failedId, setFailedId] = useState<string | null>(null);
+	const [now, setNow] = useState(() => Date.now());
+
+	useEffect(() => {
+		const timer = setInterval(() => setNow(Date.now()), 1000);
+		return () => clearInterval(timer);
+	}, []);
 
 	async function handleClaim(handoffId: string) {
 		setClaimingId(handoffId);
@@ -126,6 +149,23 @@ export function InboxList({ items, freshIds }: InboxListProps) {
 								<span className="truncate">
 									{t(`staff.reason.${item.reason}` as TKey)}
 								</span>
+							</span>
+							<span
+								data-testid="inbox-item-preview"
+								className="truncate text-sm text-foreground"
+							>
+								{item.case_summary?.asked ?? item.request}
+							</span>
+							<span
+								data-testid="inbox-item-clock"
+								className="font-mono text-xs text-muted-foreground"
+							>
+								{t(
+									item.claimed_at
+										? "staff.inbox.waited"
+										: "staff.inbox.in_queue",
+									{ time: queueClock(item, now) },
+								)}
 							</span>
 						</span>
 						<span

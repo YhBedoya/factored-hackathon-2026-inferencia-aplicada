@@ -328,6 +328,13 @@ B's workflows reach bank data only through the tools A builds. A bug in a workfl
 
 **End-of-day test:** a fresh clone following only the README → a working stack. The full §4 checklist passes on the URL in ES and PT. The slides and video are exported.
 
+**Handoff v2: G10 handoff packet and staff screens** (exception to the D8 rule, see §8)
+| # | Task | Done when |
+|---|---|---|
+| H1 | Packet v2. An LLM-written case summary read from the masked transcript (R5): what the customer asked, what Cardy did, what is unfinished. Money, dates and card masks only through placeholders filled in code (R4), no tools (R6), a fixed per-reason text on failure (R11). Code-built fields: focus card, why this queue and priority (the rule and its `by_flow`/default branch), risk signals (priority flags, legal keyword, unauthorized attempts), customer history (earlier handoffs and claims in the last N days), friction (clarification failures, abstentions, non-answers) | Replaying the HO-293FB42E conversation, the summary names the 2 unrecognized movements on •••• 9118 and the unconfirmed block. No "0 transacciones". ES + PT tests with a fake LLM |
+| H2 | Staff API: the inbox rows carry the summary and the time in queue before the claim. The transcript stays claim-only (R13). The detail links to `/staff/conversations/{id}` | `GET /staff/handoffs` returns the summary. The messages route still answers `404` on an unclaimed case |
+| H3 | Staff screens: an inbox preview with the summary and the time in queue. A redesigned packet view (summary, focus card, routing, risk, history, friction, audit link) next to the conversation | Browser check in ES and PT on the HO-293FB42E case |
+
 ### D9 · Mon 5 Oct — Submit
 - If code changed after the D7 held-out run, rerun held-out on the frozen commit and update the report.
 - `make demo-reset` on prod, then a smoke test of the three behaviors in ES and PT.
@@ -440,4 +447,5 @@ Taken only on D8, and only when the D7 held-out report shows 0 unsafe outcomes. 
 | D5 | D1.5 numeric targets | **Moved 2026-09-29** to a later card, after the first full dev run; still recorded before any held-out run |
 | D5 | Deploy of main after D5-A merge | **Decided 2026-09-29:** postponed to the end of D6 unless strictly required earlier. The human deploys `main` with the D5-A runbook (T27), and `/wave-run D5-A-deploy` records the results then |
 | D5–D6 | Paraphrase, simulator and judge model family | Paraphrase, simulator and judge: OpenAI `gpt-6-luna` (ADR-030). The judge step runs at temperature 1.0, the only value the model accepts (D7-B D14) |
+| D8 | Handoff v2 (D8-H) before the held-out report | **Decided 2026-10-03 (human):** taken on D8 as an explicit exception to the D8 rule. It must merge before the 18:00 freeze or it is dropped |
 | D7 | Final model per step | From the held-out model comparison. Proposed in `decision-log.md` "Model per step (D7)" (smoke result, final after the held-out NLU comparison) |

@@ -233,6 +233,8 @@ class GraphState(TurnState):
     intent_segments: NotRequired[Annotated[list[IntentSegment], _reduce_intent_segments]]
     segment_deferred: NotRequired[IntentSegment | None]
     handoff_request: NotRequired[str]
+    # Written by `handoff_summary` (dumped `CaseSummary`), read and re-validated by `handoff`.
+    handoff_case_summary: NotRequired[dict[str, str] | None]
     grounding: NotRequired[str]
     actions_at_turn_start: NotRequired[int]
     write_failed: NotRequired[bool]
@@ -589,6 +591,35 @@ def _guard_access[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
     return cast(N, guarded)
 
 
+def _bump_friction(state: GraphState, **delta: int) -> dict[str, int]:
+    """The cumulative `friction` channel with `delta` added (D8). A plain dict with
+    no reducer, so each update carries the whole value, read from this node's state."""
+    current = state.get("friction") or {}
+    keys = ("clarifications", "abstentions", "non_answers")
+    return {k: current.get(k, 0) + delta.get(k, 0) for k in keys}
+
+
+def _clarified(state: GraphState, update: dict[str, Any]) -> bool:
+    """A flow or agent update that asked again or ran out of clarifications."""
+    return (
+        update.get("clarification_failures", 0) > state.get("clarification_failures", 0)
+        or update.get("escalation_reason") == "clarification_exhausted"
+    )
+
+
+def _count_clarifications[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
+    """Wrap `understand` or the agent so their clarifications count toward `friction` (D8)."""
+
+    @functools.wraps(node)
+    async def counted(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+        update = await node(state, config)
+        if update and _clarified(state, update):
+            return {**update, "friction": _bump_friction(state, clarifications=1)}
+        return update
+
+    return cast(N, counted)
+
+
 def _keep_open_question[N: Callable[..., Awaitable[dict[str, Any]]]](name: str, node: N) -> N:
     """Wrap a flow node: a non-answer on its open question is replayed or handed off.
 
@@ -618,7 +649,11 @@ def _keep_open_question[N: Callable[..., Awaitable[dict[str, Any]]]](name: str, 
         ):
             new = state.get("non_answer_failures", 0) + 1
             if new == 1:
-                replay: dict[str, Any] = {"non_answer_failures": 1, "non_answer_counted": True}
+                replay: dict[str, Any] = {
+                    "non_answer_failures": 1,
+                    "non_answer_counted": True,
+                    "friction": _bump_friction(state, non_answers=1),
+                }
                 stored = state.get("open_question")
                 if stored is not None:
                     # D16: the replayed sentence is grounded once already; recording
@@ -638,9 +673,12 @@ def _keep_open_question[N: Callable[..., Awaitable[dict[str, Any]]]](name: str, 
                     state.get("language", "es"),
                 ),
                 "non_answer_failures": 0,
+                "friction": _bump_friction(state, non_answers=1),
             }
 
         update = await node(state, config)
+        if _clarified(state, update):
+            update = {**update, "friction": _bump_friction(state, clarifications=1)}
         new_pending = update.get("pending")
         if new_pending is not None and new_pending["awaiting_slot"] != "anything_else":
             return {**update, "asked_ui": list(update.get("ui") or [])}
@@ -747,7 +785,8 @@ def _segment_update(name: str, state: GraphState, update: dict[str, Any]) -> dic
         return {
             "intent_segments": [
                 {"intent": i, "route": name, "status": "abstained"} for i in _real_intents(state)
-            ]
+            ],
+            "friction": _bump_friction(state, abstentions=1),
         }
     if name == "compose":
         deferred = state.get("segment_deferred")
@@ -842,11 +881,13 @@ def build_graph(
     graph = StateGraph(GraphState, input_schema=TurnInput, output_schema=TurnOutput)
     graph.add_node("load_session", load_session)
     baseline = system == "baseline"
-    graph.add_node("understand", baseline_understand if baseline else understand)
+    graph.add_node(
+        "understand", _count_clarifications(baseline_understand if baseline else understand)
+    )
     # The baseline never summarizes (D17): it has no LLM and no memory.
     if not baseline:
         graph.add_node("summarize", summarize)
-        graph.add_node("agent", _guard_access(agent))
+        graph.add_node("agent", _count_clarifications(_guard_access(agent)))
         graph.add_node("agent_plan", _guard_access(agent_plan))
         graph.add_conditional_edges(
             "agent_plan",

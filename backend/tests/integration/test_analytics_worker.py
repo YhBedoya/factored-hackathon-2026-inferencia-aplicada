@@ -411,7 +411,12 @@ def test_worker_es_multi_intent(
             ],
             "compose": [ComposeDraft(text="Tu tarjeta {card_mask} esta {status}.")],
             "handoff_summary": [
-                HandoffSummaryDraft(request="La tarjeta tiene un bloqueo del banco.")
+                HandoffSummaryDraft(
+                    request="La tarjeta tiene un bloqueo del banco.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
         }
     )

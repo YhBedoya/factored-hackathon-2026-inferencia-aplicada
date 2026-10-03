@@ -96,7 +96,12 @@ def test_cap_returns_429_bot_mode_only(
             "nlu": [card_status, card_status, human_request],
             "compose": [ComposeDraft(text="Tu tarjeta {card_kind} {card_mask} esta {status}.")] * 2,
             "handoff_summary": [
-                HandoffSummaryDraft(request="El cliente pidió hablar con alguien.")
+                HandoffSummaryDraft(
+                    request="El cliente pidió hablar con alguien.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
         }
     )

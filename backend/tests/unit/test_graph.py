@@ -104,7 +104,14 @@ def test_human_mode_relays_without_llm(fakebank_dir: Path) -> None:
     llm = ScriptedLLM(
         {
             "nlu": [nlu_turn],
-            "handoff_summary": [HandoffSummaryDraft(request="Pidió hablar con {queue_label}.")],
+            "handoff_summary": [
+                HandoffSummaryDraft(
+                    request="Pidió hablar con {queue_label}.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
+            ],
         }
     )
     config = {

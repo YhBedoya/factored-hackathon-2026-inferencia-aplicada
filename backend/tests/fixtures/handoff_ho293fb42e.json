@@ -1,0 +1,58 @@
+{
+  "note": "Hand-written, masked rows of the HO-293FB42E turn sequence. No real export, no real names.",
+  "rows": [
+    {
+      "turn_id": null,
+      "role": "bot",
+      "content": "Hola, soy Cardy. ¿En qué te ayudo?",
+      "content_masked": "Hola, soy Cardy. ¿En qué te ayudo?",
+      "ui_payload": null
+    },
+    {
+      "turn_id": "00000000-0000-4000-8000-000000000001",
+      "role": "customer",
+      "content": "Soy Nombre Ficticio Prueba y veo cobros que no reconozco en mi tarjeta, bloquéala",
+      "content_masked": "Soy [NAME_1] y veo cobros que no reconozco en mi tarjeta, bloquéala",
+      "ui_payload": null
+    },
+    {
+      "turn_id": "00000000-0000-4000-8000-000000000001",
+      "role": "bot",
+      "content": "Voy a bloquear tu tarjeta. ¿Confirmas?",
+      "content_masked": "Voy a bloquear tu tarjeta. ¿Confirmas?",
+      "ui_payload": [
+        {
+          "kind": "confirm",
+          "payload": {
+            "token_id": "tok-fixture",
+            "labels": "confirm_cancel",
+            "steps": [
+              {
+                "tool": "block_card",
+                "summary_key": "block_card",
+                "facts": [
+                  {"key": "card_mask", "value": "•••• 9118", "source": "fixture"},
+                  {"key": "tx_count", "value": 2, "source": "fixture"}
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "turn_id": "00000000-0000-4000-8000-000000000002",
+      "role": "customer",
+      "content": "mejor quiero hablar con una persona",
+      "content_masked": "mejor quiero hablar con una persona",
+      "ui_payload": null
+    },
+    {
+      "turn_id": "00000000-0000-4000-8000-000000000002",
+      "role": "bot",
+      "content": "Te paso con una persona.",
+      "content_masked": "Te paso con una persona.",
+      "ui_payload": null
+    }
+  ]
+}
