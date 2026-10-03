@@ -1,4 +1,8 @@
+import { ChevronDown } from "lucide-react";
+import { type ReactNode, useId } from "react";
+
 import { type TKey, useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 export type Outcome = "resolved" | "clarified" | "abstained" | "handoff";
 export type Queue = "atencion" | "cobranza" | "fraudes" | "reclamos";
@@ -51,8 +55,68 @@ export const INTENTS = [
 	"human_request",
 ];
 
-const SELECT_CLASSNAME =
-	"h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground";
+// An active filter gets a cyan border ("Swip Staff Conversaciones" design).
+const CONTROL =
+	"h-10 rounded-[10px] border bg-bg text-sm font-semibold text-foreground [color-scheme:dark] focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+
+function controlBorder(active: boolean) {
+	return active ? "border-cyan" : "border-border";
+}
+
+type FieldProps = {
+	label: string;
+	className?: string;
+	/** Renders the control, given the id its label points at. */
+	children: (id: string) => ReactNode;
+};
+
+function Field({ label, className, children }: FieldProps) {
+	const id = useId();
+	return (
+		<div className={cn("flex flex-col gap-1.5", className)}>
+			<label
+				htmlFor={id}
+				className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase"
+			>
+				{label}
+			</label>
+			{children(id)}
+		</div>
+	);
+}
+
+type SelectProps = {
+	id: string;
+	testId: string;
+	value: string | undefined;
+	onChange: (value: string | undefined) => void;
+	children: ReactNode;
+};
+
+function Select({ id, testId, value, onChange, children }: SelectProps) {
+	return (
+		<span className="relative flex">
+			<select
+				id={id}
+				data-testid={testId}
+				className={cn(
+					CONTROL,
+					controlBorder(Boolean(value)),
+					"w-full cursor-pointer appearance-none pr-9 pl-3.5",
+				)}
+				value={value ?? ""}
+				onChange={(event) => onChange(event.target.value || undefined)}
+			>
+				{children}
+			</select>
+			<ChevronDown
+				aria-hidden="true"
+				className="pointer-events-none absolute top-1/2 right-3 size-3 -translate-y-1/2 text-muted-foreground"
+				strokeWidth={2.5}
+			/>
+		</span>
+	);
+}
 
 /**
  * The filter bar: language, country, intent, outcome, escalation and a date
@@ -69,127 +133,189 @@ export function ConversationFilters({
 }: ConversationFiltersProps) {
 	const { t } = useI18n();
 	const all = t("staff.conversations.filter.all");
+	const anyActive = Object.values(value).some(Boolean);
 
 	return (
-		<div className="flex flex-wrap gap-3">
-			<select
-				data-testid="filter-language"
-				className={SELECT_CLASSNAME}
-				value={value.language ?? ""}
-				onChange={(event) =>
-					onChange({
-						...value,
-						language: (event.target.value || undefined) as
-							| ConversationSearchFilters["language"]
-							| undefined,
-					})
-				}
+		<section
+			aria-label={t("staff.conversations.filters")}
+			className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card px-[18px] py-4"
+		>
+			<Field
+				label={t("staff.conversations.filter.language")}
+				className="min-w-[110px]"
 			>
-				<option value="">{all}</option>
-				{LANGUAGES.map((lang) => (
-					<option key={lang} value={lang}>
-						{t(`lang.${lang}`)}
-					</option>
-				))}
-			</select>
+				{(id) => (
+					<Select
+						id={id}
+						testId="filter-language"
+						value={value.language}
+						onChange={(language) =>
+							onChange({
+								...value,
+								language: language as ConversationSearchFilters["language"],
+							})
+						}
+					>
+						<option value="">{all}</option>
+						{LANGUAGES.map((lang) => (
+							<option key={lang} value={lang}>
+								{t(`lang.${lang}`)}
+							</option>
+						))}
+					</Select>
+				)}
+			</Field>
 
-			<select
-				data-testid="filter-country"
-				className={SELECT_CLASSNAME}
-				value={value.country ?? ""}
-				onChange={(event) =>
-					onChange({
-						...value,
-						country: (event.target.value || undefined) as
-							| ConversationSearchFilters["country"]
-							| undefined,
-					})
-				}
+			<Field
+				label={t("staff.conversations.filter.country")}
+				className="min-w-[110px]"
 			>
-				<option value="">{all}</option>
-				{COUNTRIES.map((country) => (
-					<option key={country} value={country}>
-						{country}
-					</option>
-				))}
-			</select>
+				{(id) => (
+					<Select
+						id={id}
+						testId="filter-country"
+						value={value.country}
+						onChange={(country) =>
+							onChange({
+								...value,
+								country: country as ConversationSearchFilters["country"],
+							})
+						}
+					>
+						<option value="">{all}</option>
+						{COUNTRIES.map((country) => (
+							<option key={country} value={country}>
+								{country}
+							</option>
+						))}
+					</Select>
+				)}
+			</Field>
 
-			<select
-				data-testid="filter-intent"
-				className={SELECT_CLASSNAME}
-				value={value.intent ?? ""}
-				onChange={(event) =>
-					onChange({ ...value, intent: event.target.value || undefined })
-				}
+			<Field
+				label={t("staff.conversations.filter.intent")}
+				className="min-w-[230px]"
 			>
-				<option value="">{all}</option>
-				{INTENTS.map((intent) => (
-					<option key={intent} value={intent}>
-						{intent}
-					</option>
-				))}
-			</select>
+				{(id) => (
+					<Select
+						id={id}
+						testId="filter-intent"
+						value={value.intent}
+						onChange={(intent) => onChange({ ...value, intent })}
+					>
+						<option value="">{all}</option>
+						{INTENTS.map((intent) => (
+							<option key={intent} value={intent}>
+								{intent}
+							</option>
+						))}
+					</Select>
+				)}
+			</Field>
 
-			<select
-				data-testid="filter-outcome"
-				className={SELECT_CLASSNAME}
-				value={value.outcome ?? ""}
-				onChange={(event) =>
-					onChange({
-						...value,
-						outcome: (event.target.value || undefined) as Outcome | undefined,
-					})
-				}
+			<Field
+				label={t("staff.conversations.filter.outcome")}
+				className="min-w-[160px]"
 			>
-				<option value="">{all}</option>
-				{OUTCOMES.map((outcome) => (
-					<option key={outcome} value={outcome}>
-						{t(`staff.conversations.outcome.${outcome}` as TKey)}
-					</option>
-				))}
-			</select>
+				{(id) => (
+					<Select
+						id={id}
+						testId="filter-outcome"
+						value={value.outcome}
+						onChange={(outcome) =>
+							onChange({ ...value, outcome: outcome as Outcome | undefined })
+						}
+					>
+						<option value="">{all}</option>
+						{OUTCOMES.map((outcome) => (
+							<option key={outcome} value={outcome}>
+								{t(`staff.conversations.outcome.${outcome}` as TKey)}
+							</option>
+						))}
+					</Select>
+				)}
+			</Field>
 
-			<select
-				data-testid="filter-escalation"
-				className={SELECT_CLASSNAME}
-				value={value.escalation ?? ""}
-				onChange={(event) =>
-					onChange({
-						...value,
-						escalation: (event.target.value || undefined) as
-							| Escalation
-							| undefined,
-					})
-				}
+			<Field
+				label={t("staff.conversations.filter.escalation")}
+				className="min-w-[160px]"
 			>
-				<option value="">{all}</option>
-				<option value="none">{t("staff.conversations.escalation.none")}</option>
-				<option value="any">{t("staff.conversations.escalation.any")}</option>
-				{QUEUES.map((queue) => (
-					<option key={queue} value={queue}>
-						{t(`staff.queue.${queue}` as TKey)}
-					</option>
-				))}
-			</select>
+				{(id) => (
+					<Select
+						id={id}
+						testId="filter-escalation"
+						value={value.escalation}
+						onChange={(escalation) =>
+							onChange({
+								...value,
+								escalation: escalation as Escalation | undefined,
+							})
+						}
+					>
+						<option value="">{all}</option>
+						<option value="none">
+							{t("staff.conversations.escalation.none")}
+						</option>
+						<option value="any">
+							{t("staff.conversations.escalation.any")}
+						</option>
+						{QUEUES.map((queue) => (
+							<option key={queue} value={queue}>
+								{t(`staff.queue.${queue}` as TKey)}
+							</option>
+						))}
+					</Select>
+				)}
+			</Field>
 
-			<input
-				type="date"
-				data-testid="filter-date-from"
-				className={SELECT_CLASSNAME}
-				value={value.date_from ?? ""}
-				onChange={(event) =>
-					onChange({ ...value, date_from: event.target.value || undefined })
-				}
-			/>
-			<input
-				type="date"
-				data-testid="filter-date-to"
-				className={SELECT_CLASSNAME}
-				value={value.date_to ?? ""}
-				onChange={(event) =>
-					onChange({ ...value, date_to: event.target.value || undefined })
-				}
-			/>
-		</div>
+			<Field label={t("staff.conversations.filter.date_from")}>
+				{(id) => (
+					<input
+						id={id}
+						type="date"
+						data-testid="filter-date-from"
+						className={cn(
+							CONTROL,
+							controlBorder(Boolean(value.date_from)),
+							"px-3",
+						)}
+						value={value.date_from ?? ""}
+						onChange={(event) =>
+							onChange({ ...value, date_from: event.target.value || undefined })
+						}
+					/>
+				)}
+			</Field>
+
+			<Field label={t("staff.conversations.filter.date_to")}>
+				{(id) => (
+					<input
+						id={id}
+						type="date"
+						data-testid="filter-date-to"
+						className={cn(
+							CONTROL,
+							controlBorder(Boolean(value.date_to)),
+							"px-3",
+						)}
+						value={value.date_to ?? ""}
+						onChange={(event) =>
+							onChange({ ...value, date_to: event.target.value || undefined })
+						}
+					/>
+				)}
+			</Field>
+
+			{anyActive && (
+				<button
+					type="button"
+					data-testid="filter-clear"
+					onClick={() => onChange({})}
+					className="h-10 cursor-pointer rounded-full px-4 text-sm font-semibold whitespace-nowrap text-cyan hover:text-foreground"
+				>
+					{t("staff.conversations.filter.clear")}
+				</button>
+			)}
+		</section>
 	);
 }
