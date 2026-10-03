@@ -32,6 +32,7 @@ __all__ = [
     "Fact",
     "HistoryMessage",
     "IntentSegment",
+    "OpenQuestion",
     "Pending",
     "TurnState",
     "TxOfferState",
@@ -52,6 +53,19 @@ def bind_once(current: str | None, update: str) -> str:
     if update == current:
         return current
     raise ValueError(f"R1: customer_id is write-once; already bound to {current!r}, got {update!r}")
+
+
+class OpenQuestion(TypedDict):
+    """The open flow question as it was asked, kept to be replayed on a non-answer.
+
+    `text` is the question segment exactly as the asking turn sent it. `ui` holds
+    the asking node's own `UIEvent`s; `ui.py` imports this module, so the type
+    cannot be named here. Written and cleared only by `finish`; never read by a
+    prompt builder, a tool or a handoff packet.
+    """
+
+    text: str
+    ui: list[Any]
 
 
 class Pending(TypedDict):
@@ -269,6 +283,11 @@ class TurnState(TypedDict):
     slots: NotRequired[NLUSlots]
     selected_card_id: NotRequired[str | None]
     clarification_failures: NotRequired[int]
+    # Non-answers in a row on the open flow question; kept apart from
+    # `clarification_failures`. 1 re-asks, 2 hands off. Absent = 0.
+    non_answer_failures: NotRequired[int]
+    # The open flow question as it was asked, replayed on a non-answer.
+    open_question: NotRequired[OpenQuestion | None]
     confirmation_token_id: NotRequired[str | None]
     facts: NotRequired[Annotated[list[Fact], _reduce_facts]]
     actions: NotRequired[Annotated[list[ActionResult], add]]

@@ -61,6 +61,11 @@ def smalltalk(state: GraphState) -> dict[str, Any]:
         # any) stays open; the second miss in a row is `route`'s handoff.
         return {"segments": [get_template("clarify_rephrase", language)]}
 
+    if not nlu.intents:
+        # D7: no intent and no flow question to keep. Not counted, nothing written:
+        # an open closing pause stays as it is.
+        return {"segments": [get_template("clarify_rephrase", language)]}
+
     intents = nlu.intents
     closing = "deny" in intents or "thanks_close" in intents
 
@@ -114,6 +119,7 @@ def _close(language: Language) -> dict[str, Any]:
         "selected_card_id": None,
         "slots": NLUSlots(),
         "clarification_failures": 0,
+        "non_answer_failures": 0,
         "confirmation_token_id": None,
         "closing_suggestion": None,
         # The conversation is over: memory goes with it (naturalidad-cardy D3).

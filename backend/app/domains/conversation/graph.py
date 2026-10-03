@@ -73,6 +73,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.errors import AccessDenied
 from app.domains.audit.schemas import NullAuditRecorder
+from app.domains.conversation.fact_values import record
 from app.domains.conversation.intent_registry import intent_nodes, management_intents
 from app.domains.conversation.schemas import Intent, NLUResult, NLUSlots, NLUStatus
 from app.domains.conversation.state import (
@@ -86,6 +87,7 @@ from app.domains.conversation.state import (
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import UIEvent
 from app.domains.handoff.schemas import HandoffReason
+from app.domains.policy.escalation import rule_queue
 from app.domains.policy.registry import get_policies
 
 __all__ = [
@@ -211,6 +213,12 @@ class GraphState(TurnState):
     # personalidad-cardy D6: "sí" to the closing suggestion this turn. Reset by
     # `load_session`, set by `enqueue`, read only by `tx_search` as a criterion.
     suggestion_accepted: NotRequired[bool]
+    # s0-empty-reply: per-turn, reset by `load_session`. `asked_ui` is the asking
+    # flow node's own events when it wrote a flow-question `pending` this turn
+    # (None: none did); `non_answer_counted` is set by `_keep_open_question` so
+    # `finish` doesn't reset `non_answer_failures` on that turn. Never checkpointed state.
+    asked_ui: NotRequired[list[UIEvent] | None]
+    non_answer_counted: NotRequired[bool]
 
 
 class DebugInfo(BaseModel):
@@ -424,6 +432,66 @@ def _guard_access[N: Callable[..., Awaitable[dict[str, Any]]]](node: N) -> N:
     return cast(N, guarded)
 
 
+def _keep_open_question[N: Callable[..., Awaitable[dict[str, Any]]]](name: str, node: N) -> N:
+    """Wrap a flow node: a non-answer on its open question is replayed or handed off.
+
+    A non-answer is an LLM-path turn with no intent that doesn't answer the open
+    flow question. The wrapper never calls the node then: the first one replays
+    the stored question (`open_question`), the second hands off, cancelling an
+    open plan first (R2). Anything else runs the node unchanged; when the node
+    opens a flow question, its own `ui` is kept for `finish` to store.
+    """
+
+    @functools.wraps(node)
+    async def kept(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+        # Imported here: both modules import `GraphState` from this one.
+        from app.domains.conversation.flows.actions import handoff
+        from app.domains.conversation.nodes.route import _answer_fits
+
+        nlu = state.get("nlu")
+        pending = state.get("pending")
+        if (
+            nlu is not None
+            and not state.get("degraded", False)
+            and not nlu.intents
+            and pending is not None
+            and pending["awaiting_slot"] != "anything_else"
+            and _FLOW_NODES.get(pending["flow"]) == name
+            and not _answer_fits(nlu, pending)
+        ):
+            new = state.get("non_answer_failures", 0) + 1
+            if new == 1:
+                replay: dict[str, Any] = {"non_answer_failures": 1, "non_answer_counted": True}
+                stored = state.get("open_question")
+                if stored is not None:
+                    # D16: the replayed sentence is grounded once already; recording
+                    # it keeps `reply_sent.fact_values` covering the whole reply.
+                    record(stored["text"])
+                    replay["segments"] = [stored["text"]]
+                    replay["ui"] = list(stored["ui"])
+                return replay
+            token_id = state.get("confirmation_token_id")
+            bank_write_tools = config["configurable"].get("bank_write_tools")
+            if token_id is not None and bank_write_tools is not None:
+                await bank_write_tools.cancel_plan(token_id)
+            return {
+                **handoff(
+                    rule_queue(get_policies().escalation, "clarification_exhausted"),
+                    "clarification_exhausted",
+                    state.get("language", "es"),
+                ),
+                "non_answer_failures": 0,
+            }
+
+        update = await node(state, config)
+        new_pending = update.get("pending")
+        if new_pending is not None and new_pending["awaiting_slot"] != "anything_else":
+            return {**update, "asked_ui": list(update.get("ui") or [])}
+        return update
+
+    return cast(N, kept)
+
+
 _logger = structlog.get_logger()
 
 _FLOW_INTENT: dict[str, str] = {}
@@ -622,19 +690,48 @@ def build_graph(
         graph.add_edge("summarize", "understand")
     graph.add_node("smalltalk", smalltalk)
     graph.add_node("enqueue", enqueue)
-    graph.add_node("card_info", _track_segments("card_info", _guard_access(card_info)))
-    graph.add_node("card_block", _track_segments("card_block", _guard_access(card_block)))
-    graph.add_node("card_unlock", _track_segments("card_unlock", _guard_access(card_unlock)))
-    graph.add_node("replacement", _track_segments("replacement", _guard_access(replacement)))
+    graph.add_node(
+        "card_info",
+        _track_segments("card_info", _keep_open_question("card_info", _guard_access(card_info))),
+    )
+    graph.add_node(
+        "card_block",
+        _track_segments("card_block", _keep_open_question("card_block", _guard_access(card_block))),
+    )
+    graph.add_node(
+        "card_unlock",
+        _track_segments(
+            "card_unlock", _keep_open_question("card_unlock", _guard_access(card_unlock))
+        ),
+    )
+    graph.add_node(
+        "replacement",
+        _track_segments(
+            "replacement", _keep_open_question("replacement", _guard_access(replacement))
+        ),
+    )
     graph.add_node(
         "unrecognized_charge",
-        _track_segments("unrecognized_charge", _guard_access(unrecognized_charge)),
+        _track_segments(
+            "unrecognized_charge",
+            _keep_open_question("unrecognized_charge", _guard_access(unrecognized_charge)),
+        ),
     )
     graph.add_node(
-        "decline_explain", _track_segments("decline_explain", _guard_access(decline_explain))
+        "decline_explain",
+        _track_segments(
+            "decline_explain",
+            _keep_open_question("decline_explain", _guard_access(decline_explain)),
+        ),
     )
-    graph.add_node("tx_search", _track_segments("tx_search", _guard_access(tx_search)))
-    graph.add_node("tx_explain", _track_segments("tx_explain", _guard_access(tx_explain)))
+    graph.add_node(
+        "tx_search",
+        _track_segments("tx_search", _keep_open_question("tx_search", _guard_access(tx_search))),
+    )
+    graph.add_node(
+        "tx_explain",
+        _track_segments("tx_explain", _keep_open_question("tx_explain", _guard_access(tx_explain))),
+    )
     graph.add_node("unsupported", _track_segments("unsupported", unsupported))
     graph.add_node("fallback", fallback)
     graph.add_node("compose", _track_segments("compose", baseline_compose if baseline else compose))
