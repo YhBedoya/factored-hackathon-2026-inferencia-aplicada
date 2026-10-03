@@ -38,8 +38,9 @@ const STATUS_PILL: Record<HandoffSummary["status"], string> = {
  * (R4 covers money/dates/masks, not a fixed enum); `reason` too
  * (`staff.reason.<slug>`). `reference` is shown exactly as the server sent it.
  *
- * The whole row opens the case. A queued row also carries a claim button
- * that claims it right here and goes straight to the case chat.
+ * A claimed or returned row opens the case as a whole. A queued row is not
+ * a link: only its claim button acts, claiming it right here and going
+ * straight to the case chat.
  */
 export function InboxList({ items, freshIds }: InboxListProps) {
 	const { t } = useI18n();
@@ -80,7 +81,10 @@ export function InboxList({ items, freshIds }: InboxListProps) {
 					<div
 						data-testid="inbox-item"
 						className={cn(
-							"relative grid grid-cols-[6px_minmax(0,1fr)_auto] items-center gap-x-[18px] gap-y-3 sm:grid-cols-[6px_minmax(0,1fr)_auto_auto] rounded-2xl border border-border py-[18px] pr-[22px] pl-[18px] text-foreground transition-[background-color,border-color,transform] duration-250 hover:translate-x-[3px] hover:border-cyan hover:bg-accent has-[a:focus-visible]:border-cyan has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
+							"relative grid grid-cols-[6px_minmax(0,1fr)_auto] items-center gap-x-[18px] gap-y-3 sm:grid-cols-[6px_minmax(0,1fr)_auto_auto] rounded-2xl border border-border py-[18px] pr-[22px] pl-[18px] text-foreground transition-[background-color,border-color,transform] duration-250",
+							// Only a row that opens the case reacts to hover.
+							item.status !== "queued" &&
+								"hover:translate-x-[3px] hover:border-cyan hover:bg-accent has-[a:focus-visible]:border-cyan has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-ring/50",
 							freshIds?.has(item.handoff_id) ? "bg-accent" : "bg-card",
 						)}
 					>
@@ -94,16 +98,24 @@ export function InboxList({ items, freshIds }: InboxListProps) {
 							)}
 						/>
 						<span className="flex min-w-0 flex-col gap-[3px]">
-							{/* The link stretches over the whole row; the claim button
-							    sits above it, so the two never nest. */}
-							<Link
-								to="/staff/handoffs/$handoffId"
-								params={{ handoffId: item.handoff_id }}
-								data-testid="inbox-item-queue"
-								className="font-heading text-xl leading-tight font-bold outline-none after:absolute after:inset-0 after:rounded-2xl"
-							>
-								{t(`staff.queue.${item.queue}` as TKey)}
-							</Link>
+							{item.status === "queued" ? (
+								<span
+									data-testid="inbox-item-queue"
+									className="font-heading text-xl leading-tight font-bold"
+								>
+									{t(`staff.queue.${item.queue}` as TKey)}
+								</span>
+							) : (
+								// The link stretches over the whole row.
+								<Link
+									to="/staff/handoffs/$handoffId"
+									params={{ handoffId: item.handoff_id }}
+									data-testid="inbox-item-queue"
+									className="font-heading text-xl leading-tight font-bold outline-none after:absolute after:inset-0 after:rounded-2xl"
+								>
+									{t(`staff.queue.${item.queue}` as TKey)}
+								</Link>
+							)}
 							<span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
 								<span className="font-mono text-[13px] whitespace-nowrap text-foreground">
 									{item.reference}
@@ -127,7 +139,7 @@ export function InboxList({ items, freshIds }: InboxListProps) {
 						{item.status === "queued" ? (
 							<Button
 								data-testid="inbox-claim"
-								className="relative z-10 col-span-2 justify-self-start sm:col-span-1"
+								className="col-span-2 justify-self-start sm:col-span-1"
 								disabled={claimingId !== null}
 								onClick={() => void handleClaim(item.handoff_id)}
 							>
