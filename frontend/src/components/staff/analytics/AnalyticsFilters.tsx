@@ -13,8 +13,10 @@ const LANGUAGES = ["es", "pt"] as const;
 const COUNTRIES = ["MX", "CO", "AR"] as const;
 const SOURCES = ["all", "real", "mock"] as const;
 
+// `color-scheme: dark` + an opaque background so the browser draws the open
+// option list (and the date picker) dark too, not white with light text.
 const CONTROL_CLASSNAME =
-	"h-8 rounded-lg border border-input bg-transparent px-2 text-sm text-foreground";
+	"h-8 rounded-lg border border-input bg-bg px-2 text-sm text-foreground [color-scheme:dark]";
 
 /**
  * The analytics filter bar: a date range, language, country and data source.
