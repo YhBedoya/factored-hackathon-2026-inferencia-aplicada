@@ -64,6 +64,9 @@ export function RecentInteractionsTable({
 							<th className={HEADER_CELL}>
 								{t("staff.analytics.table.sentiment")}
 							</th>
+							<th className={HEADER_CELL}>
+								{t("staff.analytics.table.served_by")}
+							</th>
 							<th className={HEADER_CELL}>{t("staff.analytics.table.cost")}</th>
 							<th className="sticky top-0 bg-card py-1 font-medium" />
 						</tr>
@@ -95,6 +98,9 @@ export function RecentInteractionsTable({
 												`staff.analytics.sentiment.${row.sentiment_overall}` as TKey,
 											)
 										: "—"}
+								</td>
+								<td className={CELL}>
+									{t(`staff.analytics.served_by.${row.served_by}` as TKey)}
 								</td>
 								<td className={CELL}>{formatUsd(row.cost_usd)}</td>
 								<td className="py-1">

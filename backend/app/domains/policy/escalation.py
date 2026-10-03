@@ -109,6 +109,7 @@ _REQUIRED_REASONS = (
     "tool_failure",
     "llm_unavailable",
     "priority_claim",
+    "agent_round_cap",
 )
 
 # Reasons whose null-queue rule resolves by the paused flow, like `human_request`.

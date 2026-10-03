@@ -49,6 +49,8 @@ __all__ = [
     "compose_checked",
     "compose_reply",
     "compose_reply_flagged",
+    "draft_problem",
+    "format_fact",
 ]
 
 _PROMPT = PromptRef("compose", 11)
@@ -542,3 +544,8 @@ async def compose(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "segments": append_next_step_offer(segments, facts_by_key, language),
         "grounding": grounding,
     }
+
+
+# Public names for the agent's reference book and checks (same logic, no copy).
+draft_problem = _draft_problem
+format_fact = _format_fact

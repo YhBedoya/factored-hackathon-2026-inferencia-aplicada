@@ -48,6 +48,10 @@ export function CostChart({ summary, isLoading, isError }: CostChartProps) {
 			label: t("staff.analytics.cost.compose"),
 			color: "var(--chart-4)",
 		},
+		agent_usd: {
+			label: t("staff.analytics.cost.agent"),
+			color: "var(--chart-2)",
+		},
 		handoff_summary_usd: {
 			label: t("staff.analytics.cost.handoff_summary"),
 			color: "var(--chart-3)",

@@ -10,8 +10,9 @@ output text (D5, R5).
 
 import asyncio
 import time
-from collections.abc import Awaitable, Callable, Mapping
-from typing import Any, Protocol, TypeVar, cast
+from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import dataclass
+from typing import Any, Literal, Protocol, TypeVar, cast
 
 import anthropic
 import openai
@@ -26,13 +27,24 @@ from botocore.exceptions import (  # type: ignore[import-untyped]
 )
 from langchain_anthropic import ChatAnthropic
 from langchain_aws import ChatBedrockConverse
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 from langchain_openai import ChatOpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.core.config import get_settings
 from app.core.faults import fault_active
-from app.core.llm.errors import LLMInvalidOutput, LLMUnavailable, LLMUnmaskedInput
+from app.core.llm.errors import (
+    LLMInvalidOutput,
+    LLMRoundCap,
+    LLMUnavailable,
+    LLMUnmaskedInput,
+)
 from app.core.llm.pricing import cost_usd
 from app.core.llm.registry import (
     MODEL_REGISTRY,
@@ -48,13 +60,47 @@ from app.core.llm.tracing import trace_llm_call
 from app.core.pii import find_pii, redact
 from app.core.retry import backoff_delay
 
-__all__ = ["LLMClient", "StructuredLLMClient", "build_chat_model", "get_llm_client"]
+__all__ = [
+    "LLMClient",
+    "LoopMessage",
+    "LoopTool",
+    "StructuredLLMClient",
+    "build_chat_model",
+    "get_llm_client",
+]
 
 T = TypeVar("T", bound=BaseModel)
 
 _logger = structlog.get_logger()
 
 _ERROR_MESSAGE_MAX = 300
+
+# The schema is offered to the model as this tool; calling it is how the loop ends.
+_OUTPUT_TOOL = "final_answer"
+
+
+@dataclass(frozen=True)
+class LoopMessage:
+    """One masked history entry (or this turn's message) handed to `tool_loop`."""
+
+    role: Literal["user", "assistant"]
+    content: str
+
+
+@dataclass(frozen=True)
+class LoopTool:
+    """A tool the model may call in `tool_loop`.
+
+    The handler gets the validated `args_schema` instance and returns the tool
+    result text (already fenced and masked by the caller). It never sees a
+    provider type.
+    """
+
+    name: str
+    description: str
+    args_schema: type[BaseModel]
+    handler: Callable[[BaseModel], Awaitable[str]]
+
 
 _TRANSPORT_ERRORS = (anthropic.APIError, openai.APIError, BotoCoreError, ClientError)
 _BEDROCK_THROTTLING = frozenset(
@@ -116,6 +162,8 @@ class _ChatModel(Protocol):
         method: Any = ...,
     ) -> Any: ...
 
+    def bind_tools(self, tools: Sequence[Any], **kwargs: Any) -> Any: ...
+
 
 # Called with `(settings, step)`; only an overridden step adds a third `model_id` argument,
 # so a two-argument stub factory keeps working when no override is set.
@@ -174,6 +222,19 @@ class LLMClient(Protocol):
 
     async def structured(
         self, *, step: Step, prompt: PromptRef, system: str, user: str, schema: type[T]
+    ) -> T: ...
+
+    async def tool_loop(
+        self,
+        *,
+        step: Step,
+        prompt: PromptRef,
+        system: str,
+        messages: Sequence[LoopMessage],
+        tools: Sequence[LoopTool],
+        schema: type[T],
+        max_rounds: int,
+        validate: Callable[[T], str | None] | None = None,
     ) -> T: ...
 
 
@@ -344,6 +405,257 @@ class StructuredLLMClient:
                 langfuse_trace_id=langfuse_trace_id,
             )
             return parsed
+
+    async def tool_loop(
+        self,
+        *,
+        step: Step,
+        prompt: PromptRef,
+        system: str,
+        messages: Sequence[LoopMessage],
+        tools: Sequence[LoopTool],
+        schema: type[T],
+        max_rounds: int,
+        validate: Callable[[T], str | None] | None = None,
+    ) -> T:
+        """Let the model call `tools` until it answers through the `schema` tool.
+
+        A round is one response that asks for tools other than the output tool.
+        After `max_rounds` rounds the model gets one more call; if it still asks
+        for a tool, `LLMRoundCap`. Handler exceptions propagate untouched.
+        """
+        settings = self._settings
+        provider: Provider = STEP_PROVIDER.get(step, settings.llm_provider)
+        override = self._model_overrides.get(step)
+        model_id = override or MODEL_REGISTRY[step][provider]
+        temperature = TEMPERATURE[step]
+
+        by_name = {tool.name: tool for tool in tools}
+        chat_model = (
+            self._chat_model_factory(settings, step, override)
+            if override
+            else self._chat_model_factory(settings, step)
+        )
+        # Automatic tool choice: Sonnet 5.5 rejects a forced `tool_choice` (ADR-031), so the
+        # output schema is one more tool and the prompt tells the model to end with it.
+        bound = chat_model.bind_tools(
+            [
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.args_schema.model_json_schema(),
+                }
+                for tool in tools
+            ]
+            + [
+                {
+                    "name": _OUTPUT_TOOL,
+                    "description": "Give the final answer for this turn. Call it alone, once.",
+                    "parameters": schema.model_json_schema(),
+                }
+            ]
+        )
+
+        history: list[BaseMessage] = [
+            HumanMessage(content=m.content) if m.role == "user" else AIMessage(content=m.content)
+            for m in messages
+        ]
+        last_user = next((m.content for m in reversed(messages) if m.role == "user"), None)
+        attempt = 0
+        rounds = 0
+        invalid_seen = False
+        while True:
+            attempt += 1
+            request: list[BaseMessage] = [SystemMessage(content=system), *history]
+            # R5: system, every message and every tool result, before each provider call.
+            if any(find_pii(str(m.content)) for m in request):
+                await self._finish(
+                    provider,
+                    model_id,
+                    step,
+                    prompt,
+                    temperature,
+                    0,
+                    "refused",
+                    time.perf_counter(),
+                    user=None,
+                    parsed=None,
+                    raw=None,
+                )
+                raise LLMUnmaskedInput(f"unmasked PII in the prompt for step {step!r}")
+
+            ai, call_started, trace_id, attempt = await self._loop_call(
+                bound,
+                request,
+                provider=provider,
+                model_id=model_id,
+                step=step,
+                prompt=prompt,
+                temperature=temperature,
+                attempt=attempt,
+                user=last_user,
+                schema=schema,
+            )
+            calls = list(ai.tool_calls)
+            output_calls = [c for c in calls if c["name"] == _OUTPUT_TOOL]
+            other_calls = [c for c in calls if c["name"] != _OUTPUT_TOOL]
+
+            reason: str | None = None
+            if not calls:
+                reason = "the response had no tool call; end with the final_answer tool"
+            elif output_calls and other_calls:
+                reason = "call final_answer alone, without other tools"
+            elif len(output_calls) > 1:
+                reason = "call final_answer once"
+            elif output_calls:
+                try:
+                    candidate = schema.model_validate(output_calls[0]["args"])
+                except ValidationError as exc:
+                    reason = str(exc)
+                else:
+                    reason = validate(candidate) if validate is not None else None
+                    if reason is None:
+                        await self._finish(
+                            provider,
+                            model_id,
+                            step,
+                            prompt,
+                            temperature,
+                            attempt,
+                            "ok",
+                            call_started,
+                            user=last_user,
+                            parsed=candidate,
+                            raw=ai,
+                            langfuse_trace_id=trace_id,
+                        )
+                        return candidate
+            if reason is not None:
+                await self._finish(
+                    provider,
+                    model_id,
+                    step,
+                    prompt,
+                    temperature,
+                    attempt,
+                    "invalid",
+                    call_started,
+                    user=last_user,
+                    parsed=None,
+                    raw=ai,
+                    langfuse_trace_id=trace_id,
+                )
+                if invalid_seen:
+                    raise LLMInvalidOutput(
+                        f"invalid output for step {step!r} after 2 invalid attempts"
+                    )
+                invalid_seen = True
+                text = f"Your previous answer was invalid: {reason}. Answer again."
+                history.append(ai)
+                # Every tool call needs a result; the reason rides on the first one.
+                if calls:
+                    history.extend(
+                        ToolMessage(content=text, tool_call_id=c["id"] or "") for c in calls
+                    )
+                else:
+                    history.append(HumanMessage(content=text))
+                continue
+
+            await self._finish(
+                provider,
+                model_id,
+                step,
+                prompt,
+                temperature,
+                attempt,
+                "ok",
+                call_started,
+                user=last_user,
+                parsed=None,
+                raw=ai,
+                langfuse_trace_id=trace_id,
+            )
+            if rounds >= max_rounds:
+                raise LLMRoundCap(f"step {step!r} still asked for tools after {max_rounds} rounds")
+            rounds += 1
+            history.append(ai)
+            for call in other_calls:
+                tool = by_name.get(call["name"])
+                if tool is None:
+                    result = f"unknown tool {call['name']!r}"
+                else:
+                    try:
+                        args = tool.args_schema.model_validate(call["args"])
+                    except ValidationError as exc:
+                        result = f"invalid arguments: {exc}"
+                    else:
+                        result = await tool.handler(args)
+                history.append(ToolMessage(content=result, tool_call_id=call["id"] or ""))
+
+    async def _loop_call(
+        self,
+        bound: Any,
+        request: list[BaseMessage],
+        *,
+        provider: Provider,
+        model_id: str,
+        step: Step,
+        prompt: PromptRef,
+        temperature: float | None,
+        attempt: int,
+        user: str | None,
+        schema: type[BaseModel],
+    ) -> tuple[AIMessage, float, str | None, int]:
+        """One provider call of `tool_loop`, with the transport retries of `structured`.
+
+        Returns the answer, its start time, trace id and the last attempt number used
+        (each transport retry is its own ledger row, so the numbers stay in call order).
+        """
+        settings = self._settings
+        transport_failures = 0
+        while True:
+            started = time.perf_counter()
+            langfuse_trace_id: str | None = None
+            try:
+                async with trace_llm_call(
+                    langfuse_host=settings.langfuse_host,
+                    provider=provider,
+                    model_id=model_id,
+                    step=step,
+                    prompt_version=prompt.label,
+                    messages=[_as_chat_dict(m) for m in request],
+                    output_schema=schema.model_json_schema(),
+                ) as span:
+                    langfuse_trace_id = span.id
+                    if fault_active("bedrock_timeout"):
+                        raise _SyntheticTimeout("bedrock_timeout fault")
+                    ai = cast(AIMessage, await bound.ainvoke(request))
+                    usage = getattr(ai, "usage_metadata", None) or {}
+                    span.set_usage(usage.get("input_tokens"), usage.get("output_tokens"))
+                    span.set_output(None, ai)
+            except (*_TRANSPORT_ERRORS, _SyntheticTimeout) as exc:
+                await self._finish(
+                    provider,
+                    model_id,
+                    step,
+                    prompt,
+                    temperature,
+                    attempt,
+                    "unavailable",
+                    started,
+                    user=user,
+                    parsed=None,
+                    raw=None,
+                    langfuse_trace_id=langfuse_trace_id,
+                    error=exc,
+                )
+                transport_failures += 1
+                if not _is_retryable(exc) or transport_failures > get_settings().retry_max:
+                    raise LLMUnavailable(f"{provider} transport failed on step {step!r}") from exc
+                await self._sleep(backoff_delay(transport_failures))
+                attempt += 1
+                continue
+            return ai, started, langfuse_trace_id, attempt
 
     async def _finish(
         self,

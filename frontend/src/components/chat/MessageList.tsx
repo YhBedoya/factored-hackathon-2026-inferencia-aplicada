@@ -25,6 +25,7 @@ type MessageListProps = {
 	onWidgetSelect: (label: string) => void;
 	onConfirmDecision: (tokenId: string, decision: ConfirmationDecision) => void;
 	onTransactionSelect: (txIds: string[]) => void;
+	onCardSelect?: (cardIds: string[]) => void;
 };
 
 /**
@@ -38,6 +39,7 @@ export function MessageList({
 	onWidgetSelect,
 	onConfirmDecision,
 	onTransactionSelect,
+	onCardSelect,
 }: MessageListProps) {
 	const listRef = useRef<HTMLDivElement>(null);
 
@@ -70,7 +72,7 @@ export function MessageList({
 					<div
 						data-testid={`message-${message.role}`}
 						className={cn(
-							"max-w-[80%] rounded-xl px-3 py-2 text-sm",
+							"max-w-[80%] whitespace-pre-line rounded-xl px-3 py-2 text-sm",
 							message.role === "bot" && "self-start border border-cyan bg-card",
 							// A person is answering: gold border, the way Cardy's
 							// bubble is cyan-bordered (brand.md).
@@ -93,6 +95,8 @@ export function MessageList({
 										key={index}
 										options={event.payload.options}
 										onSelect={onWidgetSelect}
+										multi={event.payload.multi}
+										onCardSelect={onCardSelect}
 									/>
 								);
 							case "quick_replies":

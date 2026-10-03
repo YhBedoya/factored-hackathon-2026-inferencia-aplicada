@@ -8,6 +8,8 @@ graph TD;
 	load_session(load_session)
 	understand(understand)
 	summarize(summarize)
+	agent(agent)
+	agent_plan(agent_plan)
 	smalltalk(smalltalk)
 	enqueue(enqueue)
 	card_info(card_info)
@@ -31,6 +33,14 @@ graph TD;
 	__start__ --> load_session;
 	abstain -.-> finish;
 	abstain -.-> next_intent;
+	agent -.-> fallback;
+	agent -.-> finish;
+	agent -.-> handoff_summary;
+	agent -.-> understand;
+	agent_plan -.-> agent;
+	agent_plan -.-> fallback;
+	agent_plan -.-> finish;
+	agent_plan -.-> handoff_summary;
 	card_block -.-> compose;
 	card_block -.-> fallback;
 	card_block -.-> finish;
@@ -70,6 +80,8 @@ graph TD;
 	fallback -.-> next_intent;
 	handoff --> finish;
 	handoff_summary --> handoff;
+	load_session -.-> agent;
+	load_session -.-> agent_plan;
 	load_session -.-> card_block;
 	load_session -.-> card_info;
 	load_session -.-> card_unlock;
@@ -78,7 +90,7 @@ graph TD;
 	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
-	load_session -. &nbsp;understand&nbsp; .-> summarize;
+	load_session -.-> summarize;
 	load_session -.-> tx_explain;
 	load_session -.-> tx_search;
 	load_session -.-> unrecognized_charge;
@@ -100,7 +112,8 @@ graph TD;
 	replacement -.-> handoff_summary;
 	replacement -.-> next_intent;
 	smalltalk --> finish;
-	summarize --> understand;
+	summarize -.-> agent;
+	summarize -.-> understand;
 	tx_explain -.-> compose;
 	tx_explain -.-> fallback;
 	tx_explain -.-> finish;

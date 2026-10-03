@@ -58,11 +58,12 @@ from app.core.config import get_settings
 from app.core.redis import get_redis
 from app.core.telemetry import get_trace_id
 from app.domains.conversation import store
-from app.domains.conversation.graph import ConfirmationDecision, TxSelection
+from app.domains.conversation.graph import CardSelection, ConfirmationDecision, TxSelection
 from app.domains.conversation.runner import (
     TurnInProgress,
     checkpointed_confirmation_token,
     checkpointed_offer,
+    checkpointed_replacement_offer,
     start_turn,
 )
 from app.domains.conversation.store import ConversationRow
@@ -173,9 +174,9 @@ class CreateConversationResponse(BaseModel):
 
 class PostMessageRequest(BaseModel):
     """`{text}` for a typed turn, `{resume: "step_up"}` for the OTP-resume
-    turn (D6), or `{selection: {tx_ids}}` for the D4-B pick turn (D7) --
-    exactly one of the three, or `422`. Neither `resume` nor `selection` is
-    persisted as a customer message; only `text` is.
+    turn (D6), `{selection: {tx_ids}}` for the D4-B pick turn (D7), or
+    `{card_selection: {card_ids}}` for the replacement picker -- exactly one
+    of the four, or `422`. Only `text` is persisted as a customer message.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -183,12 +184,16 @@ class PostMessageRequest(BaseModel):
     text: str | None = Field(default=None, min_length=1, max_length=2000)
     resume: Literal["step_up"] | None = None
     selection: TxSelection | None = None
+    card_selection: CardSelection | None = None
 
     @model_validator(mode="after")
     def _exactly_one(self) -> Self:
-        set_count = sum(value is not None for value in (self.text, self.resume, self.selection))
+        set_count = sum(
+            value is not None
+            for value in (self.text, self.resume, self.selection, self.card_selection)
+        )
         if set_count != 1:
-            raise ValueError("exactly one of text, resume or selection must be set")
+            raise ValueError("exactly one of text, resume, selection or card_selection must be set")
         return self
 
 
@@ -265,6 +270,16 @@ async def post_message(
         )
         if not selection_open:
             raise HTTPException(status_code=409, detail="selection_invalid")
+    if body.card_selection is not None or body.text is not None:
+        # Replacement picker gates (D32, D33): read the checkpoint only for
+        # these two bodies. An empty `card_ids` is a valid decline.
+        pending, offered_cards = await checkpointed_replacement_offer(host, conversation.id)
+        at_picker = pending is not None and pending["awaiting_slot"] == "replacement_cards"
+        if body.card_selection is not None:
+            if not (at_picker and set(body.card_selection.card_ids) <= offered_cards):
+                raise HTTPException(status_code=409, detail="selection_invalid")
+        elif at_picker:
+            raise HTTPException(status_code=409, detail="selection_required")
 
     await _check_turn_caps(session, conversation)
     try:
@@ -276,6 +291,7 @@ async def post_message(
             text=body.text,
             resume=body.resume,
             selection=body.selection,
+            card_selection=body.card_selection,
         )
     except TurnInProgress as exc:
         raise HTTPException(status_code=409, detail="turn_in_progress") from exc

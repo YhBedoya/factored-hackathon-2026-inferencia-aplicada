@@ -45,6 +45,33 @@ load_session ─┬─ mode == human ─► relay_to_agent ─► END   (_entry,
 flow finished ─► pop next queued intent (if any) ─► …   compose (grounding_check) ─► unmask ─► persist+audit ─► END
 ```
 
+### Agent node (`AGENT_ENABLED`, ADR-035)
+
+The flag is a global setting read at each turn. Off, the graph is the one above, unchanged. On, the `agent` node takes the turn after `load_session`. It runs a capped tool loop (`agent@v1`, at most 6 tool rounds) with the read tools, `scope_facts`, `propose_plan` and `pass_to_flow` (`04` §1). It holds no executing write tool and never sees a token (R6).
+
+| Turn | Goes to |
+|---|---|
+| human mode, `llm_unavailable`, legal keyword | as without the agent: relay, degraded path, handoff |
+| `pending` is a pipeline flow question (a flow-question pause, not the `anything_else` closing pause) | the pipeline: typed, button, pick and step-up turns |
+| button decision on an open agent plan | the agent plan node: Acepto executes, No acepto cancels, a stale token runs nothing and shows the reminder and card |
+| pick on a list the agent offered | the agent, with a turn event naming the picked reference |
+| anything else | the agent |
+| agent calls `pass_to_flow` | `understand` on the same message in the same turn |
+| agent raises `LLMError` | `understand` on the degraded path (ADR-032) |
+| agent raises `LLMRoundCap` | `handoff_summary → handoff`, reason `agent_round_cap` (`02` §5) |
+
+**The pass rule.** `pass_to_flow` discards the loop's work and runs the unchanged pipeline on the same message. A message that mixes a migrated and a non-migrated request passes whole. While a pipeline flow's question is open, every later turn skips the agent until that flow ends.
+
+**Replacement offer after an agent plan.** After an Acepto whose `block` steps are all verified, code offers a replacement for the cards that plan permanently blocked (D28–D30). Nothing is offered after a `lock`, after No acepto or after a failed or unverified step.
+- One card: today's `offer_replacement` text and pause (`OFFER_REPLACEMENT_PAUSE`, `selected_card_id`); the pipeline's `replacement` flow handles the answer.
+- Several cards: `offer_replacement_multi` plus a multi `card_picker` of exactly those cards, pause `replacement.replacement_cards`, `replacement_card_ids` set. The text input is disabled while it is open and a typed body gets `409 selection_required`.
+- Code builds the offer; the agent node appends it after Cardy's reply, or after `agent_code_text` when her call fails. Cardy never offers a replacement herself.
+- Reload decline (D39): a page that loads with the picker open, or that gets `409 selection_required` with no picker, posts `card_selection: {card_ids: []}`, which declines the offer.
+
+**Confirming an agent plan.** An agent plan is confirmed only by the card's buttons, labelled "Acepto / No acepto" ("Aceito / Não aceito"). No typed text confirms it on any path, including a degraded turn where the classifier reads `affirm`. Acepto runs the plan through `execute_plan` with no LLM call before the writes; Cardy then phrases the result from the verified read-backs, and on an `LLMError` the code result text is sent. A failed or unverified step sends the handoff text, never Cardy's. No acepto cancels the plan in code (`cancel_plan`) and Cardy asks what to change (the `action_cancelled` text if that call fails). Pipeline plans (flag off, or a passed flow) keep "Confirmar / Cancelar" and still accept a typed "sí".
+
+**A typed message while an agent plan is open.** The plan stays open and the agent takes the message. If the turn ends with the same plan open, code shows the same card again (the stored event, the same `token_id`, no `issue_plan` call). A change ("solo la 5214") is a new `propose_plan`, which replaces the plan; only one plan is open at a time.
+
 **Masking and grounding (D5-A).** There is no `mask_pii` node: `start_turn` in the runner masks the typed text through the conversation's `PostgresPiiVault` before it becomes graph input (`⟨KIND_n⟩` tokens, `03` §6 `pii_vault`), so the checkpoint never holds raw `user_text`. `grounding_check` is not a separate node: it runs inside `compose` on each draft, in this order: (1) placeholders only from the offered keys, (2) no stray braces, (3) no digit outside a placeholder, (4) no PII detector hit, (5) the draft's language equals the turn language (a stopword heuristic; drafts too short to judge pass). On the first failure `compose` calls the LLM once more with the reason; a second failure uses the goal's fact template (`goal_card_status`, `goal_balance_due`, `abstain`, in `templates.py`, no digits). `fallback` is used only on an `LLMError`. Each outcome (`ok`, `regenerated`, `template`) goes on `reply_sent.payload.grounding` (`04` §6). `unmask` then resolves the tokens (nested ones included) just before the reply is published and stored.
 
 **Baseline (D5-A).** `build_graph(system="baseline")` swaps four nodes and keeps the tools, policy, flows and graph shape: `understand` becomes a keyword NLU (no lexicon hit gives `general_question`), `compose` fills the goal templates, `handoff_summary` uses its fixed template and `abstain` goes straight to the four-part template. It makes no LLM call and is refused at startup unless `APP_ENV=eval`.
@@ -126,6 +153,15 @@ Rules from `policies/transaction_states.yaml`: why a hold shows up, the expected
 2. Confirm the delivery address (masked). An **address change** requires **S** step-up.
 3. **C** → T `cards.order_replacement` → **V** → simulated tracking ID.
 
+**Several cards (after an agent block, D31, D34–D36).** The flow works on a list: `replacement_card_ids`, falling back to `[selected_card_id]`.
+- Entry is the pause `replacement_cards`: `card_selection` with the picked ids (`[]` declines).
+- Decline: `replacement_declined_multi`, then the closing; segment `cancelled`; no plan issued.
+- `customer_not_active` runs once; then each card is checked for eligibility. An ineligible card is dropped with `replacement_card_not_eligible`; none left gets `replacement_not_eligible`.
+- Address: `address_confirm_multi`, or `address_ask_multi` after a "no" (several cards left). OTP at most once, for a new address only.
+- One plan, one token: N `cards.order_replacement` steps with the same `address_ref`, `action_confirm_multi`, labels `confirm_cancel`. One **V** read-back per step; the first failed or unverified step stops the plan and hands off.
+- `action_done` once per card, each with its own tracking ID, only after every step is verified.
+- The input is disabled at the pause; the S0 non-answer re-show does not apply to it.
+
 ## 5. Clarification, abstention and escalation rules
 
 Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and after every tool result. When `LLM_DISABLED` is set (cost guard, ADR-023), every turn takes the degraded path (ADR-032): the trained classifier replaces `understand` and the baseline templates replace the LLM nodes, with zero LLM calls. A degraded turn hands off only when no classifier is loaded, when its intent is in `degraded_handoff_intents` (`transaction_search`, `general_question`), or after two ambiguous turns in a row (`clarify_rephrase` first, then `clarification_exhausted`).
@@ -145,6 +181,10 @@ Deterministic, defined in `policies/escalation.yaml`, evaluated in `route` and a
 | Unauthorized access | An `injection_suspected` turn (another person's data) or a tool raising `AccessDenied` | Refuse with the `injection_suspected` template and audit `access_denied{source: nlu\|tool, attempt}` every time; the 2nd attempt in a conversation (`attempts_before_handoff`) → handoff (Atención, `unauthorized_access`) |
 | Tool / LLM failure | Tool retries exhausted (2 retries, `01` §7); with a loaded classifier, an `LLMError` or `LLM_DISABLED` runs the degraded path first and hands off only per the rules above; with none loaded, any `LLMError` or `LLM_DISABLED` | `failure_handoff` template (no LLM; `failure_handoff_after_action` when the turn already has a verified action or a write failed after its retries, the graph-local `write_failed` flag; with no language in state yet, `load_session` picks ES/PT with the in-code `_guess_language` check, since the country can't tell PT) + handoff (`tool_failure` / `llm_unavailable`, queue as `human_request`, priority normal; D6-A D8-D10) |
 | Unverified action | Read-back mismatch | Handoff (`action_unverified`) |
+
+**Stuck conversation (agent).** Code counts and hands off with `clarification_exhausted` (Atención): (a) the third agent turn labelled `asked` for the same request type; (b) typed turns that end with the same agent plan still open get the card again twice, and the third such turn hands off, with the plan cancelled first. A button click, a replaced plan or any other outcome resets the count.
+
+**Round cap (agent).** When the agent loop uses its 6 tool rounds, code cancels any open plan and hands off with `agent_round_cap` (Atención, normal). The customer reads the existing `handoff_transfer` text; the agent's partial work is never shown.
 
 A message with no intent that does not answer the open flow question is re-asked once, and the second in a row hands off with `clarification_exhausted`. It is counted in `non_answer_failures`, not in `clarification_failures`.
 

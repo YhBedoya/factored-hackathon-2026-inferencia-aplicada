@@ -50,7 +50,7 @@ from app.domains.identity.step_up_session import SessionStepUpGate
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
 from app.domains.policy.registry import get_policies
-from app.domains.policy.tools_policy import step_up_rule, tool_allowed
+from app.domains.policy.tools_policy import has_preconditions, step_up_rule, tool_allowed
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = [
@@ -297,5 +297,6 @@ def turn_tools(
         step_up_rule(bundle.tools),
         tool_allowed(bundle.tools),
         audit,
+        has_preconditions=has_preconditions(bundle.tools),
     )
     return RecordingBankTools(read_inner, audit), write_tools

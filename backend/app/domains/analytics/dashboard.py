@@ -146,6 +146,7 @@ class CostDay(_Frozen):
     nlu_usd: float
     compose_usd: float
     handoff_summary_usd: float
+    agent_usd: float
 
 
 class PerResolved(_Frozen):
@@ -169,6 +170,7 @@ class RecentInteraction(_Frozen):
     outcome: Bucket
     sentiment_overall: str | None
     cost_usd: float
+    served_by: Literal["agent", "pipeline", "mixed"]
 
 
 class AnalyticsSummary(_Frozen):
@@ -261,7 +263,8 @@ GROUP BY 1, 2
 _COST_DAY_SQL = """
 SELECT CAST((i.ended_at AT TIME ZONE :tz) AS date) AS day,
        sum(i.cost_nlu_usd) AS nlu, sum(i.cost_compose_usd) AS compose,
-       sum(i.cost_handoff_summary_usd) AS handoff_summary
+       sum(i.cost_handoff_summary_usd) AS handoff_summary,
+       sum(i.cost_agent_usd) AS agent
 FROM analytics.interactions i
 WHERE {where}
 GROUP BY 1
@@ -288,7 +291,7 @@ _QUEUE_SQL = _CAUSE_SQL.replace("handoff_cause_group", "handoff_queue")
 
 _RECENT_SQL = f"""
 SELECT i.conversation_id, i.source, i.ended_at, i.end_reason, {_BUCKET_SQL} AS outcome,
-       i.sentiment_overall, i.cost_usd,
+       i.sentiment_overall, i.cost_usd, i.served_by,
        COALESCE((
            SELECT array_agg(n.intent ORDER BY n.seq)
            FROM analytics.interaction_intents n
@@ -389,7 +392,7 @@ def _assemble(
     for r in day_rows:
         by_day[r.day][r.bucket] = r.n
     costs = {r.day: r for r in cost_rows}
-    zero = {"nlu": 0, "compose": 0, "handoff_summary": 0}
+    zero = {"nlu": 0, "compose": 0, "handoff_summary": 0, "agent": 0}
     cost_days = []
     for d in by_day:
         c = costs.get(d)
@@ -399,6 +402,7 @@ def _assemble(
                 nlu_usd=float(c.nlu if c else zero["nlu"]),
                 compose_usd=float(c.compose if c else zero["compose"]),
                 handoff_summary_usd=float(c.handoff_summary if c else zero["handoff_summary"]),
+                agent_usd=float(c.agent if c else zero["agent"]),
             )
         )
     return AnalyticsSummary(
@@ -466,6 +470,7 @@ def _assemble(
                 outcome=r.outcome,
                 sentiment_overall=r.sentiment_overall,
                 cost_usd=float(r.cost_usd),
+                served_by=r.served_by,
             )
             for r in recent_rows
         ],

@@ -1,0 +1,32 @@
+seed_id: d-greeting-normal_resolution-es-mx-01
+intent: greeting
+category: normal_resolution
+persona: CLI-H7CHAE6NGLYQ
+goal: Saludar y charlar sin pedir nada concreto
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - greeting
+  expected_outcome: resolved
+  required_tools: []
+  forbidden_tools:
+  - cards.lock_card
+  - cards.block_card
+  - cards.unlock_card
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-greeting-normal_resolution-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: ¡Hola! ¿Cómo estás?
+  reviewer: null
+  reviewed_at: null

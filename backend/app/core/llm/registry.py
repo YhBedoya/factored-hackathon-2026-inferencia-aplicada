@@ -21,6 +21,7 @@ __all__ = [
 Provider = Literal["anthropic", "bedrock", "openai"]
 Step = Literal[
     "nlu",
+    "agent",
     "compose",
     "handoff_summary",
     "summary",
@@ -38,6 +39,11 @@ Step = Literal[
 # `openai` always.
 MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "nlu": {
+        "anthropic": "claude-sonnet-5-5",
+        "bedrock": "us.anthropic.claude-sonnet-5-5-v1:0",  # unconfirmed until K2
+    },
+    # The tool-using conversation agent (cardy-agent-s1 D2): same model as `nlu`.
+    "agent": {
         "anthropic": "claude-sonnet-5-5",
         "bedrock": "us.anthropic.claude-sonnet-5-5-v1:0",  # unconfirmed until K2
     },
@@ -79,6 +85,7 @@ MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
 # value, so `nlu` omits it; the ledger records NULL for those calls.
 TEMPERATURE: dict[Step, float | None] = {
     "nlu": None,
+    "agent": None,  # same Sonnet 5.5 constraint as `nlu`
     "compose": 0.0,
     "handoff_summary": 0.0,
     "summary": 0.0,

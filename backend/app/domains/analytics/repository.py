@@ -196,6 +196,7 @@ class PostgresAnalyticsStore:
                     """
                     SELECT payload->>'route' AS route,
                            COALESCE((payload->>'degraded')::boolean, false) AS degraded,
+                           COALESCE(payload->>'path', 'pipeline') AS path,
                            COALESCE(payload->'segments', '[]'::jsonb) AS segments
                     FROM audit.audit_events
                     WHERE conversation_id = :cid AND type = 'reply_sent'
@@ -239,7 +240,7 @@ class PostgresAnalyticsStore:
                     )
                     for r in messages
                 ],
-                replies=[ReplyFact(r.route, r.degraded, r.segments) for r in replies],
+                replies=[ReplyFact(r.route, r.degraded, r.segments, r.path) for r in replies],
                 handoffs=[
                     HandoffFact(r.queue, r.reason, r.status, r.created_at, r.claimed_at)
                     for r in handoffs

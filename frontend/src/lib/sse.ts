@@ -4,9 +4,9 @@
 // is nothing to replay here (R11 doesn't apply to a read-only stream).
 
 /** One clickable option, code-formatted server-side (R4). */
-export type PickerOption = { label: string };
+export type PickerOption = { label: string; card_id?: string | null };
 
-export type CardPickerPayload = { options: PickerOption[] };
+export type CardPickerPayload = { options: PickerOption[]; multi?: boolean };
 export type CardPickerUiEvent = {
 	kind: "card_picker";
 	payload: CardPickerPayload;
@@ -27,7 +27,11 @@ export type ConfirmStepView = {
 	summary_key: string;
 	facts: { key: string; value: string | number | null; source: string }[];
 };
-export type ConfirmPayload = { token_id: string; steps: ConfirmStepView[] };
+export type ConfirmPayload = {
+	token_id: string;
+	steps: ConfirmStepView[];
+	labels?: "confirm_cancel" | "accept_decline";
+};
 export type ConfirmUiEvent = { kind: "confirm"; payload: ConfirmPayload };
 
 export type OtpRequiredPayload = { tool: string };

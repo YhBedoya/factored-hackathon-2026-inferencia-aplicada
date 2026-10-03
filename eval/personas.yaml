@@ -422,3 +422,13 @@ personas:
       D7-B: transaction_search normal_resolution seed persona
       (d-transaction_search-normal_resolution-es-co-01); real Super
       Ahorro row named in the seed turn.
+  - customer_id: CLI-00BPQUST6X8L
+    split: dev
+    country: MX
+    card_count: 2
+    card_kinds: [credit, debit]
+    blocked: false
+    notes: >-
+      cardy-agent S1 T9: two Active cards (one credit, one debit), Active
+      customer; two-request message seed
+      (d-card_block-multilingual-pt-br-01).

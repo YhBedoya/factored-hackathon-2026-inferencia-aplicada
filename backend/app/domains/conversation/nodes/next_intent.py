@@ -26,7 +26,12 @@ from app.domains.conversation.flows.card_select import load_card_select_policy
 from app.domains.conversation.graph import _INTENT_NODES, _MANAGEMENT_INTENTS, GraphState
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import RESET_FACTS
-from app.domains.conversation.templates import TemplateKind, get_template, template_variants
+from app.domains.conversation.templates import (
+    TemplateKind,
+    get_template,
+    template_variants,
+    without_closing_question,
+)
 from app.domains.policy.registry import get_policies
 
 __all__ = ["enqueue", "finish", "next_intent"]
@@ -116,6 +121,11 @@ def finish(state: GraphState) -> dict[str, Any]:
         # A verified action ran earlier this turn but its own closing was held
         # back while intents were queued (`with_closing`); the queue has drained.
         update = _closing_update(state)
+        # Cardy's done reply may end with its own "¿Te ayudo con algo más?"; one closing only.
+        # `agent_labels` is set only by an agent turn that replied (reset per turn by
+        # `load_session`), so the other flows keep their segments as they were.
+        if segments and state.get("agent_labels"):
+            segments[-1] = without_closing_question(segments[-1])
         segments += update["segments"]
     reply = "\n\n".join(segments)
     language = state.get("language", "es")

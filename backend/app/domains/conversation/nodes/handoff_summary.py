@@ -36,6 +36,10 @@ _MAX_LEN = 200
 # Fixed agent-facing texts per reason, used when the draft is rejected or the
 # LLM fails (R11). Digit-free on purpose: they carry no placeholders.
 _FALLBACK: dict[str, dict[Language, str]] = {
+    "agent_round_cap": {
+        "es": "El asistente no logró completar la solicitud tras varios intentos.",
+        "pt": "O assistente não conseguiu concluir a solicitação após várias tentativas.",
+    },
     "human_request": {
         "es": "El cliente pidió hablar con una persona. Revisa el contexto verificado.",
         "pt": "O cliente pediu para falar com uma pessoa. Revise o contexto verificado.",

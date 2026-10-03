@@ -68,6 +68,8 @@ class ConfirmPayload(BaseModel):
 
     token_id: str
     steps: list[ConfirmStepView]
+    # Agent plans are button-only and read "Acepto / No acepto" (D12).
+    labels: Literal["confirm_cancel", "accept_decline"] = "confirm_cancel"
 
 
 class OtpRequiredPayload(BaseModel):
@@ -117,6 +119,7 @@ class PickerOption(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     label: str
+    card_id: str | None = None
 
 
 class CardPickerPayload(BaseModel):
@@ -125,6 +128,7 @@ class CardPickerPayload(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     options: list[PickerOption]
+    multi: bool = False
 
 
 class CardPickerEvent(BaseModel):

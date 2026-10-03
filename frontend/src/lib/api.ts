@@ -297,6 +297,21 @@ export async function postSelection(
 	return unwrap(result).turn_id;
 }
 
+// Replacement-card pick (spec D33): same channel as `postSelection`, with
+// `card_selection`. An empty list is the "No, gracias" decline.
+export async function postCardSelection(
+	conversationId: string,
+	cardIds: string[],
+): Promise<string> {
+	const result = await withAuthRetry(() =>
+		postMessageApiV1ConversationsConversationIdMessagesPost({
+			path: { conversation_id: conversationId },
+			body: { card_selection: { card_ids: cardIds } },
+		}),
+	);
+	return unwrap(result).turn_id;
+}
+
 // The next three wrap the D1 routes proposed in this card's spec (`04` §3).
 // They are not in the generated SDK yet: A2/A4 land the real routes, and
 // `make client` regenerates typed functions to replace these by hand.

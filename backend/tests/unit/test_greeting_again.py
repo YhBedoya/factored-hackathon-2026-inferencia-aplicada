@@ -53,7 +53,7 @@ def test_greeting_after_welcome_no_self_intro(
         assert "Soy Cardy" not in again and "Sou a Cardy" not in again
 
         # (iii) the runner's seed: a stored welcome and no checkpoint flag.
-        row = MessageRow.model_construct(role="bot")
+        row = MessageRow.model_construct(role="bot", content_masked="Hola. Soy Cardy.")
 
         async def one_bot_row(_cid: object) -> list[MessageRow]:
             return [row]
@@ -65,7 +65,11 @@ def test_greeting_after_welcome_no_self_intro(
         seeded = await runner._introduced_seed(
             fresh.graph, {"configurable": {"thread_id": str(uuid4())}}, uuid4()
         )
-        assert seeded == {"introduced": True}
+        # The welcome heads the history so the model knows how the chat opened.
+        assert seeded == {
+            "introduced": True,
+            "history": [{"role": "cardy", "text": "Hola. Soy Cardy."}],
+        }
         monkeypatch.setattr(runner.store, "list_messages", no_rows)
         assert (
             await runner._introduced_seed(

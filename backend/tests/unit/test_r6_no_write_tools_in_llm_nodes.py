@@ -2,12 +2,17 @@
 
 See `docs/specs/d2-k-write-contracts.md` Decision D6 and §"Test list". A
 source scan of every module under `conversation/nodes/` and
-`conversation/flows/`: a module that imports `app.core.llm` must not
+`conversation/flows/` and `conversation/agent/`: a module that imports `app.core.llm` must not
 reference a write tool, by name or by import.
 """
 
 import ast
+import asyncio
 from pathlib import Path
+
+from app.domains.conversation.agent.schema import AgentTurn
+from app.domains.conversation.graph import ConfirmationDecision, run_turn
+from tests.conftest import AgentScript, ScriptedLLM, make_session
 
 _FORBIDDEN_NAMES = (
     "bank_write_tools",
@@ -60,10 +65,11 @@ def _write_tool_references(source: str, tree: ast.Module) -> list[str]:
 
 
 def scan_llm_modules(root: Path) -> dict[Path, list[str]]:
-    """Map each LLM-importing module under `root/nodes` and `root/flows` to its
-    write-tool offenses (empty list if clean)."""
+    """Map each LLM-importing module under `root/nodes`, `root/flows` and
+    `root/agent` to its write-tool offenses (empty list if clean). A missing
+    sub-directory is skipped."""
     found: dict[Path, list[str]] = {}
-    for subdir in ("nodes", "flows"):
+    for subdir in ("nodes", "flows", "agent"):
         for path in sorted((root / subdir).glob("*.py")):
             source = path.read_text()
             tree = ast.parse(source, filename=str(path))
@@ -87,6 +93,10 @@ def test_llm_nodes_cannot_reach_write_tools() -> None:
     snippet_tree = ast.parse(snippet)
     assert _imports_llm(snippet_tree)
     assert _write_tool_references(snippet, snippet_tree)
+
+    # The agent node reads tool output: it must be inside the scan, and clean.
+    agent_node = conversation_root / "agent" / "node.py"
+    assert scanned_llm_modules.get(agent_node) == []
 
     for bad in (
         "from app.domains.conversation.tools.handoff import HandoffTools",
@@ -143,3 +153,49 @@ def test_r6_summarize_has_no_write_tools() -> None:
     summarize = conversation_root / "nodes" / "summarize.py"
     assert summarize in scanned
     assert not scanned[summarize]
+
+
+def test_r6_agent_never_sees_the_token(fakebank_dir: Path, agent_on: None) -> None:
+    """Across ask, plan, click and result, nothing given to the model holds the token."""
+
+    def turn(outcome: str, slot: str | None, reply: str, done: list[int]) -> AgentTurn:
+        return AgentTurn.model_validate(
+            {
+                "language": "es",
+                "intents": ["card_block"],
+                "outcome": outcome,
+                "awaiting_slot": slot,
+                "reported_done": done,
+                "reply": reply,
+            }
+        )
+
+    async def run() -> None:
+        steps = [{"action": "lock", "card": "c1"}]
+        llm = ScriptedLLM(
+            {
+                "agent": [
+                    AgentScript(rounds=[], finals=[turn("asked", "block_kind", "Temporal?", [])]),
+                    AgentScript(
+                        rounds=[[("card_status", {})], [("propose_plan", {"steps": steps})]],
+                        finals=[turn("answered", None, "Confirma en la tarjeta.", [])],
+                    ),
+                    AgentScript(rounds=[], finals=[turn("answered", None, "Listo.", [0])]),
+                ]
+            }
+        )
+        session = make_session("CLI-TFSINGLE0002", fakebank_dir, llm)
+        await run_turn(session.graph, "bloquea mi tarjeta", config=session.config)
+        await run_turn(session.graph, "temporal", config=session.config)
+        token = (await session.graph.aget_state(session.config)).values["confirmation_token_id"]
+        assert token is not None
+        decision = ConfirmationDecision(token_id=token, decision="confirm")
+        await run_turn(session.graph, "", config=session.config, confirmation=decision)
+
+        assert session.overlay.locked
+        assert len(llm.calls) == 3
+        for call in llm.calls:
+            seen = [call.system, call.user, *call.messages, *call.tool_results]
+            assert not any(token in text for text in seen)
+
+    asyncio.run(run())

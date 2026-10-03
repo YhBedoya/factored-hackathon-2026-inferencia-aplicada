@@ -1,0 +1,36 @@
+seed_id: d-card_block-normal_resolution-es-mx-01
+intent: card_block
+category: normal_resolution
+persona: CLI-F7PQP3J4AS6X
+goal: Bloquear temporalmente todas las tarjetas y confirmar
+fact_sheet: {}
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - card_block
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.lock_card
+  forbidden_tools:
+  - cards.block_card
+  expected_db_state:
+  - table: app.card_controls
+    where:
+      locked: true
+    count: 3
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: d-card_block-normal_resolution-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: Quiero bloquear todas mis tarjetas, de forma temporal.
+  - confirm: true
+  reviewer: null
+  reviewed_at: null

@@ -73,6 +73,8 @@ class MockInteraction:
     cost_nlu_usd: Decimal
     cost_compose_usd: Decimal
     cost_handoff_summary_usd: Decimal
+    cost_agent_usd: Decimal
+    served_by: str
     llm_call_count: int
     sentiment_overall: str
     sentiment_start: str
@@ -284,6 +286,8 @@ def _interaction(
         cost_nlu_usd=_money(nlu),
         cost_compose_usd=_money(compose),
         cost_handoff_summary_usd=_money(summary),
+        cost_agent_usd=Decimal("0"),
+        served_by="pipeline",
         llm_call_count=2 * turns + (1 if outcome == "escalated" else 0),
         sentiment_overall=overall,
         sentiment_start=s_start,

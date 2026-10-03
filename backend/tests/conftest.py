@@ -14,9 +14,10 @@ over an `InMemoryConfirmationStore` and a `FakeStepUpGate`, `InMemoryAddressVaul
 """
 
 from collections.abc import Awaitable, Callable, Iterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -27,7 +28,15 @@ from langgraph.graph.state import CompiledStateGraph
 from pydantic import BaseModel, JsonValue
 
 from app.core.config import get_settings
-from app.core.llm import LLMError, PromptRef, Step
+from app.core.llm import (
+    LLMError,
+    LLMInvalidOutput,
+    LLMRoundCap,
+    LoopMessage,
+    LoopTool,
+    PromptRef,
+    Step,
+)
 from app.domains.audit.schemas import AuditType, NullAuditRecorder
 from app.domains.conversation import templates
 from app.domains.conversation.classifier import IntentClassifier
@@ -39,10 +48,24 @@ from app.domains.conversation.tools.handoff import InMemoryHandoffTools
 from app.domains.conversation.tools.write import BankWriteTools
 from app.domains.identity.step_up_fake import FakeStepUpGate
 from app.domains.policy.confirmation_memory import InMemoryConfirmationStore
-from app.domains.policy.tools_policy import load_tools_policy, step_up_rule, tool_allowed
+from app.domains.policy.tools_policy import (
+    has_preconditions,
+    load_tools_policy,
+    step_up_rule,
+    tool_allowed,
+)
 from app.domains.safety.vault import InMemoryAddressVault
 
-__all__ = ["Call", "RecordingAudit", "ScriptedLLM", "Session", "make_session"]
+__all__ = [
+    "AgentScript",
+    "Call",
+    "RecordingAudit",
+    "ScriptedLLM",
+    "Session",
+    "agent_on",
+    "make_session",
+    "run_recorded_turn",
+]
 
 
 @dataclass(frozen=True)
@@ -54,6 +77,23 @@ class Call:
     system: str
     user: str
     schema: type[BaseModel]
+    # Set only by `tool_loop`: the loop's input messages and every tool result
+    # string, so a test can search all the text the model was given.
+    messages: tuple[str, ...] = ()
+    tool_results: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class AgentScript:
+    """One scripted `tool_loop` call: `rounds` are the tool calls (name, args) of
+    each model response, `finals` the outputs offered in order (the second one
+    is the retry after `validate` refuses the first).
+
+    >>> AgentScript(rounds=[[("list_cards", {})]], finals=[AgentTurn(...)])
+    """
+
+    rounds: Sequence[Sequence[tuple[str, dict[str, Any]]]]
+    finals: Sequence[BaseModel | LLMError]
 
 
 @dataclass
@@ -67,9 +107,9 @@ class ScriptedLLM:
     'compose'
     """
 
-    outputs: dict[Step, Sequence[BaseModel | LLMError]] = field(default_factory=dict)
+    outputs: dict[Step, Sequence[BaseModel | LLMError | AgentScript]] = field(default_factory=dict)
     calls: list[Call] = field(default_factory=list, init=False)
-    _queues: dict[Step, list[BaseModel | LLMError]] = field(init=False)
+    _queues: dict[Step, list[BaseModel | LLMError | AgentScript]] = field(init=False)
 
     def __post_init__(self) -> None:
         self._queues = {step: list(items) for step, items in self.outputs.items()}
@@ -89,6 +129,55 @@ class ScriptedLLM:
         if isinstance(result, LLMError):
             raise result
         return cast(Any, result)
+
+    async def tool_loop(
+        self,
+        *,
+        step: Step,
+        prompt: PromptRef,
+        system: str,
+        messages: Sequence[LoopMessage],
+        tools: Sequence[LoopTool],
+        schema: type[Any],
+        max_rounds: int,
+        validate: Callable[[Any], str | None] | None = None,
+    ) -> Any:
+        queue = self._queues.get(step)
+        if not queue:
+            raise AssertionError(f"ScriptedLLM: no scripted output left for step {step!r}")
+        script = queue.pop(0)
+        assert isinstance(script, AgentScript), f"step {step!r}: expected an AgentScript"
+        by_name = {tool.name: tool for tool in tools}
+        results: list[str] = []
+        self.calls.append(
+            Call(
+                step=step,
+                prompt=prompt,
+                system=system,
+                user="",
+                schema=schema,
+                messages=tuple(m.content for m in messages),
+                tool_results=(),
+            )
+        )
+        for index, round_calls in enumerate(script.rounds):
+            if index >= max_rounds:
+                raise LLMRoundCap(f"script has more than {max_rounds} rounds")
+            for name, args in round_calls:
+                assert name in by_name, f"ScriptedLLM: scripted unknown tool {name!r}"
+                tool = by_name[name]
+                results.append(await tool.handler(tool.args_schema.model_validate(args)))
+                # Replace the recorded call so `tool_results` is current even if a later
+                # handler raises.
+                self.calls[-1] = replace(self.calls[-1], tool_results=tuple(results))
+        finals = list(script.finals)
+        for final in finals[:2]:
+            if isinstance(final, LLMError):
+                raise final
+            reason = validate(final) if validate is not None else None
+            if reason is None:
+                return final
+        raise LLMInvalidOutput("ScriptedLLM: scripted finals failed validation or ran out")
 
 
 class _FirstVariant:
@@ -219,6 +308,7 @@ def make_session(
         tool_allowed(policy),
         audit if write_audit else NullAuditRecorder(),
         **({} if sleep is None else {"sleep": sleep}),
+        has_preconditions=has_preconditions(policy),
     )
 
     config: RunnableConfig = {
@@ -244,3 +334,73 @@ def make_session(
         handoff_tools=handoff_tools,
         audit=audit,
     )
+
+
+@pytest.fixture
+def agent_on(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Turn the agent on (`AGENT_ENABLED=true`) for one test; the settings cache is
+    cleared before and after so no other test sees the flag.
+
+    >>> def test_x(agent_on): ...
+    """
+    monkeypatch.setenv("AGENT_ENABLED", "true")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+async def run_recorded_turn(
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+    text: str,
+    *,
+    confirmation: Any = None,
+    selection: Any = None,
+) -> list[tuple[str, dict[str, Any]]]:
+    """Run one turn through `runner._run_turn_traced` (the patches `test_degraded.py`
+    uses) and return the audit events that turn appended to `session.audit.events`.
+
+    >>> events = await run_recorded_turn(session, monkeypatch, "bloquea mi tarjeta")
+    """
+    from app.domains.conversation import runner
+    from app.domains.safety.vault import InMemoryPiiVault
+
+    cfg: Any = session.config["configurable"]
+    ctx = cfg["session"]
+
+    async def _publish(_: Any, kind: str, data: dict[str, Any]) -> None:
+        return None
+
+    async def _add_message(*_: Any, **__: Any) -> None:
+        return None
+
+    class _Redis:
+        async def eval(self, *_: Any) -> int:
+            return 0
+
+    monkeypatch.setattr(runner.registry, "build_tool_context", lambda *_: ctx)
+    bank = cfg["bank_tools"]
+    # The runner reads `tools.calls` for the debug line; the fake bank has none.
+    bank.calls = []
+    monkeypatch.setattr(runner.registry, "audit_recorder_for", lambda *_: session.audit)
+    monkeypatch.setattr(runner.registry, "turn_tools", lambda *_: (bank, cfg["bank_write_tools"]))
+    monkeypatch.setattr(runner.events, "publish", _publish)
+    monkeypatch.setattr(runner.store, "add_message", _add_message)
+    monkeypatch.setattr(runner, "get_redis", lambda: _Redis())
+
+    before = len(session.audit.events)
+    host: Any = SimpleNamespace(graph=session.graph, llm=cfg["llm"], classifier=cfg["classifier"])
+    await runner._run_turn_traced(
+        host,
+        session=SimpleNamespace(),
+        conversation_id=ctx.conversation_id,
+        turn_id=uuid4(),
+        text=text,
+        graph_text=text,
+        vault=InMemoryPiiVault(),
+        resume=None,
+        confirmation=confirmation,
+        selection=selection,
+        trace_id="test-trace",
+    )
+    return [(str(t), dict(p)) for t, p in session.audit.events[before:]]

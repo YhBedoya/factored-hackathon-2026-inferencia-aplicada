@@ -15,8 +15,10 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
+    "Preconditions",
     "ToolPolicy",
     "ToolsPolicy",
+    "has_preconditions",
     "load_tools_policy",
     "step_up_rule",
     "tool_allowed",
@@ -30,6 +32,17 @@ _DEFAULT_POLICY_PATH = _REPO_ROOT / "policies" / "tools.yaml"
 StepUp = Literal["never", "always", "when_address_changed"]
 
 
+class Preconditions(BaseModel):
+    """The card-state rules a write must pass before it is proposed (D9): a
+    status in `status_not_in` rejects with `already_in_state`; `locked: false`
+    also rejects an already-locked card with `already_locked`."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    status_not_in: list[str]
+    locked: bool | None = None
+
+
 class ToolPolicy(BaseModel):
     """One entry of the `tools` map: a single write tool's confirmation and
     step-up flags."""
@@ -39,6 +52,7 @@ class ToolPolicy(BaseModel):
     requires_confirmation: bool
     step_up: StepUp
     allowed_intents: list[str]
+    preconditions: Preconditions | None = None
 
 
 class ToolsPolicy(BaseModel):
@@ -115,3 +129,17 @@ def tool_allowed(policy: ToolsPolicy) -> Callable[[str, str], bool]:
         return intent in entry.allowed_intents
 
     return allowed
+
+
+def has_preconditions(policy: ToolsPolicy) -> Callable[[str], bool]:
+    """Build the executor's `HasPreconditions` from a loaded `ToolsPolicy` (D10).
+
+    `issue_plan(intent=None)` (the agent path) passes only for a tool that
+    carries a `preconditions` block; an unknown tool returns `False`.
+    """
+
+    def has(tool: str) -> bool:
+        entry = policy.tools.get(tool)
+        return entry is not None and entry.preconditions is not None
+
+    return has

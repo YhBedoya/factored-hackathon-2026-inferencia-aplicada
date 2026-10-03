@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     # line only; the guard in `main.py` refuses it under APP_ENV=prod.
     faults: Annotated[frozenset[Fault], NoDecode] = frozenset()
     llm_disabled: bool = False
+    # D1 (cardy-agent-s1): turns go to the tool-using agent instead of the NLU pipeline.
+    agent_enabled: bool = False
     # Learned intent classifier bundle dir (ADR-032). The image sets
     # INTENT_MODEL_DIR to /app/ml/intent/models; this default is the repo path
     # the host-run eval backend uses.
