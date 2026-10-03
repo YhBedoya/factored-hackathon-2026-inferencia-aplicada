@@ -32,10 +32,9 @@ test("login, live inbox, claim, packet, agent chat, return to bot", async ({
 		timeout: 10000,
 	});
 
-	await page.getByTestId("inbox-item").click();
+	// Claiming from the inbox row goes straight to the case chat.
+	await page.getByTestId("inbox-claim").click();
 	await page.waitForURL("**/staff/handoffs/**");
-
-	await page.getByTestId("claim-handoff").click();
 
 	const packet = page.getByTestId("packet-view");
 	await expect(packet).toBeVisible();
