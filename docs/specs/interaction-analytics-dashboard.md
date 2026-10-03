@@ -30,6 +30,7 @@ The requirement's tile, chart and table lists are binding as written unless a `D
 | D14 | **Navigation.** An "Analytics" link next to the existing conversations link on the inbox page, rendered only when `staffMe().role === "admin"`. The `/staff/analytics` route's `beforeLoad` sends a non-admin to `/staff` and a missing session to `/staff/login` | A6; REQ-R2; DD1 |
 | D15 | **Charts** use Recharts through shadcn's `chart` component. Colours come from the `brand.md` tokens as CSS variables. The generated API client is regenerated with `openapi-ts`. A `source = 'real'` row links to `/staff/conversations/$conversationId`; a mock row renders no link<br>**Amended (human, mid-card):** the client is regenerated from an OpenAPI dump taken with `APP_ENV=eval`, so the eval-only test-idp route stays in it; the client diff holds only analytics additions. Known leftover, type-only: `ClientOptions.baseUrl` is typed as the literal `${string}://${string}` | A7; REQ-R2; DD6; human mid-card |
 | D16 | **Card 1 is not touched.** `mock_profile.yaml` keeps 0% `cancelled` (P-D15), and the worker and migration `0009` are unchanged. REQ-R3.3 (README provenance row) is already met by card 1 and only gets checked here | H1(a); A9; README "Provenance of the analytics rows" |
+| D17 | **Layout (revision R1):** one viewport at >=1024px, 3x2 panel grid under a KPI strip, recent table scrolls inside its panel (D4 unchanged). Below 1024px the panels stack and the page scrolls | Human, 2026-10-02 |
 
 ## Contracts
 

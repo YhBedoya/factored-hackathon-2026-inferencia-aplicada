@@ -31,7 +31,7 @@ export function AnalyticsFilters({
 	const all = t("staff.analytics.filter.all");
 
 	return (
-		<div className="flex flex-wrap gap-3">
+		<div className="flex flex-wrap items-center gap-2">
 			<input
 				type="date"
 				data-testid="analytics-filter-date-from"

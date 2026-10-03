@@ -1,26 +1,32 @@
 import type { ReactNode } from "react";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { InfoHint } from "./InfoHint";
 
 const STATE_TEXT = "text-sm text-muted-foreground";
 
 interface BlockFrameProps {
 	title: string;
+	/** How to read the panel, shown behind the ⓘ next to the title. */
+	info: string;
 	testId: string;
 	isLoading: boolean;
 	isError: boolean;
 	isEmpty: boolean;
+	className?: string;
 	children: ReactNode;
 }
 
-/** A titled card whose body is the loading, error or empty state, else its children. */
+/** A titled card that fills its grid cell; its body is the loading, error or empty state, else its children. */
 export function BlockFrame({
 	title,
+	info,
 	testId,
 	isLoading,
 	isError,
 	isEmpty,
+	className,
 	children,
 }: BlockFrameProps) {
 	const { t } = useI18n();
@@ -47,11 +53,18 @@ export function BlockFrame({
 	}
 
 	return (
-		<Card data-testid={testId}>
+		<Card
+			size="sm"
+			data-testid={testId}
+			className={cn("flex h-full min-h-0 flex-col", className)}
+		>
 			<CardHeader>
-				<CardTitle>{title}</CardTitle>
+				<CardTitle className="flex items-center gap-1 text-sm">
+					{title}
+					<InfoHint label={title} text={info} />
+				</CardTitle>
 			</CardHeader>
-			<CardContent>{body}</CardContent>
+			<CardContent className="min-h-0 flex-1">{body}</CardContent>
 		</Card>
 	);
 }

@@ -4,9 +4,14 @@
 
 const DASH = "—";
 
-/** The only money formatter the analytics page uses (D13). */
-export function formatUsd(usd: number | null, digits = 4): string {
+/** The only money formatter the analytics page uses (D13); cents, like `US$ 0.08`. */
+export function formatUsd(usd: number | null, digits = 2): string {
 	return usd === null ? DASH : `US$ ${usd.toFixed(digits)}`;
+}
+
+/** A money axis tick; the axis title carries the unit, so `0.25`. */
+export function formatUsdTick(usd: number): string {
+	return usd.toFixed(2);
 }
 
 /** A 0..1 rate as `12.3%`. */

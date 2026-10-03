@@ -16,7 +16,7 @@ export function MockBadge({ show }: { show: boolean }) {
 	);
 }
 
-/** The full simulated-data disclaimer at the foot of the page (D6, D7). */
+/** The simulated-data disclaimer at the foot of the page, one line (full text in the title) (D6, D7). */
 export function MockFooter({ show }: { show: boolean }) {
 	const { t } = useI18n();
 	if (!show) {
@@ -25,7 +25,8 @@ export function MockFooter({ show }: { show: boolean }) {
 	return (
 		<p
 			data-testid="analytics-mock-footer"
-			className="text-xs text-muted-foreground"
+			title={t("staff.analytics.mock_footer")}
+			className="truncate text-[11px] text-muted-foreground"
 		>
 			{t("staff.analytics.mock_footer")}
 		</p>

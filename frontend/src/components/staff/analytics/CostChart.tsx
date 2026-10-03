@@ -1,7 +1,7 @@
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { BlockFrame } from "@/components/staff/analytics/BlockFrame";
-import { formatUsd } from "@/components/staff/analytics/format";
+import { formatUsd, formatUsdTick } from "@/components/staff/analytics/format";
 import {
 	type ChartConfig,
 	ChartContainer,
@@ -28,11 +28,10 @@ interface FigureProps {
 
 function Figure({ label, value, hint, testId }: FigureProps) {
 	return (
-		<div data-testid={testId}>
-			<p className="text-xs text-muted-foreground">{label}</p>
-			<p className="text-lg font-semibold">{value}</p>
-			{hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-		</div>
+		<span data-testid={testId} className="text-muted-foreground">
+			{label}: <span className="font-semibold text-foreground">{value}</span>
+			{hint && ` (${hint})`}
+		</span>
 	);
 }
 
@@ -61,14 +60,16 @@ export function CostChart({ summary, isLoading, isError }: CostChartProps) {
 	return (
 		<BlockFrame
 			title={t("staff.analytics.chart.cost")}
+			info={t("staff.analytics.info.chart.cost")}
 			testId="analytics-chart-cost"
 			isLoading={isLoading}
 			isError={isError}
 			isEmpty={isEmpty}
 		>
 			{cost && (
-				<div className="space-y-4">
-					<div className="flex flex-wrap gap-6">
+				<div className="flex h-full min-h-0 flex-col gap-2">
+					{/* D12: scoring overhead is shown apart, never added to the totals. */}
+					<div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
 						<Figure
 							testId="analytics-cost-total"
 							label={t("staff.analytics.cost.total")}
@@ -80,11 +81,41 @@ export function CostChart({ summary, isLoading, isError }: CostChartProps) {
 							value={formatUsd(cost.per_resolved.usd)}
 							hint={`n = ${cost.per_resolved.resolved}`}
 						/>
+						<span className="border-l pl-4">
+							<Figure
+								testId="analytics-cost-sentiment-overhead"
+								label={t("staff.analytics.cost.sentiment_overhead")}
+								value={formatUsd(cost.sentiment_overhead_usd)}
+							/>
+						</span>
 					</div>
-					<ChartContainer config={config} className="h-56 w-full">
+					<ChartContainer
+						config={config}
+						className="aspect-auto min-h-0 w-full flex-1"
+					>
 						<BarChart data={cost.per_day} accessibilityLayer>
 							<CartesianGrid vertical={false} />
-							<XAxis dataKey="day" tickLine={false} axisLine={false} />
+							<XAxis
+								dataKey="day"
+								tickLine={false}
+								axisLine={false}
+								tickFormatter={(day: string) => day.slice(5)}
+								minTickGap={16}
+							/>
+							<YAxis
+								width={48}
+								tickLine={false}
+								axisLine={false}
+								tick={{ fontSize: 10 }}
+								tickFormatter={formatUsdTick}
+								label={{
+									value: t("staff.analytics.cost.axis"),
+									angle: -90,
+									position: "insideLeft",
+									style: { textAnchor: "middle", fontSize: 10 },
+									fill: "var(--muted-foreground)",
+								}}
+							/>
 							<ChartTooltip
 								content={
 									<ChartTooltipContent
@@ -97,7 +128,11 @@ export function CostChart({ summary, isLoading, isError }: CostChartProps) {
 									/>
 								}
 							/>
-							<ChartLegend content={<ChartLegendContent />} />
+							<ChartLegend
+								content={
+									<ChartLegendContent className="flex-wrap gap-x-2 gap-y-0 pt-1 text-[10px]" />
+								}
+							/>
 							{Object.keys(config).map((key) => (
 								<Bar
 									key={key}
@@ -108,14 +143,6 @@ export function CostChart({ summary, isLoading, isError }: CostChartProps) {
 							))}
 						</BarChart>
 					</ChartContainer>
-					{/* D12: scoring overhead is shown apart, never added to the totals. */}
-					<div className="border-t pt-3">
-						<Figure
-							testId="analytics-cost-sentiment-overhead"
-							label={t("staff.analytics.cost.sentiment_overhead")}
-							value={formatUsd(cost.sentiment_overhead_usd)}
-						/>
-					</div>
 				</div>
 			)}
 		</BlockFrame>

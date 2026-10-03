@@ -17,6 +17,7 @@ Branch `feat/interaction-analytics-dashboard`, based on `feat/interaction-analyt
 - T6: nginx returns 502 on /api (backend healthy); regenerate the client from http://backend:8000/api/v1/openapi.json inside the frontend container; nobody restarts nginx without asking.
 - T6 drift: regenerate the client from an APP_ENV=eval OpenAPI dump (test-idp route kept); the client diff must hold only analytics additions.
 - After T11: nginx 502 -> T12 may run `docker restart latam-cs-nginx-1` (nginx only), then regenerate the client via http://nginx to restore the baseUrl literal. Tiles block gets its own title key (T7 fix; es/pt.json extended to T7).
+- After gate (2026-10-02): one-viewport BI layout at >=1024px, 3x2 panel grid, KPI strip, AppShell header skipped on /staff/analytics, recent table scrolls inside its panel (D4 kept). Task R1.
 
 ## Task board
 | Task | Status | Agent | One-line result |
@@ -118,3 +119,9 @@ Facts: nginx restart fixed 502 (health 200). Regen via http://nginx dropped `cre
 Checks: lint+typecheck rc=0; health ok; openapi has analytics/summary; unauth 401; /staff/analytics 200 SPA; dev DB last 7d: mock 758, real 16; no root-owned files in frontend/.
 Pending human: admin login check (Analytics link, seeded data, badge, footer; "Real only" hides badge and footer; agent has no link and /staff/analytics redirects to /staff).
 Verify: block Verify chain all pass.
+
+### R1 — One-viewport BI layout for /staff/analytics
+Changed: `AppShell.tsx` (`ownsChrome`), `routes/staff/analytics.tsx` (header line, 12x2 grid), `components/staff/analytics/*` (BlockFrame className + Card sm; charts fill panels; SummaryTiles has no outer card and its own loading/error/empty line; table scrolls with sticky header; footer one line), `es.json`/`pt.json` (removed `tiles.title`), spec row D17.
+Facts the next tasks need: IntentsChart label uses a custom `BarLabel` <text> (recharts LabelList wrapped long labels); Escalations cause axis uses `SingleLineTick`; backend rejects ranges over 90 days (422), so a 92-day URL shows "loading" forever. Playwright MCP writes screenshots on its own FS (inline only).
+Deviations: none vs plan (intent label keeps the "Resolución" word, margin 190).
+Verify: lint+typecheck rc=0; analytics.es.spec.ts 2 passed; live scrollHeight == innerHeight at 1920x1080/1366x768/1280x720 (all, 30d, real), 800px no horizontal overflow.

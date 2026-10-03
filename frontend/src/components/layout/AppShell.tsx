@@ -16,14 +16,19 @@ export const ME_QUERY_KEY = ["me"] as const;
 // The one place every route renders through (`__root.tsx`). It owns the
 // chrome that's the same everywhere: the starfield, the language toggle
 // and, once `me()` resolves a customer, the greeting and logout. The header
-// is skipped on the landing, which renders its own controls. Route content (landing, login, chat) is `children`.
+// is skipped on the landing and on the staff analytics page, which render
+// their own controls (the analytics page needs the full viewport height).
+// Route content (landing, login, chat) is `children`.
 export function AppShell({ children }: { children: ReactNode }) {
 	const { t } = useI18n();
 	const navigate = useNavigate();
 	const queryClient = useQueryClient();
-	// The landing draws its own top-right controls (language, login).
-	const isLanding = useRouterState({
-		select: (state) => state.location.pathname === "/",
+	// The landing draws its own top-right controls (language, login); the
+	// analytics dashboard puts the language toggle in its own header line.
+	const ownsChrome = useRouterState({
+		select: (state) =>
+			state.location.pathname === "/" ||
+			state.location.pathname === "/staff/analytics",
 	});
 	const { data: customer } = useQuery({
 		queryKey: ME_QUERY_KEY,
@@ -42,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 		<div className="relative min-h-svh">
 			<StarryBackground />
 			<div className="relative z-10 flex min-h-svh flex-col">
-				{!isLanding && (
+				{!ownsChrome && (
 					<header className="flex items-center justify-end gap-4 px-6 py-4">
 						<div className="flex items-center gap-3">
 							<LanguageToggle />

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { AnalyticsFilters } from "@/components/staff/analytics/AnalyticsFilters";
 import { CostChart } from "@/components/staff/analytics/CostChart";
 import { EscalationsChart } from "@/components/staff/analytics/EscalationsChart";
@@ -68,26 +69,49 @@ function StaffAnalyticsPage() {
 	});
 	const block = { summary: data, isLoading, isError };
 
+	// One viewport at lg and up (no page scroll): header line, KPI strip, a
+	// 12 x 2 panel grid that takes the remaining height, footer. Below lg the
+	// panels stack and the page scrolls; `min-h` lets a very short window
+	// scroll instead of crushing the charts.
 	return (
-		<div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-4 px-6 py-10">
-			<div className="flex flex-wrap items-center gap-3">
-				<h1 className="font-heading text-2xl text-foreground">
-					{t("staff.analytics.title")}
-				</h1>
-				<MockBadge show={data?.includes_mock ?? false} />
+		<div className="flex w-full flex-1 flex-col gap-3 px-4 py-3 lg:h-svh lg:min-h-[640px] lg:flex-none lg:overflow-hidden">
+			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+				<div className="flex items-center gap-3">
+					<h1 className="font-heading text-xl text-foreground">
+						{t("staff.analytics.title")}
+					</h1>
+					<MockBadge show={data?.includes_mock ?? false} />
+				</div>
+				<div className="flex flex-wrap items-center gap-3">
+					<AnalyticsFilters
+						value={search}
+						applied={data?.filters}
+						onChange={(next) => navigate({ search: next })}
+					/>
+					<LanguageToggle />
+				</div>
 			</div>
-			<AnalyticsFilters
-				value={search}
-				applied={data?.filters}
-				onChange={(next) => navigate({ search: next })}
-			/>
 			<SummaryTiles {...block} />
-			<OutcomesPerDayChart {...block} />
-			<IntentsChart {...block} />
-			<EscalationsChart {...block} />
-			<SentimentChart {...block} />
-			<CostChart {...block} />
-			<RecentInteractionsTable {...block} />
+			<div className="grid gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-12 lg:grid-rows-2">
+				<div className="min-h-64 lg:col-span-4 lg:min-h-0">
+					<OutcomesPerDayChart {...block} />
+				</div>
+				<div className="min-h-64 lg:col-span-5 lg:min-h-0">
+					<IntentsChart {...block} />
+				</div>
+				<div className="min-h-64 lg:col-span-3 lg:min-h-0">
+					<EscalationsChart {...block} />
+				</div>
+				<div className="min-h-64 lg:col-span-4 lg:min-h-0">
+					<CostChart {...block} />
+				</div>
+				<div className="min-h-64 lg:col-span-2 lg:min-h-0">
+					<SentimentChart {...block} />
+				</div>
+				<div className="min-h-64 lg:col-span-6 lg:min-h-0">
+					<RecentInteractionsTable {...block} />
+				</div>
+			</div>
 			<MockFooter show={data?.includes_mock ?? false} />
 		</div>
 	);
