@@ -25,8 +25,8 @@ intents:
     es: ["ultimas compras", "movimientos", "cuanto gaste", "compras de", "buscar compra"]
     pt: ["ultimas compras", "movimentacoes", "quanto gastei", "compras de", "buscar compra"]
   replacement_request:
-    es: ["reposicion", "reponer", "nueva tarjeta", "perdi mi tarjeta", "me robaron", "extravi\\w+", "tarjeta danada"]
-    pt: ["segunda via", "nova via", "novo cartao", "perdi meu cartao", "roubaram", "extravi\\w+", "cartao danificado"]
+    es: ["reposicion", "reponer", "perdi mi tarjeta", "me robaron", "extravi\\w+", "tarjeta danada"]
+    pt: ["segunda via", "nova via", "perdi meu cartao", "roubaram", "extravi\\w+", "cartao danificado"]
   card_status:
     es: ["estado de mi tarjeta", "esta activa", "esta bloqueada", "mi tarjeta esta"]
     pt: ["status do meu cartao", "esta ativo", "esta bloqueado", "meu cartao esta"]
@@ -38,7 +38,10 @@ intents:
     pt: ["ola", "oi", "bom dia", "boa tarde", "boa noite"]
   thanks_close:
     es: ["gracias", "eso es todo", "adios", "hasta luego"]
-    pt: ["obrigado", "obrigada", "valeu", "tchau", "so isso"]
+    pt: ["obrigado", "obrigada", "valeu", "tchau", "so isso", "terminar", "encerrar"]
+  affirm:
+    es: ["algo mas"]
+    pt: ["mais alguma coisa"]
 # Words that make "bloquear" specific (temporary lock vs permanent block).
 block_qualifiers:
   temporary_lock:
@@ -65,6 +68,9 @@ out_of_scope:
   transfers:
     es: ["transferencia\\w*", "transferir", "spei"]
     pt: ["transferencia\\w*", "transferir", "ted", "doc"]
+  new_card:
+    es: ["solicitar una (nueva )?tarjeta", "tarjeta (nueva|adicional)", "nueva tarjeta"]
+    pt: ["solicitar um (novo )?cartao", "cartao (novo|adicional)", "novo cartao"]
   accounts:
     es: ["cuenta de ahorro\\w*", "cuenta corriente", "abrir una cuenta"]
     pt: ["conta poupanca", "conta corrente", "abrir uma conta"]

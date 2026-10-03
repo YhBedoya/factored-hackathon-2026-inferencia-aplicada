@@ -1,6 +1,6 @@
 # Intent registry (ADR-032, D13). One row per member of the `Intent` Literal (26).
 # `node` is the flow node `_dispatch` routes to (null = unsupported, or never a flow);
-# the Literal in schemas.py and the nlu@v5 prompt list are check-only (test_registry_consistency).
+# the Literal in schemas.py and the nlu@v6 prompt list are check-only (test_registry_consistency).
 label_set_version: 1
 intents:
   - {intent: card_status, node: card_info, tier: core, classifier: true, training_dir: ml/intent/data, lexicon_key: card_status}

@@ -14,7 +14,7 @@ from app.domains.conversation.graph import ConfirmationDecision, run_turn
 from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 
 def test_es_lock_clarify_confirm_readback(fakebank_dir: Path) -> None:
@@ -63,7 +63,7 @@ def test_es_lock_clarify_confirm_readback(fakebank_dir: Path) -> None:
         assert "6475" in reply2
 
         reply3, debug3 = await run_turn(session.graph, "si", config=session.config)
-        assert debug3.pending is None
+        assert debug3.pending == "smalltalk.anything_else"  # closing after a verified lock
         assert re.search(r"quedó bloqueada temporalmente a las \d{2}:\d{2}\.", reply3)
         assert "PRD-TFM1CRED0001" in session.overlay.locked
 
@@ -107,7 +107,10 @@ def test_pt_block_by_button_offers_replacement(fakebank_dir: Path) -> None:
         )
         assert "bloqueado de forma permanente" in reply2
         assert "2222" in reply2
-        assert reply2.endswith("Quer que eu peça um cartão novo para substituir o final 2222?")
+        assert reply2.endswith(
+            "Quer que eu peça um cartão novo para substituir o final 2222, "
+            "ou ajudo você com mais alguma coisa?"
+        )
         assert debug2.pending == "replacement.offer_replacement"
         assert "PRD-TFS2CRED0001" in session.overlay.blocked
         # Only the button/step-up resume skips `understand`; this one still did.
@@ -139,8 +142,8 @@ def test_es_deny_cancels_plan(fakebank_dir: Path) -> None:
         assert debug1.pending == "card_block.confirmation"
 
         reply2, debug2 = await run_turn(session.graph, "no", config=session.config)
-        assert reply2 == get_template("action_cancelled", "es")
-        assert debug2.pending is None
+        assert strip_closing(reply2, "es") == get_template("action_cancelled", "es")
+        assert debug2.pending == "smalltalk.anything_else"
         assert session.overlay.locked == set()
         assert session.overlay.blocked == set()
 
@@ -238,7 +241,7 @@ def test_es_lost_card_block_replacement_tracking(fakebank_dir: Path) -> None:
         assert debug4.pending == "replacement.confirmation"
 
         reply5, debug5 = await run_turn(session.graph, "sí", config=session.config)
-        assert debug5.pending is None
+        assert debug5.pending == "smalltalk.anything_else"
         assert re.search(r"RPL-[0-9A-F]+", reply5)
 
         otp_text = get_template("otp_required", "es")
@@ -298,7 +301,7 @@ def test_pt_new_address_needs_otp_and_is_vaulted(fakebank_dir: Path) -> None:
         assert raw_address not in str(plan.steps[0].args)
 
         reply5, debug5 = await run_turn(session.graph, "sim", config=session.config)
-        assert debug5.pending is None
+        assert debug5.pending == "smalltalk.anything_else"
         assert re.search(r"RPL-[0-9A-F]+", reply5)
 
     asyncio.run(run())
@@ -347,7 +350,7 @@ def test_es_unlock_own_lock_needs_otp(fakebank_dir: Path) -> None:
             config=session.config,
             confirmation=ConfirmationDecision(token_id=token_id, decision="confirm"),
         )
-        assert debug4.pending is None
+        assert debug4.pending == "smalltalk.anything_else"
         assert re.search(r"quedó desbloqueada a las \d{2}:\d{2}\.", reply4)
         assert "PRD-TFS2CRED0001" not in session.overlay.locked
 
@@ -372,14 +375,13 @@ def test_which_card_question_names_the_action(fakebank_dir: Path) -> None:
         session = make_session("CLI-TFMULTI00001", fakebank_dir, llm)
 
         reply1, debug1 = await run_turn(session.graph, "quiero bloquear", config=session.config)
-        assert reply1.startswith("¿Cuál tarjeta quieres bloquear?\n")
-        assert "6475" in reply1
+        assert reply1 == "¿Cuál tarjeta quieres bloquear?"
         assert debug1.pending == "card_block.card_hint"
 
         reply2, debug2 = await run_turn(
             session.graph, "quero desbloquear meu cartão", config=session.config
         )
-        assert reply2.startswith("Qual cartão você quer desbloquear?\n")
+        assert reply2 == "Qual cartão você quer desbloquear?"
         assert debug2.pending == "card_unlock.card_hint"
         assert all(call.step != "compose" for call in llm.calls)
 

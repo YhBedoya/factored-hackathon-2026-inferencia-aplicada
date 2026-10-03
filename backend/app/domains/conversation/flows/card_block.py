@@ -24,18 +24,23 @@ from app.domains.cards.schemas import CardDetails
 from app.domains.conversation.flows.actions import (
     StepSpec,
     cancel,
+    closing,
     decision,
     execute,
     fill,
+    offer,
     start_plan,
+    with_closing,
 )
 from app.domains.conversation.flows.card_select import (
     Ask,
     Fallback,
     NoCards,
     ask_which_card_text,
+    block_candidate_ids,
     card_picker_event,
     load_card_select_policy,
+    next_step_offer_kind,
     select_card,
 )
 from app.domains.conversation.graph import GraphState
@@ -103,6 +108,8 @@ async def card_block(state: GraphState, config: RunnableConfig) -> dict[str, Any
         return await _resume_confirm(state, config)
     if node == "block_kind":
         return await _resume_block_kind(state, config)
+    if node == "offer":
+        return await _resume_offer(state, config)
     return await _select_card(state, config)
 
 
@@ -134,7 +141,25 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
-    outcome = select_card(cards, hint, failures, policy, language)
+    outcome = select_card(
+        cards,
+        hint,
+        failures,
+        policy,
+        language,
+        focus_card_id=state.get("selected_card_id"),
+        candidate_ids=block_candidate_ids(cards, policy),
+    )
+
+    # Every card is already blocked/locked/closed: say so and close, instead of
+    # the generic no-cards handoff (cards exist, there is just nothing to block).
+    if cards and (
+        isinstance(outcome, NoCards) or (isinstance(outcome, Ask) and not outcome.options)
+    ):
+        done = closing(language)
+        done["segments"] = [get_template("block_none_eligible", language), *done["segments"]]
+        done["clarification_failures"] = 0
+        return done
 
     if isinstance(outcome, Ask):
         update: dict[str, Any] = {
@@ -158,12 +183,21 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     # Selected: `block_kind` is either this turn's own or the one remembered
     # across the ask-which-card question above.
     update = {"selected_card_id": outcome.card_id, "clarification_failures": 0}
-    if block_kind is None:
-        update.update(_ask_block_kind(state, failures=0))
-        return update
     plan_update = await _check_state_and_plan(state, config, outcome.card_id, block_kind)
     update.update(plan_update)
     return update
+
+
+async def _resume_offer(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+    """The affirm/deny to the block offer `replacement` opens (D11, settled Q1,
+    Q2): affirm runs the normal path on the card already in focus (the picker
+    first when there is none); anything else shows the closing question."""
+    if decision(state) != "confirm":
+        return closing(state["language"])
+    card_id = state.get("selected_card_id")
+    if card_id is None:
+        return await _select_card(state, config)
+    return await _check_state_and_plan(state, config, card_id, None)
 
 
 async def _resume_block_kind(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -206,10 +240,11 @@ def _ask_block_kind(state: GraphState, *, failures: int) -> dict[str, Any]:
 
 
 async def _check_state_and_plan(
-    state: GraphState, config: RunnableConfig, card_id: str, block_kind: BlockKind
+    state: GraphState, config: RunnableConfig, card_id: str, block_kind: BlockKind | None
 ) -> dict[str, Any]:
-    """The policy check (already Blocked/Closed/locked), else start the plan
-    (D11). `block_kind` is remembered in `state["slots"]` so the "confirm"
+    """The state check (already Blocked/Closed/locked) before anything is
+    asked, then the lock-vs-block question or the plan (D11). `block_kind` is
+    remembered in `state["slots"]` so the "confirm"
     resume, whose own NLU only ever carries affirm/deny, still knows which
     tool to call.
     """
@@ -220,31 +255,58 @@ async def _check_state_and_plan(
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}
 
-    already = _already_state_label(details, block_kind, language)
+    already = await _already_in_state(details, block_kind, config, language)
     if already is not None:
-        text = fill(
-            get_template("already_in_state", language), card_last4=details.last4, state=already
-        )
-        return {
-            "pending": None,
-            "clarification_failures": 0,
-            "segments": [text],
-            **mark_segment("resolved"),
-        }
+        # Already in the requested state counts as resolved with no write (ADR-033),
+        # even when a next-step offer follows.
+        return {**already, **mark_segment("resolved")}
+    if block_kind is None:
+        return _ask_block_kind(state, failures=0)
 
     update = await _start_block_plan(state, config, details, block_kind)
     update["slots"] = NLUSlots(block_kind=block_kind)
     return update
 
 
-def _already_state_label(
-    details: CardDetails, block_kind: BlockKind, language: Language
-) -> str | None:
+async def _already_in_state(
+    details: CardDetails,
+    block_kind: BlockKind | None,
+    config: RunnableConfig,
+    language: Language,
+) -> dict[str, Any] | None:
+    """`already_in_state` plus the next-step offer, or `None` to go on (D1).
+
+    Blocked/Closed take the offer `next_step_offer_kind` picks (origin read
+    only for a Blocked card); a locked card asked to lock again offers the
+    unlock. Neither case shows the block-kind question.
+    """
+    kind: str | None
     if details.status in ("Blocked", "Closed"):
-        return status_label(details.status, language)
-    if block_kind == "temporary_lock" and details.locked:
-        return _LOCK_STATE_LABEL[language]
-    return None
+        label = status_label(details.status, language)
+        origin_kind = "none"
+        if details.status == "Blocked":
+            write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
+            try:
+                origin_kind = (
+                    await write_tools.get_block_origin(details.card_id, "card_block")
+                ).kind
+            except ToolUnavailable:
+                origin_kind = "none"
+        kind = next_step_offer_kind(
+            load_card_select_policy(), status=details.status, origin_kind=origin_kind
+        )
+    elif block_kind in (None, "temporary_lock") and details.locked:
+        label = _LOCK_STATE_LABEL[language]
+        kind = "unlock"
+    else:
+        return None
+
+    text = fill(get_template("already_in_state", language), card_last4=details.last4, state=label)
+    update: dict[str, Any] = {"pending": None, "clarification_failures": 0, "segments": [text]}
+    if kind is not None:
+        extra = offer(kind, language, details.last4)
+        update.update({**extra, "segments": [text, *extra["segments"]]})
+    return update
 
 
 async def _start_block_plan(
@@ -336,5 +398,6 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
             "node": "offer",
             "awaiting_slot": "offer_replacement",
         }
+        return update
 
-    return update
+    return with_closing(state, update)

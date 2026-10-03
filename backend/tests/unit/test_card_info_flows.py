@@ -40,7 +40,7 @@ from app.domains.localization import (
 )
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.min_payment import load_min_payment_policy, min_payment, next_due_date
-from tests.conftest import ScriptedLLM
+from tests.conftest import ScriptedLLM, strip_closing
 
 Country = Literal["MX", "CO", "AR"]
 
@@ -176,7 +176,7 @@ def test_credit_balance_due(
     if dpd:
         expected += " / " + format_days(dpd, language)
     expected += "\n\n" + get_template("synthetic_footnote", language)
-    assert reply == expected
+    assert strip_closing(reply, language) == expected
 
     # `currency`/`fx_rate`/`fx_as_of` never reach the LLM as placeholders (R6).
     compose_call = next(c for c in llm.calls if c.step == "compose")
@@ -217,7 +217,10 @@ def test_debit_balance(fakebank_dir: Path, language: Language) -> None:
     assert details.current_balance is not None
     balance_text = format_money(details.current_balance, "USD", "MX")
     balance_text += " " + mxn_estimate(details.current_balance, _MX_USD_MXN_FX, language)
-    assert reply == f"{kind_label('debit', language)} {mask_card(details.last4)} {balance_text}"
+    assert (
+        strip_closing(reply, language)
+        == f"{kind_label('debit', language)} {mask_card(details.last4)} {balance_text}"
+    )
 
     compose_call = next(c for c in llm.calls if c.step == "compose")
     assert "debit_balance" in compose_call.user
@@ -257,4 +260,4 @@ def test_inactive_customer_read_only(fakebank_dir: Path, language: Language) -> 
         f"\n\n{get_template('synthetic_footnote', language)}"
         f"\n\n{get_template('read_only_note', language)}"
     )
-    assert reply == expected
+    assert strip_closing(reply, language) == expected

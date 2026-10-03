@@ -22,7 +22,7 @@ from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.fakebank import FakeBank
 from app.domains.localization import format_date, local_today
 from app.domains.policy.min_payment import load_min_payment_policy, next_due_date
-from tests.conftest import ScriptedLLM, make_session
+from tests.conftest import ScriptedLLM, make_session, strip_closing
 
 
 def _config(ctx: ToolContext, bank_tools: FakeBank, llm: ScriptedLLM, thread_id: str) -> Any:
@@ -165,13 +165,81 @@ def test_block_then_balance_in_order(fakebank_dir: Path) -> None:
         )
         due_date_text = format_date(next_due_date(local_today("MX"), load_min_payment_policy()))
         parts = reply3.split("\n\n")
-        assert len(parts) == 3
+        assert len(parts) == 4
         assert "quedó bloqueada temporalmente a las" in parts[0]
         assert parts[1] == due_date_text
         assert parts[2] == get_template("synthetic_footnote", "es")
-        assert debug3.pending is None
+        assert parts[3] == get_template("closing_question", "es")
+        assert debug3.pending == "smalltalk.anything_else"
         state3 = await session.graph.aget_state(session.config)
         assert state3.values["intent_queue"] == []
         assert "PRD-TFM1CRED0001" in session.overlay.locked
+
+    asyncio.run(run())
+
+
+async def _closing_chips(session: Any) -> list[str]:
+    state = await session.graph.aget_state(session.config)
+    chips = [e for e in state.values["ui"] if e.kind == "quick_replies"]
+    assert [e.payload.slot for e in chips] == ["closing"]
+    return [o.label for o in chips[0].payload.options]
+
+
+def test_cancelled_confirmation_ends_with_closing_es(fakebank_dir: Path) -> None:
+    """A cancelled confirmation card still closes the flow with the question and chips."""
+
+    async def run() -> None:
+        llm = ScriptedLLM(
+            {
+                "nlu": [
+                    NLUResult(
+                        language="es",
+                        intents=["card_block"],
+                        status="clear",
+                        slots=NLUSlots(block_kind="temporary_lock"),
+                    )
+                ]
+            }
+        )
+        session = make_session("CLI-TFSINGLE0002", fakebank_dir, llm)
+        await run_turn(session.graph, "bloquea mi tarjeta", config=session.config)
+        state = await session.graph.aget_state(session.config)
+        token_id = state.values["confirmation_token_id"]
+
+        reply, debug = await run_turn(
+            session.graph,
+            "",
+            config=session.config,
+            confirmation=ConfirmationDecision(token_id=token_id, decision="cancel"),
+        )
+        assert strip_closing(reply, "es") == get_template("action_cancelled", "es")
+        assert debug.pending == "smalltalk.anything_else"
+        assert await _closing_chips(session) == ["Algo más", "Terminar"]
+        assert session.overlay.locked == set()
+
+    asyncio.run(run())
+
+
+def test_answered_status_query_ends_with_closing_pt(fakebank_dir: Path) -> None:
+    """An answered read-only query closes the flow with the question and chips."""
+
+    async def run() -> None:
+        llm = ScriptedLLM(
+            {
+                "nlu": [
+                    NLUResult(
+                        language="pt", intents=["card_status"], status="clear", slots=NLUSlots()
+                    )
+                ],
+                "compose": [ComposeDraft(text="Seu cartao {card_kind} {card_mask} esta {status}.")],
+            }
+        )
+        session = make_session("CLI-TFSINGLE0002", fakebank_dir, llm)
+        reply, debug = await run_turn(
+            session.graph, "qual e o status do meu cartao?", config=session.config
+        )
+        assert strip_closing(reply, "pt") == "Seu cartao Crédito •••• 2222 esta Ativo."
+        assert debug.pending == "smalltalk.anything_else"
+        assert await _closing_chips(session) == ["Mais alguma coisa", "Encerrar"]
 
     asyncio.run(run())

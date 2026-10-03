@@ -175,8 +175,7 @@ def test_widen_once_then_nothing_found_pt(fakebank_dir: Path) -> None:
 
         assert bank_tools.calls.count("search_transactions") == 2
         assert "Cine Premium" in reply
-        assert debug.pending is None
-        assert debug.ui == []
+        assert debug.pending == "smalltalk.anything_else"
 
     asyncio.run(run())
 

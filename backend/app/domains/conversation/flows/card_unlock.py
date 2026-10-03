@@ -5,8 +5,10 @@ what the customer can't self-service (D12, `02` §4.7).
 no slot yet (or `"card_select"`) runs the shared `card_select` sub-flow
 first; `"otp"` resumes the step-up pause (D1) -- only ever reached through
 `resume="step_up"`, never a typed message, since `route.py`'s `_answer_fits`
-has no `"otp"` case; `"confirm"` resumes the plan's confirm/cancel decision
-(D14).
+has no `"otp"` case; `"offer"` resumes the affirm/deny to the unlock offer
+`card_info`/`card_block` make (D1): "sí" runs the usual step-up and plan on
+the card already in focus, "no" shows the closing question; `"confirm"` resumes
+the plan's confirm/cancel decision (D14).
 
 `get_block_origin` decides everything past `card_select` (D8): a lock made
 in this session needs step-up before a plan can even be issued, a permanent
@@ -31,12 +33,14 @@ from app.core.errors import ToolUnavailable
 from app.domains.conversation.flows.actions import (
     StepSpec,
     cancel,
+    closing,
     decision,
     execute,
     fill,
     handoff,
     otp_pause,
     start_plan,
+    with_closing,
 )
 from app.domains.conversation.flows.card_select import (
     Ask,
@@ -81,6 +85,8 @@ async def card_unlock(state: GraphState, config: RunnableConfig) -> dict[str, An
         return await _resume_confirm(state, config)
     if node == "otp":
         return await _resume_otp(state, config)
+    if node == "offer":
+        return await _resume_offer(state, config)
     return await _select_card(state, config)
 
 
@@ -99,7 +105,9 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
         return {"escalation_reason": "tool_failure"}
 
     policy = load_card_select_policy()
-    outcome = select_card(cards, hint, failures, policy, language)
+    outcome = select_card(
+        cards, hint, failures, policy, language, focus_card_id=state.get("selected_card_id")
+    )
 
     if isinstance(outcome, Ask):
         return {
@@ -120,6 +128,16 @@ async def _select_card(state: GraphState, config: RunnableConfig) -> dict[str, A
     update: dict[str, Any] = {"selected_card_id": outcome.card_id, "clarification_failures": 0}
     update.update(await _check_status_and_origin(state, config, outcome.card_id))
     return update
+
+
+async def _resume_offer(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
+    """The affirm/deny to the unlock offer (D1, settled Q2): affirm continues
+    from the card already selected; deny shows the closing question instead of
+    leaving the customer at a dead end."""
+    card_id = state.get("selected_card_id")
+    if decision(state) == "confirm" and card_id is not None:
+        return await _check_status_and_origin(state, config, card_id)
+    return closing(state["language"])
 
 
 async def _check_status_and_origin(
@@ -267,7 +285,7 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
     async def call(card_id: str = card_id, token_id: str = token_id) -> ActionResult:
         return await bank_write_tools.unlock_card(card_id, token_id)
 
-    return await execute(
+    update = await execute(
         state,
         config,
         call,
@@ -275,3 +293,4 @@ async def _resume_confirm(state: GraphState, config: RunnableConfig) -> dict[str
         done_values={"result": _UNLOCK_STATE_LABEL[language]},
         card_last4=details.last4,
     )
+    return with_closing(state, update)

@@ -45,6 +45,24 @@ def _guess_language(text: str) -> Literal["es", "pt"]:
     return "pt" if _PT_MARKERS.search(text) else "es"
 
 
+def _is_typed_turn(state: GraphState) -> bool:
+    """A typed customer message worth remembering (naturalidad-cardy D3, A1).
+
+    Button, pick and step-up turns arrive with empty text. The replacement
+    address turn is skipped because its text is the raw new address, which the
+    runner's vault cannot mask (R5). Human mode is not the bot's conversation.
+    """
+    pending = state.get("pending")
+    return (
+        bool(state.get("user_text"))
+        and state.get("confirmation") is None
+        and state.get("selection") is None
+        and state.get("resume") is None
+        and state.get("mode") != "human"
+        and not (pending is not None and pending["awaiting_slot"] == "address")
+    )
+
+
 async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     """Bind `customer_id`/`country`/`customer_name` from the session and reset per-turn state."""
     configurable = config["configurable"]
@@ -61,7 +79,7 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
     has_classifier = configurable.get("classifier") is not None
     degraded = kill_switch and has_classifier
     reason = "llm_unavailable" if kill_switch and not has_classifier else None
-    return {
+    update: dict[str, Any] = {
         "actions_at_turn_start": len(state.get("actions", [])),
         "write_failed": False,
         "customer_id": session.customer_id,
@@ -80,3 +98,9 @@ async def load_session(state: GraphState, config: RunnableConfig) -> dict[str, A
         "language": state.get("language") or _guess_language(state.get("user_text", "")),
         "ui": [],
     }
+    if _is_typed_turn(state):
+        update["history"] = [
+            *(state.get("history") or []),
+            {"role": "customer", "text": state["user_text"]},
+        ]
+    return update

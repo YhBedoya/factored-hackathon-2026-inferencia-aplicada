@@ -10,6 +10,7 @@ from app.domains.conversation.nodes.next_intent import enqueue, finish, next_int
 from app.domains.conversation.nodes.relay import relay_to_agent
 from app.domains.conversation.nodes.route import route
 from app.domains.conversation.nodes.smalltalk import smalltalk
+from app.domains.conversation.nodes.summarize import summarize
 from app.domains.conversation.nodes.understand import run_nlu, understand
 from app.domains.conversation.nodes.unsupported import unsupported
 
@@ -27,6 +28,7 @@ __all__ = [
     "route",
     "run_nlu",
     "smalltalk",
+    "summarize",
     "understand",
     "unsupported",
 ]

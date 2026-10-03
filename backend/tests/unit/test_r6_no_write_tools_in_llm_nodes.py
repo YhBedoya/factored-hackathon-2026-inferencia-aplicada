@@ -133,3 +133,13 @@ def test_read_only_llm_surfaces_have_no_write_tools() -> None:
         if path == registry:
             continue
         assert '"judge"' not in path.read_text(encoding="utf-8"), path
+
+
+def test_r6_summarize_has_no_write_tools() -> None:
+    """naturalidad-cardy D3: `summarize` is an LLM node over conversation text, so
+    it must be inside the scan and reference no write tool."""
+    conversation_root = Path(__file__).resolve().parents[2] / "app" / "domains" / "conversation"
+    scanned = scan_llm_modules(conversation_root)
+    summarize = conversation_root / "nodes" / "summarize.py"
+    assert summarize in scanned
+    assert not scanned[summarize]

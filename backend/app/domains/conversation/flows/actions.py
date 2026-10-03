@@ -24,7 +24,7 @@ from app.core.errors import ConfirmationRequired, ToolUnavailable
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
-from app.domains.conversation.state import Fact, mark_segment
+from app.domains.conversation.state import Fact, Pending, mark_segment
 from app.domains.conversation.templates import Language, TemplateKind, get_template
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.ui import (
@@ -33,6 +33,9 @@ from app.domains.conversation.ui import (
     ConfirmStepView,
     OtpRequiredEvent,
     OtpRequiredPayload,
+    PickerOption,
+    QuickRepliesEvent,
+    QuickRepliesPayload,
 )
 from app.domains.handoff.schemas import HandoffReason
 from app.domains.localization.format import Queue, format_time
@@ -40,16 +43,24 @@ from app.domains.policy.confirmation import PlanStep, ToolArg
 from app.domains.policy.escalation import load_escalation_policy, rule_queue
 
 __all__ = [
+    "CLOSING_PAUSE",
+    "OFFER_BLOCK_PAUSE",
+    "OFFER_REPLACEMENT_PAUSE",
+    "OFFER_UNLOCK_PAUSE",
     "DoneValues",
     "StepSpec",
     "cancel",
+    "closing",
     "decision",
     "execute",
     "execute_plan",
     "fill",
     "handoff",
+    "offer",
+    "offer_pieces",
     "otp_pause",
     "start_plan",
+    "with_closing",
 ]
 
 DoneValues = Mapping[str, str] | Callable[[ActionResult], Mapping[str, str]]
@@ -57,6 +68,105 @@ DoneValues = Mapping[str, str] | Callable[[ActionResult], Mapping[str, str]]
 `action_done_noref`), or a function of the verified `ActionResult` (D13's
 `replacement`, whose `{reference} = tracking_id` is only known after the
 write returns)."""
+
+
+OFFER_REPLACEMENT_PAUSE: Pending = {
+    "flow": "replacement",
+    "node": "offer",
+    "awaiting_slot": "offer_replacement",
+}
+OFFER_UNLOCK_PAUSE: Pending = {
+    "flow": "card_unlock",
+    "node": "offer",
+    "awaiting_slot": "offer_unlock",
+}
+OFFER_BLOCK_PAUSE: Pending = {
+    "flow": "card_block",
+    "node": "offer",
+    "awaiting_slot": "offer_block",
+}
+# Same value as `smalltalk._ANYTHING_ELSE`, defined here because flows never
+# import from `nodes/`: with it open, "Terminar" closes and "Algo más" asks what else.
+CLOSING_PAUSE: Pending = {
+    "flow": "smalltalk",
+    "node": "anything_else",
+    "awaiting_slot": "anything_else",
+}
+
+_CLOSING_OPTIONS: dict[str, list[str]] = {
+    "es": ["Algo más", "Terminar"],
+    "pt": ["Mais alguma coisa", "Encerrar"],
+}
+
+
+def closing(language: Language) -> dict[str, Any]:
+    """The closing question with its "anything else / finish" buttons."""
+    return {
+        "pending": CLOSING_PAUSE,
+        "segments": [get_template("closing_question", language)],
+        "ui": [
+            QuickRepliesEvent(
+                kind="quick_replies",
+                payload=QuickRepliesPayload(
+                    slot="closing",
+                    options=[PickerOption(label=label) for label in _CLOSING_OPTIONS[language]],
+                ),
+            )
+        ],
+    }
+
+
+def with_closing(state: GraphState, update: dict[str, Any]) -> dict[str, Any]:
+    """Add the closing question after a verified `execute(...)` update.
+
+    A failure or handoff update carries no `actions`, so it never gets the
+    closing: the graph's failure path owns that reply.
+    """
+    if "actions" not in update:
+        return update
+    # `intent_queue` still holds this turn's intent (`next_intent` pops it), so
+    # more than one entry means a queued intent runs next: no closing then.
+    if len(state.get("intent_queue") or []) > 1:
+        return update
+    extra = closing(state["language"])
+    return {
+        **update,
+        "segments": [*update.get("segments", []), *extra["segments"]],
+        "pending": extra["pending"],
+        "ui": [*update.get("ui", []), *extra["ui"]],
+    }
+
+
+def offer_pieces(kind: str, language: Language) -> dict[str, Any]:
+    """An offer's pause and chips without its text, for `card_info`, whose
+    text `compose` appends (`next_step_offer` fact)."""
+    if kind == "replacement":
+        return {"pending": OFFER_REPLACEMENT_PAUSE}
+    if kind == "unlock":
+        return {"pending": OFFER_UNLOCK_PAUSE}
+    # "human": a chip only, no pause; tapping it sends the label as text.
+    return {
+        "ui": [
+            QuickRepliesEvent(
+                kind="quick_replies",
+                payload=QuickRepliesPayload(
+                    slot="next_step",
+                    options=[PickerOption(label=get_template("tx_human_option", language))],
+                ),
+            )
+        ]
+    }
+
+
+def offer(kind: str, language: Language, card_last4: str) -> dict[str, Any]:
+    """A next-step offer: its text (placeholders filled in code, R4) plus pieces."""
+    if kind == "replacement":
+        text = fill(get_template("offer_replacement", language), card_last4=card_last4)
+    elif kind == "unlock":
+        text = fill(get_template("offer_unlock", language), card_last4=card_last4)
+    else:
+        text = get_template("offer_human", language)
+    return {"segments": [text], **offer_pieces(kind, language)}
 
 
 def fill(template: str, **values: str) -> str:

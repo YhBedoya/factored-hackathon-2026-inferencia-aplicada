@@ -7,6 +7,7 @@ graph TD;
 	__start__([<p>__start__</p>]):::first
 	load_session(load_session)
 	understand(understand)
+	summarize(summarize)
 	smalltalk(smalltalk)
 	enqueue(enqueue)
 	card_info(card_info)
@@ -77,9 +78,9 @@ graph TD;
 	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
+	load_session -. &nbsp;understand&nbsp; .-> summarize;
 	load_session -.-> tx_explain;
 	load_session -.-> tx_search;
-	load_session -.-> understand;
 	load_session -.-> unrecognized_charge;
 	next_intent -.-> card_block;
 	next_intent -.-> card_info;
@@ -99,6 +100,7 @@ graph TD;
 	replacement -.-> handoff_summary;
 	replacement -.-> next_intent;
 	smalltalk --> finish;
+	summarize --> understand;
 	tx_explain -.-> compose;
 	tx_explain -.-> fallback;
 	tx_explain -.-> finish;

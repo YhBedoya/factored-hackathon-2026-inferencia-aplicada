@@ -21,8 +21,10 @@ from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
-from app.domains.conversation.graph import _MANAGEMENT_INTENTS, GraphState
+from app.domains.conversation.flows.actions import closing
+from app.domains.conversation.graph import _INTENT_NODES, _MANAGEMENT_INTENTS, GraphState
 from app.domains.conversation.state import RESET_FACTS
+from app.domains.conversation.templates import TemplateKind, template_variants
 from app.domains.policy.registry import get_policies
 
 __all__ = ["enqueue", "finish", "next_intent"]
@@ -74,9 +76,76 @@ def next_intent(state: GraphState) -> dict[str, Any]:
         update["escalation_reason"] = "llm_unavailable"
     if remaining:
         update["facts"] = RESET_FACTS
+    elif queue[0] in _INTENT_NODES and _closing_allowed({**state, "intent_queue": []}):
+        # The last queued flow just answered (a query, a cancel, a declined
+        # offer) and left nothing pending: close the flow with the question.
+        update.update(_closing_update(state))
     return update
 
 
 def finish(state: GraphState) -> dict[str, Any]:
-    """Join this turn's `segments` into the single `reply` output channel (D8)."""
-    return {"reply": "\n\n".join(state.get("segments") or [])}
+    """Join this turn's `segments` into the single `reply` output channel (D8).
+
+    Also appends the reply to `history` (naturalidad-cardy D3). It carries
+    tokens, not values, until the runner unmasks it. No trimming here:
+    `summarize` folds the overflow on the next typed turn. Human mode never
+    gets a bot reply to remember.
+    """
+    update: dict[str, Any] = {}
+    segments = list(state.get("segments") or [])
+    if _owes_closing(state):
+        # A verified action ran earlier this turn but its own closing was held
+        # back while intents were queued (`with_closing`); the queue has drained.
+        update = _closing_update(state)
+        segments += update["segments"]
+    reply = "\n\n".join(segments)
+    update["reply"] = reply
+    if reply and state.get("mode") != "human":
+        update["history"] = [*(state.get("history") or []), {"role": "cardy", "text": reply}]
+    return update
+
+
+# Replies that already ask the customer for something (no pause) or refuse an
+# access attempt: a cheerful "anything else?" after them would be wrong.
+_NO_CLOSING_KINDS: tuple[TemplateKind, ...] = ("tx_search_ask_criterion", "injection_suspected")
+
+
+def _closing_allowed(state: GraphState) -> bool:
+    """The skips shared by every closing: nothing else is waiting on the customer
+    and the reply doesn't already end by asking something.
+    """
+    if state.get("mode") == "human" or state.get("intent_queue"):
+        return False
+    if state.get("pending") is not None:
+        return False
+    if state.get("escalation_reason") is not None or state.get("handoff_queue") is not None:
+        return False
+    segments = state.get("segments") or []
+    if not segments:
+        return False
+    language = state["language"]
+    if any(segments[-1] in template_variants(kind, language) for kind in _NO_CLOSING_KINDS):
+        return False
+    # A chip row means the reply already asked (the human offer, abstain).
+    return not any(getattr(event, "kind", None) == "quick_replies" for event in state.get("ui", []))
+
+
+def _closing_update(state: GraphState) -> dict[str, Any]:
+    """`closing(...)` as a state update that keeps this turn's other ui events."""
+    extra = closing(state["language"])
+    return {
+        "segments": extra["segments"],
+        "pending": extra["pending"],
+        "ui": [*state.get("ui", []), *extra["ui"]],
+    }
+
+
+def _owes_closing(state: GraphState) -> bool:
+    """True when a verified action ran this turn but its own closing was held
+    back while intents were queued (`with_closing`); R3: no verified action,
+    no closing from here.
+    """
+    if not _closing_allowed(state):
+        return False
+    actions = state.get("actions", [])[state.get("actions_at_turn_start", 0) :]
+    return any(a.verified for a in actions)

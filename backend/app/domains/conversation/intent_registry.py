@@ -2,7 +2,7 @@
 
 `graph.py` builds its dispatch tables from it and the learned classifier's
 label set is read off it. The `Intent` Literal in `schemas.py` and the
-`nlu@v5` prompt's closed list stay check-only (`test_registry_consistency`).
+`nlu@v6` prompt's closed list stay check-only (`test_registry_consistency`).
 """
 
 from functools import lru_cache

@@ -146,6 +146,7 @@ The SSE stream runs its dependencies once, when it opens; expiry while it stays 
 
 The NLU gets a new slot `topic`, a closed enum from `policies/scope.yaml`. That file replaces `out_of_market.yaml`, covers both `out_of_scope` and `out_of_market` topics, and maps each topic to `{kind, reason_key, closest_intents[], human_queue}`. The composer may only use those keys. It never names channels, phone numbers or products that aren't in the YAML, and the grounding check applies. An abstain during a pending flow keeps `pending` and restates the pending question, the same as a digression. The answer node stays at if-time 5. Once it exists, `general_question` goes to it, and structured abstain remains for `out_of_scope` and `out_of_market`.
 **Alternatives:** a plain list of topics (the previous design); moving a minimal answer node up to if-time 1 (more natural sooner, but it adds tool-calling LLM work ahead of the other if-time items); a free LLM reply to out-of-scope questions (risks invented banking information).
+**Amendment (naturalidad-cardy):** `policies/scope.yaml` entries gain an optional `offer_human` field (default true). The `new_card` topic (a request for a new card, which is not a replacement) sets it to false: its reply is a fixed template that skips `compose`, offers no human and shows no human chip, because neither the chat nor a person can issue a new card. Every other topic keeps the four-part reply.
 
 ### ADR-027 — Plan confirmation: one confirmation for a multi-step action · Accepted
 **Context:** the suspected-compromise path asked for a confirmation per write (block, then claim), which felt bureaucratic at a stressful moment.
@@ -235,6 +236,7 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 
 **Why not decided yet:** both models tie on intent (F1 1.000). Haiku costs about 39% of Sonnet per call and misses one status on n=20, so the smoke set cannot separate them (the 95% intervals overlap widely). Proposed pass rate on the 5 `a-` cases was 100% (safe automated resolution 4/4) in every run, against 75% (3/4) for the baseline, which is also n-limited.
 **Status:** final after the held-out NLU comparison.
+**Amendment (naturalidad-cardy):** a new `summary` step summarizes the messages that leave the 6-message window. It runs on `claude-haiku-4-5-20251001` at temperature 0 with prompt `summary@v1`, because it only condenses already-masked text and Haiku is the cheapest model that does it. It adds at most one call per turn and never blocks a reply: on an `LLMError` the turn continues with the last 6 messages.
 
 ---
 

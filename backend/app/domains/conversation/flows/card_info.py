@@ -46,6 +46,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.errors import NotFound, ToolUnavailable
 from app.domains.cards.schemas import CardDetails
+from app.domains.conversation.flows.actions import offer_pieces
 from app.domains.conversation.flows.card_select import (
     Ask,
     NoCards,
@@ -53,12 +54,14 @@ from app.domains.conversation.flows.card_select import (
     ask_which_card_text,
     card_picker_event,
     load_card_select_policy,
+    next_step_offer_kind,
     select_card,
 )
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.schemas import Intent
 from app.domains.conversation.state import Fact
 from app.domains.conversation.tools import BankReadTools
+from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.localization import local_today
 from app.domains.policy.escalation import load_escalation_policy
 from app.domains.policy.min_payment import load_min_payment_policy, min_payment, next_due_date
@@ -68,6 +71,7 @@ __all__ = ["card_info"]
 _MIN_PAYMENT_SOURCE = "policy:min_payment@v1"
 _FX_SOURCE = "reference.get_fx_rate"
 _PROFILE_SOURCE = "customers.get_profile"
+_POLICY_SOURCE = "policies/card_select.yaml"
 
 
 def _current_intent(state: GraphState) -> Intent:
@@ -98,7 +102,14 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
             return {"escalation_reason": "tool_failure"}
 
         policy = load_card_select_policy()
-        outcome = select_card(cards, hint, failures, policy, state["language"])
+        outcome = select_card(
+            cards,
+            hint,
+            failures,
+            policy,
+            state["language"],
+            focus_card_id=state.get("selected_card_id"),
+        )
 
         if isinstance(outcome, Ask):
             return {
@@ -139,12 +150,49 @@ async def card_info(state: GraphState, config: RunnableConfig) -> dict[str, Any]
         return {"escalation_reason": "tool_failure"}
 
     facts = await _facts(intent, details, bank_tools, state)
-    return {
+    if details.locked and details.status == "Active":
+        # A temporary lock isn't a product status: without this the reply says
+        # "Activa" and then offers to unlock. `compose` formats `status` only
+        # through `status_label`, whose "Locked" label names the lock.
+        facts = [
+            Fact(key=f.key, value="Locked", source=f.source) if f.key == "status" else f
+            for f in facts
+        ]
+    update: dict[str, Any] = {
         "selected_card_id": card_id,
         "pending": None,
         "clarification_failures": 0,
-        "facts": facts,
     }
+    # D2/A2: the next step is offered on `card_status` only, because the
+    # `get_block_origin` allowlist has no `balance_due`.
+    if intent == "card_status":
+        kind = await _next_step_kind(details, config)
+        if kind is not None:
+            facts = [*facts, Fact(key="next_step_offer", value=kind, source=_POLICY_SOURCE)]
+            update.update(offer_pieces(kind, state["language"]))
+    update["facts"] = facts
+    return update
+
+
+async def _next_step_kind(details: CardDetails, config: RunnableConfig) -> str | None:
+    """The offer kind for a card that isn't plainly active, else `None` (D1).
+
+    The origin is read only when status is Blocked or the card is locked: any
+    other non-active status (Closed, Suspended) decides the kind by itself.
+    """
+    if details.status == "Active" and not details.locked:
+        return None
+    origin_kind = "none"
+    if details.status == "Blocked" or details.locked:
+        write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
+        try:
+            origin = await write_tools.get_block_origin(details.card_id, "card_status")
+        except ToolUnavailable:
+            return None
+        origin_kind = origin.kind
+    return next_step_offer_kind(
+        load_card_select_policy(), status=details.status, origin_kind=origin_kind
+    )
 
 
 async def _facts(

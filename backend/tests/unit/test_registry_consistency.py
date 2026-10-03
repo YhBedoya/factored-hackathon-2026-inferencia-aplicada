@@ -1,4 +1,4 @@
-"""D13: the intent registry, the `Intent` Literal and the `nlu@v5` prompt list agree."""
+"""D13: the intent registry, the `Intent` Literal and the `nlu@v6` prompt list agree."""
 
 import re
 import sys
@@ -24,7 +24,7 @@ from app.domains.conversation.intent_registry import (  # noqa: E402
 )
 from app.domains.conversation.schemas import Intent  # noqa: E402
 
-_PROMPT = _REPO_ROOT / "backend/app/domains/conversation/prompts/nlu@v5.md"
+_PROMPT = _REPO_ROOT / "backend/app/domains/conversation/prompts/nlu@v6.md"
 
 
 def _prompt_intents() -> set[str]:
@@ -63,6 +63,7 @@ def test_classifier_labels() -> None:
         "investments",
         "insurance",
         "transfers",
+        "new_card",
         "other",
     )
 
@@ -91,12 +92,19 @@ def test_every_classifier_intent_has_an_eval_item() -> None:
     assert not missing
 
 
+# Scope topics added after the served bundle was trained. The classifier loads
+# (its labels are a subset of the registry) but never predicts them until the
+# next retrain adds their training data; then drop them from this set.
+_NOT_YET_TRAINED = {"new_card"}
+
+
 def test_every_classifier_label_has_training_data_in_all_locales() -> None:
     data = _REPO_ROOT / "ml" / "intent" / "data"
     locales = ("es-mx", "es-co", "es-ar", "pt-br")
     missing = [
         f"{locale}/{label}.yaml"
         for label in classifier_labels()
+        if label not in _NOT_YET_TRAINED
         for locale in locales
         if not (data / locale / f"{label}.yaml").is_file()
     ]

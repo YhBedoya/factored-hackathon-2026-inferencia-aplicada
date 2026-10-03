@@ -69,7 +69,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
   "intents": ["card_block", "decline_explain"],
   "status": "clear | ambiguous | out_of_scope | out_of_market | injection_suspected",
   "slots": {
-    "card_hint": "credit | debit | last4:6475 | null",
+    "card_hint": "credit | debit | focus | last4:6475 | null",
     "block_kind": "temporary_lock | permanent_block | null",
     "date_expression": "el martes pasado",
     "merchant_text": "super ahorro",
@@ -77,7 +77,7 @@ The idempotency key for a confirmed step is `<token_id>:<step_index>`, with `ste
     "amount_approx": true,
     "currency": "COP | ARS | USD | MXN | null",
     "pending_answer": "affirm | deny | <slot value> | null",
-    "topic": "loans | accounts | investments | insurance | transfers | pix_boleto | other | null"
+    "topic": "loans | accounts | investments | insurance | transfers | pix_boleto | new_card | other | null"
   },
   "clarification": "lock_vs_block | which_card | which_transaction | null"
 }
@@ -157,7 +157,7 @@ class ConversationTimeline(BaseModel):  conversation: ConversationSummary; turns
 
 The `ui.confirm` payload is `{token_id, steps: [{tool, summary_key, facts}]}` (`ConfirmPayload`, `app/domains/conversation/ui.py`); the `ui.otp_required` payload is `{tool}` (`OtpRequiredPayload`), naming the action waiting on step-up. `ui.transaction_list` is `{options: [{tx_id, label}], multi: bool}`, each label `merchant · money · day-first date · •••• last4`, built in code (R4). The `•••• last4` part is left out when the row's product is not a card, for example a savings account (D7-B D19); `multi` is `true` for `unrecognized_charge`'s multi-select and `false` for `decline_explain`'s single-pick offer (D5-B D3) -- the frontend renders radio inputs instead of checkboxes when it is `false`, and the selection gate (above) accepts exactly one id. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}` (D4-A D12, D4-B D13).
 
-**Handoff deltas (D4-A):** `mode` is emitted at handoff (`human`, `null`), at claim (`human`, the agent's `display_name`) and at return (`bot`, `null`). `message.role = customer` is published only in human mode, as the relay for the agent, and the customer UI ignores its own echo; `agent` carries `agent_display_name`; `system` is the fixed `back_with_cardy` text at return. In human mode a customer turn emits `status`, the `customer` echo and `done`, with no bot `message` and no LLM call. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}`, with `queue_label` localized to the conversation language, all built in code; `case_ids` lists the claims the bot opened in the conversation before the handoff (empty otherwise). `ui.quick_replies.slot` is `block_kind | abstain | next_step`; for `abstain` the options are the closest action's label and the human offer, and clicking one sends its label as text. `next_step` (D5-B D7) is `decline_explain`'s own self-service offer (code 54 only): one option, the localized replacement action; tapping it sends that label as text, so NLU routes it as `replacement_request` on its own turn.
+**Handoff deltas (D4-A):** `mode` is emitted at handoff (`human`, `null`), at claim (`human`, the agent's `display_name`) and at return (`bot`, `null`). `message.role = customer` is published only in human mode, as the relay for the agent, and the customer UI ignores its own echo; `agent` carries `agent_display_name`; `system` is the fixed `back_with_cardy` text at return. In human mode a customer turn emits `status`, the `customer` echo and `done`, with no bot `message` and no LLM call. `ui.handoff_banner` is `{handoff_id, reference, queue, queue_label, case_ids}`, with `queue_label` localized to the conversation language, all built in code; `case_ids` lists the claims the bot opened in the conversation before the handoff (empty otherwise). `ui.quick_replies.slot` is `block_kind | abstain | next_step | closing`; for `abstain` the options are the closest action's label and the human offer, and clicking one sends its label as text. `next_step` (D5-B D7) is `decline_explain`'s own self-service offer (code 54 only): one option, the localized replacement action; tapping it sends that label as text, so NLU routes it as `replacement_request` on its own turn. `closing` follows a verified action or a declined offer: two options, "Algo más" / "Terminar" (PT "Mais alguma coisa" / "Encerrar"); tapping one sends its label as text, "Algo más" gets `ask_what_else` and "Terminar" the farewell plus `conversation_closed`.
 
 ## 4. Handoff packet (D3.5)
 
@@ -213,7 +213,7 @@ tools:
   cards.unlock_card:       {requires_confirmation: true,  step_up: always,               allowed_intents: [card_unlock]}
   cards.block_card:        {requires_confirmation: true,  step_up: never,                allowed_intents: [card_block, unrecognized_charge]}
   cards.order_replacement: {requires_confirmation: true,  step_up: when_address_changed, allowed_intents: [replacement_request]}
-  cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_unlock, replacement_request]}
+  cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_status, card_block, card_unlock, replacement_request]}   # safety-critical (ADR-018, D2)
   disputes.create_claim:   {requires_confirmation: true,  step_up: never,                allowed_intents: [unrecognized_charge]}   # D4-B D18
 
 # policies/transaction_states.yaml (D7-B D4): pending/reversed cause, next step and hold days
@@ -257,9 +257,15 @@ degraded_handoff_intents: [transaction_search, general_question, decline_explain
 unauthorized_access:  {attempts_before_handoff: 2}
 legal_keywords:      {es: [demanda, abogado, condusef, superfinanciera, bcra, ...], pt: [processo, advogado, procon, "banco central", ...]}
 
-# policies/scope.yaml (D4-A D8): one entry per Topic literal
+# policies/card_select.yaml (v3): block-picker eligibility, replacement eligibility and next-step offer by block origin
+card_block:      {eligible_statuses: [Active], exclude_locked: true}   # cards the block picker lists; a hint still resolves over every card
+replacement:     {eligible_origins: [customer_block]}   # an expired card is also eligible, checked in code
+next_step_offer: {customer_block: replacement, customer_lock: unlock, bank_side: human, suspended: human, closed: human}
+
+# policies/scope.yaml (D4-A D8; v2 adds offer_human and new_card): one entry per Topic literal
 topics:
-  <Topic>: {kind: out_of_market | out_of_scope, reason_key, closest_intents: [Intent], human_queue: Queue}
+  <Topic>: {kind: out_of_market | out_of_scope, reason_key, closest_intents: [Intent], human_queue: Queue, offer_human: bool (optional, default true)}
+  new_card: {kind: out_of_scope, reason_key: new_card_not_available, closest_intents: [], human_queue: atencion, offer_human: false}   # no human chip or offer
 ```
 
 Other files: `tools.yaml` (D2-B, extended by D3-A1), `escalation.yaml`, `disputes.yaml`, `min_payment.yaml` and `transaction_states.yaml` (D7-B D4) are shown above. `scope.yaml` (shown above; out-of-scope and out-of-market topics → `kind`, `reason_key`, `closest_intents[]`, `human_queue`; Pix, boleto and CPF are `kind: out_of_market`, ADR-026), `card_select.yaml` (eligible statuses for card selection), and the Stretch files (limits bounds, benefits catalog, retention offers).

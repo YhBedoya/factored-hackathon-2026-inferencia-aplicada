@@ -6,5 +6,5 @@ tools:
   cards.unlock_card:       {requires_confirmation: true,  step_up: always,               allowed_intents: [card_unlock]}
   cards.block_card:        {requires_confirmation: true,  step_up: never,                allowed_intents: [card_block, unrecognized_charge]}
   cards.order_replacement: {requires_confirmation: true,  step_up: when_address_changed, allowed_intents: [replacement_request]}
-  cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_unlock, replacement_request]}
+  cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_status, card_block, card_unlock, replacement_request]}
   disputes.create_claim:   {requires_confirmation: true,  step_up: never,                allowed_intents: [unrecognized_charge]}

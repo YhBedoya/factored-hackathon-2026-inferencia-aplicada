@@ -26,15 +26,19 @@ from app.domains.localization import kind_label, mask_card, status_label
 
 __all__ = [
     "Ask",
+    "CardBlockPolicy",
     "CardSelectPolicy",
     "CardStatusPolicy",
     "Fallback",
     "NoCards",
+    "ReplacementPolicy",
     "SelectOutcome",
     "Selected",
     "ask_which_card_text",
+    "block_candidate_ids",
     "card_picker_event",
     "load_card_select_policy",
+    "next_step_offer_kind",
     "select_card",
 ]
 
@@ -55,6 +59,27 @@ class CardStatusPolicy(BaseModel):
     eligible_statuses: list[CardStatus]
 
 
+class CardBlockPolicy(BaseModel):
+    """The `card_block` block: which cards the block picker lists."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    eligible_statuses: list[CardStatus]
+    exclude_locked: bool
+
+
+OriginKind = Literal["customer_block", "customer_lock", "bank_side", "suspended", "closed"]
+OfferKind = Literal["replacement", "unlock", "human"]
+
+
+class ReplacementPolicy(BaseModel):
+    """The `replacement` block: which block origins make a card replaceable."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    eligible_origins: list[Literal["customer_block"]]
+
+
 class CardSelectPolicy(BaseModel):
     """`policies/card_select.yaml`, validated (`04` §5, R8).
 
@@ -68,6 +93,9 @@ class CardSelectPolicy(BaseModel):
     provenance: Literal["team-generated-synthetic"]
     version: int
     card_status: CardStatusPolicy
+    card_block: CardBlockPolicy
+    replacement: ReplacementPolicy
+    next_step_offer: dict[OriginKind, OfferKind]
 
 
 class Selected(BaseModel):
@@ -141,6 +169,16 @@ def card_picker_event(outcome: Ask) -> CardPickerEvent:
     return CardPickerEvent(kind="card_picker", payload=CardPickerPayload(options=options))
 
 
+def block_candidate_ids(cards: list[CardSummary], policy: CardSelectPolicy) -> frozenset[str]:
+    """The cards `card_block`'s picker may list (R8: the rule is in the policy)."""
+    rule = policy.card_block
+    return frozenset(
+        c.card_id
+        for c in cards
+        if c.status in rule.eligible_statuses and not (rule.exclude_locked and c.locked)
+    )
+
+
 def load_card_select_policy(path: Path | None = None) -> CardSelectPolicy:
     """Load and validate `policies/card_select.yaml` (R8).
 
@@ -154,12 +192,40 @@ def load_card_select_policy(path: Path | None = None) -> CardSelectPolicy:
 
 def _build_card_options(cards: tuple[CardSummary, ...], language: Language) -> str:
     """`"Crédito •••• 6475 · Activa"` per option, one per line (`02` §4.1)."""
-    lines = [
-        f"{kind_label(card.kind, language)} {mask_card(card.last4)}"
-        f" · {status_label(card.status, language)}"
-        for card in cards
-    ]
+    # A temporary lock isn't a product status: an Active+locked card gets the
+    # "Locked" label, as `card_info` does, so the picker never says "Activa".
+    lines = []
+    for card in cards:
+        status = "Locked" if card.locked and card.status == "Active" else card.status
+        lines.append(
+            f"{kind_label(card.kind, language)} {mask_card(card.last4)}"
+            f" · {status_label(status, language)}"
+        )
     return "\n".join(lines)
+
+
+def next_step_offer_kind(
+    policy: CardSelectPolicy,
+    *,
+    status: CardStatus,
+    origin_kind: str,
+) -> OfferKind | None:
+    """Which next step to offer for a card (D1): status first, then block origin.
+
+    Closed and Suspended cards go to a person whatever the origin; otherwise the
+    origin picks the entry. An unknown origin (e.g. `none`) offers nothing.
+    """
+    if status == "Closed":
+        return policy.next_step_offer["closed"]
+    if status == "Suspended":
+        return policy.next_step_offer["suspended"]
+    if origin_kind == "customer_block":
+        return policy.next_step_offer["customer_block"]
+    if origin_kind == "customer_lock":
+        return policy.next_step_offer["customer_lock"]
+    if origin_kind == "bank_side":
+        return policy.next_step_offer["bank_side"]
+    return None
 
 
 def _resolve_hint(cards: list[CardSummary], hint: str) -> CardSummary | None:
@@ -186,6 +252,9 @@ def select_card(
     failures: int,
     policy: CardSelectPolicy,
     language: Language,
+    *,
+    focus_card_id: str | None = None,
+    candidate_ids: frozenset[str] | None = None,
 ) -> SelectOutcome:
     """Pick a card, ask again, or give up, exactly per D12.
 
@@ -193,8 +262,21 @@ def select_card(
     is the turn's `clarification_failures` coming in; `Ask.failures` and the
     `Fallback` case are what the caller writes back. `NoCards` is the no-hint,
     zero-eligible-cards case (all Closed, or no cards at all).
+
+    `hint == "focus"` resolves to `focus_card_id` only if that id is in `cards`
+    (R1: a foreign id never matches); otherwise it acts as no hint and counts no
+    failure (D9). `candidate_ids` replaces the status eligibility for the no-hint
+    branch only; a real hint still resolves over every card (D12).
     """
-    eligible = tuple(c for c in cards if c.status in policy.card_status.eligible_statuses)
+    if hint == "focus":
+        if focus_card_id is not None and any(c.card_id == focus_card_id for c in cards):
+            return Selected(card_id=focus_card_id)
+        hint = None
+
+    if candidate_ids is not None:
+        eligible = tuple(c for c in cards if c.card_id in candidate_ids)
+    else:
+        eligible = tuple(c for c in cards if c.status in policy.card_status.eligible_statuses)
 
     if hint is not None:
         match = _resolve_hint(cards, hint)

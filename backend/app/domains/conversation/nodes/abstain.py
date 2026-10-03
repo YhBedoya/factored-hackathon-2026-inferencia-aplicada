@@ -20,7 +20,7 @@ from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.nodes.compose import compose_reply_flagged
 from app.domains.conversation.state import Fact
-from app.domains.conversation.templates import Language, get_template
+from app.domains.conversation.templates import Language, get_template, template_variants
 from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
 from app.domains.policy.registry import get_policies
 
@@ -35,6 +35,7 @@ _TOPIC_LABELS: dict[str, dict[Language, str]] = {
     "insurance": {"es": "seguros", "pt": "seguros"},
     "transfers": {"es": "transferencias", "pt": "transferências"},
     "pix_boleto": {"es": "Pix y boletos", "pt": "Pix e boletos"},
+    "new_card": {"es": "tarjetas nuevas", "pt": "cartões novos"},
     "other": {"es": "eso", "pt": "isso"},
 }
 
@@ -114,10 +115,15 @@ async def _abstain(
     topic = nlu.slots.topic if nlu is not None and nlu.slots.topic else "other"
     entry = get_policies().scope.topics[topic]
 
+    if entry.reason_key == "new_card_not_available":
+        # Fixed wording, no compose call: the answer is a plain "not here".
+        return {"segments": [get_template("new_card_not_available", language)], "ui": []}, False
+
     topic_label = _TOPIC_LABELS[topic][language]
     reason = _REASONS[entry.reason_key][language]
     closest_action = _closest_action(entry.closest_intents, language)
-    human_offer = _HUMAN_OFFERS[language]
+    # A topic a person cannot help with (offer_human false) gets no human fact or chip.
+    human_offer = _HUMAN_OFFERS[language] if entry.offer_human else ""
 
     values = {
         "topic_label": topic_label,
@@ -136,17 +142,19 @@ async def _abstain(
         text, llm_failed = await compose_reply_flagged(
             llm, language=language, country=state["country"], goal="abstain", facts=facts
         )
-    if text == get_template("fallback", language):
+    if text in template_variants("fallback", language):
+        # The closest action and the human offer are chips, not words in the text.
         text = get_template("abstain_fallback", language).format(
-            topic_label=topic_label,
-            reason=reason,
-            closest_action=closest_action,
-            human_offer=human_offer,
+            topic_label=topic_label, reason=reason
         )
         text = re.sub(r"\s+", " ", text).strip()
 
     labels = [closest_action] if closest_action else []
-    options = [PickerOption(label=label) for label in [*labels, human_offer]]
+    if human_offer:
+        labels.append(human_offer)
+    if not labels:
+        return {"segments": [text], "ui": []}, llm_failed
+    options = [PickerOption(label=label) for label in labels]
     update = {
         "segments": [text],
         "ui": [
