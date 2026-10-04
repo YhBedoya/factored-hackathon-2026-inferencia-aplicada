@@ -54,7 +54,7 @@ export function StaffNav() {
 	async function handleLogout() {
 		await staffLogout();
 		queryClient.removeQueries({ queryKey: ["staff"] });
-		await navigate({ to: "/staff/login" });
+		await navigate({ to: "/" });
 	}
 
 	return (

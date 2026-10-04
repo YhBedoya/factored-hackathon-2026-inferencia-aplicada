@@ -21,6 +21,7 @@ __all__ = [
     "COUNTRY_LABELS",
     "LoginProfile",
     "build_known_pii",
+    "get_display_names",
     "get_document",
     "get_known_pii",
     "get_login_profile",
@@ -108,3 +109,10 @@ async def get_document(customer_id: str) -> tuple[str, str]:
     if row is None:
         raise ToolUnavailable(f"no profile for customer {customer_id!r}")
     return row["document_type"], row["document_number"]
+
+
+async def get_display_names(customer_ids: list[str]) -> dict[str, str]:
+    """Full names for the judges' demo catalog (ADR-036). Rendered in the
+    UI only, never logged; an id with no row is left out.
+    """
+    return await repository.fetch_display_names(customer_ids)

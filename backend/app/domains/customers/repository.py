@@ -22,7 +22,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.db import get_engine
 from app.core.errors import ToolUnavailable
 
-__all__ = ["fetch_document", "fetch_known_pii", "fetch_login_profile", "fetch_profile"]
+__all__ = [
+    "fetch_display_names",
+    "fetch_document",
+    "fetch_known_pii",
+    "fetch_login_profile",
+    "fetch_profile",
+]
 
 
 async def _fetch_one(sql: str, params: dict[str, Any]) -> RowMapping | None:
@@ -92,3 +98,30 @@ async def fetch_document(customer_id: str) -> RowMapping | None:
         """,
         {"customer_id": customer_id},
     )
+
+
+async def fetch_display_names(customer_ids: list[str]) -> dict[str, str]:
+    """`customer_id -> "first_name last_name"` for the judges' demo catalog
+    (ADR-036) only; ids with no row are left out.
+    """
+    try:
+        async with get_engine().connect() as conn:
+            result = await conn.execute(
+                text(
+                    """
+                    SELECT customer_id, first_name, last_name
+                    FROM bank.customers
+                    WHERE customer_id = ANY(:customer_ids)
+                    """
+                ),
+                {"customer_ids": customer_ids},
+            )
+            rows = result.mappings().all()
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"customers query failed: {exc}") from exc
+    return {
+        row["customer_id"]: " ".join(
+            part.strip() for part in (row["first_name"], row["last_name"]) if part and part.strip()
+        )
+        for row in rows
+    }

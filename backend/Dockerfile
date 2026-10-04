@@ -20,6 +20,7 @@ RUN uv sync --frozen --no-group ml
 # Personas come from the `eval` named build context (compose
 # `additional_contexts`), since `eval/` sits outside the backend context.
 COPY --from=eval personas.yaml /app/eval/personas.yaml
+COPY --from=eval demo_personas.yaml /app/eval/demo_personas.yaml
 
 # Intent-classifier bundle from the `intent` named context (compose
 # `additional_contexts`): `model.lock` next to `models/`, as the loader expects.
