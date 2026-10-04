@@ -173,7 +173,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 |---|---|
 | `JWT_SECRET`, `IDENTITY_HMAC_KEY`, `CREDENTIALS_SEED` | SSM SecureString. The seed must equal the one behind the credentials sent to the judges |
 | `DEMO_OTP_CODE` | SSM SecureString (ADR-008) |
-| `DEMO_QUICK_LOGIN`, `DEMO_REPO_URL`, `DEMO_DOCS_URL` | Plain values (ADR-036). `DEMO_QUICK_LOGIN=true` only for the judging window: it opens one-click login as 10 demo personas and as admin, and shows `DEMO_OTP_CODE` on the landing page |
+| `DEMO_QUICK_LOGIN`, `DEMO_REPO_URL`, `DEMO_DOCS_URL` | Plain values in `.env.prod.example` (ADR-036). `DEMO_QUICK_LOGIN=true` only for the judging window: it opens one-click login as 10 demo personas and as admin, and shows `DEMO_OTP_CODE` on the landing page |
 | `PII_VAULT_KEY` | SSM SecureString at `/swip/prod/PII_VAULT_KEY`, a Fernet key. Losing it makes the vault rows and the encrypted message content unreadable, so back it up with the other secrets |
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
 | `ANALYTICS_DB_PASSWORD` | SSM SecureString at `/swip/prod/ANALYTICS_DB_PASSWORD`. Password of the Postgres role `analytics_worker`; migration `0009` reads it to set the role's password. `ANALYTICS_DATABASE_URL` is built from it in Compose |
@@ -211,7 +211,7 @@ A laptop-side wrapper **(proposed: `make deploy-remote`)** runs the same thing t
 - IMDSv2 only. The role is least-privilege (§4). There are no long-lived AWS keys on the box or in the repo.
 - Postgres, Redis, Grafana and the Victoria services are bound to localhost and blocked by the security group.
 - `APP_ENV=prod` turns off `/test-idp` and turns on `Secure` cookies. JWTs are in httpOnly cookies with CSRF protection (ADR-008).
-- `DEMO_QUICK_LOGIN=true` mounts the public `/demo/*` routes, which log in as 10 curated personas or as admin without a password (ADR-036). Turn it on only for the judging window.
+- `DEMO_QUICK_LOGIN=true` mounts the public `/demo/*` routes, which log in as 10 curated personas or as admin without a password (ADR-036). Turn it on only for the judging window. Prod also sets `DEMO_RESET_ENABLED=false`, so that public admin can't call `POST /admin/demo/reset` (a DB wipe and about 3 minutes of downtime); the operator resets on the box with `make demo-reset`.
 - Secrets live in SSM SecureStrings and a `0600` `.env`. The data bucket is private and encrypted.
 - Cost guard (ADR-023): a Budgets alarm here, and the turn caps and `LLM_DISABLED` kill switch on D6.
 - Staff panel protection: **decided (D4-A, ADR-008 amended 2026-09-28).** Seeded staff accounts (one agent per handoff queue plus one admin) log in with `POST /auth/staff/login`, get the same httpOnly cookie + CSRF session with role `agent` or `admin`, and every `/staff/*` and `/admin/*` router declares `require_role` (R13). Staff passwords derive from `CREDENTIALS_SEED`, so a rebuilt box keeps them.

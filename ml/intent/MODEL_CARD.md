@@ -63,7 +63,7 @@ End to end (report section 7): with the classifier loaded, 8 degraded scenarios 
 12. scikit-learn is pinned `>=1.6` (locked 1.9.1), with no load-time version check against the bundle manifest. Decided: the loader refuses any bundle that fails to unpickle and the app then hands off. Silent behaviour drift across library versions is not detected.
 13. The bundle manifest records no library versions (keys: candidate, data_sha256, data_version, embedding_model, hyperparameters, label_set_version, labels, model_id, seed, tau).
 14. No training item contains a runtime mask token (`⟨KIND_n⟩`), while served text is masked and can contain them. Behaviour on masked tokens is untested.
-15. S3 storage is deferred to deploy. The bundle lives in `ml/intent/models/` (git-ignored), pinned by sha256 in `ml/intent/model.lock`.
+15. The bundle is committed in `ml/intent/models/` (ADR-032 amended 2026-10-04, no S3), pinned by sha256 in `ml/intent/model.lock`. A retrain must commit the new bundle together with the new `model.lock`.
 
 ## Retrain and pin
 

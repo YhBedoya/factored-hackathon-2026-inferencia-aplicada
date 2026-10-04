@@ -9,9 +9,11 @@ data/
 # ...except the committed intent-classifier training data (ml/intent/)
 !ml/intent/data/
 
-# Intent classifier bundles and model caches are never committed (D12)
+# Model caches are never committed (D12). The pinned bundle is (ADR-032 amended
+# 2026-10-04): `intent-compare` keeps only the one `model.lock` names.
 ml/intent/models/*
 !ml/intent/models/.gitkeep
+!ml/intent/models/*.tar.gz
 ml/intent/.cache/
 
 # Python
