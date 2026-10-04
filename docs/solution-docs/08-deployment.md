@@ -173,7 +173,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 |---|---|
 | `JWT_SECRET`, `IDENTITY_HMAC_KEY`, `CREDENTIALS_SEED` | SSM SecureString. The seed must equal the one behind the credentials sent to the judges |
 | `DEMO_OTP_CODE` | SSM SecureString (ADR-008) |
-| `DEMO_QUICK_LOGIN`, `DEMO_REPO_URL`, `DEMO_DOCS_URL` | Plain values (ADR-036). `DEMO_QUICK_LOGIN=true` only for the judging window: it opens one-click login as 10 demo personas and as admin, and shows `DEMO_OTP_CODE` on the landing page |
+| `DEMO_QUICK_LOGIN`, `DEMO_REPO_URL`, `DEMO_DOCS_URL` | Plain values in `.env.prod.example` (ADR-036). `DEMO_QUICK_LOGIN=true` only for the judging window: it opens one-click login as 10 demo personas and as admin, and shows `DEMO_OTP_CODE` on the landing page |
 | `PII_VAULT_KEY` | SSM SecureString at `/swip/prod/PII_VAULT_KEY`, a Fernet key. Losing it makes the vault rows and the encrypted message content unreadable, so back it up with the other secrets |
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
 | `ANALYTICS_DB_PASSWORD` | SSM SecureString at `/swip/prod/ANALYTICS_DB_PASSWORD`. Password of the Postgres role `analytics_worker`; migration `0009` reads it to set the role's password. `ANALYTICS_DATABASE_URL` is built from it in Compose |
