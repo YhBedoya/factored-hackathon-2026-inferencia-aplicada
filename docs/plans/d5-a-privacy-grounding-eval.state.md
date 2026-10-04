@@ -318,15 +318,16 @@ Set `PUBLIC_HOST` (step 2) to the Elastic IP with dashes + `.sslip.io`.
 ```bash
 cd /opt/swip && git checkout main && git pull --ff-only
 bash infra/aws/render-env.sh
-docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml up -d postgres redis
+docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml up -d postgres redis
 make data      # ingest -> dbt -> load -> seed-identity -> golden -> demo-reset; already applies 0007 on latam_golden
 ```
 `make data` runs the box-side `seed-identity`; the agent never runs it.
+Every prod compose call needs the observability file too (the prod overlay overrides `grafana`, defined only there). `docker compose ...` below means these same three `-f` files (`COMPOSE_PROD` in the Makefile).
 
 **Step 5. Certificate (08 §8).** Staging first, then production, via the compose `certbot` service (HTTP-01 webroot shared with nginx).
 ```bash
 # staging: add --staging, expect success, then remove it
-docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.prod.yml run --rm --entrypoint certbot certbot \
+docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml run --rm --entrypoint certbot certbot \
   certonly --webroot -w /var/www/certbot -d <EIP_WITH_DASHES>.sslip.io --staging --agree-tos -m <CERT_EMAIL> --non-interactive
 # production (only after staging passed; use --force-renewal to replace the staging cert)
 docker compose ... run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot \
