@@ -211,7 +211,7 @@ A laptop-side wrapper **(proposed: `make deploy-remote`)** runs the same thing t
 - IMDSv2 only. The role is least-privilege (§4). There are no long-lived AWS keys on the box or in the repo.
 - Postgres, Redis, Grafana and the Victoria services are bound to localhost and blocked by the security group.
 - `APP_ENV=prod` turns off `/test-idp` and turns on `Secure` cookies. JWTs are in httpOnly cookies with CSRF protection (ADR-008).
-- `DEMO_QUICK_LOGIN=true` mounts the public `/demo/*` routes, which log in as 10 curated personas or as admin without a password (ADR-036). Turn it on only for the judging window.
+- `DEMO_QUICK_LOGIN=true` mounts the public `/demo/*` routes, which log in as 10 curated personas or as admin without a password (ADR-036). Turn it on only for the judging window. Prod also sets `DEMO_RESET_ENABLED=false`, so that public admin can't call `POST /admin/demo/reset` (a DB wipe and about 3 minutes of downtime); the operator resets on the box with `make demo-reset`.
 - Secrets live in SSM SecureStrings and a `0600` `.env`. The data bucket is private and encrypted.
 - Cost guard (ADR-023): a Budgets alarm here, and the turn caps and `LLM_DISABLED` kill switch on D6.
 - Staff panel protection: **decided (D4-A, ADR-008 amended 2026-09-28).** Seeded staff accounts (one agent per handoff queue plus one admin) log in with `POST /auth/staff/login`, get the same httpOnly cookie + CSRF session with role `agent` or `admin`, and every `/staff/*` and `/admin/*` router declares `require_role` (R13). Staff passwords derive from `CREDENTIALS_SEED`, so a rebuilt box keeps them.

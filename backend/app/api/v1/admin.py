@@ -1,6 +1,7 @@
 """Admin routes (D4-A D16), all under `/admin` and restricted to role `admin`.
 
-T25 adds `POST /admin/demo/reset` (`{status: "reset", duration_ms}`).
+T25 adds `POST /admin/demo/reset` (`{status: "reset", duration_ms}`). With
+`DEMO_RESET_ENABLED=false` (prod) it is `404 not_found`.
 
 The router declares `require_role("admin")` and `require_csrf` at the router
 level (R13, ADR-025), so an agent session gets `403 forbidden_role`.
@@ -9,7 +10,7 @@ See `docs/specs/d4-a-escalation-handoff-deploy.md` D16 and "Contracts" ->
 "Staff API".
 """
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from app.core.config import get_settings
@@ -38,6 +39,8 @@ async def demo_reset(request: Request) -> DemoResetResponse:
     the turn host is closed first and reopened in `finally`: a failed reset
     must not leave the app without a host. The failure then propagates as a 500.
     """
+    if not get_settings().demo_reset_enabled:
+        raise HTTPException(status_code=404, detail="not_found")
     old_host = request.app.state.turn_host
     await close_host(old_host)
     try:
