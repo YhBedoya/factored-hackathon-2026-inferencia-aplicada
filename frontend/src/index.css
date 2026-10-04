@@ -20,6 +20,11 @@
 	--color-alert: #ff6b6b;
 	/* Banking home only ("Swip Panel" design): approved movements and income. */
 	--color-ok: #5cd69a;
+	/* Staff case screen only ("Swip Staff Caso" design): the recessed chat
+	 * background and inputs (`surface`), and Cardy's bubble and the pending
+	 * case-summary row (`cyan-deep`). */
+	--color-surface: #0b1328;
+	--color-cyan-deep: #0f3440;
 	--font-heading: "Plus Jakarta Sans", sans-serif;
 	--font-sans: "Inter", sans-serif;
 }
