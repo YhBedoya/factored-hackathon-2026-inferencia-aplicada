@@ -226,6 +226,17 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 - **Round cap (D3).** When the loop uses its 6 rounds, code cancels any open plan and hands off with the new reason `agent_round_cap`, which shows the existing `handoff_transfer` text. *Why:* a bounded loop (R11) must end in a safe fallback and a handoff, never an invented answer.
 **Alternatives:** keep ADR-002 unchanged (no free conversation across flows); let the agent hold the write tools behind a confirmation prompt (breaks R6); confirm by typed text on the agent path (ambiguous); retry past the cap (unbounded).
 
+### ADR-036 — Judges' quick access behind a flag · Accepted (2026-10-04)
+**Context:** ADR-008 sends the judges persona credentials and the OTP code by email. Typing a document number and a generated password for each persona slows down judges who want to try several cases and the staff panel.
+**Decision:** amends ADR-008. With `DEMO_QUICK_LOGIN=true`, `create_app()` mounts three public routes under `/api/v1/demo`. The landing page shows an "Acceso evaluadores" button in its top-left corner only when they answer.
+- `GET /demo/catalog` lists 10 curated personas from `eval/demo_personas.yaml`. Each shows its name from the DB, country, trait chips, what it is good for and suggested prompts in ES and PT. The response also carries `DEMO_OTP_CODE` and the `DEMO_REPO_URL`/`DEMO_DOCS_URL` links.
+- `POST /demo/sessions/customer {persona_id}` opens a customer session without a password, but only for an id in that file. Every id there must be a `dev` persona of `personas.yaml`, and the route takes no `customer_id` (R1).
+- `POST /demo/sessions/staff` opens a session for the seeded `admin`.
+
+No password ever reaches the browser. The flag is off by default, and `test_demo_access.py` asserts the routes are absent without it.
+**Risk:** while the flag is on, anyone who reaches the URL can enter as those 10 personas or as admin and change their demo data. *Mitigation:* the data is synthetic, the flag is on only for the judging window, and `POST /admin/demo/reset` restores the golden DB.
+**Alternatives:** keep credentials by email only (slower to evaluate); prefill the login forms (sends passwords to the browser); reuse `/test-idp` in prod (takes any `customer_id`, breaks R1).
+
 ### D3-A D4 — Step-up validity window · Resolved
 **Decision:** `policies/tools.yaml`'s `step_up_window_minutes: 5` sets `SessionStepUpGate`'s window (valid when `now - session.step_up_at <= window`). An open confirmation plan is not tied to the session: it dies at its own 5-minute Redis TTL (ADR-027) regardless of session state, and `POST /conversations/{id}/confirmations/{token_id}` returns `401` once the session itself has expired, before the plan is even looked at.
 **Why:** resolves the "Step-up validity window" item below, decided while building the D3-A step-up flow (ADR-025) as planned. See spec `docs/specs/d3-a-guardrails-write-path.md` D4.

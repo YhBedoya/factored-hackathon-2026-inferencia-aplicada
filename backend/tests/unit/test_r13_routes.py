@@ -95,6 +95,9 @@ def _role_guard_roles(ctx: routing.RouteContext) -> list[tuple[str, ...]]:
 
 def test_every_route_declares_role_and_ownership(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "dev")
+    # The judges' quick-access routes are public by design (ADR-036) and only
+    # mounted behind this flag; keep a developer's local `.env` from adding them.
+    monkeypatch.setenv("DEMO_QUICK_LOGIN", "false")
     get_settings.cache_clear()
     try:
         from app.main import create_app

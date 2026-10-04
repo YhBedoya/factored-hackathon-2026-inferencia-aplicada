@@ -1,0 +1,122 @@
+# Judges' quick-access catalog (ADR-036): the 10 personas the landing page's
+# "Acceso evaluadores" panel lists when DEMO_QUICK_LOGIN=true.
+#
+# Every `customer_id` must be a `split: dev` persona in `personas.yaml` --
+# `demo_access.load_demo_catalog()` refuses anything else, so this file can't
+# open a door to an arbitrary customer or to a held-out persona. Traits come
+# from `personas.yaml`; this file only adds what each persona is good for
+# (`purpose`) and a few things to try (`prompts`), in Spanish and Portuguese.
+# No PII here (R10): the display name is read from the DB at request time.
+personas:
+  - customer_id: CLI-U6NAXZG11P97
+    purpose:
+      es: Dos tarjetas (crédito y débito). Ideal para consultar saldo, pago mínimo y bloquear una tarjeta.
+      pt: Dois cartões (crédito e débito). Ideal para consultar saldo, pagamento mínimo e bloquear um cartão.
+    prompts:
+      es:
+        - ¿Cuánto debo en mi tarjeta de crédito y cuándo vence el pago?
+        - Perdí mi tarjeta de débito, bloquéala por favor.
+        - ¿Cuál es el pago mínimo de este mes?
+      pt:
+        - Quanto devo no meu cartão de crédito e quando vence o pagamento?
+        - Perdi meu cartão de débito, bloqueia por favor.
+        - Qual é o pagamento mínimo deste mês?
+  - customer_id: CLI-UZ7Z6C3JFXGX
+    purpose:
+      es: Tarjeta de crédito bloqueada por el banco. Muestra el traspaso a un agente de Fraudes.
+      pt: Cartão de crédito bloqueado pelo banco. Mostra o encaminhamento para um agente de Fraudes.
+    prompts:
+      es:
+        - ¿Por qué está bloqueada mi tarjeta?
+        - Quiero desbloquear mi tarjeta de crédito.
+      pt:
+        - Por que meu cartão está bloqueado?
+        - Quero desbloquear meu cartão de crédito.
+  - customer_id: CLI-2FKTNVMZ3HVH
+    purpose:
+      es: Tarjeta de crédito en mora. Muestra el traspaso a un agente de Cobranza.
+      pt: Cartão de crédito em atraso. Mostra o encaminhamento para um agente de Cobrança.
+    prompts:
+      es:
+        - ¿Por qué no puedo usar mi tarjeta?
+        - ¿Cuánto tengo que pagar para ponerme al día?
+      pt:
+        - Por que não consigo usar meu cartão?
+        - Quanto preciso pagar para ficar em dia?
+  - customer_id: CLI-AO5PZVMZCL1V
+    purpose:
+      es: Cliente inactivo con tarjetas activas. Solo lectura; desbloqueo y reposición pasan a Atención.
+      pt: Cliente inativo com cartões ativos. Somente leitura; desbloqueio e reposição vão para o Atendimento.
+    prompts:
+      es:
+        - Muéstrame mis tarjetas.
+        - Quiero pedir una reposición de mi tarjeta de débito.
+      pt:
+        - Mostra meus cartões.
+        - Quero pedir a reposição do meu cartão de débito.
+  - customer_id: CLI-F7PQP3J4AS6X
+    purpose:
+      es: Tres tarjetas de crédito y un rechazo reciente (código 05). Para explicar un rechazo.
+      pt: Três cartões de crédito e uma recusa recente (código 05). Para explicar uma recusa.
+    prompts:
+      es:
+        - Me rechazaron una compra, ¿por qué?
+        - ¿Qué significa el rechazo de mi última compra?
+      pt:
+        - Minha compra foi recusada, por quê?
+        - O que significa a recusa da minha última compra?
+  - customer_id: CLI-5RJITZ5VLJGY
+    purpose:
+      es: Dos tarjetas de débito y un rechazo reciente por fondos insuficientes (código 51).
+      pt: Dois cartões de débito e uma recusa recente por saldo insuficiente (código 51).
+    prompts:
+      es:
+        - ¿Por qué rechazaron mi pago con la tarjeta de débito?
+        - ¿Cuánto saldo tengo disponible?
+      pt:
+        - Por que meu pagamento com o cartão de débito foi recusado?
+        - Quanto saldo tenho disponível?
+  - customer_id: CLI-001AVI5RHIYA
+    purpose:
+      es: Tiene una transacción pendiente. Para preguntar por un cargo que aún no aparece.
+      pt: Tem uma transação pendente. Para perguntar por uma cobrança que ainda não aparece.
+    prompts:
+      es:
+        - Tengo un cargo pendiente, ¿qué pasa con él?
+        - Muéstrame mis últimos movimientos.
+      pt:
+        - Tenho uma cobrança pendente, o que acontece com ela?
+        - Mostra minhas últimas movimentações.
+  - customer_id: CLI-1B7XH7IDPE2N
+    purpose:
+      es: Tiene una transacción reversada. Para preguntar por un reembolso o un cargo anulado.
+      pt: Tem uma transação estornada. Para perguntar por um reembolso ou uma cobrança anulada.
+    prompts:
+      es:
+        - Me devolvieron un cargo, ¿por qué?
+        - Quiero disputar un cargo que no reconozco.
+      pt:
+        - Uma cobrança foi estornada, por quê?
+        - Quero contestar uma cobrança que não reconheço.
+  - customer_id: CLI-1GS3I085CUFD
+    purpose:
+      es: Tarjeta que vence en menos de 90 días. Para preguntar por la renovación.
+      pt: Cartão que vence em menos de 90 dias. Para perguntar pela renovação.
+    prompts:
+      es:
+        - ¿Cuándo vence mi tarjeta?
+        - ¿Me van a enviar una tarjeta nueva?
+      pt:
+        - Quando vence meu cartão?
+        - Vocês vão me enviar um cartão novo?
+  - customer_id: CLI-8U06DH6VYHA3
+    purpose:
+      es: Tres tarjetas, una bloqueada. Para elegir entre varias tarjetas y pedir un agente humano.
+      pt: Três cartões, um bloqueado. Para escolher entre vários cartões e pedir um agente humano.
+    prompts:
+      es:
+        - ¿Cuál de mis tarjetas está bloqueada?
+        - Quiero hablar con una persona.
+      pt:
+        - Qual dos meus cartões está bloqueado?
+        - Quero falar com uma pessoa.

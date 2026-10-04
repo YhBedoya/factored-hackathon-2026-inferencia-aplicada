@@ -519,3 +519,62 @@ export async function getAnalyticsSummary(
 	);
 	return unwrap(result);
 }
+
+// ADR-036: the judges' quick access. The `/demo/*` routes are mounted only
+// when the backend runs with `DEMO_QUICK_LOGIN=true`, so they are not in the
+// generated SDK (`make client` would only see them with the flag on); these
+// wrap them by hand. A login takes a `persona_id`, never a `customer_id` (R1).
+export type DemoChip =
+	| "credit"
+	| "debit"
+	| "blocked"
+	| "inactive"
+	| "suspended"
+	| "recent_decline"
+	| "pending_tx"
+	| "reversed_tx"
+	| "expiring_card";
+
+export type DemoPersona = {
+	persona_id: string;
+	display_name: string;
+	country: "MX" | "CO" | "AR";
+	card_count: number;
+	chips: DemoChip[];
+	purpose: Record<Lang, string>;
+	prompts: Record<Lang, string[]>;
+};
+
+export type DemoCatalog = {
+	personas: DemoPersona[];
+	otp_code: string | null;
+	links: { repo: string | null; docs: string | null };
+};
+
+// `null` when the quick access is off (the route is a 404).
+export async function getDemoCatalog(): Promise<DemoCatalog | null> {
+	const result = await client.get<{ 200: DemoCatalog }, unknown>({
+		url: "/api/v1/demo/catalog",
+	});
+	if (statusOf(result) === 404) {
+		return null;
+	}
+	return unwrap(result);
+}
+
+export async function demoLoginCustomer(
+	personaId: string,
+): Promise<MeResponse> {
+	const result = await client.post<{ 200: MeResponse }, unknown>({
+		url: "/api/v1/demo/sessions/customer",
+		body: { persona_id: personaId },
+	});
+	return unwrap(result);
+}
+
+export async function demoLoginStaff(): Promise<StaffMeResponse> {
+	const result = await client.post<{ 200: StaffMeResponse }, unknown>({
+		url: "/api/v1/demo/sessions/staff",
+	});
+	return unwrap(result);
+}
