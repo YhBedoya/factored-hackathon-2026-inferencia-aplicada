@@ -56,7 +56,14 @@ def test_round_cap_hands_off_and_llm_error_degrades(
         llm = ScriptedLLM(
             {
                 "agent": [open_plan, AgentScript(rounds=[[("card_status", {})]] * 7, finals=[])],
-                "handoff_summary": [HandoffSummaryDraft(request="El asistente no pudo completar.")],
+                "handoff_summary": [
+                    HandoffSummaryDraft(
+                        request="El asistente no pudo completar.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
+                ],
             }
         )
         session = make_session(_CUSTOMER, fakebank_dir, llm)

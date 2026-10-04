@@ -1,19 +1,20 @@
-"""Writes the one-line `request` of a handoff packet (D9, D10, R4-R6, R11).
+"""Writes the `request` line and the `case_summary` of a handoff packet (D1-D4, R4-R6, R11).
 
-This is the LLM half of the handoff: it reads facts and actions and has no
-write or handoff tools (R6). The user message holds only code-built keys --
-reason, queue, intents, the actions' tool names and verified flags, and the
-placeholder keys on offer -- never `user_text` or a fact's value (R5). The
-draft's `{card_mask}`, `{tx_count}` and `{queue_label}` are filled in code
-(R4). A draft with an unknown placeholder, a brace residue or a raw digit,
-or an `LLMError`, is replaced by a fixed per-reason text (R11); the LLM is
+This is the LLM half of the handoff: it has no write or handoff tools (R6). The
+user message carries the masked transcript (`content_masked` only, R5), code-built
+keys and the placeholder keys on offer, all inside one data fence. Numbers come
+only from placeholders filled in code (R4): `{card_mask}`, `{tx_count}`,
+`{plan_card_mask}` and `{queue_label}`. A draft with an unknown placeholder, a
+brace residue or a raw digit in any of its four fields, or an `LLMError`, is
+replaced by a fixed per-reason `request` and no case summary (R11); the LLM is
 never called a second time.
 
-The node writes graph-local `handoff_request`; the code-only `handoff` node
-reads it next.
+The node writes graph-local `handoff_request` and `handoff_case_summary`; the
+code-only `handoff` node reads them next.
 """
 
 import re
+from collections.abc import Sequence
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
@@ -23,16 +24,21 @@ from app.core.config import get_settings
 from app.core.llm import LLMClient, LLMError, PromptRef
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.prompts import load_prompt
+from app.domains.conversation.store import MessageRow
 from app.domains.conversation.templates import Language
+from app.domains.handoff.schemas import CaseSummary
 from app.domains.localization import mask_card, queue_label
 from app.domains.policy.escalation import load_escalation_policy, resolve_escalation
 from app.domains.policy.registry import get_policies
 
 __all__ = ["HandoffSummaryDraft", "handoff_summary"]
 
-_PROMPT = PromptRef("handoff_summary", 1)
+_PROMPT = PromptRef("handoff_summary", 2)
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 _MAX_LEN = 200
+_CASE_MAX_LEN = 280
+_TRANSCRIPT_ROWS = 30
+_TRANSCRIPT_ROW_LEN = 500
 
 # Fixed agent-facing texts per reason, used when the draft is rejected or the
 # LLM fails (R11). Digit-free on purpose: they carry no placeholders.
@@ -99,10 +105,62 @@ class HandoffSummaryDraft(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     request: str
+    asked: str
+    did: str
+    unfinished: str
 
 
 def _fallback(reason: str | None, language: Language) -> str:
     return _FALLBACK.get(reason or _DEFAULT_REASON, _FALLBACK[_DEFAULT_REASON])[language]
+
+
+async def _load_transcript(configurable: dict[str, Any]) -> list[MessageRow]:
+    """The session-bound transcript loader's rows; empty when absent or failing."""
+    loader = configurable.get("transcript")
+    if loader is None:
+        return []
+    try:
+        return list(await loader())
+    except Exception:  # the transcript is optional context; the summary must not fail on it
+        return []
+
+
+def _transcript_lines(rows: Sequence[MessageRow]) -> list[str]:
+    """Last 30 rows as `role: masked text`; never reads the raw `content` (R5)."""
+    return [
+        f"{row.role}: {row.content_masked[:_TRANSCRIPT_ROW_LEN]}"
+        for row in rows[-_TRANSCRIPT_ROWS:]
+        if row.content_masked
+    ]
+
+
+def _unanswered_confirm_facts(rows: Sequence[MessageRow]) -> dict[str, str]:
+    """Step facts of the last `confirm` the customer has not answered yet (D3).
+
+    A button decision runs without text, so it persists a bot row in a turn with
+    no customer row; any such row after the confirm means it was answered.
+    """
+    index: int | None = None
+    events: list[dict[str, Any]] = []
+    for i, row in enumerate(rows):
+        payload = row.ui_payload
+        if row.role != "bot" or not isinstance(payload, list):
+            continue
+        confirms = [event for event in payload if event.get("kind") == "confirm"]
+        if confirms:
+            index, events = i, confirms
+    if index is None:
+        return {}
+    customer_turns = {row.turn_id for row in rows if row.role == "customer"}
+    if any(row.role == "bot" and row.turn_id not in customer_turns for row in rows[index + 1 :]):
+        return {}
+    facts: dict[str, str] = {}
+    for event in events:
+        for step in event.get("payload", {}).get("steps", []):
+            for fact in step.get("facts", []):
+                if fact.get("value") is not None:
+                    facts.setdefault(str(fact.get("key")), str(fact["value"]))
+    return facts
 
 
 async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -130,19 +188,27 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
         text=state.get("user_text", ""),
     )
     if resolution is None:
-        return {"handoff_request": _fallback(None, language)}
+        return {"handoff_request": _fallback(None, language), "handoff_case_summary": None}
     reason, queue = resolution.reason, resolution.queue
     fallback = _fallback(reason, language)
     # Under LLM_DISABLED there is no model to ask; `llm_unavailable` with the LLM
     # enabled still tries it (retries included) and falls back on `LLMError`.
+    failed: dict[str, Any] = {"handoff_request": fallback, "handoff_case_summary": None}
     if get_settings().llm_disabled:
-        return {"handoff_request": fallback}
+        return failed
 
+    rows = await _load_transcript(configurable)
+    confirm_facts = _unanswered_confirm_facts(rows)
+    # Each placeholder is offered only when it has a value (AS3).
+    values: dict[str, str] = {"queue_label": queue_label(queue, language)}
+    evidence = state.get("handoff_evidence") or []
+    if evidence:
+        values["tx_count"] = str(len(evidence))
+    elif "tx_count" in confirm_facts:
+        values["tx_count"] = confirm_facts["tx_count"]
+    if "card_mask" in confirm_facts:
+        values["plan_card_mask"] = confirm_facts["card_mask"]
     # `card_mask` is offered only when the selected card's last4 can be read.
-    values: dict[str, str] = {
-        "tx_count": str(len(state.get("handoff_evidence") or [])),
-        "queue_label": queue_label(queue, language),
-    }
     card_id = state.get("selected_card_id")
     if card_id:
         try:
@@ -170,12 +236,13 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
             f"Idioma de la solicitud: {language}",
             f"Motivo: {reason}",
             f"Cola: {queue}",
-            "Datos (solo claves y etiquetas; no hay valores del cliente):",
             "```",
             f"intents: {', '.join(intents) or '-'}",
             f"acciones: {'; '.join(actions) or '-'}",
             *facts,
             f"placeholders: {', '.join('{' + k + '}' for k in values)}",
+            "conversación:",
+            *(_transcript_lines(rows) or ["-"]),
             "```",
         ]
     )
@@ -194,13 +261,24 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
             )
 
             return {**await baseline_handoff_summary(state, config), "degraded": True}
-        return {"handoff_request": fallback}
+        return failed
 
-    text = draft.request
-    if any(key not in values for key in _PLACEHOLDER.findall(text)):
-        return {"handoff_request": fallback}
-    residual = _PLACEHOLDER.sub("", text)
-    if "{" in residual or "}" in residual or any(c.isdigit() for c in residual):
-        return {"handoff_request": fallback}
-    filled = _PLACEHOLDER.sub(lambda m: values[m.group(1)], text)
-    return {"handoff_request": filled[:_MAX_LEN]}
+    for text in (draft.request, draft.asked, draft.did, draft.unfinished):
+        if any(key not in values for key in _PLACEHOLDER.findall(text)):
+            return failed
+        residual = _PLACEHOLDER.sub("", text)
+        if "{" in residual or "}" in residual or any(c.isdigit() for c in residual):
+            return failed
+
+    def fill(text: str, limit: int) -> str:
+        return _PLACEHOLDER.sub(lambda m: values[m.group(1)], text)[:limit]
+
+    case = CaseSummary(
+        asked=fill(draft.asked, _CASE_MAX_LEN),
+        did=fill(draft.did, _CASE_MAX_LEN),
+        unfinished=fill(draft.unfinished, _CASE_MAX_LEN),
+    )
+    return {
+        "handoff_request": fill(draft.request, _MAX_LEN),
+        "handoff_case_summary": case.model_dump(),
+    }

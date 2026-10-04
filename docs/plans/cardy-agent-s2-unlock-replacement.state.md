@@ -56,6 +56,7 @@ Branch `feat/cardy-agent-s2-unlock-replacement`, based on `develop` @ 04c137a. W
 | T28 | done | ad0f8587020ece119 | test_otp_exits.py 4 passed (R2 agent+pipeline, R13 ownership, pipeline cancel) |
 | T29 | done | a927f19c63afafcdf | 04 §3/§5 + service/graph/conversations docstrings fixed; ruff clean, 6 passed |
 | T30 | done | a13d1f215b4e75881 | step_up_failed summary gets {failed_codes} (policy) + not-executed fact; 4 passed, lint/mypy clean |
+| T31 | done | a4317e0c19b3d6221 | test_otp_exits draft -> v2 shape, mypy alias; handoff_summary coherent unchanged; 22 passed |
 
 <!-- IMPLEMENTER ZONE — append-only, written by the task agents. -->
 ## Task log
@@ -242,3 +243,9 @@ Changed: `backend/app/domains/conversation/nodes/handoff_summary.py` (for reason
 Facts the next tasks need: the prompt `handoff_summary@v1` bans digits, so the count goes through a placeholder (R4); prompt untouched and does not force a count. `step_up_exit.py` untouched.
 Deviations: none.
 Verify: `AGENT_ENABLED=false uv run pytest tests/unit/test_otp_exits.py -q` → 4 passed; ruff check/format, mypy clean; no `handoff_summary` unit tests by -k (skipped).
+
+### T31 — Merge fix: step_up_failed facts vs handoff_summary v2
+Changed: `backend/tests/unit/test_otp_exits.py` (fake draft now v2 shape request/asked/did/unfinished, `{failed_codes}` in request and did; `_Outputs` alias fixes the 2 mypy dict-item errors).
+Facts the next tasks need: merged `handoff_summary.py` was already coherent and is untouched: T30's facts and `{failed_codes}` sit in the v2 fenced input, and the v2 placeholder/digit checks run over all four draft fields using the same `values`.
+Deviations: none.
+Verify: pytest otp_exits+handoff_summary_v2+handoff_packet → 22 passed; ruff check/format clean; mypy only the 8 pre-existing conftest.py errors.

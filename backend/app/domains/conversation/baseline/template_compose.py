@@ -74,4 +74,7 @@ async def baseline_handoff_summary(state: GraphState, config: RunnableConfig) ->
         intents=list(nlu.intents) if nlu is not None else [],
         text=state.get("user_text", ""),
     )
-    return {"handoff_request": _fallback(resolution.reason if resolution else None, language)}
+    return {
+        "handoff_request": _fallback(resolution.reason if resolution else None, language),
+        "handoff_case_summary": None,
+    }

@@ -24,13 +24,23 @@ from app.domains.conversation.tools.handoff import HandoffTools
 from app.domains.conversation.ui import HandoffBannerEvent, HandoffBannerPayload
 from app.domains.handoff.schemas import (
     ActionTaken,
+    CaseSummary,
+    CustomerHistory,
+    Friction,
     HandoffPacket,
     HandoffReason,
+    RiskSignals,
+    Routing,
     VerifiedFact,
     reference_for,
 )
-from app.domains.localization.format import queue_label
-from app.domains.policy.escalation import load_escalation_policy, resolve_escalation, rule
+from app.domains.localization.format import Language, kind_label, mask_card, queue_label
+from app.domains.policy.escalation import (
+    legal_hit,
+    load_escalation_policy,
+    resolve_escalation,
+    rule,
+)
 
 __all__ = ["handoff"]
 
@@ -70,6 +80,31 @@ def _fact_value(result: ActionResult) -> JsonValue:
         return result.tracking_id
     status = result.readback.get("status")
     return _json(status) if status is not None else True
+
+
+async def _focus_card(
+    state: GraphState, configurable: dict[str, Any], language: Language
+) -> str | None:
+    """ "Crédito •••• 9118" for the card the conversation was about (D5), built in
+    code (R4). `None` when there is no card, no tools or the read fails: the packet
+    never waits on it."""
+    card_id = state.get("selected_card_id")
+    bank_tools = configurable.get("bank_tools")
+    if card_id is None or bank_tools is None:
+        return None
+    try:
+        card = await bank_tools.get_card_details(card_id)
+    except Exception:
+        return None
+    return f"{kind_label(card.kind, language)} {mask_card(card.last4)}"
+
+
+async def _history(handoff_tools: HandoffTools, days: int) -> CustomerHistory | None:
+    """A failed history read never blocks the handoff (D6, R11)."""
+    try:
+        return await handoff_tools.history(days)
+    except Exception:
+        return None
 
 
 async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
@@ -136,6 +171,8 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     hit: list[HandoffReason] = [reason]
     if state.get("priority_flags") and reason != "priority_claim":
         hit.append("priority_claim")
+    summary = state.get("handoff_case_summary")
+    friction = state.get("friction") or {}
     packet = HandoffPacket(
         handoff_id=candidate_id,
         conversation_id=session.conversation_id,
@@ -152,6 +189,24 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         escalation_rules_hit=hit,
         policy_version=session.policy_version,
         created_at=now,
+        case_summary=CaseSummary.model_validate(summary) if summary else None,
+        focus_card=await _focus_card(state, configurable, language),
+        routing=Routing(
+            reason=reason, queue=resolution.queue, branch=resolution.branch, flow=resolution.flow
+        ),
+        # Snapshotted from the incoming state: the return below resets the flags.
+        risk=RiskSignals(
+            priority_flags=list(state.get("priority_flags", [])),
+            legal_keyword=legal_hit(state.get("user_text", ""), policy)
+            or reason == "legal_regulator",
+            unauthorized_attempts=state.get("unauthorized_attempts", 0),
+        ),
+        history=await _history(handoff_tools, policy.handoff_packet.history_days),
+        friction=Friction(
+            clarifications=friction.get("clarifications", 0),
+            abstentions=friction.get("abstentions", 0),
+            non_answers=friction.get("non_answers", 0),
+        ),
     )
     # The persisted id wins: an already-open handoff keeps its own reference (R3).
     handoff_id = await handoff_tools.create(packet)

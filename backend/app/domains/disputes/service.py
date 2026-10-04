@@ -25,9 +25,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.domains.disputes import repository
 from app.domains.disputes.schemas import ClaimRow, PrioritySignals
+from app.domains.handoff.schemas import PastClaim
 from app.domains.transactions import service as transactions_service
 
-__all__ = ["create_claims", "get_claims", "priority_signals"]
+__all__ = ["create_claims", "get_claims", "priority_signals", "recent_claims"]
 
 _CASE_TYPE = "Claim"
 _CATEGORY = "Transactions"
@@ -153,3 +154,18 @@ async def priority_signals(customer_id: str, open_statuses: list[str]) -> Priori
     return PrioritySignals(
         repeat_complainer=row["repeat_complainer"], open_critical=row["open_critical"]
     )
+
+
+async def recent_claims(customer_id: str, since: datetime, limit: int) -> list[PastClaim]:
+    """The customer's claims from `since`, newest first, for the handoff
+    packet's history (R1)."""
+    rows = await repository.fetch_recent_claims(customer_id, since, limit)
+    return [
+        PastClaim(
+            claim_id=row["complaint_id"],
+            category=row["category"],
+            status=row["status"],
+            created_at=row["creation_date"],
+        )
+        for row in rows
+    ]

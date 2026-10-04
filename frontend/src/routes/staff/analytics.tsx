@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useNavigate,
+} from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 
 import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { AnalyticsFilters } from "@/components/staff/analytics/AnalyticsFilters";
@@ -14,6 +20,7 @@ import { OutcomesPerDayChart } from "@/components/staff/analytics/OutcomesPerDay
 import { RecentInteractionsTable } from "@/components/staff/analytics/RecentInteractionsTable";
 import { SentimentChart } from "@/components/staff/analytics/SentimentChart";
 import { SummaryTiles } from "@/components/staff/analytics/SummaryTiles";
+import { StaffLogo } from "@/components/staff/StaffNav";
 import { type AnalyticsQuery, getAnalyticsSummary, staffMe } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -76,7 +83,20 @@ function StaffAnalyticsPage() {
 	return (
 		<div className="flex w-full flex-1 flex-col gap-3 px-4 py-3 lg:h-svh lg:min-h-[640px] lg:flex-none lg:overflow-hidden">
 			<div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-				<div className="flex items-center gap-3">
+				<div className="flex flex-wrap items-center gap-3.5">
+					<StaffLogo />
+					<Link
+						to="/staff"
+						data-testid="analytics-back"
+						className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+					>
+						<ArrowLeft
+							aria-hidden="true"
+							className="size-4"
+							strokeWidth={2.5}
+						/>
+						{t("staff.analytics.back")}
+					</Link>
 					<h1 className="font-heading text-xl text-foreground">
 						{t("staff.analytics.title")}
 					</h1>

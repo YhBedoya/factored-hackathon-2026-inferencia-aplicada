@@ -61,7 +61,12 @@ def test_unverified_write_never_says_done(fakebank_dir: Path) -> None:
                     NLUResult(language="es", intents=["affirm"], status="clear"),
                 ],
                 "handoff_summary": [
-                    HandoffSummaryDraft(request="Acción sin verificar en {queue_label}.")
+                    HandoffSummaryDraft(
+                        request="Acción sin verificar en {queue_label}.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
                 ],
             }
         )

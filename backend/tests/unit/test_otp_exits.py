@@ -3,7 +3,7 @@ checks conversation ownership first (R13), and Cancel at a pipeline OTP pause. R
 called as functions with a stub `turn_host`; every turn runs on `ScriptedLLM`."""
 
 import asyncio
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -11,13 +11,15 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, Response
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 import app.api.v1.auth as auth_module
 import app.api.v1.conversations as conversations_module
 from app.api.v1.auth import OtpVerifyRequest, verify_otp
 from app.api.v1.conversations import PostMessageRequest, post_message
 from app.core.config import get_settings
+from app.core.llm import LLMError
+from app.core.llm.registry import Step
 from app.domains.conversation import store as conversation_store
 from app.domains.conversation.agent.schema import AgentTurn
 from app.domains.conversation.graph import run_turn
@@ -130,7 +132,10 @@ def _agent_turn() -> AgentTurn:
     )
 
 
-def _pipeline_llm(extra: dict[str, list[Any]] | None = None) -> ScriptedLLM:
+_Outputs = dict[Step, Sequence[BaseModel | LLMError | AgentScript]]
+
+
+def _pipeline_llm(extra: _Outputs | None = None) -> ScriptedLLM:
     nlu = [NLUResult(language="es", intents=["card_unlock"], status="clear")]
     return ScriptedLLM({"nlu": nlu, **(extra or {})})
 
@@ -142,10 +147,13 @@ def test_r2_third_wrong_code_hands_off(
     monkeypatch: pytest.MonkeyPatch,
     request: pytest.FixtureRequest,
 ) -> None:
-    drafts: dict[str, list[Any]] = {
+    drafts: _Outputs = {
         "handoff_summary": [
             HandoffSummaryDraft(
-                request="Código OTP errado {failed_codes} vezes; ação não executada."
+                request="Código OTP errado {failed_codes} vezes; ação não executada.",
+                asked="Pediu para desbloquear o cartão.",
+                did="Pediu o código de verificação; {failed_codes} códigos errados.",
+                unfinished="O desbloqueio não foi executado.",
             )
         ]
     }

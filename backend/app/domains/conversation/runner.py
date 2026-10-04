@@ -39,6 +39,7 @@ never deleted out from under that later turn.
 """
 
 import asyncio
+import functools
 from collections.abc import Sequence
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -383,6 +384,8 @@ async def _run_turn(
                 "handoff_tools": ServiceHandoffTools(ctx),
                 "audit": audit,
                 "classifier": host.classifier,
+                # Session-bound: the handoff summary reads the masked transcript (D1).
+                "transcript": functools.partial(store.list_messages, conversation_id),
             }
         }
 

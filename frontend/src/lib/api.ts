@@ -33,6 +33,7 @@ import {
 	type StaffLoginRequest,
 	type StaffMeResponse,
 	staffLoginApiV1AuthStaffLoginPost,
+	staffLogoutApiV1StaffLogoutPost,
 	staffMeApiV1StaffMeGet,
 	type TranscriptMessage,
 	type TxPage,
@@ -411,6 +412,16 @@ export async function staffMe(): Promise<StaffMeResponse | null> {
 		return null;
 	}
 	return unwrap(result);
+}
+
+// Ends the staff session (clears the staff cookie). A `401` here means the
+// session is already gone, which is the outcome the caller wants anyway.
+export async function staffLogout(): Promise<void> {
+	const result = await staffLogoutApiV1StaffLogoutPost();
+	if (statusOf(result) === 401) {
+		return;
+	}
+	unwrap(result);
 }
 
 export async function listStaffHandoffs(): Promise<HandoffSummary[]> {

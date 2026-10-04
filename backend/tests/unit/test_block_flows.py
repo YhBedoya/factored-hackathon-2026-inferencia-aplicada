@@ -161,7 +161,12 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
                     NLUResult(language="pt", intents=["card_unlock"], status="clear"),
                 ],
                 "handoff_summary": [
-                    HandoffSummaryDraft(request="Bloqueio do banco em {queue_label}.")
+                    HandoffSummaryDraft(
+                        request="Bloqueio do banco em {queue_label}.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
                 ],
             }
         )
@@ -183,7 +188,12 @@ def test_pt_bank_side_unlock_hands_off(fakebank_dir: Path) -> None:
                     NLUResult(language="pt", intents=["card_unlock"], status="clear"),
                 ],
                 "handoff_summary": [
-                    HandoffSummaryDraft(request="Bloqueio do banco em {queue_label}.")
+                    HandoffSummaryDraft(
+                        request="Bloqueio do banco em {queue_label}.",
+                        asked="Pidió ayuda.",
+                        did="Nada.",
+                        unfinished="Todo.",
+                    )
                 ],
             }
         )
