@@ -33,14 +33,24 @@ StepUp = Literal["never", "always", "when_address_changed"]
 
 
 class Preconditions(BaseModel):
-    """The card-state rules a write must pass before it is proposed (D9): a
-    status in `status_not_in` rejects with `already_in_state`; `locked: false`
-    also rejects an already-locked card with `already_locked`."""
+    """The card-state rules a write must pass before it is proposed (D9, S2 D5).
+
+    - `status_not_in`: a status in the list rejects with `already_in_state`.
+    - `locked: false`: also rejects an already-locked card with `already_locked`.
+    - `block_origin_in`: the card's block origin must be in the list, else
+      `not_locked` (origin `none`) or `permanent_block` (`customer_block`);
+      a bank-side origin is a handoff, not a reason code.
+    - `replacement_eligible: true`: the block origin must be one that
+      `card_select.yaml` lists as replacement-eligible, or the card expired,
+      else `not_eligible`.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    status_not_in: list[str]
+    status_not_in: list[str] = Field(default_factory=list)
     locked: bool | None = None
+    block_origin_in: list[str] | None = None
+    replacement_eligible: bool | None = None
 
 
 class ToolPolicy(BaseModel):
@@ -60,6 +70,8 @@ class ToolsPolicy(BaseModel):
 
     `provenance` and `version` have no default, so a file missing either one
     fails `model_validate` instead of silently running with no step-up rule.
+    `step_up_max_failures` has no default either: a file without it fails to
+    load rather than running with an unlimited OTP retry count.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -67,6 +79,7 @@ class ToolsPolicy(BaseModel):
     provenance: Literal["team-generated-synthetic"]
     version: int
     step_up_window_minutes: int = Field(ge=1)
+    step_up_max_failures: int = Field(ge=1)
     tools: dict[str, ToolPolicy]
 
 

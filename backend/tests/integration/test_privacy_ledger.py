@@ -92,7 +92,14 @@ def test_turn_writes_masked_ledger_and_encrypted_messages(
             _human_request_nlu("es"),
         ],
         ComposeDraft: [ComposeDraft(text="Tu tarjeta {card_kind} {card_mask} esta {status}.")],
-        HandoffSummaryDraft: [HandoffSummaryDraft(request="El cliente pidió hablar con alguien.")],
+        HandoffSummaryDraft: [
+            HandoffSummaryDraft(
+                request="El cliente pidió hablar con alguien.",
+                asked="Pidió ayuda.",
+                did="Nada.",
+                unfinished="Todo.",
+            )
+        ],
     }
     app_client.app.state.turn_host.llm = StructuredLLMClient(  # type: ignore[attr-defined]
         LLMSettings(_env_file=None),

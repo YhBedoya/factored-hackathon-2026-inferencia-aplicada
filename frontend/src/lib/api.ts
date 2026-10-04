@@ -329,6 +329,21 @@ export async function postResume(conversationId: string): Promise<string> {
 	return unwrap(result).turn_id;
 }
 
+// Cancel of the agent OTP pause (spec D12, D16, D17): same channel as
+// `postResume`. `409 cancel_invalid` means no pause is open.
+export async function postStepUpCancel(
+	conversationId: string,
+): Promise<string> {
+	const result = await withAuthRetry(() =>
+		client.post<{ 202: TurnAccepted }, unknown>({
+			url: "/api/v1/conversations/{conversation_id}/messages",
+			path: { conversation_id: conversationId },
+			body: { resume: "step_up_cancel" },
+		}),
+	);
+	return unwrap(result).turn_id;
+}
+
 export type ConfirmationDecision = "confirm" | "cancel";
 
 export async function postConfirmation(
@@ -346,14 +361,24 @@ export async function postConfirmation(
 	return unwrap(result).turn_id;
 }
 
-export async function verifyOtp(code: string): Promise<void> {
-	const result = await withAuthRetry(() =>
+export async function verifyOtp(
+	code: string,
+	conversationId: string,
+): Promise<void> {
+	const exec = () =>
 		client.post<{ 200: MeResponse }, unknown>({
 			url: "/api/v1/auth/otp/verify",
-			body: { code },
-		}),
-	);
-	unwrap(result);
+			body: { code, conversation_id: conversationId },
+		});
+	const first = await exec();
+	// A wrong code is a 401 `otp_invalid`, not an expired session: skip the
+	// refresh-and-retry (it would burn extra of the step-up limit and end in the
+	// re-login dialog). Only another 401 detail goes through `withAuthRetry`.
+	if (statusOf(first) === 401 && errorCode(first.error) !== "otp_invalid") {
+		unwrap(await withAuthRetry(exec));
+		return;
+	}
+	unwrap(first);
 }
 
 // D4-B D3/D5: the staff SPA. `staffLogin` is the entry point (exempt from

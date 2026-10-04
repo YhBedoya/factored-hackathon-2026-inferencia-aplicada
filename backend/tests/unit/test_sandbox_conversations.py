@@ -169,7 +169,14 @@ def test_pt_tool_failure_hands_off(fakebank_dir: Path) -> None:
     llm = ScriptedLLM(
         {
             "nlu": [nlu],
-            "handoff_summary": [HandoffSummaryDraft(request="Falha ao consultar cartoes.")],
+            "handoff_summary": [
+                HandoffSummaryDraft(
+                    request="Falha ao consultar cartoes.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
+            ],
         }
     )
     graph = build_graph(MemorySaver())

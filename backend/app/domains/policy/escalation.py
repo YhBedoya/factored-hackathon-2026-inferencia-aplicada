@@ -1,5 +1,5 @@
 """ADR-021 handoff queues and escalation rules, loaded from
-`policies/escalation.yaml` v5 (spec D2-D7, B2, R8).
+`policies/escalation.yaml` v9 (spec D2-D7, B2, D8-H D7, S2 D29, R8).
 
 `rules.<reason>` is the single source of each handoff reason's queue and
 priority (`queue: null` means the caller picks it: bank-side origin, human
@@ -22,6 +22,7 @@ __all__ = [
     "BankSideQueuesPolicy",
     "CustomerNotActivePolicy",
     "EscalationPolicy",
+    "HandoffPacketPolicy",
     "HumanRequestQueuesPolicy",
     "LegalKeywordsPolicy",
     "Resolution",
@@ -80,6 +81,14 @@ class HumanRequestQueuesPolicy(BaseModel):
     by_flow: dict[str, Queue]
 
 
+class HandoffPacketPolicy(BaseModel):
+    """`handoff_packet`: how far back the packet's customer history reads (D7)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    history_days: int
+
+
 class UnauthorizedAccessPolicy(BaseModel):
     """`unauthorized_access`: attempts before the handoff (D6)."""
 
@@ -110,6 +119,7 @@ _REQUIRED_REASONS = (
     "llm_unavailable",
     "priority_claim",
     "agent_round_cap",
+    "step_up_failed",
 )
 
 # Reasons whose null-queue rule resolves by the paused flow, like `human_request`.
@@ -134,6 +144,7 @@ class EscalationPolicy(BaseModel):
     human_request_queues: HumanRequestQueuesPolicy
     unauthorized_access: UnauthorizedAccessPolicy
     legal_keywords: LegalKeywordsPolicy
+    handoff_packet: HandoffPacketPolicy
     # Intent names (plain str: `policy` must not import the conversation `Intent`
     # literal, `06` §2). Defaults empty so other YAMLs still load (ADR-032).
     degraded_handoff_intents: list[str] = []
@@ -165,6 +176,10 @@ class Resolution(BaseModel):
     reason: str
     queue: Queue
     priority: Literal["high", "normal"]
+    # How the queue was chosen (D5): rule queue | queue set by the flow |
+    # human_request_queues.by_flow | .default. `flow` is set only for by_flow.
+    branch: Literal["rule", "flow", "by_flow", "default"]
+    flow: str | None
 
 
 def _fold(text: str) -> str:
@@ -195,6 +210,15 @@ def rule_queue(policy: EscalationPolicy, reason: str) -> Queue:
     return queue
 
 
+def _route_by_flow(
+    hrq: HumanRequestQueuesPolicy, pending_flow: str | None
+) -> tuple[Queue, Literal["by_flow", "default"], str | None]:
+    """The paused flow's queue when `by_flow` has one, else the default."""
+    if pending_flow and pending_flow in hrq.by_flow:
+        return hrq.by_flow[pending_flow], "by_flow", pending_flow
+    return hrq.default, "default", None
+
+
 def resolve_escalation(
     policy: EscalationPolicy,
     *,
@@ -209,21 +233,26 @@ def resolve_escalation(
     A `reason` already in state wins (queue from state, else the rule's),
     then a legal keyword, then a `human_request` intent; otherwise `None`.
     """
+    branch: Literal["rule", "flow", "by_flow", "default"]
+    flow: str | None = None
+    hrq = policy.human_request_queues
     if reason is not None:
         resolved_reason = reason
-        resolved_queue: str | None = queue if queue is not None else policy.rules[reason].queue
+        resolved_queue: str | None
+        if queue is not None:
+            resolved_queue, branch = queue, "flow"
+        else:
+            resolved_queue, branch = policy.rules[reason].queue, "rule"
         if resolved_queue is None and reason in _FLOW_ROUTED_REASONS:
             # Failure handoffs have no fixed queue: route like a human request.
-            hrq = policy.human_request_queues
-            by_flow = hrq.by_flow.get(pending_flow, hrq.default) if pending_flow else None
-            resolved_queue = by_flow or hrq.default
+            resolved_queue, branch, flow = _route_by_flow(hrq, pending_flow)
     elif legal_hit(text, policy):
         resolved_reason = "legal_regulator"
         resolved_queue = policy.rules[resolved_reason].queue
+        branch = "rule"
     elif "human_request" in intents:
         resolved_reason = "human_request"
-        hrq = policy.human_request_queues
-        resolved_queue = hrq.by_flow.get(pending_flow, hrq.default) if pending_flow else hrq.default
+        resolved_queue, branch, flow = _route_by_flow(hrq, pending_flow)
     else:
         return None
     if resolved_queue is None:
@@ -232,4 +261,6 @@ def resolve_escalation(
         reason=resolved_reason,
         queue=resolved_queue,
         priority=policy.rules[resolved_reason].priority,
+        branch=branch,
+        flow=flow,
     )

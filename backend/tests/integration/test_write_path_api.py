@@ -393,7 +393,12 @@ def test_bank_blocked_unlock_handoff(
         {
             "nlu": [NLUResult(language="es", intents=["card_unlock"], status="clear")],
             "handoff_summary": [
-                HandoffSummaryDraft(request="La tarjeta tiene un bloqueo del banco.")
+                HandoffSummaryDraft(
+                    request="La tarjeta tiene un bloqueo del banco.",
+                    asked="Pidió ayuda.",
+                    did="Nada.",
+                    unfinished="Todo.",
+                )
             ],
         }
     )

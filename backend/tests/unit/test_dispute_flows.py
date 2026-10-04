@@ -28,7 +28,12 @@ _CARD_ID = "PRD-TFS2CRED0001"
 _TXN01 = "TRX-TFS2CRED0001TXN01"  # Approved, low fraud_score
 _TXN02 = "TRX-TFS2CRED0001TXN02"  # Approved, low fraud_score
 _TXN03 = "TRX-TFS2CRED0001TXN03"  # Pending, empty merchant, fraud_score 45.00
-_SUMMARY = HandoffSummaryDraft(request="{tx_count} cargos no reconocidos, cola {queue_label}.")
+_SUMMARY = HandoffSummaryDraft(
+    request="{tx_count} cargos no reconocidos, cola {queue_label}.",
+    asked="Pidió ayuda.",
+    did="Nada.",
+    unfinished="Todo.",
+)
 
 
 @pytest.mark.parametrize(

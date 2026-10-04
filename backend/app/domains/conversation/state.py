@@ -274,8 +274,11 @@ class AgentPlanStep(TypedDict):
     action; the block reason is set by code when the call is built (S1 D8).
     """
 
-    action: Literal["lock", "block"]
+    action: Literal["lock", "block", "unlock", "replace"]
     card_id: str
+    address_ref: NotRequired[
+        str
+    ]  # "on_file" or "⟨ADDR_n⟩"; absent on a "new" replace until the address turn
 
 
 class TurnState(TypedDict):
@@ -298,6 +301,10 @@ class TurnState(TypedDict):
     # Non-answers in a row on the open flow question; kept apart from
     # `clarification_failures`. 1 re-asks, 2 hands off. Absent = 0.
     non_answer_failures: NotRequired[int]
+    # Cumulative friction for the handoff packet (D8): keys `clarifications`,
+    # `abstentions`, `non_answers`. Only `graph.py` increments it; no flow and no
+    # `load_session` reset touches it, and `return_to_bot` zeroes it.
+    friction: NotRequired[dict[str, int]]
     # The open flow question as it was asked, replayed on a non-answer.
     open_question: NotRequired[OpenQuestion | None]
     confirmation_token_id: NotRequired[str | None]

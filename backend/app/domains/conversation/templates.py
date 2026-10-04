@@ -72,6 +72,8 @@ TemplateKind = Literal[
     "address_ask_multi",
     "action_confirm_multi",
     "offer_unlock",
+    "agent_plan_ready",
+    "step_up_failed_handoff",
     "offer_human",
     "replacement_needs_block",
     "new_card_not_available",
@@ -664,6 +666,19 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
             "Feito: seu cartão final {card_last4} ficou {result} às {time}.",
             "Já está: seu cartão final {card_last4} está {result} desde as {time}.",
         ],
+    },
+    # S2 D10, D11: the agent's plan is issued and the confirm card follows.
+    "agent_plan_ready": {
+        "es": "Listo. Revisa abajo lo que voy a hacer y elige Acepto o No acepto.",
+        "pt": "Pronto. Confira abaixo o que vou fazer e escolha Aceito ou Não aceito.",
+    },
+    # S2 D32: third wrong OTP code, before `handoff_transfer`.
+    "step_up_failed_handoff": {
+        "es": "No pudimos verificar tu identidad, así que te paso con una persona del equipo.",
+        "pt": (
+            "Não conseguimos verificar sua identidade, então vou te passar para "
+            "uma pessoa da equipe."
+        ),
     },
     # D1: the OTP resume path, before the plan is issued.
     "otp_required": {

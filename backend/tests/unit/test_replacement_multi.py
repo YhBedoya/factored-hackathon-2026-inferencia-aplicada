@@ -235,7 +235,12 @@ class _UnverifiedSecondReplacement:
 def test_r3_unverified_second_replacement_hands_off(fakebank_dir: Path, agent_on: None) -> None:
     async def run() -> None:
         affirm = NLUResult(language="es", intents=["affirm"], status="clear")
-        draft = HandoffSummaryDraft(request="Reemplazo sin verificar en {queue_label}.")
+        draft = HandoffSummaryDraft(
+            request="Reemplazo sin verificar en {queue_label}.",
+            asked="Pidió ayuda.",
+            did="Nada.",
+            unfinished="Todo.",
+        )
         llm = _script("es", extra=[affirm, draft])
         writes = _UnverifiedSecondReplacement()
         session = make_session(_CUSTOMER, fakebank_dir, llm, raw_writes=writes, write_audit=True)

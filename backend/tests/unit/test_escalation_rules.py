@@ -32,7 +32,12 @@ _SINGLE = "CLI-TFSINGLE0002"
 _BLOCKED = "CLI-TFBLOCKD0003"
 _INACTIVE = "CLI-TFINACT00004"
 
-_DRAFT = HandoffSummaryDraft(request="Solicitud enviada a {queue_label}.")
+_DRAFT = HandoffSummaryDraft(
+    request="Solicitud enviada a {queue_label}.",
+    asked="Pidió ayuda.",
+    did="Nada.",
+    unfinished="Todo.",
+)
 
 
 @dataclass(frozen=True)

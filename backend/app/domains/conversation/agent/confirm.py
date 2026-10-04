@@ -12,12 +12,14 @@ This module never imports the LLM package (R6). It reads write tools only throug
 `config["configurable"]`, like `flows/actions.py`.
 """
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any, Literal
 
 from langchain_core.runnables import RunnableConfig
 
 from app.core.actions import ActionResult
+from app.domains.conversation.agent.plan import plan_segments
 from app.domains.conversation.flows.actions import (
     OFFER_REPLACEMENT_PAUSE,
     decision,
@@ -26,8 +28,10 @@ from app.domains.conversation.flows.actions import (
     handoff,
 )
 from app.domains.conversation.flows.card_block import _BLOCK_STATE_LABEL, _LOCK_STATE_LABEL
+from app.domains.conversation.flows.card_unlock import _UNLOCK_STATE_LABEL
+from app.domains.conversation.flows.replacement import _REPLACEMENT_STATE_LABEL
 from app.domains.conversation.graph import GraphState
-from app.domains.conversation.state import IntentSegment, SegmentStatus
+from app.domains.conversation.state import AgentPlanStep
 from app.domains.conversation.templates import Language, get_template
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
@@ -49,11 +53,6 @@ _CLEARED: dict[str, Any] = {
     "confirmation_token_id": None,
     "agent_plan_steps": None,
 }
-
-
-def _segment(status: SegmentStatus) -> list[IntentSegment]:
-    # Lock and block are one request type in the catalog (`card_block`).
-    return [{"intent": "card_block", "route": "card_block", "status": status}]
 
 
 def replay_open_plan(state: GraphState, text: str | None = None) -> dict[str, Any]:
@@ -93,7 +92,10 @@ async def count_open_plan_turn(
         ),
         "agent_plan_steps": None,
         "non_answer_failures": 0,
-        "intent_segments": [{"intent": "card_block", "route": "handoff", "status": "handoff"}],
+        "intent_segments": (
+            plan_segments(state.get("agent_plan_steps") or [], "handoff")
+            or [{"intent": "card_block", "route": "handoff", "status": "handoff"}]
+        ),
     }
 
 
@@ -121,7 +123,7 @@ async def _decline(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         **_CLEARED,
         "agent_code_text": get_template("action_cancelled", state.get("language", "es")),
         "agent_plan_result": {"outcome": "declined", "steps": []},
-        "intent_segments": _segment("cancelled"),
+        "intent_segments": plan_segments(state.get("agent_plan_steps") or [], "cancelled"),
     }
 
 
@@ -146,6 +148,15 @@ async def _accept(state: GraphState, config: RunnableConfig, language: Language)
             async def call(card_id: str = card_id) -> ActionResult:
                 return await write_tools.lock_card(card_id, token_id)
 
+        elif step["action"] == "unlock":
+
+            async def call(card_id: str = card_id) -> ActionResult:
+                return await write_tools.unlock_card(card_id, token_id)
+
+        elif step["action"] == "replace":
+            calls.append(_replace_call(write_tools, card_id, step.get("address_ref", ""), token_id))
+            continue
+
         else:
 
             async def call(card_id: str = card_id) -> ActionResult:
@@ -160,19 +171,36 @@ async def _accept(state: GraphState, config: RunnableConfig, language: Language)
         return {
             **results,
             **_CLEARED,
-            "intent_segments": _segment("handoff"),
+            "intent_segments": plan_segments(steps, "handoff"),
         }
 
     texts: list[str] = []
     for step, result, digits in zip(steps, results, last4, strict=True):
-        label = (_LOCK_STATE_LABEL if step["action"] == "lock" else _BLOCK_STATE_LABEL)[language]
         at = result.readback.get("at")
+        when = format_time(at, state["country"]) if isinstance(at, datetime) else ""
+        if step["action"] == "replace":
+            # Filled as the replacement flow does: the tracking id is the reference.
+            texts.append(
+                fill(
+                    get_template("action_done", language),
+                    result=_REPLACEMENT_STATE_LABEL[language],
+                    reference=result.tracking_id or "",
+                    card_last4=digits,
+                    time=when,
+                )
+            )
+            continue
+        labels = {
+            "lock": _LOCK_STATE_LABEL,
+            "unlock": _UNLOCK_STATE_LABEL,
+            "block": _BLOCK_STATE_LABEL,
+        }
         texts.append(
             fill(
                 get_template("action_done_noref", language),
-                result=label,
+                result=labels[step["action"]][language],
                 card_last4=digits,
-                time=format_time(at, state["country"]) if isinstance(at, datetime) else "",
+                time=when,
             )
         )
     return {
@@ -181,11 +209,27 @@ async def _accept(state: GraphState, config: RunnableConfig, language: Language)
         "agent_code_text": "\n\n".join(texts),
         "agent_plan_result": {
             "outcome": "confirmed",
-            "steps": [{"action": s["action"], "card_id": s["card_id"]} for s in steps],
+            "steps": [_result_step(s, r) for s, r in zip(steps, results, strict=True)],
         },
-        "intent_segments": _segment("resolved"),
+        "intent_segments": plan_segments(steps, "resolved"),
         "agent_offer": _replacement_offer(blocked, language),
     }
+
+
+def _replace_call(
+    write_tools: ConfirmedWriteTools, card_id: str, address_ref: str, token_id: str
+) -> Callable[[], Awaitable[ActionResult]]:
+    async def call() -> ActionResult:
+        return await write_tools.order_replacement(card_id, address_ref, token_id)
+
+    return call
+
+
+def _result_step(step: AgentPlanStep, result: ActionResult) -> dict[str, str]:
+    entry = {"action": step["action"], "card_id": step["card_id"]}
+    if step["action"] == "replace":
+        entry["tracking_id"] = result.tracking_id or ""
+    return entry
 
 
 def _replacement_offer(

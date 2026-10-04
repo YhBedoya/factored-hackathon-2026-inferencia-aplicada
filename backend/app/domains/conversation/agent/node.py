@@ -26,18 +26,33 @@ from pydantic import BaseModel
 from app.core.errors import ToolUnavailable
 from app.core.llm import LLMClient, LLMError, LLMRoundCap, LoopMessage, LoopTool, PromptRef
 from app.domains.conversation.agent.checks import claims_problem, fill_reply, reply_problem
-from app.domains.conversation.agent.confirm import count_open_plan_turn
-from app.domains.conversation.agent.plan import PlanBox, ProposeArgs, cancel_open_plan, propose_plan
+from app.domains.conversation.agent.confirm import _replacement_offer, count_open_plan_turn
+from app.domains.conversation.agent.plan import (
+    PlanBox,
+    PlanHandoff,
+    ProposeArgs,
+    cancel_open_plan,
+    otp_text,
+    plan_labels,
+    propose_plan,
+)
 from app.domains.conversation.agent.reads import read_tools
 from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.agent.schema import MAX_ROUNDS, AgentTurn, PassToFlow
 from app.domains.conversation.context import redact_values
+from app.domains.conversation.flows.actions import fill
 from app.domains.conversation.flows.actions import handoff as _handoff_update
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.intent_registry import load_registry
 from app.domains.conversation.nodes.understand import _context
 from app.domains.conversation.prompts import load_prompt
-from app.domains.conversation.state import Fact, IntentSegment, Pending, SegmentStatus
+from app.domains.conversation.state import (
+    AgentPlanStep,
+    Fact,
+    IntentSegment,
+    Pending,
+    SegmentStatus,
+)
 from app.domains.conversation.templates import Language, get_template, without_closing_question
 from app.domains.localization import mask_card
 from app.domains.policy.escalation import rule_queue
@@ -45,7 +60,7 @@ from app.domains.policy.registry import get_policies
 
 __all__ = ["agent", "agent_tools"]
 
-_PROMPT = PromptRef("agent", 1)
+_PROMPT = PromptRef("agent", 2)
 _PLAYBOOKS_SLOT = "<<PLAYBOOKS>>"
 # D17: both stuck-conversation counters hand off on the third turn.
 _MAX_ASKED_TURNS = 3
@@ -77,8 +92,9 @@ def agent_tools(
         *read_tools(state, config, refs),
         LoopTool(
             "propose_plan",
-            "Propose locking or blocking cards, by card reference. The customer still has "
-            "to confirm with a button; you cannot execute anything.",
+            "Propose locking, blocking, unlocking or replacing cards, by card reference. "
+            "For a replacement, set the `address` field: the address on file or a new one. "
+            "The customer still has to confirm with a button; you cannot execute anything.",
             ProposeArgs,
             propose,
         ),
@@ -200,7 +216,8 @@ async def _plan_event(
     """The code-written turn event after a click (D14, D15) and the step indexes code
     verified. Steps are named by card handle, never by id."""
     result = state.get("agent_plan_result") or {}
-    if result.get("outcome") != "confirmed":
+    issued = result.get("outcome") == "issued"
+    if result.get("outcome") != "confirmed" and not issued:
         return (
             [
                 "Evento del sistema (no es un mensaje del cliente): el cliente toco No acepto. "
@@ -209,20 +226,41 @@ async def _plan_event(
             [],
         )
     bank_tools = config["configurable"]["bank_tools"]
-    lines = [
-        "Evento del sistema (no es un mensaje del cliente): el cliente toco Acepto y el "
-        "sistema verifico estos pasos:"
-    ]
-    names = {"lock": "bloqueo temporal", "block": "bloqueo permanente por perdida o robo"}
+    if issued:
+        lines = [
+            "Evento del sistema (no es un mensaje del cliente): el cliente verifico su "
+            "identidad y el sistema le muestra este plan para que elija Acepto o No acepto:"
+        ]
+    else:
+        lines = [
+            "Evento del sistema (no es un mensaje del cliente): el cliente toco Acepto y el "
+            "sistema verifico estos pasos:"
+        ]
+    names = {
+        "lock": "bloqueo temporal",
+        "block": "bloqueo permanente por perdida o robo",
+        "unlock": "desbloqueo",
+        "replace": "reposicion",
+    }
     steps = result.get("steps", [])
     for index, step in enumerate(steps):
         details = await bank_tools.get_card_details(step["card_id"])
-        handle = refs.add_card(
-            step["card_id"],
-            [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)],
-        )
-        lines.append(f"- paso {index}: {names[step['action']]} de la tarjeta {handle}: verificado")
+        facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]
+        tracking_id = step.get("tracking_id")
+        if step["action"] == "replace" and tracking_id:
+            # R4: Cardy can only reference the tracking id; code fills it in.
+            facts.append(
+                Fact(key="tracking_id", value=tracking_id, source="cards.order_replacement")
+            )
+        handle = refs.add_card(step["card_id"], facts)
+        suffix = "" if issued else ": verificado"
+        lines.append(f"- paso {index}: {names[step['action']]} de la tarjeta {handle}{suffix}")
         lines.append(refs.render(handle))
+    if issued:
+        lines.append(
+            "Presenta el plan con tus palabras; nada esta hecho todavia, reported_done va vacio."
+        )
+        return lines, []
     lines.append("Confirma el resultado con tus palabras y lista esos pasos en reported_done.")
     return lines, list(range(len(steps)))
 
@@ -243,7 +281,9 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     box = PlanBox()
     tools = agent_tools(state, config, refs, box)
     pending = state.get("pending")
-    code_text = state.get("agent_code_text")  # set only by `agent_plan` on a click turn
+    code_text = state.get("agent_code_text")  # set by `agent_plan` on a click turn
+    # D10: the turn after the OTP; the plan is already issued and its card is code's.
+    issued = (state.get("agent_plan_result") or {}).get("outcome") == "issued"
     plan_was_open = _is_plan_open(pending) and code_text is None
 
     attempts = 0
@@ -264,7 +304,8 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         lines = _header(state)
         if code_text is not None:
             # After a click: a closed plan has no text to read and nothing to pass on.
-            tools = [tool for tool in tools if tool.name != "pass_to_flow"]
+            drop = {"pass_to_flow", "propose_plan"} if issued else {"pass_to_flow"}
+            tools = [tool for tool in tools if tool.name not in drop]
             event_lines, verified = await _plan_event(state, config, refs)
             lines += event_lines
         else:
@@ -287,12 +328,17 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             validate=validate,
         )
     except PassToFlow:
-        # D7: the loop's work is discarded, so a plan it opened is cancelled.
-        return await cancel_open_plan(state, config, box) if box.token_id is not None else {}
+        # D7: the loop's work is discarded, so a plan or pause it opened is cancelled.
+        return await cancel_open_plan(state, config, box) if box.opened else {}
+    except PlanHandoff as exc:
+        # D6: a check ended the turn in a handoff; whatever was open is cancelled first.
+        cleared = await cancel_open_plan(state, config, box)
+        return {**cleared, "agent_plan_steps": None, **exc.update}
     except LLMError as exc:
         if code_text is not None:
             # D14, D15: the write already ran (or was declined); code's text stands.
-            return _with_offer(_code_text_update(code_text, previous), state)
+            steps = (state.get("agent_plan_result") or {}).get("steps", [])
+            return _with_offer(_code_text_update(code_text, previous, steps), state)
         if isinstance(exc, LLMRoundCap):
             cleared = await cancel_open_plan(state, config, box)
             return {
@@ -303,7 +349,10 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
                     previous,
                 ),
             }
-        if plan_was_open and box.token_id is None:
+        if box.opened and box.token_id is None:
+            # D8: an OTP or address pause was opened; code's text stands in for Cardy's.
+            return _pause_without_reply(box, previous)
+        if plan_was_open and not box.opened:
             # D5: the plan stays open; code sends the reminder and the card, no pipeline.
             return await count_open_plan_turn(state, config)
         cleared = (
@@ -316,14 +365,16 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         return {"escalation_reason": "tool_failure"}
 
     language = turn.language if turn.language in ("es", "pt") else previous
-    replaced = box.token_id is not None
-    carried = plan_was_open and not replaced
+    opened = box.opened
+    carried = plan_was_open and not opened
     if claims_problem(turn, verified) is not None:
         # D16: the reply claims something code did not verify, so it is not sent.
         if code_text is not None:
             reply: str | None = code_text
         elif carried:
             reply = None  # the reminder and the card
+        elif opened and _is_otp_pause(box):
+            reply = otp_text(language)
         else:
             reply = get_template("fallback", language)
     else:
@@ -332,7 +383,7 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     update: dict[str, Any] = {"language": language}
     if reply is not None:
         update["segments"] = [reply]
-    if replaced:
+    if opened:
         update["clarification_failures"] = 0
     elif carried:
         # D13, D17 (b): the plan stays open; the typed turn is counted and the card shown again.
@@ -340,6 +391,9 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         if "escalation_reason" in counted:
             return counted
         update.update(counted)
+    elif issued:
+        # D10: pending, ui and the token belong to the open plan; this turn only words it.
+        pass
     elif turn.outcome == "asked":
         node = _first_request(turn) or "agent"
         same = (
@@ -379,15 +433,49 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             update["tx_offer"] = None
             update["closing_suggestion"] = None
     # The transaction list and its pick pause, when a read offered one.
-    update.update(refs.graph_update)
-    if replaced:
-        # An accepted plan is the turn's pause and card (D11); the token stays in `box`.
+    if not issued:
+        update.update(refs.graph_update)
+    box_update = box.update()
+    if opened:
+        # An accepted plan or a pause replaces any pause Cardy set (D11); the token stays in `box`.
         update.pop("tx_offer", None)
-        update.update(box.update())
+        update.update(box_update)
 
     if code_text is None:
         final_pending = update.get("pending", pending)
-        update["intent_segments"] = _segments(turn, final_pending)
+        update["intent_segments"] = box_update.get("intent_segments") or _segments(
+            turn, final_pending
+        )
+    tail = list(box.after_reply)
+    offer: dict[str, Any] | None = None
+    if box.permanent_blocked:
+        # D2: the unlock was refused for good; say so in code, then offer a replacement.
+        no_undo = get_template("block_permanent_no_undo", language)
+        tail = [
+            *(fill(no_undo, card_last4=digits) for _, _, digits in box.permanent_blocked),
+            *tail,
+        ]
+        update["intent_segments"] = [
+            {k: v for k, v in segment.items() if k != "awaiting_slot"} | {"status": "abstained"}
+            if segment["intent"] == "card_unlock"
+            else segment
+            for segment in update.get("intent_segments", [])
+        ]
+        shown = update["pending"] if "pending" in update else pending
+        agent_pause = (
+            shown is not None
+            and shown["flow"] == "agent"
+            and shown["awaiting_slot"] in ("confirmation", "otp", "address")
+        )
+        # AQ4: an open agent pause is kept and no offer is made that turn.
+        if not opened and not agent_pause:
+            offer = _replacement_offer(box.permanent_blocked, language)
+    if tail and "segments" in update:
+        # The tail ends in its own question; two closings in a row read as a stutter.
+        update["segments"] = [
+            *(without_closing_question(seg) for seg in update["segments"]),
+            *tail,
+        ]
     update["agent_labels"] = {
         "language": turn.language,
         "status": _status_for(turn, refs),
@@ -395,16 +483,34 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "route": _route_for(_first_request(turn), turn.outcome),
     }
     update["grounding"] = "ok" if attempts <= 1 else "regenerated"
+    if offer is not None:
+        return _with_offer(update, state, offer=offer)
     return _with_offer(update, state) if code_text is not None else update
 
 
-def _with_offer(update: dict[str, Any], state: GraphState) -> dict[str, Any]:
+def _is_otp_pause(box: PlanBox) -> bool:
+    pending = box.update().get("pending")
+    return box.token_id is None and pending is not None and pending["node"] == "otp"
+
+
+def _pause_without_reply(box: PlanBox, language: Language) -> dict[str, Any]:
+    """An OTP or address pause when Cardy's turn failed: code's text, the same pause (D8)."""
+    update = box.update()
+    update["language"] = language
+    update["segments"] = [*([otp_text(language)] if _is_otp_pause(box) else []), *box.after_reply]
+    update["agent_labels"] = plan_labels(update["agent_plan_steps"], language)
+    return update
+
+
+def _with_offer(
+    update: dict[str, Any], state: GraphState, offer: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Append the replacement offer `agent_plan` built, after the reply (D30).
 
     Its pause replaces whatever pause Cardy set; the offer's ids ride the checkpoint, never
     a prompt or a turn event.
     """
-    offer = state.get("agent_offer")
+    offer = offer if offer is not None else state.get("agent_offer")
     if offer is None:
         return update
     # The offer ends in its own question; two closings in a row read as a stutter.
@@ -415,20 +521,26 @@ def _with_offer(update: dict[str, Any], state: GraphState) -> dict[str, Any]:
     merged["selected_card_id"] = offer["selected_card_id"]
     merged["replacement_card_ids"] = offer["replacement_card_ids"]
     merged["agent_offer"] = None
+    # D3: the next replacement segment is the customer's answer to this offer.
+    merged["bot_offered_flow"] = "replacement"
     if offer["ui"] is not None:
         merged["ui"] = [*(update.get("ui") or []), offer["ui"]]
         merged["asked_ui"] = [offer["ui"]]
     return merged
 
 
-def _code_text_update(text: str, language: Language) -> dict[str, Any]:
+def _code_text_update(
+    text: str, language: Language, steps: list[AgentPlanStep] | None = None
+) -> dict[str, Any]:
     """The reply after a click when Cardy's own turn fails: code's result text (D14, D15)."""
-    return {
-        "segments": [text],
-        "agent_labels": {
+    labels: dict[str, Any] = (
+        plan_labels(steps, language)
+        if steps
+        else {
             "language": language,
             "status": "clear",
             "intents": ["card_block"],
             "route": "card_block",
-        },
-    }
+        }
+    )
+    return {"segments": [text], "agent_labels": labels}

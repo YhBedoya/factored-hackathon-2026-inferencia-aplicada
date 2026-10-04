@@ -7,6 +7,7 @@ to `ToolUnavailable`, like the other repositories. Never imports
 """
 
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -30,6 +31,7 @@ __all__ = [
     "HandoffClosed",
     "NotClaimant",
     "claim",
+    "fetch_customer_handoffs",
     "get_handoff",
     "insert_handoff",
     "list_handoffs",
@@ -52,7 +54,7 @@ class NotClaimant(ToolError):
 
 _SELECT_SQL = """
     SELECT h.id, h.conversation_id, h.queue, h.reason, h.priority, h.status,
-           h.agent_id, h.created_at, h.packet, a.display_name AS claimed_by
+           h.agent_id, h.created_at, h.claimed_at, h.packet, a.display_name AS claimed_by
     FROM app.handoffs h
     LEFT JOIN identity.accounts a ON a.account_id = h.agent_id
 """
@@ -89,6 +91,9 @@ def _detail(row: Any) -> HandoffDetail:
         language=packet.language,
         created_at=row["created_at"],
         claimed_by=row["claimed_by"],
+        request=packet.request,
+        case_summary=packet.case_summary,
+        claimed_at=row["claimed_at"],
     )
     return HandoffDetail(summary=summary, packet=packet)
 
@@ -143,6 +148,39 @@ async def list_handoffs(
             rows = (await conn.execute(text(sql), params)).mappings().all()
     except (SQLAlchemyError, OSError) as exc:
         raise ToolUnavailable(f"handoff list failed: {exc}") from exc
+    return [_detail(r) for r in rows]
+
+
+async def fetch_customer_handoffs(
+    customer_id: str, exclude_conversation_id: UUID, since: datetime, limit: int
+) -> list[HandoffDetail]:
+    """This customer's handoffs on other conversations since `since`, newest
+    first. Scoped by `app.conversations.customer_id` (R1)."""
+    sql = (
+        _SELECT_SQL
+        + " JOIN app.conversations c ON c.id = h.conversation_id"
+        + " WHERE c.customer_id = :customer_id AND h.conversation_id <> :exclude"
+        + " AND h.created_at >= :since ORDER BY h.created_at DESC LIMIT :limit"
+    )
+    try:
+        async with get_engine().connect() as conn:
+            rows = (
+                (
+                    await conn.execute(
+                        text(sql),
+                        {
+                            "customer_id": customer_id,
+                            "exclude": exclude_conversation_id,
+                            "since": since,
+                            "limit": limit,
+                        },
+                    )
+                )
+                .mappings()
+                .all()
+            )
+    except (SQLAlchemyError, OSError) as exc:
+        raise ToolUnavailable(f"handoff history read failed: {exc}") from exc
     return [_detail(r) for r in rows]
 
 
