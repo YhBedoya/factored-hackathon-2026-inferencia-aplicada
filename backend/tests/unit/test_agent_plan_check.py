@@ -71,12 +71,7 @@ def test_precondition_rejects_blocked_card(fakebank_dir: Path) -> None:
         write_tools = session.config["configurable"]["bank_write_tools"]
         with pytest.raises(PolicyDenied):
             await write_tools.issue_plan(
-                [
-                    PlanStep(
-                        tool="disputes.create_claim",
-                        args={"tx_ids": ["TRX-1"], "answers": [], "priority_flags": []},
-                    )
-                ],
+                [PlanStep(tool="cards.get_block_origin", args={"card_id": card_id})],
                 None,
             )
 

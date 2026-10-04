@@ -51,6 +51,8 @@ class Preconditions(BaseModel):
     locked: bool | None = None
     block_origin_in: list[str] | None = None
     replacement_eligible: bool | None = None
+    tx_owned: bool | None = None
+    answers_complete: bool | None = None
 
 
 class ToolPolicy(BaseModel):

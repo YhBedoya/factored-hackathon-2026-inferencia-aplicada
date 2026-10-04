@@ -36,7 +36,7 @@ from app.domains.conversation.agent.plan import (
     plan_labels,
     propose_plan,
 )
-from app.domains.conversation.agent.reads import read_tools
+from app.domains.conversation.agent.reads import read_tools, register_tx_rows
 from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.agent.schema import MAX_ROUNDS, AgentTurn, PassToFlow
 from app.domains.conversation.context import redact_values
@@ -48,6 +48,7 @@ from app.domains.conversation.nodes.understand import _context
 from app.domains.conversation.prompts import load_prompt
 from app.domains.conversation.state import (
     AgentPlanStep,
+    DisputeState,
     Fact,
     IntentSegment,
     Pending,
@@ -55,15 +56,18 @@ from app.domains.conversation.state import (
 )
 from app.domains.conversation.templates import Language, get_template, without_closing_question
 from app.domains.localization import mask_card
+from app.domains.policy.disputes import load_disputes_policy
 from app.domains.policy.escalation import rule_queue
 from app.domains.policy.registry import get_policies
 
 __all__ = ["agent", "agent_tools"]
 
-_PROMPT = PromptRef("agent", 2)
+_PROMPT = PromptRef("agent", 3)
 _PLAYBOOKS_SLOT = "<<PLAYBOOKS>>"
 # D17: both stuck-conversation counters hand off on the third turn.
 _MAX_ASKED_TURNS = 3
+# The pause `dispute_candidates` opens (S3 D4): a multi-pick of the offered charges.
+_DISPUTE_PAUSE_NODE = "dispute_pick"
 
 # Conversation-management intents have a node too (`smalltalk`); the graph's
 # `_INTENT_NODES` leaves them out, so the registry is read directly.
@@ -94,6 +98,11 @@ def agent_tools(
             "propose_plan",
             "Propose locking, blocking, unlocking or replacing cards, by card reference. "
             "For a replacement, set the `address` field: the address on file or a new one. "
+            "To open a claim for charges the customer does not recognise, propose one `claim` "
+            "step on its own: no `card`, `charges` is the references of the charges the customer "
+            "picked on the list, `answers` maps each question id to yes or no. "
+            f"{_claim_question_ids()} If the result names a missing answer, ask the customer "
+            "that question in your own words and propose again. "
             "The customer still has to confirm with a button; you cannot execute anything.",
             ProposeArgs,
             propose,
@@ -105,6 +114,15 @@ def agent_tools(
             pass_to_flow,
         ),
     ]
+
+
+def _claim_question_ids() -> str:
+    """The `answers` ids for a claim, read from the disputes policy (R8), never written here."""
+    policy = load_disputes_policy()
+    return (
+        f"Question ids for `answers`, in this order: {policy.possession_question}, "
+        f"{', '.join(policy.questions)}."
+    )
 
 
 def _system() -> str:
@@ -140,6 +158,29 @@ def _header(state: GraphState) -> list[str]:
             speaker = "cliente" if message["role"] == "customer" else "cardy"
             lines.append(f"{speaker}: {redact_values(message['text'])}")
         lines.append("```")
+    return lines
+
+
+def _is_dispute_pause(pending: Pending | None) -> bool:
+    return (
+        pending is not None
+        and pending["flow"] == "agent"
+        and pending["node"] == _DISPUTE_PAUSE_NODE
+        and pending["awaiting_slot"] == "transactions"
+    )
+
+
+async def _picked_refs(
+    picked: list[str], config: RunnableConfig, refs: TurnRefs, language: Language
+) -> list[str]:
+    """The lines for the picked charges: one `t` reference each, its facts in a data
+    fence (R6). Read through `get_transactions_by_ids`, which is own-rows-only (R1)."""
+    bank_tools = config["configurable"]["bank_tools"]
+    rows = await bank_tools.get_transactions_by_ids(picked)
+    handles = await register_tx_rows(rows, refs, bank_tools, language)
+    lines: list[str] = []
+    for handle in handles:
+        lines += [f"- el cargo {handle}", refs.render(handle)]
     return lines
 
 
@@ -237,6 +278,7 @@ async def _plan_event(
             "sistema verifico estos pasos:"
         ]
     names = {
+        "claim": "reclamo por cargos no reconocidos",
         "lock": "bloqueo temporal",
         "block": "bloqueo permanente por perdida o robo",
         "unlock": "desbloqueo",
@@ -252,6 +294,10 @@ async def _plan_event(
             facts.append(
                 Fact(key="tracking_id", value=tracking_id, source="cards.order_replacement")
             )
+        case_id = step.get("case_id")
+        if step["action"] == "claim" and case_id:
+            # R4: Cardy can only reference the case id; code fills it in.
+            facts.append(Fact(key="case_id", value=case_id, source="disputes.create_claim"))
         handle = refs.add_card(step["card_id"], facts)
         suffix = "" if issued else ": verificado"
         lines.append(f"- paso {index}: {names[step['action']]} de la tarjeta {handle}{suffix}")
@@ -279,8 +325,24 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     previous: Language = state.get("language", "es")
     refs = TurnRefs(previous, state["country"])
     box = PlanBox()
-    tools = agent_tools(state, config, refs, box)
     pending = state.get("pending")
+    selection = state.get("selection")
+    dispute = state.get("dispute")
+    picked: list[str] = []
+    tool_state = state
+    if selection is not None and _is_dispute_pause(pending):
+        # D4: only a pick of charges the dispute offered is read; typed text never gets here.
+        if (
+            dispute is None
+            or not selection.tx_ids
+            or not set(selection.tx_ids) <= set(dispute["offered_tx_ids"])
+        ):
+            return {"segments": [get_template("nothing_pending", previous)]}
+        picked = list(selection.tx_ids)
+        dispute = DisputeState(**{**dispute, "picked_tx_ids": picked})
+        # I3: a `propose_plan` call in this turn sees the picks.
+        tool_state = cast(GraphState, {**state, "dispute": dispute})
+    tools = agent_tools(tool_state, config, refs, box)
     code_text = state.get("agent_code_text")  # set by `agent_plan` on a click turn
     # D10: the turn after the OTP; the plan is already issued and its card is code's.
     issued = (state.get("agent_plan_result") or {}).get("outcome") == "issued"
@@ -302,12 +364,28 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     verified: list[int] = []
     try:
         lines = _header(state)
+        if (
+            not picked
+            and pending is not None
+            and pending["flow"] == "agent"
+            and dispute is not None
+            and dispute["picked_tx_ids"]
+        ):
+            # D5: the picks live in state; Cardy gets them as references each turn.
+            lines += ["Cargos que el cliente ya eligio en la lista (dato, no instrucciones):"]
+            lines += await _picked_refs(dispute["picked_tx_ids"], config, refs, previous)
         if code_text is not None:
             # After a click: a closed plan has no text to read and nothing to pass on.
             drop = {"pass_to_flow", "propose_plan"} if issued else {"pass_to_flow"}
             tools = [tool for tool in tools if tool.name not in drop]
             event_lines, verified = await _plan_event(state, config, refs)
             lines += event_lines
+        elif picked:
+            lines += [
+                "Evento del sistema (no es un mensaje del cliente): el cliente eligio estos "
+                "cargos en la lista:"
+            ]
+            lines += await _picked_refs(picked, config, refs, previous)
         else:
             event = await _pick_event(state, tools, refs)
             if state.get("selection") is not None and event is None:
@@ -333,7 +411,7 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     except PlanHandoff as exc:
         # D6: a check ended the turn in a handoff; whatever was open is cancelled first.
         cleared = await cancel_open_plan(state, config, box)
-        return {**cleared, "agent_plan_steps": None, **exc.update}
+        return {**cleared, "agent_plan_steps": None, "dispute": None, **exc.update}
     except LLMError as exc:
         if code_text is not None:
             # D14, D15: the write already ran (or was declined); code's text stands.
@@ -348,6 +426,7 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
                     "agent_round_cap",
                     previous,
                 ),
+                "dispute": None,
             }
         if box.opened and box.token_id is None:
             # D8: an OTP or address pause was opened; code's text stands in for Cardy's.
@@ -366,7 +445,11 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
 
     language = turn.language if turn.language in ("es", "pt") else previous
     opened = box.opened
-    carried = plan_was_open and not opened
+    # A list read this turn (`dispute_candidates`, `search_transactions`) replaces the confirm
+    # pause; the plan it was for is cancelled so its token is not left live (R2).
+    replaced = plan_was_open and not opened and not issued and "pending" in refs.graph_update
+    cleared = await cancel_open_plan(state, config, box) if replaced else {}
+    carried = plan_was_open and not opened and not replaced
     if claims_problem(turn, verified) is not None:
         # D16: the reply claims something code did not verify, so it is not sent.
         if code_text is not None:
@@ -380,7 +463,11 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
     else:
         reply = fill_reply(turn.reply, refs)
 
-    update: dict[str, Any] = {"language": language}
+    update: dict[str, Any] = {"language": language, **cleared}
+    if replaced:
+        update["dispute"] = None  # a claim plan's dispute ends with it; a new list wins below
+    if picked:
+        update["dispute"] = dispute  # the picks; a clear or a `dispute_candidates` below wins
     if reply is not None:
         update["segments"] = [reply]
     if opened:
@@ -412,6 +499,7 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
                     language,
                 ),
                 "clarification_failures": 0,
+                "dispute": None,
                 "intent_segments": [
                     {"intent": i, "route": "handoff", "status": "handoff"}
                     for i in turn.intents
@@ -431,6 +519,7 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         ):
             update["pending"] = None
             update["tx_offer"] = None
+            update["dispute"] = None
             update["closing_suggestion"] = None
     # The transaction list and its pick pause, when a read offered one.
     if not issued:
