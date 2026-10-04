@@ -119,21 +119,28 @@ Resources:
           #!/bin/bash
           set -euo pipefail
           export DEBIAN_FRONTEND=noninteractive
+          # Retry every download: one reset connection failed the first bootstrap
+          # (2026-10-04, the Docker GPG key).
+          echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
+          CURL_RETRY="--retry 5 --retry-all-errors --retry-delay 3"
           apt-get update
           apt-get install -y ca-certificates curl git make jq unzip
           install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          curl $CURL_RETRY -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
           chmod a+r /etc/apt/keyrings/docker.asc
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" > /etc/apt/sources.list.d/docker.list
           apt-get update
           apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
           systemctl enable --now docker
-          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
-          curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
-          unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
-          git clone ${RepoUrl} /opt/swip
-          chown -R ubuntu:ubuntu /opt/swip
           usermod -aG docker ubuntu
+          curl $CURL_RETRY -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
+          curl $CURL_RETRY -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+          unzip -q /tmp/awscliv2.zip -d /tmp && /tmp/aws/install
+          # Last, and not fatal: a private repo needs the deploy key first (runbook
+          # step 4). The clone then runs by hand as ubuntu into this same directory.
+          install -d -o ubuntu -g ubuntu /opt/swip
+          sudo -u ubuntu env GIT_TERMINAL_PROMPT=0 git clone ${RepoUrl} /opt/swip \
+            || echo "swip: git clone failed (private repo? add the deploy key, runbook step 4)" >&2
 
   ElasticIp:
     Type: AWS::EC2::EIP
