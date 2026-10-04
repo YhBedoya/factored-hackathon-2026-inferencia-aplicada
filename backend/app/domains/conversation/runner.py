@@ -155,7 +155,7 @@ async def start_turn(
     conversation_id: UUID,
     trace_id: str,
     text: str | None = None,
-    resume: Literal["step_up"] | None = None,
+    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None = None,
     confirmation: ConfirmationDecision | None = None,
     selection: TxSelection | None = None,
     card_selection: CardSelection | None = None,
@@ -291,6 +291,21 @@ async def checkpointed_replacement_offer(
     return pending, set(state.values.get("replacement_card_ids") or [])
 
 
+async def checkpointed_otp_pause(
+    host: TurnHost, conversation_id: UUID
+) -> Literal["agent", "pipeline"] | None:
+    """Who owns this conversation's open OTP pause, from one checkpoint read (S2 D30):
+    the route's gate for a Cancel (any OTP pause) and for typed text (agent pause only).
+    An agent pause counts only with `AGENT_ENABLED` on (S1 D27), as `graph._otp_pause`."""
+    state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
+    pending: Pending | None = state.values.get("pending")
+    if pending is None or pending["awaiting_slot"] != "otp":
+        return None
+    if pending["flow"] == "agent":
+        return "agent" if get_settings().agent_enabled else None
+    return "pipeline"
+
+
 _GROUNDING_RANK = {"ok": 0, "regenerated": 1, "template": 2}
 
 
@@ -321,7 +336,7 @@ async def _run_turn(
     text: str | None,
     graph_text: str | None,
     vault: PiiVault,
-    resume: Literal["step_up"] | None,
+    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None,
     confirmation: ConfirmationDecision | None,
     selection: TxSelection | None,
     trace_id: str,
@@ -438,9 +453,20 @@ async def _run_turn(
                         # ends in `finish` / `handoff` (see after the loop).
                         agent_ran = True
                         agent_plan_ran = True
-                    elif node_name == "agent":
-                        agent_ran = True
+                    elif node_name in (
+                        "agent",
+                        "agent_step_up",
+                        "agent_address",
+                        "step_up_failed",
+                        "otp_cancel",
+                    ):
                         labels = values.get("agent_labels")
+                        # Exit nodes at a pipeline pause carry no labels: they stay on the
+                        # pipeline path and take the paused flow's route (S2 D28, D30).
+                        if labels or node_name not in ("step_up_failed", "otp_cancel"):
+                            agent_ran = True
+                        elif route_taken is None and values.get("intent_segments"):
+                            route_taken = values["intent_segments"][0]["route"]
                         if labels:
                             language = (
                                 labels["language"]

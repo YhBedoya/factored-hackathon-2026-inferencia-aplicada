@@ -6,10 +6,14 @@ config:
 graph TD;
 	__start__([<p>__start__</p>]):::first
 	load_session(load_session)
+	step_up_failed(step_up_failed)
+	otp_cancel(otp_cancel)
 	understand(understand)
 	summarize(summarize)
 	agent(agent)
 	agent_plan(agent_plan)
+	agent_step_up(agent_step_up)
+	agent_address(agent_address)
 	smalltalk(smalltalk)
 	enqueue(enqueue)
 	card_info(card_info)
@@ -37,10 +41,18 @@ graph TD;
 	agent -.-> finish;
 	agent -.-> handoff_summary;
 	agent -.-> understand;
+	agent_address -.-> agent;
+	agent_address -.-> fallback;
+	agent_address -.-> finish;
+	agent_address -.-> handoff_summary;
 	agent_plan -.-> agent;
 	agent_plan -.-> fallback;
 	agent_plan -.-> finish;
 	agent_plan -.-> handoff_summary;
+	agent_step_up -.-> agent;
+	agent_step_up -.-> fallback;
+	agent_step_up -.-> finish;
+	agent_step_up -.-> handoff_summary;
 	card_block -.-> compose;
 	card_block -.-> fallback;
 	card_block -.-> finish;
@@ -81,15 +93,19 @@ graph TD;
 	handoff --> finish;
 	handoff_summary --> handoff;
 	load_session -.-> agent;
+	load_session -.-> agent_address;
 	load_session -.-> agent_plan;
+	load_session -.-> agent_step_up;
 	load_session -.-> card_block;
 	load_session -.-> card_info;
 	load_session -.-> card_unlock;
 	load_session -.-> decline_explain;
 	load_session -.-> fallback;
+	load_session -.-> otp_cancel;
 	load_session -.-> relay_to_agent;
 	load_session -.-> replacement;
 	load_session -.-> smalltalk;
+	load_session -.-> step_up_failed;
 	load_session -.-> summarize;
 	load_session -.-> tx_explain;
 	load_session -.-> tx_search;
@@ -105,6 +121,7 @@ graph TD;
 	next_intent -.-> tx_search;
 	next_intent -.-> unrecognized_charge;
 	next_intent -.-> unsupported;
+	otp_cancel --> finish;
 	relay_to_agent --> finish;
 	replacement -.-> compose;
 	replacement -.-> fallback;
@@ -112,6 +129,7 @@ graph TD;
 	replacement -.-> handoff_summary;
 	replacement -.-> next_intent;
 	smalltalk --> finish;
+	step_up_failed --> handoff_summary;
 	summarize -.-> agent;
 	summarize -.-> understand;
 	tx_explain -.-> compose;

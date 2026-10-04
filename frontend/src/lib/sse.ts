@@ -34,7 +34,7 @@ export type ConfirmPayload = {
 };
 export type ConfirmUiEvent = { kind: "confirm"; payload: ConfirmPayload };
 
-export type OtpRequiredPayload = { tool: string };
+export type OtpRequiredPayload = { tool: string; cancellable?: boolean };
 export type OtpRequiredUiEvent = {
 	kind: "otp_required";
 	payload: OtpRequiredPayload;

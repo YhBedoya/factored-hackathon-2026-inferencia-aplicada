@@ -274,8 +274,11 @@ class AgentPlanStep(TypedDict):
     action; the block reason is set by code when the call is built (S1 D8).
     """
 
-    action: Literal["lock", "block"]
+    action: Literal["lock", "block", "unlock", "replace"]
     card_id: str
+    address_ref: NotRequired[
+        str
+    ]  # "on_file" or "⟨ADDR_n⟩"; absent on a "new" replace until the address turn
 
 
 class TurnState(TypedDict):

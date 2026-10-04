@@ -37,6 +37,7 @@ from app.core.config import get_settings
 from app.core.db import get_engine
 from app.domains.identity.passwords import hash_password, staff_login_key
 from app.domains.identity.tokens import CSRF_HEADER, decode_token
+from app.domains.policy.registry import get_policies
 from app.main import create_app
 from tests.integration.conftest import ItAccount
 
@@ -180,8 +181,9 @@ def test_otp_verify(
 ) -> None:
     """D4/D5: the right `DEMO_OTP_CODE` steps the session up (the re-issued
     `session` cookie decodes with `step_up_at` set); a wrong code is `401
-    otp_invalid`, five of those hit `rl:otp:<account_id>`'s limit, and the
-    sixth attempt is `429 too_many_attempts` even with the right code.
+    otp_invalid`, `step_up_max_failures` (`tools.yaml`, 3) of those hit
+    `rl:otp:<account_id>`'s limit, and the next attempt is `429
+    too_many_attempts` even with the right code.
     """
 
     monkeypatch.setenv("DEMO_OTP_CODE", "246810")
@@ -223,7 +225,7 @@ def test_otp_verify(
     assert other_login.status_code == 200
     csrf_token = other_login.cookies["csrf_token"]
 
-    for _ in range(5):
+    for _ in range(get_policies().tools.step_up_max_failures):
         wrong_response = app_client.post(
             "/api/v1/auth/otp/verify",
             json={"code": "000000"},

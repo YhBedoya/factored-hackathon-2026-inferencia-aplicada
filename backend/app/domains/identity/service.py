@@ -58,6 +58,7 @@ __all__ = [
     "me",
     "mint_session_for_customer",
     "refresh",
+    "reset_otp_failures",
     "session_from_token",
     "staff_login",
     "staff_me",
@@ -98,9 +99,14 @@ class TooManyAttempts(Exception):
 
 class OtpInvalid(Exception):
     """`verify_otp`'s code didn't match `settings.demo_otp_code` (D3-A4 D5).
-    The code itself never reaches this message (ADR-008): only `OtpInvalid()`
-    with no argument is ever raised.
+    The code itself never reaches this message (ADR-008). `failures` is the
+    counter after this miss (D26), so the caller can tell the limit was just
+    reached without another Redis read.
     """
+
+    def __init__(self, message: str = "otp code did not match", *, failures: int = 0) -> None:
+        super().__init__(message)
+        self.failures = failures
 
 
 class AccountStore(Protocol):
@@ -151,6 +157,8 @@ class LoginLimiter(Protocol):
 
     async def record_failure(self, key: str, *, window_seconds: int) -> None: ...
 
+    async def reset(self, key: str) -> None: ...
+
 
 class _RedisLoginLimiter:
     """The default `LoginLimiter`: a plain Redis `INCR` counter, `EXPIRE`d
@@ -166,6 +174,9 @@ class _RedisLoginLimiter:
         count = await get_redis().incr(key)
         if count == 1:
             await get_redis().expire(key, window_seconds)
+
+    async def reset(self, key: str) -> None:
+        await get_redis().delete(key)
 
 
 _default_limiter = _RedisLoginLimiter()
@@ -300,6 +311,7 @@ async def verify_otp(
     session: Session,
     code: str,
     *,
+    max_failures: int,
     limiter: LoginLimiter | None = None,
     settings: Settings | None = None,
 ) -> Session:
@@ -309,7 +321,8 @@ async def verify_otp(
 
     Reuses the D7 rate-limit shape, keyed `rl:otp:<account_id>` instead of a
     login key (there's no document number to hash post-login), and checked
-    *first*: once the counter is at `settings.login_max_failures`, every
+    *first*: once the counter is at the `max_failures` argument (the step-up limit
+    from tools.yaml, D26), every
     further call raises `TooManyAttempts`, even with the right code, without
     touching the limiter again. A miss records a failure and raises
     `OtpInvalid`; a match returns `session` with a fresh `step_up_at`, and
@@ -323,7 +336,7 @@ async def verify_otp(
 
     rate_limit_key = f"{_OTP_RATE_LIMIT_KEY_PREFIX}{session.account_id}"
     failures = await limiter.get_failures(rate_limit_key)
-    if failures >= settings.login_max_failures:
+    if failures >= max_failures:
         _logger.warning("auth.otp_throttled", account_id=str(session.account_id))
         raise TooManyAttempts(f"too many OTP attempts for account {session.account_id}")
 
@@ -333,10 +346,20 @@ async def verify_otp(
     if not matched:
         await limiter.record_failure(rate_limit_key, window_seconds=settings.login_window_seconds)
         _logger.warning("auth.otp_failed", account_id=str(session.account_id))
-        raise OtpInvalid("otp code did not match")
+        raise OtpInvalid("otp code did not match", failures=failures + 1)
 
     _logger.info("auth.otp_verified", account_id=str(session.account_id))
     return session.model_copy(update={"step_up_at": datetime.now(UTC)})
+
+
+async def reset_otp_failures(session: Session, *, limiter: LoginLimiter | None = None) -> None:
+    """Clear `rl:otp:<account_id>` (D26): after the step-up limit hands the
+    customer off, the next conversation starts from a zero counter.
+    """
+
+    limiter = limiter or _default_limiter
+    await limiter.reset(f"{_OTP_RATE_LIMIT_KEY_PREFIX}{session.account_id}")
+    _logger.info("auth.otp_reset", account_id=str(session.account_id))
 
 
 async def me(session: Session) -> MeResponse:

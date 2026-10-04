@@ -26,6 +26,7 @@ from app.domains.conversation.prompts import load_prompt
 from app.domains.conversation.templates import Language
 from app.domains.localization import mask_card, queue_label
 from app.domains.policy.escalation import load_escalation_policy, resolve_escalation
+from app.domains.policy.registry import get_policies
 
 __all__ = ["HandoffSummaryDraft", "handoff_summary"]
 
@@ -36,6 +37,10 @@ _MAX_LEN = 200
 # Fixed agent-facing texts per reason, used when the draft is rejected or the
 # LLM fails (R11). Digit-free on purpose: they carry no placeholders.
 _FALLBACK: dict[str, dict[Language, str]] = {
+    "step_up_failed": {
+        "es": "El cliente no superó la verificación de identidad (código) tras varios intentos.",
+        "pt": "O cliente não passou na verificação de identidade (código) após várias tentativas.",
+    },
     "agent_round_cap": {
         "es": "El asistente no logró completar la solicitud tras varios intentos.",
         "pt": "O assistente não conseguiu concluir a solicitação após várias tentativas.",
@@ -146,6 +151,19 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
         except Exception:  # the mask is optional; the summary must not fail on it
             pass
 
+    # step_up_failed facts are written in code (D28): the wrong-code count is the
+    # policy limit, offered as a placeholder so the model never types a digit (R4),
+    # and the paused action is stated as not executed.
+    facts: list[str] = []
+    if reason == "step_up_failed":
+        values["failed_codes"] = str(get_policies().tools.step_up_max_failures)
+        facts = [
+            "hecho: el cliente ingresó {failed_codes} códigos incorrectos y falló la "
+            "verificación de identidad",
+            "hecho: la acción solicitada (pausada) NO se ejecutó; "
+            "el estado de la tarjeta no cambió",
+        ]
+
     actions = [f"{a.tool} verified={str(a.verified).lower()}" for a in state.get("actions", [])]
     user = "\n".join(
         [
@@ -156,6 +174,7 @@ async def handoff_summary(state: GraphState, config: RunnableConfig) -> dict[str
             "```",
             f"intents: {', '.join(intents) or '-'}",
             f"acciones: {'; '.join(actions) or '-'}",
+            *facts,
             f"placeholders: {', '.join('{' + k + '}' for k in values)}",
             "```",
         ]
