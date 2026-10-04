@@ -319,7 +319,7 @@ Set `PUBLIC_HOST` (step 2) to the Elastic IP with dashes + `.sslip.io`.
 cd /opt/swip && git checkout main && git pull --ff-only
 bash infra/aws/render-env.sh
 docker compose --env-file .env -f docker/docker-compose.base.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.prod.yml up -d postgres redis
-make data      # ingest -> dbt -> load -> seed-identity -> golden -> demo-reset; already applies 0007 on latam_golden
+make data      # ingest -> dbt -> load -> seed-identity -> golden -> demo-reset; applies Alembic head (0010 as of 2026-10-04) on latam_golden
 ```
 `make data` runs the box-side `seed-identity`; the agent never runs it.
 Every prod compose call needs the observability file too (the prod overlay overrides `grafana`, defined only there). `docker compose ...` below means these same three `-f` files (`COMPOSE_PROD` in the Makefile).
@@ -335,7 +335,7 @@ docker compose ... run --rm --entrypoint certbot certbot certonly --webroot -w /
 ```
 If sslip.io is rate-limited: register a cheap domain in Route 53, add an A record to the same Elastic IP, set `PUBLIC_HOST=<DOMAIN>` in SSM, re-issue (cookies are host-only, users log in again). Plain HTTP is not a fallback (Secure cookies).
 
-**Step 6. Deploy and smoke.** On the box: `make deploy` (renders `.env`, builds, `up -d --wait`, applies Alembic head, including `0007_privacy_ledger`, to `latam_app` AND `latam_golden`, then smokes). From a laptop instead: `make deploy-remote INSTANCE_ID=<INSTANCE_ID> DEPLOY_REF=main`. Then:
+**Step 6. Deploy and smoke.** On the box: `make deploy` (renders `.env`, builds, `up -d --wait`, applies Alembic head, currently `0010_agent_cost` (includes `0007_privacy_ledger`), to `latam_app` AND `latam_golden`, then smokes). From a laptop instead: `make deploy-remote INSTANCE_ID=<INSTANCE_ID> DEPLOY_REF=main`. Then:
 ```bash
 export SMOKE_DOC_TYPE=<DOC_TYPE> SMOKE_DOC=<PERSONA_DOC> SMOKE_PASSWORD=<PERSONA_PASSWORD> SMOKE_STAFF_USER=<STAFF_USER> SMOKE_STAFF_PASSWORD=<STAFF_PASSWORD>
 make smoke-prod HOST=<EIP_WITH_DASHES>.sslip.io
@@ -362,7 +362,7 @@ Also on the public URL: the D3 flows (card status/block, unrecognized charge), t
 - [ ] `validate-template` and `make infra-up` succeeded. Paste: the stack Outputs (InstanceId, PublicIp) and the `BedrockModelArns` you passed (ARNs only, redact the account id).
 - [ ] Data built on the box. Paste: the tail of `make data`.
 - [ ] Certificates: staging then production. Paste: the `openssl x509 -noout -issuer` line.
-- [ ] `make deploy` applied `0007`. Paste: `SELECT version_num FROM alembic_version` in both `latam_app` and `latam_golden` (expect `0007`).
+- [ ] `make deploy` applied Alembic head. Paste: `SELECT version_num FROM alembic_version` in both `latam_app` and `latam_golden` (expect the head, `0010` as of 2026-10-04).
 - [ ] `make smoke-prod` green. Paste: its full output.
 - [ ] HSTS present. Paste: the `strict-transport-security` header line.
 - [ ] Ports closed. Paste: the three `nc` lines (22, 5432, 3000 all closed).
