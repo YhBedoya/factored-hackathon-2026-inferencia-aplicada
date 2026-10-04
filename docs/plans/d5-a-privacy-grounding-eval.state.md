@@ -307,7 +307,7 @@ aws cloudformation validate-template --template-body file://infra/aws/ec2-stack.
 # ARNs: the profile ARN plus the foundation-model ARN in every region it routes to
 aws bedrock get-inference-profile --inference-profile-identifier us.anthropic.claude-haiku-4-5-20251001-v1:0 \
   --region us-east-2 --profile <TEAM_PROFILE> --query '[inferenceProfileArn, models[].modelArn]' --output text
-# repeat for the Sonnet 5.5 profile (nlu, agent): us.anthropic.claude-sonnet-5-5
+# repeat for the Sonnet 4.6 profile (nlu, agent; ADR-017 amended 2026-10-04): us.anthropic.claude-sonnet-4-6
 # (confirm both ids equal backend/app/core/llm/registry.py before running)
 make infra-up ALERT_EMAIL_1=<EMAIL_1> ALERT_EMAIL_2=<EMAIL_2> DATA_BUCKET=<OUR_BUCKET> BEDROCK_ARNS=<PROFILE_ARN>,<MODEL_ARN_1>,<MODEL_ARN_2>,...
 aws cloudformation describe-stacks --stack-name <STACK_NAME> --query 'Stacks[0].Outputs' --region us-east-2 --profile <TEAM_PROFILE>   # InstanceId, PublicIp

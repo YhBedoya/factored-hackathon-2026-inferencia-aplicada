@@ -33,19 +33,20 @@ Step = Literal[
 ]
 
 # Sonnet 5.5 for NLU (human decision, D5-A); Haiku 4.5 for the other served steps (D6).
-# The Bedrock IDs are placeholders until Dev A's K2 confirms the inference-profile
-# ARN/region; do not build on them before then. `paraphrase` is eval-only tooling
+# On Bedrock, `nlu` and `agent` use Sonnet 4.6: the team's AWS project cannot call the
+# Claude 5 family (ADR-017 amended 2026-10-04). The Bedrock IDs stay unconfirmed until
+# K2 runs on the box. `paraphrase` is eval-only tooling
 # (ADR-030): it has no Bedrock/Anthropic entry because `STEP_PROVIDER` pins it to
 # `openai` always.
 MODEL_REGISTRY: dict[Step, dict[Provider, str]] = {
     "nlu": {
         "anthropic": "claude-sonnet-5-5",
-        "bedrock": "us.anthropic.claude-sonnet-5-5",  # unconfirmed until K2
+        "bedrock": "us.anthropic.claude-sonnet-4-6",  # unconfirmed until K2
     },
     # The tool-using conversation agent (cardy-agent-s1 D2): same model as `nlu`.
     "agent": {
         "anthropic": "claude-sonnet-5-5",
-        "bedrock": "us.anthropic.claude-sonnet-5-5",  # unconfirmed until K2
+        "bedrock": "us.anthropic.claude-sonnet-4-6",  # unconfirmed until K2
     },
     "compose": {
         "anthropic": "claude-haiku-4-5-20251001",
