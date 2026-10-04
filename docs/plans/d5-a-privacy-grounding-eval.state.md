@@ -293,13 +293,14 @@ put POSTGRES_PASSWORD <PG_PASSWORD>            # not the dev default
 put JWT_SECRET <JWT_SECRET>
 put IDENTITY_HMAC_KEY <IDENTITY_HMAC_KEY>
 put CREDENTIALS_SEED <CREDENTIALS_SEED>        # MUST equal the seed behind the judges' credentials
-put DEMO_OTP_CODE <DEMO_OTP_CODE>
+put DEMO_OTP_CODE <DEMO_OTP_CODE>              # 6 digits
+put ANALYTICS_DB_PASSWORD <ANALYTICS_DB_PASSWORD>   # analytics worker's DB role (ADR-033)
 put S3_BUCKET <OUR_BUCKET>
 put PUBLIC_HOST <EIP_WITH_DASHES>.sslip.io     # after step 3 gives the Elastic IP; re-put then
 # NEW (D21): a Fernet key. Generate it locally, put it, and keep a copy in the team vault.
 put PII_VAULT_KEY "$(python3 -c 'import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
 ```
-Losing `PII_VAULT_KEY` makes old vault rows and message content unreadable (demo-reset clears them). The backend refuses to start with it empty. Verify names only: `aws ssm get-parameters-by-path --path /swip/prod/ --query 'Parameters[].Name' --profile <TEAM_PROFILE> --region us-east-2` lists all nine.
+Losing `PII_VAULT_KEY` makes old vault rows and message content unreadable (demo-reset clears them). The backend refuses to start with it empty. Verify names only: `aws ssm get-parameters-by-path --path /swip/prod/ --query 'Parameters[].Name' --profile <TEAM_PROFILE> --region us-east-2` lists all ten (nine secrets plus `PUBLIC_HOST`).
 
 **Step 3. Template check, Bedrock ARNs, stack.**
 ```bash
@@ -315,6 +316,15 @@ aws cloudformation describe-stacks --stack-name <STACK_NAME> --query 'Stacks[0].
 Set `PUBLIC_HOST` (step 2) to the Elastic IP with dashes + `.sslip.io`.
 
 **Step 4. On the box (SSM Session Manager to `<INSTANCE_ID>`).**
+Session Manager opens as `ssm-user` (prompt `$`); the repo, `.env` and Docker belong to `ubuntu`, so run `sudo -iu ubuntu` first and check `whoami`. Type `exit` once to go back; a second `exit` ends the session. Paste one command at a time: multi-line pastes can arrive doubled.
+While the repo is private, the UserData clone fails (cloud-init logs `swip: git clone failed`). Add a read-only deploy key as `ubuntu`, then clone by hand:
+```bash
+ssh-keygen -t ed25519 -N '' -C swip-ec2-deploy -f ~/.ssh/swip_deploy && cat ~/.ssh/swip_deploy.pub   # GitHub: repo Settings > Deploy keys, write access off
+printf 'Host github.com\n  IdentityFile ~/.ssh/swip_deploy\n  IdentitiesOnly yes\n' > ~/.ssh/config && chmod 600 ~/.ssh/config
+ssh -T git@github.com    # "Hi <owner>/<repo>! You've successfully authenticated"
+git clone git@github.com:<owner>/<repo>.git /opt/swip
+```
+Once the repo is public, a new stack's UserData clone works over HTTPS and none of this is needed. On an existing box, switch it first (`git remote set-url origin https://github.com/<owner>/<repo>.git`, then `git fetch`), and only then remove the deploy key in GitHub and `~/.ssh/swip_deploy*`. SSH fetches need a key even from a public repo.
 ```bash
 cd /opt/swip && git checkout main && git pull --ff-only
 bash infra/aws/render-env.sh
