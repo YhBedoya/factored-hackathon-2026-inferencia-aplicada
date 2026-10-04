@@ -177,7 +177,7 @@ The box's `.env` is **rendered at deploy time** from SSM Parameter Store (`aws s
 | `POSTGRES_PASSWORD` | SSM SecureString. **Not** the dev default `postgres`. `DATABASE_URL` and `GOLDEN_DATABASE_URL` are built from it |
 | `ANALYTICS_DB_PASSWORD` | SSM SecureString at `/swip/prod/ANALYTICS_DB_PASSWORD`. Password of the Postgres role `analytics_worker`; migration `0009` reads it to set the role's password. `ANALYTICS_DATABASE_URL` is built from it in Compose |
 | `S3_BUCKET` | SSM (our bucket) |
-| `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AWS_REGION=us-east-2`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
+| `APP_ENV=prod`, `LLM_PROVIDER=bedrock`, `AGENT_ENABLED=true` (ADR-035), `AWS_REGION=us-east-2`, `S3_PREFIX=data`, `BANK=postgres`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `PUBLIC_HOST`, session and rate-limit values | Plain values in a committed template **(proposed: `.env.prod.example`)** |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_PROFILE`, `ANTHROPIC_API_KEY`, organizer credentials | **Absent.** The instance role supplies AWS credentials, and the Anthropic API isn't used in prod (ADR-028) |
 
 ## 10. Provisioning and deploy workflow
