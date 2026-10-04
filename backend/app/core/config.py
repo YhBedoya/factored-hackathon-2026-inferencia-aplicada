@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     demo_personas_path: Path = Path("/app/eval/demo_personas.yaml")
     demo_repo_url: str = ""
     demo_docs_url: str = ""
+    # `POST /admin/demo/reset`. Off in prod, where quick access makes admin a
+    # public one-click login; the box resets with `make demo-reset` instead.
+    demo_reset_enabled: bool = True
     git_sha: str = "unknown"
 
     # Reliability (D6-A). `FAULTS` is comma-separated and set on the command
