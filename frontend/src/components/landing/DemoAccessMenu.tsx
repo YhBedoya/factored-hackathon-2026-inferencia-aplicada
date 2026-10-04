@@ -4,11 +4,13 @@ import { cn } from "cn";
 import {
 	BookOpenIcon,
 	CheckIcon,
+	ChevronDownIcon,
 	CodeIcon,
 	CopyIcon,
 	KeyRoundIcon,
 	ShieldCheckIcon,
 	UserRoundIcon,
+	WrenchIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -88,18 +90,67 @@ export function DemoAccessMenu() {
 	);
 }
 
-function SectionTitle({
+// Each part of the panel is its own collapsible card, closed when the panel
+// opens: the header (icon, title, hint) toggles its body. Several can be
+// open at once.
+function DemoSection({
+	id,
 	icon,
+	title,
+	hint,
 	children,
 }: {
+	id: string;
 	icon: React.ReactNode;
+	title: string;
+	hint: string;
 	children: React.ReactNode;
 }) {
+	const [open, setOpen] = useState(false);
+	const bodyId = `${id}-body`;
 	return (
-		<h3 className="flex items-center gap-2 text-sm font-semibold">
-			{icon}
-			{children}
-		</h3>
+		<section
+			aria-labelledby={id}
+			data-testid={id}
+			className="overflow-hidden rounded-xl border bg-card"
+		>
+			<h3>
+				<button
+					type="button"
+					id={id}
+					aria-expanded={open}
+					aria-controls={bodyId}
+					data-testid={`${id}-toggle`}
+					onClick={() => setOpen((value) => !value)}
+					className={cn(
+						"flex w-full items-center gap-3 bg-muted/50 px-4 py-3 text-left transition-colors hover:bg-muted",
+						open && "border-b",
+					)}
+				>
+					<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+						{icon}
+					</span>
+					<span className="flex flex-1 flex-col gap-0.5">
+						<span className="text-sm font-semibold">{title}</span>
+						<span className="text-muted-foreground text-xs font-normal">
+							{hint}
+						</span>
+					</span>
+					<ChevronDownIcon
+						aria-hidden
+						className={cn(
+							"size-4 shrink-0 text-muted-foreground transition-transform",
+							open && "rotate-180",
+						)}
+					/>
+				</button>
+			</h3>
+			{open && (
+				<div id={bodyId} className="flex flex-col gap-3 p-4">
+					{children}
+				</div>
+			)}
+		</section>
 	);
 }
 
@@ -130,13 +181,12 @@ function CustomerSection({ personas }: { personas: DemoPersona[] }) {
 	}
 
 	return (
-		<section className="flex flex-col gap-3" aria-labelledby="demo-customer">
-			<SectionTitle icon={<UserRoundIcon className="size-4" aria-hidden />}>
-				<span id="demo-customer">{t("landing.demo.customer.title")}</span>
-			</SectionTitle>
-			<p className="text-muted-foreground text-xs">
-				{t("landing.demo.customer.hint")}
-			</p>
+		<DemoSection
+			id="demo-customer"
+			icon={<UserRoundIcon className="size-4" aria-hidden />}
+			title={t("landing.demo.customer.title")}
+			hint={t("landing.demo.customer.hint")}
+		>
 			<div
 				className="flex max-h-72 flex-col gap-1.5 overflow-y-auto rounded-lg border p-1.5"
 				data-testid="demo-persona-list"
@@ -211,7 +261,7 @@ function CustomerSection({ personas }: { personas: DemoPersona[] }) {
 					{t("landing.demo.error")}
 				</p>
 			)}
-		</section>
+		</DemoSection>
 	);
 }
 
@@ -235,19 +285,14 @@ function StaffSection() {
 	}
 
 	return (
-		<section
-			className="flex flex-col gap-3 border-t pt-4"
-			aria-labelledby="demo-staff"
+		<DemoSection
+			id="demo-staff"
+			icon={<ShieldCheckIcon className="size-4" aria-hidden />}
+			title={t("landing.demo.staff.title")}
+			hint={t("landing.demo.staff.hint")}
 		>
-			<SectionTitle icon={<ShieldCheckIcon className="size-4" aria-hidden />}>
-				<span id="demo-staff">{t("landing.demo.staff.title")}</span>
-			</SectionTitle>
-			<p className="text-muted-foreground text-xs">
-				{t("landing.demo.staff.hint")}
-			</p>
 			<Button
 				type="button"
-				variant="outline"
 				disabled={pending}
 				onClick={handleLogin}
 				data-testid="demo-staff-login"
@@ -259,7 +304,7 @@ function StaffSection() {
 					{t("landing.demo.error")}
 				</p>
 			)}
-		</section>
+		</DemoSection>
 	);
 }
 
@@ -277,7 +322,12 @@ function ExtrasSection({
 		return null;
 	}
 	return (
-		<section className="flex flex-col gap-3 border-t pt-4">
+		<DemoSection
+			id="demo-tools"
+			icon={<WrenchIcon className="size-4" aria-hidden />}
+			title={t("landing.demo.tools.title")}
+			hint={t("landing.demo.tools.hint")}
+		>
 			{otpCode && (
 				<div className="flex items-center justify-between gap-2">
 					<div>
@@ -298,7 +348,7 @@ function ExtrasSection({
 				</div>
 			)}
 			{(repo || docs) && (
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="flex flex-wrap items-center gap-2 border-t pt-3">
 					<span className="text-sm font-semibold">
 						{t("landing.demo.links")}
 					</span>
@@ -320,7 +370,7 @@ function ExtrasSection({
 					)}
 				</div>
 			)}
-		</section>
+		</DemoSection>
 	);
 }
 

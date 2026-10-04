@@ -21,6 +21,8 @@
 	"landing.demo.staff.title": "Entrar como staff",
 	"landing.demo.staff.hint": "Entre como administrador: caixa de casos, conversas e análises.",
 	"landing.demo.staff.login": "Entrar como admin",
+	"landing.demo.tools.title": "Ferramentas para avaliar",
+	"landing.demo.tools.hint": "Código para verificar sua identidade no chat e links do projeto.",
 	"landing.demo.otp": "Código OTP de demo",
 	"landing.demo.otp.hint": "Use quando o Cardy pedir para verificar sua identidade.",
 	"landing.demo.links": "Recursos",
