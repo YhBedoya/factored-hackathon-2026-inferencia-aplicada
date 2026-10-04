@@ -274,7 +274,7 @@ class AgentPlanStep(TypedDict):
     action; the block reason is set by code when the call is built (S1 D8).
     """
 
-    action: Literal["lock", "block", "unlock", "replace"]
+    action: Literal["lock", "block", "unlock", "replace", "claim"]
     card_id: str
     address_ref: NotRequired[
         str

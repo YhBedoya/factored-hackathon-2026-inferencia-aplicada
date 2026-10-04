@@ -19,6 +19,11 @@ from typing import Any, Literal
 from langchain_core.runnables import RunnableConfig
 
 from app.core.actions import ActionResult
+from app.domains.conversation.agent.dispute import (
+    accept_claim_plan,
+    decline_claim_plan,
+    has_claim,
+)
 from app.domains.conversation.agent.plan import plan_segments
 from app.domains.conversation.flows.actions import (
     OFFER_REPLACEMENT_PAUSE,
@@ -84,6 +89,7 @@ async def count_open_plan_turn(
     write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
     if token_id is not None:
         await write_tools.cancel_plan(token_id)
+    open_steps = state.get("agent_plan_steps") or []
     return {
         **handoff(
             rule_queue(get_policies().escalation, "clarification_exhausted"),
@@ -91,6 +97,8 @@ async def count_open_plan_turn(
             state.get("language", "es"),
         ),
         "agent_plan_steps": None,
+        # A claim plan's dispute ends with it (D5).
+        **({"dispute": None} if has_claim(open_steps) else {}),
         "non_answer_failures": 0,
         "intent_segments": (
             plan_segments(state.get("agent_plan_steps") or [], "handoff")
@@ -104,13 +112,18 @@ async def agent_plan(state: GraphState, config: RunnableConfig) -> dict[str, Any
     language = state.get("language", "es")
     outcome = decision(state)
     steps = state.get("agent_plan_steps") or []
+    claim_plan = has_claim(steps)
     if outcome == "cancel" and state.get("confirmation_token_id") is not None:
+        if claim_plan:
+            return await decline_claim_plan(state, config)
         return await _decline(state, config)
     if outcome != "confirm" or not steps:
         # A stale token (or a plan with nothing stored): nothing runs; the reminder and the
         # stored card go out again. The typed-turn count is kept, not reset (D17 b): only a
         # new plan resets it.
         return {**replay_open_plan(state), "non_answer_counted": True}
+    if claim_plan:
+        return await accept_claim_plan(state, config)
     return await _accept(state, config, language)
 
 

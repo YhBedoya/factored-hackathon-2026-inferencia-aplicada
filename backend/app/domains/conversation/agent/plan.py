@@ -13,6 +13,12 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.errors import PolicyDenied, StepUpRequired
+from app.domains.conversation.agent.dispute import (
+    build_claim_plan,
+    check_claim,
+    claim_segments,
+    has_claim,
+)
 from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.flows.actions import handoff
 from app.domains.conversation.flows.replacement import _card_eligible
@@ -58,12 +64,14 @@ _TOOL_BY_ACTION = {
     "block": "cards.block_card",
     "unlock": "cards.unlock_card",
     "replace": "cards.order_replacement",
+    "claim": "disputes.create_claim",
 }
 _SUMMARY_BY_ACTION = {
     "lock": "lock_card",
     "block": "block_card",
     "unlock": "unlock_card",
     "replace": "order_replacement",
+    "claim": "create_claim",
 }
 # (intent, route) per action: lock and block are one request type.
 _INTENT_BY_ACTION = {
@@ -71,6 +79,7 @@ _INTENT_BY_ACTION = {
     "block": ("card_block", "card_block"),
     "unlock": ("card_unlock", "card_unlock"),
     "replace": ("replacement_request", "replacement"),
+    "claim": ("unrecognized_charge", "unrecognized_charge"),
 }
 
 AGENT_OTP_PAUSE = {"flow": "agent", "node": "otp", "awaiting_slot": "otp"}
@@ -86,15 +95,36 @@ class PlanHandoff(Exception):
 
 
 class ProposedStep(BaseModel):
-    action: Literal["lock", "block", "unlock", "replace"]
-    card: str = Field(description="Card reference from this turn's results (c1).")
+    action: Literal["lock", "block", "unlock", "replace", "claim"]
+    card: str | None = Field(
+        default=None,
+        description="Card reference from this turn's results (c1). Not for a claim step.",
+    )
     address: Literal["on_file", "new"] | None = Field(
         default=None,
         description="Only for replace: send to the address on file, or to a new one.",
     )
+    charges: list[str] | None = Field(
+        default=None,
+        description="Only for claim: the references (t1) of the charges the customer picked.",
+    )
+    answers: dict[str, Literal["yes", "no"]] | None = Field(
+        default=None,
+        description="Only for claim: the customer's yes/no answer to each dispute question id.",
+    )
 
     @model_validator(mode="after")
-    def _address_only_for_replace(self) -> "ProposedStep":
+    def _fields_by_action(self) -> "ProposedStep":
+        if self.action == "claim":
+            if self.card is not None or self.address is not None:
+                raise ValueError("a claim step takes charges, not card or address")
+            if not self.charges:
+                raise ValueError("a claim step needs at least one charge")
+            return self
+        if self.card is None:
+            raise ValueError("this step needs a card reference")
+        if self.charges is not None or self.answers is not None:
+            raise ValueError("charges and answers are only for a claim step")
         if self.action == "replace" and self.address is None:
             raise ValueError("a replace step needs address: on_file or new")
         if self.action != "replace" and self.address is not None:
@@ -124,7 +154,13 @@ class PlanBox:
     def update(self) -> dict[str, Any]:
         return dict(self._update)
 
-    def set(self, token_id: str, event: ConfirmEvent, steps: list[AgentPlanStep]) -> None:
+    def set(
+        self,
+        token_id: str,
+        event: ConfirmEvent,
+        steps: list[AgentPlanStep],
+        extra: dict[str, Any] | None = None,
+    ) -> None:
         self.token_id = token_id
         self.event = event
         self._paused = False
@@ -134,6 +170,7 @@ class PlanBox:
             "pending": {"flow": "agent", "node": "confirm", "awaiting_slot": "confirmation"},
             "ui": [event],
             "asked_ui": [event],
+            **(extra or {}),
         }
 
     def pause(self, update: dict[str, Any]) -> None:
@@ -155,7 +192,13 @@ class PlanBox:
 def plan_segments(
     steps: list[AgentPlanStep], status: SegmentStatus, awaiting_slot: str | None = None
 ) -> list[IntentSegment]:
-    """One segment per distinct intent, in step order."""
+    """One segment per distinct intent, in step order. A plan with a claim step is one
+    `unrecognized_charge` segment, its block step included (D18)."""
+    if has_claim(steps):
+        claimed = claim_segments(status)[0]
+        if awaiting_slot is not None:
+            claimed["awaiting_slot"] = awaiting_slot
+        return [claimed]
     segments: list[IntentSegment] = []
     seen: set[str] = set()
     for step in steps:
@@ -172,7 +215,11 @@ def plan_segments(
 
 def plan_labels(steps: list[AgentPlanStep], language: Language) -> dict[str, Any]:
     """The `agent_labels` of a turn that ended on a plan or a plan pause."""
-    pairs = [_INTENT_BY_ACTION[step["action"]] for step in steps]
+    pairs = (
+        [_INTENT_BY_ACTION["claim"]]
+        if has_claim(steps)
+        else [_INTENT_BY_ACTION[step["action"]] for step in steps]
+    )
     return {
         "language": language,
         "status": "clear",
@@ -247,11 +294,19 @@ async def check_steps(
             handoff(rule_queue(escalation, "customer_not_active"), "customer_not_active", language)
         )
 
-    blocked_ids = {refs.card_id(step.card) for step in steps if step.action == "block"} - {None}
+    claim = next((step for step in steps if step.action == "claim"), None)
+    if claim is not None:
+        return check_claim(
+            [step.action for step in steps], claim.charges, claim.answers, refs, state
+        )
+
+    blocked_ids = {refs.card_id(step.card or "") for step in steps if step.action == "block"} - {
+        None
+    }
     replace_addresses = {step.address for step in steps if step.action == "replace"}
     codes: list[str | None] = []
     for step in steps:
-        card_id = refs.card_id(step.card)
+        card_id = refs.card_id(step.card or "")
         if card_id is None:
             codes.append("unknown_reference")
             continue
@@ -354,7 +409,7 @@ async def propose_plan(
     codes = await check_steps(args.steps, refs, bank_tools, get_policies().tools, state, config)
     if any(code is not None for code in codes):
         for step, code in zip(args.steps, codes, strict=True):
-            card_id = refs.card_id(step.card)
+            card_id = refs.card_id(step.card or "")
             if code == "permanent_block" and card_id is not None:
                 if all(card_id != known[0] for known in box.permanent_blocked):
                     details = await bank_tools.get_card_details(card_id)
@@ -363,9 +418,14 @@ async def propose_plan(
 
     await cancel_open_plan(state, config, box)
 
+    claim = next((step for step in args.steps if step.action == "claim"), None)
+    if claim is not None:
+        # Code builds the whole claim plan (D10); it never reads the model's steps again.
+        return await build_claim_plan(state, config, refs, box, claim.answers)
+
     kept_steps: list[AgentPlanStep] = []
     for step in args.steps:
-        card_id = refs.card_id(step.card)
+        card_id = refs.card_id(step.card or "")
         assert card_id is not None  # check_steps accepted it
         kept: AgentPlanStep = {"action": step.action, "card_id": card_id}
         if step.action == "replace" and step.address == "on_file":
@@ -393,6 +453,6 @@ async def propose_plan(
 
 def _rejected(steps: list[ProposedStep], codes: list[str | None]) -> str:
     detail = ", ".join(
-        f"{step.card}: {code or 'ok'}" for step, code in zip(steps, codes, strict=True)
+        f"{step.card or 'claim'}: {code or 'ok'}" for step, code in zip(steps, codes, strict=True)
     )
     return f"rejected ({detail})"

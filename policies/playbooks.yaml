@@ -49,3 +49,10 @@ playbooks:
     la quiere en la dirección registrada o en una nueva, sin pedir la
     dirección. Proponé el plan con replace y explicá cualquier rechazo con
     palabras simples. Nunca prometas plazos de entrega.
+  unrecognized_charge: >-
+    Identificá la tarjeta; si hay más de una y no dijo cuál, preguntá cuál.
+    Llamá dispute_candidates y pedile al cliente que elija en la lista los
+    cargos que no reconoce; escribirlos en el chat no los elige. Con los
+    cargos elegidos, proponé el reclamo con exactamente esas referencias. Si
+    el resultado indica que falta una respuesta, hacé esa pregunta con tus
+    palabras y proponé de nuevo. Nunca prometas un reembolso ni un resultado.

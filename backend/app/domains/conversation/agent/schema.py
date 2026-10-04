@@ -20,7 +20,7 @@ class AgentTurn(BaseModel):
     language: Literal["es", "pt", "mixed", "other"]
     intents: list[Intent]  # existing catalog, message order
     outcome: Literal["answered", "asked", "redirected"]
-    awaiting_slot: Literal["card_hint", "block_kind", "criterion"] | None
+    awaiting_slot: Literal["card_hint", "block_kind", "criterion", "dispute_question"] | None
     reported_done: list[int]  # plan step indexes the reply reports as done (D16)
     reply: str  # with {reference} placeholders only
 

@@ -257,7 +257,9 @@ async def checkpointed_offer(
     "is a transaction list actually open", "what ids did it offer" and "how
     many can be picked". Reads `decline` (multi `False`) when
     `pending["flow"] == "decline_explain"`, `tx_offer` (multi `False`, this
-    card's B1) when the flow is `tx_search`, `tx_explain` or `agent`, else `dispute`
+    card's B1) when the flow is `tx_search`, `tx_explain` or `agent` (except the
+    agent's `dispute_pick` pause, which reads `dispute` with multi `True`: every
+    other agent pause keeps `tx_offer` with multi `False`), else `dispute`
     (multi `True`, D4-B's shape) -- none of these flows ever share a
     checkpoint slot (`state.py`'s `DeclineState`/`DisputeState`/
     `TxOfferState`). `(None, set(), True)` on a conversation with no
@@ -269,6 +271,12 @@ async def checkpointed_offer(
         decline: DeclineState | None = state.values.get("decline")
         offered = set(decline["offered_tx_ids"]) if decline is not None else set()
         return pending, offered, False
+    if pending is not None and pending["flow"] == "agent" and pending["node"] == "dispute_pick":
+        # The agent's dispute list is a multi-pick; its offer lives in `dispute`,
+        # never in the request (R1).
+        agent_dispute: DisputeState | None = state.values.get("dispute")
+        offered = set(agent_dispute["offered_tx_ids"]) if agent_dispute is not None else set()
+        return pending, offered, True
     if pending is not None and pending["flow"] in {"tx_search", "tx_explain", "agent"}:
         tx_offer: TxOfferState | None = state.values.get("tx_offer")
         offered = set(tx_offer["offered_tx_ids"]) if tx_offer is not None else set()
