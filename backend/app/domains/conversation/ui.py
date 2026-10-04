@@ -73,11 +73,15 @@ class ConfirmPayload(BaseModel):
 
 
 class OtpRequiredPayload(BaseModel):
-    """`ui.otp_required` payload: the action waiting on step-up (D15)."""
+    """`ui.otp_required` payload: the action waiting on step-up (D15).
+
+    Every OTP pause sends `cancellable=true` (S2 D31): one modal, with Cancel.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     tool: str
+    cancellable: bool = True
 
 
 class ConfirmEvent(BaseModel):

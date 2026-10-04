@@ -163,6 +163,17 @@ class ConfirmedWriteTools:
                     {"rule_id": "tool_not_allowed", "tool": step.tool, "intent": intent},
                 )
                 raise PolicyDenied("tool_not_allowed")
+        if intent is None:
+            # Agent path: no flow gates step-up before the card, so refuse at issue
+            # time rather than after the user confirmed (the `_run` check stays).
+            for step in steps:
+                if self._requires_step_up(step.tool, step.args) and not (
+                    await self._step_up.is_step_up_valid()
+                ):
+                    await self._record(
+                        "rule_hit", {"rule_id": "step_up_required", "tool": step.tool}
+                    )
+                    raise StepUpRequired
         plan = await self._confirmations.issue(steps)
         await self._record(
             "confirmation_issued",

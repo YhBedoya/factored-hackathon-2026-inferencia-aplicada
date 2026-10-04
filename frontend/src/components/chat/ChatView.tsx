@@ -26,6 +26,7 @@ import {
 	postConfirmation,
 	postMessage,
 	postSelection,
+	postStepUpCancel,
 	sessionExpired,
 } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
@@ -233,7 +234,14 @@ export function ChatView({
 			// declined once (D39); 409/429 mean there was nothing to decline.
 			if (!declinedOnMountRef.current) {
 				declinedOnMountRef.current = true;
-				postCardSelection(conversationIdRef.current, []).catch(() => {});
+				const mountId = conversationIdRef.current;
+				// D16: a reload loses an open agent OTP modal, so the pause is
+				// cancelled once. Chained after the picker decline so the two
+				// posts never race for the same turn; any 409 is ignored.
+				postCardSelection(mountId, [])
+					.catch(() => {})
+					.then(() => postStepUpCancel(mountId))
+					.catch(() => {});
 			}
 		} else {
 			startConversation(true).catch(() => {
@@ -283,6 +291,19 @@ export function ChatView({
 			}
 			setErrorCode("selection_required");
 			setErrorStatus(409);
+			return;
+		}
+		if (
+			err instanceof ApiError &&
+			err.status === 409 &&
+			err.code === "otp_required"
+		) {
+			// Typed text at the agent OTP pause is refused (D15): drop the
+			// bubble and re-open the modal, which keeps the input disabled.
+			if (typedBubbleId) {
+				setMessages((prev) => prev.filter((m) => m.id !== typedBubbleId));
+			}
+			setOtpTool((prev) => prev ?? "agent");
 			return;
 		}
 		if (err instanceof ApiError && err.code === "session_replay_dropped") {
@@ -363,6 +384,30 @@ export function ChatView({
 	function handleOtpVerified() {
 		setOtpTool(null);
 		setComposerDisabled(true);
+	}
+
+	// `429 otp_handoff`: close the modal; the handoff reply, banner and mode
+	// event arrive on the stream, so the composer stays off until they do.
+	function handleOtpHandoff() {
+		setOtpTool(null);
+		setComposerDisabled(true);
+	}
+
+	async function handleOtpCancel() {
+		clearError();
+		setOtpTool(null);
+		try {
+			const id = await ensureConversation();
+			setComposerDisabled(true);
+			await postStepUpCancel(id);
+		} catch (err) {
+			// No pause open (or already resolved): nothing to cancel.
+			if (err instanceof ApiError && err.code === "cancel_invalid") {
+				setComposerDisabled(false);
+				return;
+			}
+			handleTurnError(err);
+		}
 	}
 
 	function handleNewConversation() {
@@ -450,6 +495,8 @@ export function ChatView({
 				<OtpModal
 					conversationId={conversationId}
 					onVerified={handleOtpVerified}
+					onCancel={handleOtpCancel}
+					onHandoff={handleOtpHandoff}
 				/>
 			)}
 			<SessionExpiredModal
@@ -459,7 +506,7 @@ export function ChatView({
 				onMismatch={handleSessionMismatch}
 			/>
 			<Composer
-				disabled={composerDisabled || closed || pickerOpen}
+				disabled={composerDisabled || closed || pickerOpen || !!otpTool}
 				onSend={handleSend}
 				prefill={prefill}
 			/>

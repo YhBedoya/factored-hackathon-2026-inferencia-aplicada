@@ -1,5 +1,5 @@
 """ADR-021 handoff queues and escalation rules, loaded from
-`policies/escalation.yaml` v8 (spec D2-D7, B2, D8-H D7, R8).
+`policies/escalation.yaml` v9 (spec D2-D7, B2, D8-H D7, S2 D29, R8).
 
 `rules.<reason>` is the single source of each handoff reason's queue and
 priority (`queue: null` means the caller picks it: bank-side origin, human
@@ -119,6 +119,7 @@ _REQUIRED_REASONS = (
     "llm_unavailable",
     "priority_claim",
     "agent_round_cap",
+    "step_up_failed",
 )
 
 # Reasons whose null-queue rule resolves by the paused flow, like `human_request`.

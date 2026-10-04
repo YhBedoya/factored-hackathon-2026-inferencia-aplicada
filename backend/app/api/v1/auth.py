@@ -33,11 +33,16 @@ D6, D7, D9 and `docs/specs/d3-a-guardrails-write-path.md` D4, D5.
 """
 
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 
+from app.api.v1.conversations import get_owned_conversation
 from app.core.config import Settings, get_settings
+from app.core.telemetry import get_trace_id
+from app.domains.conversation.runner import TurnInProgress, checkpointed_otp_pause, start_turn
+from app.domains.conversation.store import ConversationRow
 from app.domains.identity import service as identity_service
 from app.domains.identity.deps import get_session, require_csrf, require_role
 from app.domains.identity.models import LoginRequest, MeResponse, Session
@@ -48,6 +53,7 @@ from app.domains.identity.tokens import (
     issue_token,
     new_csrf_token,
 )
+from app.domains.policy.registry import get_policies
 
 __all__ = ["OtpVerifyRequest", "public_router", "router"]
 
@@ -60,6 +66,7 @@ class OtpVerifyRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     code: str
+    conversation_id: UUID | None = None
 
 
 public_router = APIRouter()
@@ -161,9 +168,37 @@ async def me(session: Annotated[Session, Depends(get_session)]) -> MeResponse:
     return await identity_service.me(session)
 
 
+async def _hand_off_if_paused(
+    request: Request, session: Session, conversation: ConversationRow
+) -> None:
+    """Start the `step_up_failed` turn when `conversation` is open, in bot
+    mode and at an OTP pause; raise `429 otp_handoff` once it is scheduled.
+    Returns silently when there is nothing to hand off (S2 D27).
+    """
+
+    if conversation.status == "closed" or conversation.mode != "bot":
+        return
+    host = request.app.state.turn_host
+    if await checkpointed_otp_pause(host, conversation.id) is None:
+        return
+    try:
+        await start_turn(
+            host,
+            session=session,
+            conversation_id=conversation.id,
+            trace_id=get_trace_id(),
+            resume="step_up_failed",
+        )
+    except TurnInProgress as exc:
+        raise HTTPException(status_code=429, detail="too_many_attempts") from exc
+    await identity_service.reset_otp_failures(session)
+    raise HTTPException(status_code=429, detail="otp_handoff")
+
+
 @router.post("/auth/otp/verify", response_model=MeResponse)
 async def verify_otp(
     req: OtpVerifyRequest,
+    request: Request,
     response: Response,
     session: Annotated[Session, Depends(get_session)],
 ) -> MeResponse:
@@ -173,14 +208,34 @@ async def verify_otp(
     otp_invalid`; hitting `rl:otp:<account_id>`'s limit is `429
     too_many_attempts`, checked before the code, so it wins even when the
     code in this same request is right.
+
+    With `conversation_id` (S2 D27) the conversation is loaded first, scoped
+    to the caller (`404 not_found` before the code is checked, nothing
+    recorded). If the code is wrong and brings the counter to
+    `tools.step_up_max_failures`, or the counter is already there, and that
+    conversation is open, in bot mode and paused at an OTP pause, the route
+    starts the internal `step_up_failed` handoff turn, resets the counter
+    and returns `429 otp_handoff`. A `turn_in_progress` there is `429
+    too_many_attempts` with the counter kept, so the next attempt hands
+    off. Every other case is the plain `401` / `429`. The handoff turn is
+    server-started, so it counts toward no turn cap (A4).
     """
 
     settings = get_settings()
+    conversation = None
+    if req.conversation_id is not None:
+        conversation = await get_owned_conversation(req.conversation_id, session)
+    limit = get_policies().tools.step_up_max_failures
     try:
-        new_session = await identity_service.verify_otp(session, req.code, settings=settings)
-    except identity_service.TooManyAttempts as exc:
-        raise HTTPException(status_code=429, detail="too_many_attempts") from exc
-    except identity_service.OtpInvalid as exc:
+        new_session = await identity_service.verify_otp(
+            session, req.code, max_failures=limit, settings=settings
+        )
+    except (identity_service.TooManyAttempts, identity_service.OtpInvalid) as exc:
+        at_limit = isinstance(exc, identity_service.TooManyAttempts) or exc.failures >= limit
+        if at_limit and conversation is not None:
+            await _hand_off_if_paused(request, session, conversation)
+        if isinstance(exc, identity_service.TooManyAttempts):
+            raise HTTPException(status_code=429, detail="too_many_attempts") from exc
         raise HTTPException(status_code=401, detail="otp_invalid") from exc
 
     token, _claims = issue_token(

@@ -63,6 +63,7 @@ from app.domains.conversation.runner import (
     TurnInProgress,
     checkpointed_confirmation_token,
     checkpointed_offer,
+    checkpointed_otp_pause,
     checkpointed_replacement_offer,
     start_turn,
 )
@@ -174,7 +175,9 @@ class CreateConversationResponse(BaseModel):
 
 class PostMessageRequest(BaseModel):
     """`{text}` for a typed turn, `{resume: "step_up"}` for the OTP-resume
-    turn (D6), `{selection: {tx_ids}}` for the D4-B pick turn (D7), or
+    turn (D6; `"step_up_cancel"` is Cancel on any OTP pause, S2: agent pause -> `agent_step_up`,
+    pipeline pause -> `otp_cancel`),
+    `{selection: {tx_ids}}` for the D4-B pick turn (D7), or
     `{card_selection: {card_ids}}` for the replacement picker -- exactly one
     of the four, or `422`. Only `text` is persisted as a customer message.
     """
@@ -182,7 +185,7 @@ class PostMessageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str | None = Field(default=None, min_length=1, max_length=2000)
-    resume: Literal["step_up"] | None = None
+    resume: Literal["step_up", "step_up_cancel"] | None = None
     selection: TxSelection | None = None
     card_selection: CardSelection | None = None
 
@@ -280,6 +283,15 @@ async def post_message(
                 raise HTTPException(status_code=409, detail="selection_invalid")
         elif at_picker:
             raise HTTPException(status_code=409, detail="selection_required")
+
+    if body.resume == "step_up_cancel" or body.text is not None:
+        # S2 D15/D17/D30: Cancel works at any OTP pause; typed text is refused only at
+        # the agent's (a pipeline OTP pause takes text as today). One checkpoint read.
+        otp_pause = await checkpointed_otp_pause(host, conversation.id)
+        if body.resume == "step_up_cancel" and otp_pause is None:
+            raise HTTPException(status_code=409, detail="cancel_invalid")
+        if body.text is not None and otp_pause == "agent":
+            raise HTTPException(status_code=409, detail="otp_required")
 
     await _check_turn_caps(session, conversation)
     try:

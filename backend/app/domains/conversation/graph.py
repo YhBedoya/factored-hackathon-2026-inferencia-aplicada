@@ -27,7 +27,9 @@ loop, so one turn can answer several queued intents in one reply:
   both need to agree on.
 * `resume` is the button/step-up counterpart to `TurnInput.confirmation`:
   `"step_up"` means the customer just completed OTP outside the graph and
-  this turn should try to resume whatever was waiting on it.
+  this turn should try to resume whatever was waiting on it;
+  `"step_up_cancel"` (S2) is the customer's Cancel on any OTP pause: the agent pause goes to
+  `agent_step_up`, the pipeline pause to `otp_cancel`.
 * `_entry` (after `load_session`), `route` (after `understand`), `enqueue`,
   `_dispatch`, `_after_flow` and `_after_segment` are this turn's routing
   decisions (`docs/plans/d2-b-card-info-block.md` §"Graph shape"). `route`
@@ -167,8 +169,10 @@ class TurnInput(TypedDict):
     LLM call; `_entry` is the routing that does the skipping). `resume`
     (D8, D20) is the same idea for the OTP path: `"step_up"` means step-up
     just completed outside the graph, and this turn should try to resume
-    whatever paused on it. `selection` (D4-B D7) is the same shape again for
-    `unrecognized_charge`'s pick step: every caller passes it explicitly
+    whatever paused on it; `"step_up_cancel"` (S2) is Cancel on any OTP pause (the agent
+    pause goes to `agent_step_up`, the pipeline pause to `otp_cancel`). `selection`
+    (D4-B D7) is the same shape again
+    for `unrecognized_charge`'s pick step: every caller passes it explicitly
     (`None` otherwise), and when it is set (and the checkpoint is actually
     paused on it) `_entry` skips `understand` too -- the pick is never run
     through NLU, and never saved as a customer message. `card_selection` is the
@@ -178,7 +182,7 @@ class TurnInput(TypedDict):
 
     user_text: str
     confirmation: NotRequired[ConfirmationDecision | None]
-    resume: NotRequired[Literal["step_up"] | None]
+    resume: NotRequired[Literal["step_up", "step_up_cancel", "step_up_failed"] | None]
     selection: NotRequired[TxSelection | None]
     card_selection: NotRequired[CardSelection | None]
     introduced: NotRequired[bool]
@@ -225,7 +229,7 @@ class GraphState(TurnState):
     user_text: NotRequired[str]
     reply: NotRequired[str]
     confirmation: NotRequired[ConfirmationDecision | None]
-    resume: NotRequired[Literal["step_up"] | None]
+    resume: NotRequired[Literal["step_up", "step_up_cancel", "step_up_failed"] | None]
     selection: NotRequired[TxSelection | None]
     card_selection: NotRequired[CardSelection | None]
     ui: NotRequired[list[UIEvent]]
@@ -344,6 +348,28 @@ def _entry(state: GraphState) -> str:
     """
     if state.get("mode") == "human":
         return "relay_to_agent"
+    otp_pause = _otp_pause(state)
+    resume = state.get("resume")
+    if resume == "step_up_failed" and otp_pause is not None:
+        return "step_up_failed"
+    if resume == "step_up_cancel" and otp_pause == "pipeline":
+        return "otp_cancel"
+    pause = _agent_pause(state)
+    if pause == "otp":
+        return "agent_step_up"
+    if pause is None and _flag_off_address_pause(state):
+        # Kill switch with the address question open: the typed address must not reach
+        # the NLU (R5), so a code node vaults and drops it (S2 D11).
+        pause = "address"
+    if (
+        pause == "address"
+        and state.get("user_text")
+        and state.get("confirmation") is None
+        and state.get("resume") is None
+        and state.get("selection") is None
+        and state.get("card_selection") is None
+    ):
+        return "agent_address"
     if state.get("escalation_reason") == "llm_unavailable":
         return "fallback"
     if _agent_plan_click(state):
@@ -351,6 +377,41 @@ def _entry(state: GraphState) -> str:
     if _routes_to_agent(state):
         return "agent" if state.get("selection") is not None else "summarize"
     return _pipeline_entry(state)
+
+
+def _agent_pause(state: GraphState) -> Literal["otp", "address"] | None:
+    """Which agent code-node pause is open (S2 D15): the OTP pause or the address
+    question. Flag off, nothing (S1 D27)."""
+    pending = state.get("pending")
+    if not state.get("agent_enabled") or pending is None or pending["flow"] != "agent":
+        return None
+    if pending["awaiting_slot"] == "otp":
+        return "otp"
+    if pending["awaiting_slot"] == "address":
+        return "address"
+    return None
+
+
+def _otp_pause(state: GraphState) -> Literal["agent", "pipeline"] | None:
+    """Who owns the open OTP pause (S2 D28, D30): `agent` (only with the flag on, S1
+    D27), `pipeline`, or None when no OTP pause is open."""
+    pending = state.get("pending")
+    if pending is None or pending["awaiting_slot"] != "otp":
+        return None
+    if pending["flow"] == "agent":
+        return "agent" if state.get("agent_enabled") else None
+    return "pipeline"
+
+
+def _flag_off_address_pause(state: GraphState) -> bool:
+    """`AGENT_ENABLED` is off but the agent's address question is still open."""
+    pending = state.get("pending")
+    return (
+        not state.get("agent_enabled")
+        and pending is not None
+        and pending["flow"] == "agent"
+        and pending["awaiting_slot"] == "address"
+    )
 
 
 def _agent_plan_click(state: GraphState) -> bool:
@@ -488,6 +549,12 @@ def _after_agent_plan(state: GraphState) -> str:
     if reason is not None or state.get("handoff_queue") is not None:
         return "handoff_summary"
     return "agent" if state.get("agent_code_text") is not None else "finish"
+
+
+def _after_agent_pause(state: GraphState) -> str:
+    """Conditional edge after `agent_step_up` / `agent_address` (S2 D17): as
+    `_after_agent_plan`; `agent_address` never sets `agent_code_text`."""
+    return _after_agent_plan(state)
 
 
 def _dispatch(state: GraphState) -> str:
@@ -846,6 +913,7 @@ def build_graph(
     """
     from app.domains.conversation.agent.confirm import agent_plan
     from app.domains.conversation.agent.node import agent
+    from app.domains.conversation.agent.step_up import agent_address, agent_step_up
     from app.domains.conversation.baseline.template_compose import (
         baseline_abstain,
         baseline_compose,
@@ -877,9 +945,15 @@ def build_graph(
         understand,
         unsupported,
     )
+    from app.domains.conversation.nodes.step_up_exit import otp_cancel, step_up_failed
 
     graph = StateGraph(GraphState, input_schema=TurnInput, output_schema=TurnOutput)
     graph.add_node("load_session", load_session)
+    # OTP exits (S2 D28, D30): code-only, on both systems.
+    graph.add_node("step_up_failed", _guard_access(step_up_failed))
+    graph.add_node("otp_cancel", _guard_access(otp_cancel))
+    graph.add_edge("step_up_failed", "handoff_summary")
+    graph.add_edge("otp_cancel", "finish")
     baseline = system == "baseline"
     graph.add_node(
         "understand", _count_clarifications(baseline_understand if baseline else understand)
@@ -899,6 +973,21 @@ def build_graph(
                 "handoff_summary": "handoff_summary",
             },
         )
+        for pause_node, pause_fn in (
+            ("agent_step_up", agent_step_up),
+            ("agent_address", agent_address),
+        ):
+            graph.add_node(pause_node, _guard_access(pause_fn))
+            graph.add_conditional_edges(
+                pause_node,
+                _after_agent_pause,
+                {
+                    "agent": "agent",
+                    "finish": "finish",
+                    "fallback": "fallback",
+                    "handoff_summary": "handoff_summary",
+                },
+            )
         graph.add_conditional_edges(
             "summarize", _after_summarize, {"agent": "agent", "understand": "understand"}
         )
@@ -981,6 +1070,10 @@ def build_graph(
             "summarize": "understand" if baseline else "summarize",
             "agent": "understand" if baseline else "agent",
             "agent_plan": "smalltalk" if baseline else "agent_plan",
+            "agent_step_up": "smalltalk" if baseline else "agent_step_up",
+            "agent_address": "smalltalk" if baseline else "agent_address",
+            "step_up_failed": "step_up_failed",
+            "otp_cancel": "otp_cancel",
             "relay_to_agent": "relay_to_agent",
             "fallback": "fallback",
             "smalltalk": "smalltalk",
@@ -1169,7 +1262,7 @@ async def run_turn(
     *,
     config: RunnableConfig,
     confirmation: ConfirmationDecision | None = None,
-    resume: Literal["step_up"] | None = None,
+    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None = None,
     selection: TxSelection | None = None,
     card_selection: CardSelection | None = None,
 ) -> tuple[str, DebugInfo]:

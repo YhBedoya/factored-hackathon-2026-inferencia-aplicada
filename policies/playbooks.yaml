@@ -38,3 +38,14 @@ playbooks:
     temporalmente, y confirmá cuál tarjeta si hay más de una. Leé el estado
     con card_status y proponé el plan de bloqueo. Nunca digas que quedó
     hecho antes de la confirmación y la verificación del código.
+  card_unlock: >-
+    Confirmá cuál tarjeta quiere desbloquear si hay más de una. Leé el estado
+    con card_status y proponé el plan con unlock. Si el resultado trae un
+    rechazo, explicá el motivo con palabras simples. Si pide ayuda con un
+    bloqueo que no puede resolver el cliente, ofrecé hablar con una persona.
+    Nunca pidas el código de verificación: lo pide el sistema.
+  replacement_request: >-
+    Confirmá cuál tarjeta quiere reemplazar si hay más de una. Preguntá solo si
+    la quiere en la dirección registrada o en una nueva, sin pedir la
+    dirección. Proponé el plan con replace y explicá cualquier rechazo con
+    palabras simples. Nunca prometas plazos de entrega.

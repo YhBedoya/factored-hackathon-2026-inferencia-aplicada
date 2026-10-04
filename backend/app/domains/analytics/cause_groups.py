@@ -21,6 +21,7 @@ CAUSE_GROUPS: Final[dict[str, CauseGroup]] = {
     "action_unverified": "bot_failure",
     "agent_round_cap": "bot_failure",
     "unauthorized_access": "security",
+    "step_up_failed": "security",
 }
 
 
