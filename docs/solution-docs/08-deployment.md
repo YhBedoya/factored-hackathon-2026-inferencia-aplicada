@@ -20,7 +20,7 @@ Anything marked **(proposed)** is a default this doc picks that the team has not
 | Data source | **Our own S3 bucket** in us-east-2, holding a one-time copy of the organizers' `data/` prefix (§5). The deployment never reads the organizers' bucket |
 | Golden DB | Built **on the box** with `make data` from our bucket, so the date shift lands on the deploy date (§6) |
 | AWS access | An **IAM instance role** (S3 read, Bedrock invoke, SSM). No long-lived AWS keys on the box |
-| LLM | `LLM_PROVIDER=bedrock` from us-east-2, through a `us.` cross-region inference profile (ADR-028) |
+| LLM | `LLM_PROVIDER=bedrock` from us-east-2, through a `us.` cross-region inference profile (ADR-028). `nlu` and `agent` use Sonnet 4.6 there, because the project cannot call the Claude 5 family (ADR-017 amended 2026-10-04) |
 | DNS / TLS | `<ip-with-dashes>.sslip.io` with a Let's Encrypt certificate. **Fallback: a Route 53 domain** pointed at the same Elastic IP (§8) |
 | Secrets | SSM Parameter Store SecureStrings, written to a `0600` `.env` on the box at deploy time (§9) |
 | Operator access | SSM Session Manager. **No SSH port open** |
