@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { HandoffSummary } from "@/client";
+import { QUEUE_BAR } from "@/components/staff/queueStyles";
 import { Button } from "@/components/ui/button";
 import { claimStaffHandoff } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
@@ -13,15 +14,6 @@ type InboxListProps = {
 	items: HandoffSummary[];
 	// Handoffs that arrived in the latest poll that brought new rows.
 	freshIds?: ReadonlySet<string>;
-};
-
-// Each queue keeps one brand color ("Swip Staff Bandeja" design): Fraudes
-// is the alert red, Reclamos gold, Atención cyan, Cobranza neutral.
-const QUEUE_BAR: Record<HandoffSummary["queue"], string> = {
-	atencion: "bg-cyan",
-	cobranza: "bg-muted-foreground",
-	fraudes: "bg-alert",
-	reclamos: "bg-gold",
 };
 
 const STATUS_PILL: Record<HandoffSummary["status"], string> = {
