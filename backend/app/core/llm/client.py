@@ -10,9 +10,10 @@ output text (D5, R5).
 
 import asyncio
 import time
+import types
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar, cast, get_args
 
 import anthropic
 import openai
@@ -139,6 +140,31 @@ def _error_message(exc: BaseException) -> str:
         text = f"{exc.status_code} {api_type or ''}: {api_msg or text}"
     # Mask the full text first so a match is never split at the cut, then truncate.
     return redact(text)[:_ERROR_MESSAGE_MAX]
+
+
+def _blank_to_none(schema: type[BaseModel], args: Any) -> Any:
+    """`""` becomes `None` on the top-level fields that accept `None`.
+
+    Sonnet 4.6 on Bedrock fills an absent optional field with an empty string,
+    which a `Literal[...] | None` or a pattern-checked `str | None` rejects.
+    """
+    if not isinstance(args, dict):
+        return args
+    fields = schema.model_fields
+    return {
+        key: None
+        if value == "" and key in fields and types.NoneType in get_args(fields[key].annotation)
+        else value
+        for key, value in args.items()
+    }
+
+
+def _invalid_reason(exc: ValidationError) -> str:
+    """Field paths and messages for the log, without the rejected input values (R5)."""
+    return "; ".join(
+        f"{'.'.join(map(str, err['loc']))}: {err['msg']}"
+        for err in exc.errors(include_input=False, include_url=False)
+    )
 
 
 def _as_chat_dict(message: BaseMessage) -> dict[str, str]:
@@ -501,6 +527,7 @@ class StructuredLLMClient:
             other_calls = [c for c in calls if c["name"] != _OUTPUT_TOOL]
 
             reason: str | None = None
+            log_reason: str | None = None
             if not calls:
                 reason = "the response had no tool call; end with the final_answer tool"
             elif output_calls and other_calls:
@@ -509,9 +536,12 @@ class StructuredLLMClient:
                 reason = "call final_answer once"
             elif output_calls:
                 try:
-                    candidate = schema.model_validate(output_calls[0]["args"])
+                    candidate = schema.model_validate(
+                        _blank_to_none(schema, output_calls[0]["args"])
+                    )
                 except ValidationError as exc:
                     reason = str(exc)
+                    log_reason = _invalid_reason(exc)
                 else:
                     reason = validate(candidate) if validate is not None else None
                     if reason is None:
@@ -544,6 +574,7 @@ class StructuredLLMClient:
                     parsed=None,
                     raw=ai,
                     langfuse_trace_id=trace_id,
+                    reason=log_reason or reason,
                 )
                 if invalid_seen:
                     raise LLMInvalidOutput(
@@ -585,7 +616,9 @@ class StructuredLLMClient:
                     result = f"unknown tool {call['name']!r}"
                 else:
                     try:
-                        args = tool.args_schema.model_validate(call["args"])
+                        args = tool.args_schema.model_validate(
+                            _blank_to_none(tool.args_schema, call["args"])
+                        )
                     except ValidationError as exc:
                         result = f"invalid arguments: {exc}"
                     else:
@@ -673,6 +706,7 @@ class StructuredLLMClient:
         raw: Any,
         langfuse_trace_id: str | None = None,
         error: BaseException | None = None,
+        reason: str | None = None,
     ) -> None:
         """Log `llm.call`, then ledger the attempt. A sink failure never breaks the call."""
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
@@ -684,6 +718,9 @@ class StructuredLLMClient:
             if error is not None
             else {}
         )
+        # Only on `invalid`; log-only, why the output was rejected (masked, truncated).
+        if reason is not None:
+            error_fields["invalid_reason"] = redact(reason)[:_ERROR_MESSAGE_MAX]
         _logger.info(
             "llm.call",
             provider=provider,

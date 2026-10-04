@@ -126,3 +126,24 @@ def test_no_route_accepts_customer_id(monkeypatch: pytest.MonkeyPatch) -> None:
     finally:
         monkeypatch.undo()
         get_settings.cache_clear()
+
+
+def test_demo_routes_accept_no_customer_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ADR-036: the judges' quick-access routes, mounted only behind
+    `DEMO_QUICK_LOGIN`, take a `persona_id`, never a `customer_id` (R1).
+    """
+    monkeypatch.setenv("APP_ENV", "dev")
+    monkeypatch.setenv("DEMO_QUICK_LOGIN", "true")
+    get_settings.cache_clear()
+    try:
+        from app.main import create_app
+
+        names_by_path = _route_param_names(create_app())
+        demo_paths = [path for path in names_by_path if path.startswith("/api/v1/demo")]
+        assert "/api/v1/demo/sessions/customer" in demo_paths
+        for path in demo_paths:
+            assert "customer_id" not in names_by_path[path], f"{path} accepts customer_id"
+        assert "persona_id" in names_by_path["/api/v1/demo/sessions/customer"]
+    finally:
+        monkeypatch.undo()
+        get_settings.cache_clear()

@@ -22,7 +22,8 @@ baked into the always-built `api_router` -- a test that flips `APP_ENV` and
 clears `get_settings`'s cache between two `create_app()` calls must see the
 route appear and disappear, not just once at import time. It is
 `include_router`ed under the same `/api/v1` prefix as `api_router`, same as
-every other router.
+every other router. `demo_access.router` (ADR-036) follows the same
+pattern, gated on `DEMO_QUICK_LOGIN` instead of `APP_ENV`.
 """
 
 from collections.abc import AsyncIterator
@@ -34,6 +35,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.router import api_router
+from app.api.v1.demo_access import router as demo_access_router
 from app.api.v1.test_idp import router as test_idp_router
 from app.core.config import get_settings
 from app.core.llm import get_llm_client
@@ -165,6 +167,8 @@ def create_app() -> FastAPI:
     app.include_router(api_router)
     if get_settings().app_env == "eval":
         app.include_router(test_idp_router, prefix="/api/v1")
+    if get_settings().demo_quick_login:
+        app.include_router(demo_access_router, prefix="/api/v1")
     return app
 
 

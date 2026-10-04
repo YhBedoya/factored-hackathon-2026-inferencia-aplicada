@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     # D7-A: personas file for the simulator route, and the build's git SHA for
     # the timeline/report provenance ("unknown" outside an image build).
     personas_path: Path = Path("/app/eval/personas.yaml")
+    # Judges' quick access (ADR-036): mounts the public `/demo/*` routes. Off
+    # by default; turned on only for the judging window.
+    demo_quick_login: bool = False
+    demo_personas_path: Path = Path("/app/eval/demo_personas.yaml")
+    demo_repo_url: str = ""
+    demo_docs_url: str = ""
     git_sha: str = "unknown"
 
     # Reliability (D6-A). `FAULTS` is comma-separated and set on the command

@@ -57,6 +57,7 @@ __all__ = [
     "logout",
     "me",
     "mint_session_for_customer",
+    "mint_session_for_staff",
     "refresh",
     "reset_otp_failures",
     "session_from_token",
@@ -235,6 +236,25 @@ async def login(
         customer_id=account.customer_id,
         step_up_at=None,
     )
+
+
+async def mint_session_for_staff(
+    username: str, *, store: AccountStore | None = None, settings: Settings | None = None
+) -> Session:
+    """`POST /demo/sessions/staff` (ADR-036, only when `DEMO_QUICK_LOGIN`):
+    a session for the seeded staff `username` with no password check. Same
+    account checks as `staff_login()`: role `agent|admin` and `active`.
+    """
+
+    store = store or _default_store
+    settings = settings or get_settings()
+    key = staff_login_key(username, hmac_key=settings.identity_hmac_key)
+    account = await store.get_account_by_login_key(key)
+    if account is None or account.role not in ("agent", "admin") or account.status != "active":
+        raise InvalidCredentials(_INVALID_CREDENTIALS_MESSAGE)
+    _logger.info("auth.demo_staff_session", account_id=str(account.account_id))
+    role: Literal["agent", "admin"] = "admin" if account.role == "admin" else "agent"
+    return Session(account_id=account.account_id, role=role, customer_id=None, step_up_at=None)
 
 
 _OTP_RATE_LIMIT_KEY_PREFIX = "rl:otp:"

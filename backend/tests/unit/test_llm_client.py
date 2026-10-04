@@ -8,7 +8,7 @@ has no async test runner (only sync pytest).
 
 import asyncio
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import pytest
@@ -300,4 +300,32 @@ def test_r5_tool_loop_refuses_unmasked_tool_result() -> None:
                 max_rounds=3,
             )
         )
+    assert stub.calls == 1
+
+
+class _Slot(BaseModel):
+    slot: Literal["card_hint"] | None
+    reply: str
+
+
+def test_tool_loop_reads_blank_optional_as_none() -> None:
+    """Sonnet 4.6 on Bedrock sends `""` for an absent optional; it is `None`, not invalid."""
+    answer = AIMessage(
+        content="",
+        tool_calls=[{"name": "final_answer", "args": {"slot": "", "reply": ""}, "id": "t1"}],
+    )
+    stub = _ToolStubChatModel([answer])
+    client = StructuredLLMClient(_settings(), chat_model_factory=lambda s, step: stub)  # type: ignore[arg-type]
+    out = asyncio.run(
+        client.tool_loop(
+            step="agent",
+            prompt=PromptRef("agent", 1),
+            system="sys",
+            messages=[LoopMessage("user", "hola")],
+            tools=[],
+            schema=_Slot,
+            max_rounds=3,
+        )
+    )
+    assert out == _Slot(slot=None, reply="")
     assert stub.calls == 1

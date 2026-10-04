@@ -19,6 +19,7 @@ services:
       # `/app/policies` (T14).
       - ../policies:/policies:ro
       - ../eval/personas.yaml:/app/eval/personas.yaml:ro
+      - ../eval/demo_personas.yaml:/app/eval/demo_personas.yaml:ro
 
   analytics-worker:
     environment:

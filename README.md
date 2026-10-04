@@ -83,6 +83,12 @@ What's in it:
   observability overlay; empty disables exporting.
 - **LLM**: `LLM_PROVIDER` (`anthropic` during the build, Bedrock later,
   ADR-028) and `ANTHROPIC_API_KEY`.
+- **Judges' quick access** (ADR-036): `DEMO_QUICK_LOGIN=true` adds an
+  "Acceso evaluadores" button to the landing page's top-left corner. It
+  logs in with one click as one of 10 demo personas (`eval/demo_personas.yaml`)
+  or as admin, and shows `DEMO_OTP_CODE` plus the `DEMO_REPO_URL` and
+  `DEMO_DOCS_URL` links. It is off by default; turn it on only for the
+  judging window.
 
 ## 3. `make setup`
 

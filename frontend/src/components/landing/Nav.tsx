@@ -4,12 +4,15 @@ import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 
+import { DemoAccessMenu } from "./DemoAccessMenu";
 import { SoonButton } from "./SoonButton";
 
 // No bar: the login buttons end at the content column's right edge and the
 // language toggle sits at the far right of the page. The right padding only
 // grows when the page is too narrow for the toggle to clear the buttons.
 // AppShell hides its own header on `/`, so the toggle lives here instead.
+// The judges' quick access (ADR-036) mirrors it in the top-left corner; it
+// renders nothing unless the backend runs with `DEMO_QUICK_LOGIN=true`.
 export function Nav() {
 	const { t } = useI18n();
 	return (
@@ -27,6 +30,9 @@ export function Nav() {
 				<span className="hidden sm:inline-flex">
 					<SoonButton label={t("landing.nav.open")} />
 				</span>
+			</div>
+			<div className="absolute top-4 left-4 sm:top-6 sm:left-6">
+				<DemoAccessMenu />
 			</div>
 			<div className="absolute top-5 right-4 sm:top-7 sm:right-6">
 				<LanguageToggle />
