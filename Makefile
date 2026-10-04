@@ -93,7 +93,7 @@ analytics: ## One analytics pass over finished conversations (analytics worker, 
 	$(COMPOSE) run --rm analytics-worker uv run --no-sync python -m app.domains.analytics.worker --once
 
 seed-identity: ## Seed identity.accounts into latam_golden (D5), then reset latam_app from it.
-	cd backend && DATABASE_URL=$(GOLDEN_DATABASE_URL) uv run alembic upgrade head
+	cd backend && DATABASE_URL="$$GOLDEN_DATABASE_URL" uv run alembic upgrade head
 	cd backend && uv run python -m app.domains.identity.provision
 	cd pipeline && uv run python -m load.demo_reset
 	@test -z "$$($(COMPOSE) ps -q backend)" || $(COMPOSE) restart backend
