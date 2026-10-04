@@ -19,9 +19,10 @@ aws ssm get-parameters-by-path --region "$REGION" --path /swip/prod/ --with-decr
   --query 'Parameters[].[Name,Value]' --output json \
   | jq -r '.[] | "\(.[0] | split("/") | last)=\(.[1])"' > "$TMP.ssm"
 
-# Template first, minus keys SSM overrides; then SSM.
+# Template first, minus keys SSM overrides and empty placeholders (`KEY=`);
+# then SSM. A copied `DATABASE_URL=` would skip the URL block below.
 keys="$(cut -d= -f1 "$TMP.ssm")"
-grep -vE '^\s*(#|$)' "$TEMPLATE" | while IFS= read -r line; do
+grep -vE '^\s*(#|$)|^[A-Za-z_][A-Za-z0-9_]*=$' "$TEMPLATE" | while IFS= read -r line; do
   k="${line%%=*}"
   grep -qxF "$k" <<<"$keys" || printf '%s\n' "$line"
 done > "$TMP"
@@ -29,10 +30,11 @@ cat "$TMP.ssm" >> "$TMP"
 
 # Host-side tools (alembic, make data) reach Postgres on loopback.
 if ! grep -q '^DATABASE_URL=' "$TMP"; then
+  user="$(grep '^POSTGRES_USER=' "$TMP" | head -1 | cut -d= -f2-)"
   pw="$(grep '^POSTGRES_PASSWORD=' "$TMP" | head -1 | cut -d= -f2-)"
   {
-    printf 'DATABASE_URL=postgresql+asyncpg://postgres:%s@localhost:5432/latam_app\n' "$pw"
-    printf 'GOLDEN_DATABASE_URL=postgresql+asyncpg://postgres:%s@localhost:5432/latam_golden\n' "$pw"
+    printf 'DATABASE_URL=postgresql+asyncpg://%s:%s@localhost:5432/latam_app\n' "${user:-postgres}" "$pw"
+    printf 'GOLDEN_DATABASE_URL=postgresql+asyncpg://%s:%s@localhost:5432/latam_golden\n' "${user:-postgres}" "$pw"
   } >> "$TMP"
 fi
 
