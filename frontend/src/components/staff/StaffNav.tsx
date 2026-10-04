@@ -15,11 +15,15 @@ const TAB_IDLE =
 	"border-transparent text-muted-foreground hover:text-foreground";
 
 // The "Swip" wordmark plus the gold "Staff" badge, shared by `StaffNav` and
-// the analytics header.
+// the analytics header. Clicking it always goes back to the inbox.
 export function StaffLogo() {
 	const { t } = useI18n();
 	return (
-		<>
+		<Link
+			to="/staff"
+			data-testid="staff-logo"
+			className="flex items-center gap-3.5 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+		>
 			<span className="flex items-center gap-2 font-heading text-[22px] font-bold tracking-tight">
 				<span aria-hidden="true" className="size-2.5 rounded-[3px] bg-cyan" />
 				Swip
@@ -27,7 +31,7 @@ export function StaffLogo() {
 			<span className="rounded-full border border-gold px-2.5 py-0.5 text-xs font-semibold tracking-[0.06em] text-gold uppercase">
 				{t("staff.nav.badge")}
 			</span>
-		</>
+		</Link>
 	);
 }
 
