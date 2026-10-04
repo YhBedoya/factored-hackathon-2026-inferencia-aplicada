@@ -9,6 +9,8 @@ import pytest
 
 from app.core.db import get_engine
 from app.domains.conversation.agent.schema import AgentTurn
+from app.domains.conversation.nodes.compose import ComposeDraft
+from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.safety.vault import InMemoryPiiVault
 from tests.conftest import AgentScript, ScriptedLLM, make_session, run_recorded_turn
 from tests.stub_classifier import make_stub_classifier
@@ -51,8 +53,8 @@ def test_r4_digit_outside_reference_rejected(
 
     monkeypatch.setattr(InMemoryPiiVault, "unmask", _spy)
 
-    async def run(script: AgentScript) -> list[tuple[str, dict[str, Any]]]:
-        llm = ScriptedLLM({"agent": [script]})
+    async def run(script: AgentScript, **pipeline: Any) -> list[tuple[str, dict[str, Any]]]:
+        llm = ScriptedLLM({"agent": [script], **pipeline})
         session = make_session(_CUSTOMER, fakebank_dir, llm, classifier=classifier)
         return await run_recorded_turn(session, monkeypatch, _TEXT)
 
@@ -62,9 +64,15 @@ def test_r4_digit_outside_reference_rejected(
         # Script A: the first final has a raw digit, the second is valid.
         a = _reply_sent(await run(AgentScript(rounds=rounds, finals=[_turn(_BAD_A), _turn(_GOOD)])))
         reply_a = sent[-1]
-        # Script B: both finals have a raw digit, so the pipeline answers, degraded.
+        # Script B: both finals have a raw digit, so the pipeline answers; the
+        # model is up, so the NLU runs and the turn is not degraded.
+        nlu = NLUResult(language="es", intents=["card_status"], status="clear", slots=NLUSlots())
         b = _reply_sent(
-            await run(AgentScript(rounds=rounds, finals=[_turn(_BAD_B1), _turn(_BAD_B2)]))
+            await run(
+                AgentScript(rounds=rounds, finals=[_turn(_BAD_B1), _turn(_BAD_B2)]),
+                nlu=[nlu],
+                compose=[ComposeDraft(text="Este es el estado de tu tarjeta.")],
+            )
         )
         return a, reply_a, b, sent[-1]
 
@@ -87,7 +95,7 @@ def test_r4_digit_outside_reference_rejected(
     assert reply_digits
     assert set(reply_digits) <= fact_digits
 
-    assert b["degraded"] is True
+    assert b["degraded"] is False
     assert b["path"] == "pipeline"
     assert "7731" not in reply_b
     assert "9902" not in reply_b

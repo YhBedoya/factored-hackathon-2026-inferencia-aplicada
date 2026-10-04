@@ -13,7 +13,9 @@ node merges without reading it. A plan is confirmed by the card's buttons alone,
 
 Control leaves the node through its update, read by `graph._after_agent`:
 `PassToFlow` returns nothing (the pipeline runs on the same message, D7),
-`LLMRoundCap` a handoff reason (D3), any other `LLMError` `degraded` (D4) and
+`LLMRoundCap` a handoff reason (D3), `LLMInvalidOutput` nothing as a pass (the
+model is up, only its answers failed the checks), any other `LLMError`
+`degraded` (D4) and
 `ToolUnavailable` the usual tool-failure reason (R11). `AccessDenied` is left
 to `_guard_access`.
 """
@@ -24,7 +26,15 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel
 
 from app.core.errors import ToolUnavailable
-from app.core.llm import LLMClient, LLMError, LLMRoundCap, LoopMessage, LoopTool, PromptRef
+from app.core.llm import (
+    LLMClient,
+    LLMError,
+    LLMInvalidOutput,
+    LLMRoundCap,
+    LoopMessage,
+    LoopTool,
+    PromptRef,
+)
 from app.domains.conversation.agent.checks import claims_problem, fill_reply, reply_problem
 from app.domains.conversation.agent.confirm import _replacement_offer, count_open_plan_turn
 from app.domains.conversation.agent.plan import (
@@ -62,7 +72,7 @@ from app.domains.policy.registry import get_policies
 
 __all__ = ["agent", "agent_tools"]
 
-_PROMPT = PromptRef("agent", 3)
+_PROMPT = PromptRef("agent", 4)
 _PLAYBOOKS_SLOT = "<<PLAYBOOKS>>"
 # D17: both stuck-conversation counters hand off on the third turn.
 _MAX_ASKED_TURNS = 3
@@ -439,6 +449,11 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             if plan_was_open or box.token_id is not None
             else {}
         )
+        if isinstance(exc, LLMInvalidOutput):
+            # Bedrock answered; only the replies failed the checks (e.g. a literal
+            # number). The pipeline answers as on a pass, where the flow's facts
+            # and compose's template fallback still reach the customer.
+            return cleared
         return {**cleared, "degraded": True}
     except ToolUnavailable:
         return {"escalation_reason": "tool_failure"}

@@ -57,7 +57,8 @@ The flag is a global setting read at each turn. Off, the graph is the one above,
 | pick on a list the agent offered | the agent, with a turn event naming the picked reference. For the dispute list (pause `agent/dispute_pick`) the pick is multi-pick and the turn event names the picked references |
 | anything else | the agent |
 | agent calls `pass_to_flow` | `understand` on the same message in the same turn |
-| agent raises `LLMError` | `understand` on the degraded path (ADR-032) |
+| agent raises `LLMInvalidOutput` (its answer failed the checks twice) | `understand` on the same message, not degraded, as for `pass_to_flow` (ADR-035) |
+| agent raises any other `LLMError` | `understand` on the degraded path (ADR-032) |
 | agent raises `LLMRoundCap` | `handoff_summary → handoff`, reason `agent_round_cap` (`02` §5) |
 
 S2 adds two agent pauses, `agent/otp` and `agent/address`, and two code nodes, `agent_step_up` and `agent_address`, routed before `llm_unavailable`. They run step-up and the new-address turn in code before an unlock or replacement plan is issued (spec `docs/specs/cardy-agent-s2-unlock-replacement.md`).

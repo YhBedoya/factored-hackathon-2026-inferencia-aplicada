@@ -5,8 +5,10 @@ Every tool reads through `config["configurable"]["bank_tools"]` (so the audit ro
 their current names), builds its facts with the flows' own builders, registers them on
 the turn's `TurnRefs` and returns the fenced `{reference, value}` text (R4, R6). A card
 or transaction argument is a handle from this turn (`c1`, `t1`); an unknown handle is
-never looked up (R1). No tool takes a `customer_id`, computes a sum or compares, and this
-module holds no write tool: `ToolUnavailable` and `AccessDenied` propagate to the node.
+never looked up (R1). A search with no card keeps only the rows on the customer's cards:
+`transactions.search` also returns loan and account rows, which no card tool can explain.
+No tool takes a `customer_id`, computes a sum or compares, and this module holds no write
+tool: `ToolUnavailable` and `AccessDenied` propagate to the node.
 """
 
 from datetime import UTC, datetime
@@ -16,6 +18,7 @@ from typing import Any, cast
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
+from app.core.errors import NotFound
 from app.core.llm import LoopTool
 from app.domains.cards.schemas import CardDetails
 from app.domains.conversation.agent.refs import TurnRefs
@@ -166,6 +169,11 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
         facts = await _debit_balance_facts(details, bank_tools, country=country)
         return refs.render(refs.add_card(card_id, facts))
 
+    async def _card_rows(rows: list[TxView]) -> list[TxView]:
+        """The rows on the customer's cards; a search with no card returns every product's."""
+        card_ids = {card.card_id for card in await bank_tools.list_cards()}
+        return [tx for tx in rows if tx.card_id in card_ids]
+
     async def _list_rows(rows: list[TxView]) -> str:
         """Register each row as a transaction reference; offer the pick when several (D21)."""
         handles = await register_tx_rows(rows, refs, bank_tools, language)
@@ -215,9 +223,9 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
             return "no search criterion: ask the customer for a merchant, an amount or a date."
         if card_id is not None:
             tx_filter = tx_filter.model_copy(update={"card_id": card_id})
-        rows = await bank_tools.search_transactions(tx_filter)
+        rows = await _card_rows(await bank_tools.search_transactions(tx_filter))
         if not rows:
-            rows = await bank_tools.search_transactions(_widen(tx_filter, today))
+            rows = await _card_rows(await bank_tools.search_transactions(_widen(tx_filter, today)))
         if not rows:
             return "no matching transactions."
         return await _list_rows(rows)
@@ -269,7 +277,11 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
         """Decline cause, Pending/Reversed state or plain details, by the row's own status."""
         update: dict[str, Any]
         if tx.status == "Declined":
-            details = await bank_tools.get_card_details(tx.card_id)
+            try:
+                details = await bank_tools.get_card_details(tx.card_id)
+            except NotFound:
+                # Not on a card (a loan or account row): nothing a card tool can explain.
+                return "no explanation available for this transaction."
             update = await _explain(flow_state, config, details, tx)
         elif tx.status in ("Pending", "Reversed"):
             update = await explain_tx(flow_state, config, tx)
@@ -293,8 +305,8 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
             card_id = refs.card_id(a.card)
             if card_id is None:
                 return _NO_CARD_REF
-        declines = await bank_tools.search_transactions(
-            TxFilter(card_id=card_id, status=["Declined"])
+        declines = await _card_rows(
+            await bank_tools.search_transactions(TxFilter(card_id=card_id, status=["Declined"]))
         )
         if not declines:
             return "no declined transactions."
