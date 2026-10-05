@@ -5,7 +5,13 @@ import { type TKey, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export type Outcome = "resolved" | "clarified" | "abstained" | "handoff";
-export type Queue = "atencion" | "cobranza" | "fraudes" | "reclamos";
+export type Queue =
+	| "atencion"
+	| "cobranza"
+	| "fraudes"
+	| "reclamos"
+	| "creditos"
+	| "retencion";
 /** `none` (no handoff), `any`, or one queue (D7-A D19). */
 export type Escalation = "none" | "any" | Queue;
 
@@ -39,7 +45,14 @@ export const OUTCOMES: Outcome[] = [
 	"abstained",
 	"handoff",
 ];
-export const QUEUES: Queue[] = ["atencion", "cobranza", "fraudes", "reclamos"];
+export const QUEUES: Queue[] = [
+	"atencion",
+	"cobranza",
+	"fraudes",
+	"reclamos",
+	"creditos",
+	"retencion",
+];
 // Only the intents a case actually lands on today; the full 25-item NLU
 // catalog would swamp the picker with values no conversation ever has.
 export const INTENTS = [

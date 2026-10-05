@@ -43,6 +43,13 @@ class Preconditions(BaseModel):
     - `replacement_eligible: true`: the block origin must be one that
       `card_select.yaml` lists as replacement-eligible, or the card expired,
       else `not_eligible`.
+    - `request_eligible: true`: the C3 checks run in order and the first to
+      fail gives the code: `customer_not_active`, `card_past_due`,
+      `card_cap_reached`, `request_pending`.
+    - `closure_pending: false`: a pending closure request on the card rejects
+      with `closure_pending`.
+    - `reason_in_policy: true`: a reason outside `card_requests.yaml`
+      `cancel_reasons` rejects with `invalid_reason`.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -53,6 +60,9 @@ class Preconditions(BaseModel):
     replacement_eligible: bool | None = None
     tx_owned: bool | None = None
     answers_complete: bool | None = None
+    request_eligible: bool | None = None
+    closure_pending: bool | None = None
+    reason_in_policy: bool | None = None
 
 
 class ToolPolicy(BaseModel):

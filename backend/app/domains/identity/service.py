@@ -72,8 +72,6 @@ _logger = structlog.get_logger()
 # look identical to the caller, so the message never hints at which one it was.
 _INVALID_CREDENTIALS_MESSAGE = "invalid document number or password"
 
-_FOUR_BULLETS = "•" * 4
-
 
 class InvalidCredentials(Exception):
     """Login failed: unknown `login_key`, wrong password, or an inactive
@@ -391,7 +389,7 @@ async def me(session: Session) -> MeResponse:
     if session.customer_id is None:
         raise ValueError("me() requires a customer session")
     profile = await customers_service.get_login_profile(session.customer_id)
-    hint = f"{profile.document_type} {_FOUR_BULLETS}{profile.document_last3}"
+    hint = customers_service.login_hint(profile.document_type, profile.document_last3)
     return MeResponse(
         role="customer",
         login_hint=hint,

@@ -46,10 +46,11 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -62,6 +63,7 @@ from app.domains.conversation.graph import CardSelection, ConfirmationDecision, 
 from app.domains.conversation.runner import (
     TurnInProgress,
     checkpointed_confirmation_token,
+    checkpointed_form_pause,
     checkpointed_offer,
     checkpointed_otp_pause,
     checkpointed_replacement_offer,
@@ -69,9 +71,12 @@ from app.domains.conversation.runner import (
 )
 from app.domains.conversation.store import ConversationRow
 from app.domains.conversation.welcome import post_welcome
+from app.domains.customers import service as customers_service
+from app.domains.customers.schemas import ProfileFormView, ProfileValues
 from app.domains.identity.deps import get_session, require_csrf, require_role
 from app.domains.identity.models import Session
 from app.domains.policy.confirmation_redis import RedisConfirmationStore
+from app.domains.safety.vault import PostgresPiiVault
 
 __all__ = ["router"]
 
@@ -293,6 +298,10 @@ async def post_message(
         if body.text is not None and otp_pause == "agent":
             raise HTTPException(status_code=409, detail="otp_required")
 
+    if body.text is not None and await checkpointed_form_pause(host, conversation.id):
+        # D9-C D11: typed text at the profile form is refused, the pause stays.
+        raise HTTPException(status_code=409, detail="form_required")
+
     await _check_turn_caps(session, conversation)
     try:
         turn_id = await start_turn(
@@ -304,6 +313,98 @@ async def post_message(
             resume=body.resume,
             selection=body.selection,
             card_selection=body.card_selection,
+        )
+    except TurnInProgress as exc:
+        raise HTTPException(status_code=409, detail="turn_in_progress") from exc
+    await _count_turn(session, conversation)
+    return PostMessageResponse(turn_id=turn_id)
+
+
+class ProfileFormValues(BaseModel):
+    """The five editable values as submitted (D9-C D11). Never logged, persisted as a
+    message or sent to the LLM: they go to the vault only (R5)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    email: str = Field(max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    mobile_phone: str = Field(pattern=r"^\+?[0-9][0-9 ()\-]{5,19}$")
+    address: str = Field(min_length=1, max_length=300)
+    occupation: str = Field(min_length=1, max_length=120)
+    estimated_monthly_income: Decimal = Field(gt=0, max_digits=14, decimal_places=2)
+
+
+class ProfileFormSubmit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["submit"]
+    values: ProfileFormValues
+
+
+class ProfileFormCancel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["cancel"]
+
+
+ProfileFormRequest = Annotated[ProfileFormSubmit | ProfileFormCancel, Field(discriminator="action")]
+
+
+@router.get("/{conversation_id}/profile-form", response_model=ProfileFormView)
+async def get_profile_form(
+    request: Request,
+    response: Response,
+    session: Annotated[Session, Depends(get_session)],
+    conversation: Annotated[ConversationRow, Depends(get_owned_conversation)],
+) -> ProfileFormView:
+    """The form's initial view for the session's customer (R1). `409 form_not_open`
+    unless the checkpoint is paused at the form. Never cached or persisted."""
+    if not await checkpointed_form_pause(request.app.state.turn_host, conversation.id):
+        raise HTTPException(status_code=409, detail="form_not_open")
+    response.headers["Cache-Control"] = "no-store"
+    language: Literal["es", "pt"] = "pt" if conversation.language == "pt" else "es"
+    view = await customers_service.get_profile_form(_customer_id(session), language)
+    # The kind lives in the checkpoint, so a re-opened form (after a reload) titles itself.
+    state = await request.app.state.turn_host.graph.aget_state(
+        {"configurable": {"thread_id": str(conversation.id)}}
+    )
+    kind = state.values.get("card_request_kind")
+    return view.model_copy(update={"card_kind": kind}) if kind in ("credit", "debit") else view
+
+
+@router.post("/{conversation_id}/profile-form", response_model=PostMessageResponse, status_code=202)
+async def post_profile_form(
+    body: ProfileFormRequest,
+    request: Request,
+    session: Annotated[Session, Depends(get_session)],
+    conversation: Annotated[ConversationRow, Depends(get_owned_conversation)],
+) -> PostMessageResponse:
+    """Submit or cancel the profile form (D9-C D11). A submit stages only the
+    *changed* values in the vault and passes their names to the turn; the values
+    never enter the message, `ui_payload`, LLM input or checkpoint (R5).
+    """
+    host = request.app.state.turn_host
+    if not await checkpointed_form_pause(host, conversation.id):
+        raise HTTPException(status_code=409, detail="form_not_open")
+    customer_id = _customer_id(session)
+    await _check_turn_caps(session, conversation)
+
+    changed: list[str] | None = None
+    if isinstance(body, ProfileFormSubmit):
+        values = ProfileValues(**body.values.model_dump())
+        fields = await customers_service.changed_fields(customer_id, values)
+        raw = values.model_dump()
+        await PostgresPiiVault(conversation.id).stage_form_values(
+            {field: str(raw[field]) for field in fields}
+        )
+        changed = list(fields)
+    try:
+        turn_id = await start_turn(
+            host,
+            session=session,
+            conversation_id=conversation.id,
+            trace_id=get_trace_id(),
+            resume="profile_form" if changed is not None else "profile_form_cancel",
+            form_changed_fields=changed,
         )
     except TurnInProgress as exc:
         raise HTTPException(status_code=409, detail="turn_in_progress") from exc
@@ -360,15 +461,26 @@ async def _sse_stream(stream: AsyncIterator[tuple[str, Any]]) -> AsyncIterator[s
     """
 
     yield ": connected\n\n"
-    while True:
-        try:
-            event, data = await asyncio.wait_for(anext(stream), timeout=_PING_INTERVAL_SECONDS)
-        except TimeoutError:
-            yield ": ping\n\n"
-            continue
-        except StopAsyncIteration:
-            return
-        yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+    # One read stays pending across pings: cancelling it on a timeout would close
+    # `stream`, end the response and drop whatever is published before the reconnect.
+    pending: asyncio.Task[tuple[str, Any]] | None = None
+    try:
+        while True:
+            if pending is None:
+                pending = asyncio.ensure_future(anext(stream))
+            done, _ = await asyncio.wait({pending}, timeout=_PING_INTERVAL_SECONDS)
+            if not done:
+                yield ": ping\n\n"
+                continue
+            finished, pending = pending, None
+            try:
+                event, data = finished.result()
+            except StopAsyncIteration:
+                return
+            yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+    finally:
+        if pending is not None:
+            pending.cancel()
 
 
 @router.get("/{conversation_id}/stream")

@@ -25,7 +25,7 @@ intents:
   - {intent: benefits_info, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
   - {intent: card_activation, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
   - {intent: pin_reset, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
-  - {intent: card_cancel, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
+  - {intent: card_cancel, node: null, tier: core, classifier: false, training_dir: null, lexicon_key: null}
   - {intent: limit_increase, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
   - {intent: card_finder, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}
   - {intent: prequalification, node: null, tier: stretch, classifier: false, training_dir: null, lexicon_key: null}

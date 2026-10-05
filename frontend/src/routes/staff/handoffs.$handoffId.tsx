@@ -1,8 +1,9 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { HandoffDetail } from "@/client";
 import { AgentChat } from "@/components/staff/AgentChat";
+import { CardRequestPanel } from "@/components/staff/CardRequestPanel";
 import { PacketView } from "@/components/staff/PacketView";
 import { StaffNav } from "@/components/staff/StaffNav";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,13 @@ function StaffHandoffDetailPage() {
 	const [detail, setDetail] = useState<HandoffDetail | null>(null);
 	const [returning, setReturning] = useState(false);
 	const [errorCode, setErrorCode] = useState<string | null>(null);
+	// A card request blocks "return" until it is decided (AS9). Assumed
+	// pending until the panel reports its status.
+	const [requestPending, setRequestPending] = useState(true);
+	const onPendingChange = useCallback(
+		(pending: boolean) => setRequestPending(pending),
+		[],
+	);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -70,6 +78,9 @@ function StaffHandoffDetailPage() {
 			setReturning(false);
 		}
 	}
+
+	const hasCardRequest = Boolean(detail?.packet.card_request);
+	const returnBlocked = hasCardRequest && requestPending;
 
 	if (!detail) {
 		return (
@@ -117,13 +128,26 @@ function StaffHandoffDetailPage() {
 								"h-10 self-start rounded-full border-muted-foreground px-[18px] font-semibold hover:border-foreground",
 								returning && "opacity-45",
 							)}
-							disabled={returning}
+							disabled={returning || returnBlocked}
 							onClick={() => void handleReturn()}
 						>
 							{t(returning ? "staff.detail.returning" : "staff.detail.return")}
 						</Button>
+						{returnBlocked && (
+							<p className="text-xs text-muted-foreground">
+								{t("staff.card_request.return_blocked")}
+							</p>
+						)}
 					</div>
 					<div className="order-first lg:sticky lg:top-22 lg:order-none lg:max-h-[calc(100vh-112px)] lg:overflow-y-auto">
+						{hasCardRequest && (
+							<div className="mb-4">
+								<CardRequestPanel
+									handoffId={handoffId}
+									onPendingChange={onPendingChange}
+								/>
+							</div>
+						)}
 						<PacketView summary={detail.summary} packet={detail.packet} />
 					</div>
 				</div>

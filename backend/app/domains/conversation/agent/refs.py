@@ -45,6 +45,21 @@ class TurnRefs:
         self._register(prefix, facts)
         return prefix
 
+    def add_value(self, fact: Fact) -> str:
+        """One fact under its own key as the reference (`close_balance`), for a value that
+        belongs to no card handle. The value is formatted by code like any other (R4)."""
+        text = format_fact(
+            fact.key, {fact.key: fact}, language=self._language, country=self._country
+        )
+        self._values[fact.key] = text
+        return self.render_value(fact.key)
+
+    def render_value(self, reference: str) -> str:
+        line = json.dumps(
+            {"reference": reference, "value": self._values[reference]}, ensure_ascii=False
+        )
+        return "\n".join(["```", line, "```"])
+
     def card_id(self, handle: str) -> str | None:
         return self._cards.get(handle)
 

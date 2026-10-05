@@ -362,6 +362,8 @@ def app_client(it_env: None) -> Iterator[TestClient]:
 _STAFF = (
     ("it.atencion", "Laura", "atencion"),
     ("it.fraudes", "Sofia", "fraudes"),
+    ("it.creditos", "Valentina", "creditos"),
+    ("it.retencion", "Andres", "retencion"),
 )
 
 

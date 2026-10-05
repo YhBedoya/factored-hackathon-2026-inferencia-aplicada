@@ -20,6 +20,8 @@ model is up, only its answers failed the checks), any other `LLMError`
 to `_guard_access`.
 """
 
+import re
+import unicodedata
 from typing import Any, Literal, cast
 
 from langchain_core.runnables import RunnableConfig
@@ -54,6 +56,7 @@ from app.domains.conversation.flows.actions import fill
 from app.domains.conversation.flows.actions import handoff as _handoff_update
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.intent_registry import load_registry
+from app.domains.conversation.nodes.abstain import card_request_unavailable_reply
 from app.domains.conversation.nodes.understand import _context
 from app.domains.conversation.prompts import load_prompt
 from app.domains.conversation.state import (
@@ -72,7 +75,7 @@ from app.domains.policy.registry import get_policies
 
 __all__ = ["agent", "agent_tools"]
 
-_PROMPT = PromptRef("agent", 4)
+_PROMPT = PromptRef("agent", 5)
 _PLAYBOOKS_SLOT = "<<PLAYBOOKS>>"
 # D17: both stuck-conversation counters hand off on the third turn.
 _MAX_ASKED_TURNS = 3
@@ -113,6 +116,8 @@ def agent_tools(
             "picked on the list, `answers` maps each question id to yes or no. "
             f"{_claim_question_ids()} If the result names a missing answer, ask the customer "
             "that question in your own words and propose again. "
+            "To close a card, propose one `close` step on its own: `card` and `reason`, one of "
+            f"these codes: {_cancel_reasons()}. "
             "The customer still has to confirm with a button; you cannot execute anything.",
             ProposeArgs,
             propose,
@@ -124,6 +129,11 @@ def agent_tools(
             pass_to_flow,
         ),
     ]
+
+
+def _cancel_reasons() -> str:
+    """The `reason` codes for a close, read from `card_requests.yaml` (R8), never written here."""
+    return ", ".join(get_policies().card_requests.cancel_reasons)
 
 
 def _claim_question_ids() -> str:
@@ -293,9 +303,15 @@ async def _plan_event(
         "block": "bloqueo permanente por perdida o robo",
         "unlock": "desbloqueo",
         "replace": "reposicion",
+        "close": "solicitud de cierre",
     }
     steps = result.get("steps", [])
     for index, step in enumerate(steps):
+        if step["action"] == "open":
+            # No card to read (D9-C): the request is not a card yet.
+            suffix = "" if issued else ": verificado"
+            lines.append(f"- paso {index}: solicitud de tarjeta nueva{suffix}")
+            continue
         details = await bank_tools.get_card_details(step["card_id"])
         facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]
         tracking_id = step.get("tracking_id")
@@ -319,6 +335,70 @@ async def _plan_event(
         return lines, []
     lines.append("Confirma el resultado con tus palabras y lista esos pasos en reported_done.")
     return lines, list(range(len(steps)))
+
+
+# Code-side fallback for when the LLM cannot read the message (Q2): ES and PT keywords,
+# accent-folded and lowercase, one list per request kind. Wording only; policy stays in YAML.
+_NEW_CARD_WORDS = (
+    "quiero una tarjeta nueva",
+    "quiero una nueva tarjeta",
+    "pedir una tarjeta",
+    "solicitar una tarjeta",
+    "solicitar tarjeta",
+    "quero um cartao novo",
+    "quero um novo cartao",
+    "pedir um cartao",
+    "solicitar um cartao",
+    "solicitar cartao",
+)
+# Only explicit close-a-card wording: a bare "dar de baja" or "otra tarjeta" also
+# appears in block, claim and insurance messages, which must reach their own flows.
+_CLOSE_CARD_WORDS = (
+    "cancelar mi tarjeta",
+    "cancelar la tarjeta",
+    "cancelar tarjeta",
+    "cerrar mi tarjeta",
+    "cerrar la tarjeta",
+    "cerrar tarjeta",
+    "dar de baja mi tarjeta",
+    "dar de baja la tarjeta",
+    "cancelar meu cartao",
+    "cancelar o cartao",
+    "cancelar cartao",
+    "encerrar meu cartao",
+    "encerrar o cartao",
+    "encerrar cartao",
+    "fechar meu cartao",
+    "fechar o cartao",
+)
+# A lost/stolen or negated message is never a request here: it is a block flow, or a "no".
+# Whole words on the folded text ("perdio", "aprobada" must not match). The verb forms
+# stand alone; the adjectives need the card word just before them ("la perdida de dinero"
+# is not a lost card). A negation counts only right before a close verb.
+_NOT_A_REQUEST = re.compile(
+    r"\b(?:robaron|roubaram|perdi|extravie)\b"
+    r"|\b(?:tarjeta|cartao)(?:\s+\w+)?\s+"
+    r"(?:robada|robado|roubada|roubado|perdida|perdido|extraviada|extraviado)\b"
+    r"|\b(?:no\s+quiero\s+(?:cancelar|cerrar|dar\s+de\s+baja)"
+    r"|nao\s+quero\s+(?:cancelar|encerrar|fechar))\b"
+)
+_CARD_REQUEST_ACTIONS = frozenset({"open", "close"})
+_CARD_REQUEST_CLEARED: dict[str, Any] = {"card_request_kind": None, "profile_changed_fields": None}
+
+
+def _card_request_in_flight(state: GraphState) -> bool:
+    """True when a card request is under way or the customer's text asks for one.
+
+    The text is only matched, never logged (R5).
+    """
+    steps = state.get("agent_plan_steps") or []
+    if any(str(step["action"]) in _CARD_REQUEST_ACTIONS for step in steps):
+        return True
+    folded = unicodedata.normalize("NFKD", state.get("user_text", "").lower())
+    text = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    if _NOT_A_REQUEST.search(text):
+        return False
+    return any(word in text for word in (*_NEW_CARD_WORDS, *_CLOSE_CARD_WORDS))
 
 
 def _is_plan_open(pending: Pending | None) -> bool:
@@ -441,6 +521,13 @@ async def agent(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         if box.opened and box.token_id is None:
             # D8: an OTP or address pause was opened; code's text stands in for Cardy's.
             return _pause_without_reply(box, previous)
+        if _card_request_in_flight(state):
+            # C7 (Q2): the LLM is down, so no request can be taken; code's fixed reply stands.
+            return {
+                **await cancel_open_plan(state, config, box),
+                **_CARD_REQUEST_CLEARED,
+                **card_request_unavailable_reply(previous),
+            }
         if plan_was_open and not box.opened:
             # D5: the plan stays open; code sends the reminder and the card, no pipeline.
             return await count_open_plan_turn(state, config)

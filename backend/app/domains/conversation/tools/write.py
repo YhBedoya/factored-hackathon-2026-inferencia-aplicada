@@ -10,13 +10,23 @@ ships the Protocol and factory type only: no implementation.
 """
 
 from collections.abc import Callable
-from typing import Protocol
+from dataclasses import dataclass
+from typing import Literal, Protocol
 
 from app.core.actions import ActionResult
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.tools.context import ToolContext
 
-__all__ = ["BankWriteTools", "BankWriteToolsFactory"]
+__all__ = ["BankWriteTools", "BankWriteToolsFactory", "PendingCardRequests"]
+
+
+@dataclass(frozen=True)
+class PendingCardRequests:
+    """The session customer's open card requests (D9-C I9): whether a card
+    opening is pending, and the ids of the cards with a pending closure."""
+
+    open_pending: bool
+    close_card_ids: frozenset[str]
 
 
 class BankWriteTools(Protocol):
@@ -65,6 +75,35 @@ class BankWriteTools(Protocol):
         # list built in code by the flow (SA1): the row's `priority` is
         # `'High'` when it's non-empty, `NULL` otherwise.
         # May raise: NotFound, AccessDenied (any tx not the customer's), ToolUnavailable.
+        ...
+
+    async def request_card(
+        self,
+        kind: Literal["credit", "debit"],
+        changed_fields: list[str],
+        *,
+        idempotency_key: str,
+    ) -> ActionResult:
+        # Registry name: cards.request_card. Reads the changed values from the
+        # vault, never from an argument (R5). `tracking_id` is the request
+        # reference; the read-back is `{status, kind, fields_saved, request_id, at}`.
+        # May raise: ToolUnavailable, Conflict.
+        ...
+
+    async def request_closure(
+        self, card_id: str, reason: str, *, idempotency_key: str
+    ) -> ActionResult:
+        # Registry name: cards.request_closure. `reason` is a `cancel_reasons`
+        # code (T29's `check_steps` validates it, not this tool). `tracking_id`
+        # is the request reference; the read-back is `{status, reason, request_id,
+        # card_id, card_kind, last4, current_balance, currency, at}`, the balance
+        # a raw `Decimal` for code to format (R4).
+        # May raise: NotFound, AccessDenied, ToolUnavailable, Conflict.
+        ...
+
+    async def pending_card_requests(self) -> PendingCardRequests:
+        # Registry name: cards.pending_card_requests (read, scoped to the session).
+        # May raise: ToolUnavailable.
         ...
 
 

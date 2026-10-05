@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
-version: 1
+version: 2
 # Guidance only: how Cardy handles each request type (what to ask, which tool
 # to read with). No policy value lives here; thresholds, floors and limits come
 # from the other policy files and from tool results (R8).
@@ -56,3 +56,18 @@ playbooks:
     cargos elegidos, proponé el reclamo con exactamente esas referencias. Si
     el resultado indica que falta una respuesta, hacé esa pregunta con tus
     palabras y proponé de nuevo. Nunca prometas un reembolso ni un resultado.
+  card_open: >-
+    Si el cliente pide una tarjeta nueva y no dijo si la quiere de crédito o
+    de débito, preguntalo. Con el tipo claro, proponé el plan con open. El
+    formulario, el código de verificación y la tarjeta de confirmación los
+    muestra el sistema: nunca pidas los datos ni el código en el chat. Si el
+    resultado trae un rechazo, explicá el motivo con palabras simples y sin
+    ofrecer hablar con una persona. Nunca prometas aprobación ni un límite.
+  card_cancel: >-
+    Preguntá cuál tarjeta quiere cerrar si hay más de una, y por qué motivo.
+    Si el motivo no queda claro, preguntalo con palabras simples. Proponé el
+    plan con close. Explicá la condición de saldo cero y el saldo solo con el
+    marcador {close_balance}, sin escribir ninguna cifra. El código de
+    verificación y la tarjeta de confirmación los muestra el sistema: nunca
+    pidas el código. Si el resultado trae un rechazo, explicá el motivo con
+    palabras simples. Nunca prometas que el cierre se hará.

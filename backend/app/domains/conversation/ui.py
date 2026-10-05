@@ -42,6 +42,8 @@ __all__ = [
     "OtpRequiredEvent",
     "OtpRequiredPayload",
     "PickerOption",
+    "ProfileFormEvent",
+    "ProfileFormPayload",
     "QuickRepliesEvent",
     "QuickRepliesPayload",
     "TransactionListEvent",
@@ -100,6 +102,24 @@ class OtpRequiredEvent(BaseModel):
 
     kind: Literal["otp_required"]
     payload: OtpRequiredPayload
+
+
+class ProfileFormPayload(BaseModel):
+    """`ui.profile_form` payload: the kind of card being requested (I11). The form's
+    values come from the profile-form route, never from this event."""
+
+    model_config = ConfigDict(frozen=True)
+
+    card_kind: Literal["credit", "debit"]
+
+
+class ProfileFormEvent(BaseModel):
+    """Push event asking the customer to review their profile before a card request."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["profile_form"]
+    payload: ProfileFormPayload
 
 
 class ConversationClosedPayload(BaseModel):
@@ -250,6 +270,7 @@ class MessagePayload(BaseModel):
 UIEvent = Annotated[
     ConfirmEvent
     | OtpRequiredEvent
+    | ProfileFormEvent
     | ConversationClosedEvent
     | CardPickerEvent
     | QuickRepliesEvent

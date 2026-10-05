@@ -274,8 +274,11 @@ class AgentPlanStep(TypedDict):
     action; the block reason is set by code when the call is built (S1 D8).
     """
 
-    action: Literal["lock", "block", "unlock", "replace", "claim"]
-    card_id: str
+    action: Literal["lock", "block", "unlock", "replace", "claim", "open", "close"]
+    # Absent on an `open` step: a card request names a kind, not a card (I11).
+    card_id: NotRequired[str]
+    kind: NotRequired[Literal["credit", "debit"]]
+    reason: NotRequired[str]
     address_ref: NotRequired[
         str
     ]  # "on_file" or "⟨ADDR_n⟩"; absent on a "new" replace until the address turn
@@ -310,6 +313,10 @@ class TurnState(TypedDict):
     confirmation_token_id: NotRequired[str | None]
     # The agent's open plan, in order (S1 D11); set with the token, cleared with it.
     agent_plan_steps: NotRequired[list[AgentPlanStep] | None]
+    # Card request (I11): the requested kind, and the profile fields the form changed
+    # (names only, never values; `None` before the form is submitted).
+    card_request_kind: NotRequired[Literal["credit", "debit"] | None]
+    profile_changed_fields: NotRequired[list[str] | None]
     # Offered ids while paused at `replacement_cards`, then the selected eligible ids;
     # cleared when the flow ends.
     replacement_card_ids: NotRequired[list[str] | None]

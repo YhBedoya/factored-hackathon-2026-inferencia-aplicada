@@ -32,7 +32,6 @@ TOPICS = frozenset(
         "insurance",
         "transfers",
         "pix_boleto",
-        "new_card",
         "other",
     }
 )
