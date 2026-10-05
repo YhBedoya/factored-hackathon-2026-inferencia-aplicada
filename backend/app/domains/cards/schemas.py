@@ -22,6 +22,7 @@ __all__ = [
     "CardRequestView",
     "CardSummary",
     "CloseCardReadback",
+    "CustomerCardRequest",
     "DecisionName",
     "DecisionOutcome",
     "PanelCard",
@@ -120,6 +121,26 @@ class CardRequestView(BaseModel):
     agent_id: UUID | None
     decided_at: datetime | None
     created_at: datetime
+
+
+class CustomerCardRequest(BaseModel):
+    """One of the customer's own card requests, as Cardy may read it.
+
+    No `decline_reason`, `agent_id` or `customer_id`: the reason is staff-only
+    (`card_requests.yaml`), so it is absent from the type, not filtered later.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    reference: str
+    kind: Literal["open", "close"]
+    card_kind: Literal["credit", "debit"]
+    status: Literal["pending", "decided"]
+    decision: Literal["approve", "decline", "cancel", "keep", "not_cancelled_balance"] | None
+    product_id: str | None
+    credit_limit: Decimal | None
+    created_at: datetime
+    decided_at: datetime | None
 
 
 class CloseCardReadback(BaseModel):

@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 
 from app.core.errors import NotFound
 from app.core.llm import LoopTool
-from app.domains.cards.schemas import CardDetails
+from app.domains.cards.schemas import CardDetails, CustomerCardRequest
 from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.flows.card_info import (
     _card_status_facts,
@@ -56,11 +56,26 @@ from app.domains.policy.disputes import load_disputes_policy
 from app.domains.policy.registry import get_policies
 from app.domains.transactions.schemas import TxFilter, TxStatus, TxView
 
-__all__ = ["read_tools", "register_tx_rows"]
+__all__ = ["read_tools", "register_tx_rows", "request_status"]
 
 _UNKNOWN_REF = "unknown reference: use a card or transaction reference from this turn's results."
 _NO_CARD_REF = "unknown reference: call card_status first to get the card references."
 _MERCHANT_FALLBACK = {"es": "Comercio", "pt": "Estabelecimento"}
+# A decided request's status code, by decision; `compose` maps it to its label (R4).
+_DECISION_STATUS = {
+    "approve": "approved",
+    "decline": "declined",
+    "cancel": "cancelled",
+    "keep": "kept",
+    "not_cancelled_balance": "not_cancelled",
+}
+
+
+def request_status(request: CustomerCardRequest) -> str:
+    """`pending`, or the decision's status code. Never carries a decline reason."""
+    if request.status == "pending" or request.decision is None:
+        return "pending"
+    return _DECISION_STATUS[request.decision]
 
 
 async def register_tx_rows(
@@ -116,6 +131,10 @@ class _DeclineArgs(BaseModel):
 
 class _ScopeArgs(BaseModel):
     topic: str = Field(description="A scope topic key.")
+
+
+class _NoArgs(BaseModel):
+    pass
 
 
 def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> list[LoopTool]:
@@ -317,6 +336,41 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
             return await _tx_state_facts(matches[0])
         return await _list_rows(matches or declines)
 
+    async def card_request_status(_args: BaseModel) -> str:
+        """The customer's latest card requests (newest first) as `r` groups (R1, R4)."""
+        requests = await bank_tools.get_card_requests()
+        if not requests:
+            return "no card requests."
+        parts: list[str] = []
+        for index, request in enumerate(requests, start=1):
+            source = f"bank.card_requests:{request.reference}"
+            status = request_status(request)
+            facts = [
+                Fact(key="request_kind", value=request.kind, source=source),
+                Fact(key="card_kind", value=request.card_kind, source=source),
+                Fact(key="request_status", value=status, source=source),
+                Fact(key="tracking_id", value=request.reference, source=source),
+                Fact(
+                    key="request_date",
+                    value=request.created_at.astimezone(BANK_TZ[country]).date(),
+                    source=source,
+                ),
+            ]
+            if request.product_id is not None:
+                try:
+                    details = await bank_tools.get_card_details(request.product_id)
+                except NotFound:
+                    details = None
+                if details is not None:
+                    facts.append(Fact(key="card_mask", value=details.last4, source=source))
+                    if status == "approved" and request.credit_limit is not None:
+                        facts.append(
+                            Fact(key="credit_limit", value=request.credit_limit, source=source)
+                        )
+                        facts.append(Fact(key="currency", value=details.currency, source=source))
+            parts.append(refs.render(refs.add_group(f"r{index}", facts)))
+        return "\n".join(parts)
+
     async def scope_facts(args: BaseModel) -> str:
         topic = cast(_ScopeArgs, args).topic
         topics = get_policies().scope.topics
@@ -367,6 +421,12 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
             "Why a purchase was declined, or the state of a pending or reversed one.",
             _DeclineArgs,
             explain_decline,
+        ),
+        LoopTool(
+            "card_request_status",
+            "The customer's latest card requests (open or close), newest first, and their status.",
+            _NoArgs,
+            card_request_status,
         ),
         LoopTool(
             "scope_facts",

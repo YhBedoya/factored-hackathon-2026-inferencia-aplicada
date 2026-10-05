@@ -6,13 +6,16 @@ they hold no bank tools. `return_to_bot` takes the same `turn:<id>` lock the
 turn runner uses, so a customer turn can't race the checkpoint edit.
 """
 
+from typing import Literal
 from uuid import UUID, uuid4
 
 from app.core import events
 from app.core.pii import KnownPii
 from app.core.redis import get_redis
 from app.domains.conversation import store
+from app.domains.conversation.context import WINDOW
 from app.domains.conversation.hosting import TurnHost
+from app.domains.conversation.state import HistoryMessage
 from app.domains.conversation.templates import get_template
 from app.domains.conversation.ui import MessagePayload, ModePayload
 from app.domains.localization.format import Language
@@ -32,6 +35,27 @@ if redis.call("get", KEYS[1]) == ARGV[1] then
 end
 return 0
 """
+
+
+# Transcript roles Cardy's history window carries; `system` notices stay out.
+_HISTORY_ROLES: dict[str, Literal["customer", "cardy", "agent"]] = {
+    "customer": "customer",
+    "bot": "cardy",
+    "agent": "agent",
+}
+
+
+def _history_from_transcript(rows: list[store.MessageRow], back_text: str) -> list[HistoryMessage]:
+    """The last `WINDOW` masked transcript messages plus the `back_with_cardy`
+    line, so Cardy sees what the advisor told the customer (R5: masked only).
+    """
+    history: list[HistoryMessage] = [
+        {"role": _HISTORY_ROLES[row.role], "text": row.content_masked}
+        for row in rows
+        if row.role in _HISTORY_ROLES and row.content_masked
+    ]
+    history.append({"role": "cardy", "text": back_text})
+    return history[-WINDOW:]
 
 
 class TurnBusy(Exception):
@@ -69,6 +93,11 @@ async def return_to_bot(host: TurnHost, conversation_id: UUID, language: Languag
     if not await redis.set(lock_key, lock_id, nx=True, ex=_LOCK_TTL_SECONDS):
         raise TurnBusy(f"a turn is running for conversation {conversation_id}")
     try:
+        text = get_template("back_with_cardy", language)
+        masked = await PostgresPiiVault(conversation_id).mask(text, _PATTERNS_ONLY)
+        # The advisor's messages live only in the transcript: fold them into
+        # the checkpoint's window or Cardy can't answer about the outcome.
+        history = _history_from_transcript(await store.list_messages(conversation_id), masked)
         config = {"configurable": {"thread_id": str(conversation_id)}}
         await host.graph.aupdate_state(
             config,  # type: ignore[arg-type]
@@ -90,10 +119,9 @@ async def return_to_bot(host: TurnHost, conversation_id: UUID, language: Languag
                 "friction": {"clarifications": 0, "abstentions": 0, "non_answers": 0},
                 "open_question": None,
                 "unauthorized_attempts": 0,
+                "history": history,
             },
         )
-        text = get_template("back_with_cardy", language)
-        masked = await PostgresPiiVault(conversation_id).mask(text, _PATTERNS_ONLY)
         await store.add_message(
             conversation_id, uuid4(), role="system", content=text, content_masked=masked
         )

@@ -25,7 +25,7 @@ import structlog
 from app.core.errors import AccessDenied
 from app.core.pii import KnownPii
 from app.domains.cards import service as cards_service
-from app.domains.cards.schemas import CardDetails, CardSummary
+from app.domains.cards.schemas import CardDetails, CardSummary, CustomerCardRequest
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers import service as customers_service
@@ -105,6 +105,9 @@ class PostgresBank:
     async def get_priority_signals(self) -> PrioritySignals:
         open_statuses = load_disputes_policy().priority.open_statuses
         return await disputes_service.priority_signals(self._ctx.customer_id, open_statuses)
+
+    async def get_card_requests(self) -> list[CustomerCardRequest]:
+        return await cards_service.recent_requests(self._ctx.customer_id)
 
     def _log_access_denied(self, *, tool: str, requested_id: str) -> None:
         _logger.warning(

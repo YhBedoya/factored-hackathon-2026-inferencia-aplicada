@@ -21,6 +21,7 @@ from app.domains.conversation.graph import run_turn
 from app.domains.conversation.nodes.handoff import handoff
 from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft, handoff_summary
 from app.domains.conversation.schemas import NLUResult
+from app.domains.conversation.store import MessageRow
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.handoff import (
     HandoffTools,
@@ -310,11 +311,46 @@ def test_packet_v2_code_fields(fakebank_dir: Path, monkeypatch: pytest.MonkeyPat
 
     monkeypatch.setattr(takeover, "get_redis", lambda: _Redis())
     monkeypatch.setattr(takeover, "PostgresPiiVault", _Vault)
+
+    async def _no_rows(*_: Any) -> list[Any]:
+        return []
+
     monkeypatch.setattr(takeover.store, "add_message", _noop)
+    monkeypatch.setattr(takeover.store, "list_messages", _no_rows)
     monkeypatch.setattr(takeover.events, "publish", _noop)
     monkeypatch.setattr(takeover, "publish_mode", _noop)
     asyncio.run(takeover.return_to_bot(SimpleNamespace(graph=_Graph()), uuid4(), "es"))  # type: ignore[arg-type]
     assert recorded[0]["friction"] == {"clarifications": 0, "abstentions": 0, "non_answers": 0}
+
+
+def test_return_to_bot_folds_advisor_messages_into_history() -> None:
+    """After a takeover Cardy's window holds the advisor's masked messages, not system notices."""
+
+    def row(role: str, masked: str) -> MessageRow:
+        return MessageRow(
+            id=uuid4(),
+            conversation_id=uuid4(),
+            turn_id=uuid4(),
+            role=role,
+            content="raw " + masked,
+            content_masked=masked,
+            ui_payload=None,
+            created_at=datetime.now(UTC),
+        )
+
+    rows = [
+        row("customer", "quiero una tarjeta"),
+        row("bot", "te paso con Créditos"),
+        row("system", "Enviamos tu caso a Créditos."),
+        row("agent", "¡Buenas noticias! Aprobamos tu nueva tarjeta."),
+    ]
+    history = takeover._history_from_transcript(rows, "de vuelta con Cardy")
+    assert history == [
+        {"role": "customer", "text": "quiero una tarjeta"},
+        {"role": "cardy", "text": "te paso con Créditos"},
+        {"role": "agent", "text": "¡Buenas noticias! Aprobamos tu nueva tarjeta."},
+        {"role": "cardy", "text": "de vuelta con Cardy"},
+    ]
 
 
 def test_r1_history_session_bound(monkeypatch: pytest.MonkeyPatch) -> None:

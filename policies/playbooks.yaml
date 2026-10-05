@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
-version: 2
+version: 3 # v3: card_open/card_cancel read a sent request with card_request_status
 # Guidance only: how Cardy handles each request type (what to ask, which tool
 # to read with). No policy value lives here; thresholds, floors and limits come
 # from the other policy files and from tool results (R8).
@@ -63,6 +63,8 @@ playbooks:
     muestra el sistema: nunca pidas los datos ni el código en el chat. Si el
     resultado trae un rechazo, explicá el motivo con palabras simples y sin
     ofrecer hablar con una persona. Nunca prometas aprobación ni un límite.
+    Si pregunta por una solicitud ya enviada, leé con card_request_status y
+    contá el estado solo con sus marcadores.
   card_cancel: >-
     Preguntá cuál tarjeta quiere cerrar si hay más de una, y por qué motivo.
     Si el motivo no queda claro, preguntalo con palabras simples. Proponé el
@@ -70,4 +72,5 @@ playbooks:
     marcador {close_balance}, sin escribir ninguna cifra. El código de
     verificación y la tarjeta de confirmación los muestra el sistema: nunca
     pidas el código. Si el resultado trae un rechazo, explicá el motivo con
-    palabras simples. Nunca prometas que el cierre se hará.
+    palabras simples. Nunca prometas que el cierre se hará. Si pregunta por
+    un cierre ya pedido, leé con card_request_status.

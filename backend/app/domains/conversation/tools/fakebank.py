@@ -47,7 +47,14 @@ import duckdb
 from app.core.actions import ActionResult
 from app.core.errors import AccessDenied, NotFound, ToolUnavailable
 from app.core.pii import KnownPii
-from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
+from app.domains.cards.schemas import (
+    AddressRef,
+    BlockOrigin,
+    BlockReason,
+    CardDetails,
+    CardSummary,
+    CustomerCardRequest,
+)
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.write import (
@@ -458,6 +465,27 @@ class FakeBank:
             rate=Decimal(row["exchange_rate"]),
             as_of=date.fromisoformat(row["date"]),
         )
+
+    async def get_card_requests(self) -> list[CustomerCardRequest]:
+        """The overlay's requests, newest first, at most 3 (the Postgres read's
+        shape). A test may seed `decision`, `credit_limit`, `decided_at`."""
+        rows = sorted(
+            self._overlay.card_requests.values(), key=lambda r: r["created_at"], reverse=True
+        )
+        return [
+            CustomerCardRequest(
+                reference=r["reference"],
+                kind=r["kind"],
+                card_kind=r["card_kind"],
+                status=r["status"],
+                decision=r.get("decision"),
+                product_id=r.get("product_id"),
+                credit_limit=r.get("credit_limit"),
+                created_at=r["created_at"],
+                decided_at=r.get("decided_at"),
+            )
+            for r in rows[:3]
+        ]
 
     async def get_priority_signals(self) -> PrioritySignals:
         """B2's two priority signals over the complaints partitions (R1): no

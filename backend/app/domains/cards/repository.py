@@ -48,6 +48,7 @@ __all__ = [
     "fetch_lock_row",
     "fetch_pending_requests",
     "fetch_product_row",
+    "fetch_recent_requests",
     "fetch_replacement_by_id",
     "fetch_replacement_by_key",
     "fetch_request_by_decision_key",
@@ -470,6 +471,15 @@ async def fetch_pending_requests(customer_id: str) -> list[RowMapping]:
         f"SELECT {_REQUEST_COLUMNS} FROM app.card_requests "
         "WHERE customer_id = :customer_id AND status = 'pending' ORDER BY created_at, id",
         {"customer_id": customer_id},
+    )
+
+
+async def fetch_recent_requests(customer_id: str, limit: int) -> list[RowMapping]:
+    """The customer's latest requests, both kinds and any status, newest first (R1)."""
+    return await _fetch_rows(
+        f"SELECT {_REQUEST_COLUMNS} FROM app.card_requests "
+        "WHERE customer_id = :customer_id ORDER BY created_at DESC, id DESC LIMIT :limit",
+        {"customer_id": customer_id, "limit": limit},
     )
 
 
