@@ -57,7 +57,7 @@ from app.domains.conversation.tools import BankReadTools, ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools
 from app.domains.conversation.tools.fakebank import make_fakebank_factory
 from app.domains.conversation.tools.handoff import InMemoryHandoffTools
-from app.domains.conversation.tools.write import BankWriteTools
+from app.domains.conversation.tools.write import BankWriteTools, PendingCardRequests
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.disputes.schemas import PrioritySignals
 from app.domains.identity.step_up_fake import FakeStepUpGate
@@ -170,6 +170,26 @@ class _RecordingWriteTools:
         return await self._inner.create_claim(
             tx_ids, answers, priority_flags, idempotency_key=idempotency_key
         )
+
+    async def request_card(
+        self,
+        kind: Literal["credit", "debit"],
+        changed_fields: list[str],
+        *,
+        idempotency_key: str,
+    ) -> ActionResult:
+        self._calls.append("request_card")
+        return await self._inner.request_card(kind, changed_fields, idempotency_key=idempotency_key)
+
+    async def request_closure(
+        self, card_id: str, reason: str, *, idempotency_key: str
+    ) -> ActionResult:
+        self._calls.append("request_closure")
+        return await self._inner.request_closure(card_id, reason, idempotency_key=idempotency_key)
+
+    async def pending_card_requests(self) -> PendingCardRequests:
+        self._calls.append("pending_card_requests")
+        return await self._inner.pending_card_requests()
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:

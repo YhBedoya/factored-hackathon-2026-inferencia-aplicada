@@ -120,6 +120,8 @@ _REQUIRED_REASONS = (
     "priority_claim",
     "agent_round_cap",
     "step_up_failed",
+    "card_open_request",
+    "card_close_request",
 )
 
 # Reasons whose null-queue rule resolves by the paused flow, like `human_request`.

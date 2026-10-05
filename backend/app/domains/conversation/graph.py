@@ -177,12 +177,20 @@ class TurnInput(TypedDict):
     paused on it) `_entry` skips `understand` too -- the pick is never run
     through NLU, and never saved as a customer message. `card_selection` is the
     same again for the replacement picker: passed explicitly every turn (`None`
-    otherwise), never run through NLU.
+    otherwise), never run through NLU. `"profile_form"` / `"profile_form_cancel"` (D9-C)
+    are the profile form's Send and Cancel; `form_changed_fields` carries the changed
+    field *names* only (R5: the values are in the vault, never in the graph).
     """
 
     user_text: str
     confirmation: NotRequired[ConfirmationDecision | None]
-    resume: NotRequired[Literal["step_up", "step_up_cancel", "step_up_failed"] | None]
+    resume: NotRequired[
+        Literal[
+            "step_up", "step_up_cancel", "step_up_failed", "profile_form", "profile_form_cancel"
+        ]
+        | None
+    ]
+    form_changed_fields: NotRequired[list[str] | None]
     selection: NotRequired[TxSelection | None]
     card_selection: NotRequired[CardSelection | None]
     introduced: NotRequired[bool]
@@ -229,7 +237,13 @@ class GraphState(TurnState):
     user_text: NotRequired[str]
     reply: NotRequired[str]
     confirmation: NotRequired[ConfirmationDecision | None]
-    resume: NotRequired[Literal["step_up", "step_up_cancel", "step_up_failed"] | None]
+    resume: NotRequired[
+        Literal[
+            "step_up", "step_up_cancel", "step_up_failed", "profile_form", "profile_form_cancel"
+        ]
+        | None
+    ]
+    form_changed_fields: NotRequired[list[str] | None]
     selection: NotRequired[TxSelection | None]
     card_selection: NotRequired[CardSelection | None]
     ui: NotRequired[list[UIEvent]]
@@ -361,6 +375,10 @@ def _entry(state: GraphState) -> str:
         # Kill switch with the address question open: the typed address must not reach
         # the NLU (R5), so a code node vaults and drops it (S2 D11).
         pause = "address"
+    if pause == "profile_form" or (pause is None and _flag_off_form_pause(state)):
+        # Every turn at the form pause is code's (D11), the flag-off one included: the
+        # node ends the open request without an LLM call.
+        return "agent_profile_form"
     if (
         pause == "address"
         and state.get("user_text")
@@ -379,9 +397,9 @@ def _entry(state: GraphState) -> str:
     return _pipeline_entry(state)
 
 
-def _agent_pause(state: GraphState) -> Literal["otp", "address"] | None:
-    """Which agent code-node pause is open (S2 D15): the OTP pause or the address
-    question. Flag off, nothing (S1 D27)."""
+def _agent_pause(state: GraphState) -> Literal["otp", "address", "profile_form"] | None:
+    """Which agent code-node pause is open (S2 D15): the OTP pause, the address
+    question or the profile form (D9-C). Flag off, nothing (S1 D27)."""
     pending = state.get("pending")
     if not state.get("agent_enabled") or pending is None or pending["flow"] != "agent":
         return None
@@ -389,6 +407,8 @@ def _agent_pause(state: GraphState) -> Literal["otp", "address"] | None:
         return "otp"
     if pending["awaiting_slot"] == "address":
         return "address"
+    if pending["awaiting_slot"] == "profile_form":
+        return "profile_form"
     return None
 
 
@@ -411,6 +431,17 @@ def _flag_off_address_pause(state: GraphState) -> bool:
         and pending is not None
         and pending["flow"] == "agent"
         and pending["awaiting_slot"] == "address"
+    )
+
+
+def _flag_off_form_pause(state: GraphState) -> bool:
+    """`AGENT_ENABLED` is off but the agent's profile form is still open."""
+    pending = state.get("pending")
+    return (
+        not state.get("agent_enabled")
+        and pending is not None
+        and pending["flow"] == "agent"
+        and pending["awaiting_slot"] == "profile_form"
     )
 
 
@@ -552,7 +583,7 @@ def _after_agent_plan(state: GraphState) -> str:
 
 
 def _after_agent_pause(state: GraphState) -> str:
-    """Conditional edge after `agent_step_up` / `agent_address` (S2 D17): as
+    """Conditional edge after `agent_step_up` / `agent_address` / `agent_profile_form` (S2 D17): as
     `_after_agent_plan`; `agent_address` never sets `agent_code_text`."""
     return _after_agent_plan(state)
 
@@ -911,6 +942,7 @@ def build_graph(
     `compose`, `handoff_summary` and `abstain`'s wording -- for LLM-free
     ones. Tools, policy, flows and graph shape stay identical.
     """
+    from app.domains.conversation.agent.card_request import agent_profile_form
     from app.domains.conversation.agent.confirm import agent_plan
     from app.domains.conversation.agent.node import agent
     from app.domains.conversation.agent.step_up import agent_address, agent_step_up
@@ -976,6 +1008,7 @@ def build_graph(
         for pause_node, pause_fn in (
             ("agent_step_up", agent_step_up),
             ("agent_address", agent_address),
+            ("agent_profile_form", agent_profile_form),
         ):
             graph.add_node(pause_node, _guard_access(pause_fn))
             graph.add_conditional_edges(
@@ -1072,6 +1105,7 @@ def build_graph(
             "agent_plan": "smalltalk" if baseline else "agent_plan",
             "agent_step_up": "smalltalk" if baseline else "agent_step_up",
             "agent_address": "smalltalk" if baseline else "agent_address",
+            "agent_profile_form": "smalltalk" if baseline else "agent_profile_form",
             "step_up_failed": "step_up_failed",
             "otp_cancel": "otp_cancel",
             "relay_to_agent": "relay_to_agent",
@@ -1262,9 +1296,13 @@ async def run_turn(
     *,
     config: RunnableConfig,
     confirmation: ConfirmationDecision | None = None,
-    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None = None,
+    resume: Literal[
+        "step_up", "step_up_cancel", "step_up_failed", "profile_form", "profile_form_cancel"
+    ]
+    | None = None,
     selection: TxSelection | None = None,
     card_selection: CardSelection | None = None,
+    form_changed_fields: list[str] | None = None,
 ) -> tuple[str, DebugInfo]:
     """Run one turn and build its debug line (D9, D20, `07` §1).
 
@@ -1290,6 +1328,7 @@ async def run_turn(
             "resume": resume,
             "selection": selection,
             "card_selection": card_selection,
+            "form_changed_fields": form_changed_fields,
         },
         config=config,
         stream_mode="updates",

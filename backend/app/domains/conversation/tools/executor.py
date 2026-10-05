@@ -40,7 +40,7 @@ decision for D2-K, only `except Exception` cancels the plan; an
 
 import asyncio
 from collections.abc import Awaitable, Callable, Sequence
-from typing import cast
+from typing import Literal, cast
 
 import structlog
 from pydantic import JsonValue
@@ -59,7 +59,7 @@ from app.core.retry import backoff_delay
 from app.domains.audit.schemas import AuditType, Recorder
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.schemas import Intent
-from app.domains.conversation.tools.write import BankWriteTools
+from app.domains.conversation.tools.write import BankWriteTools, PendingCardRequests
 from app.domains.identity.step_up import StepUpGate
 from app.domains.policy.confirmation import (
     ConfirmationPlan,
@@ -99,10 +99,18 @@ file states its preconditions.
 """
 
 _GET_BLOCK_ORIGIN_TOOL = "cards.get_block_origin"
+_PENDING_CARD_REQUESTS_TOOL = "cards.pending_card_requests"
 
 # The writes `cards_write_error` fails (D6): every `cards.*` write, not claims.
 _CARDS_WRITES = frozenset(
-    {"cards.lock_card", "cards.unlock_card", "cards.block_card", "cards.order_replacement"}
+    {
+        "cards.lock_card",
+        "cards.unlock_card",
+        "cards.block_card",
+        "cards.order_replacement",
+        "cards.request_card",
+        "cards.request_closure",
+    }
 )
 
 
@@ -259,6 +267,42 @@ class ConfirmedWriteTools:
                 tx_ids, answers, priority_flags, idempotency_key=key
             ),
         )
+
+    async def request_card(
+        self, kind: Literal["credit", "debit"], changed_fields: list[str], token_id: str
+    ) -> ActionResult:
+        args: ToolArgs = {"kind": kind, "changed_fields": changed_fields}
+        return await self._run(
+            "cards.request_card",
+            args,
+            token_id,
+            lambda key: self._raw.request_card(kind, changed_fields, idempotency_key=key),
+        )
+
+    async def request_closure(self, card_id: str, reason: str, token_id: str) -> ActionResult:
+        args: ToolArgs = {"card_id": card_id, "reason": reason}
+        return await self._run(
+            "cards.request_closure",
+            args,
+            token_id,
+            lambda key: self._raw.request_closure(card_id, reason, idempotency_key=key),
+        )
+
+    async def pending_card_requests(self) -> PendingCardRequests:
+        """An audited read like `get_block_origin`, without the allowlist
+        check: the agent path has no intent, and the read changes nothing."""
+        tool = _PENDING_CARD_REQUESTS_TOOL
+        await self._record_tool_call({"tool": tool})
+        pending = await self._raw.pending_card_requests()
+        await self._record(
+            "tool_result",
+            {
+                "tool": tool,
+                "open_pending": pending.open_pending,
+                "close_count": len(pending.close_card_ids),
+            },
+        )
+        return pending
 
     async def _run(
         self,

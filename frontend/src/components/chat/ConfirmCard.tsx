@@ -47,8 +47,10 @@ export function ConfirmCard({ payload, onDecide }: ConfirmCardProps) {
 							{t(`confirm.steps.${step.summary_key}` as TKey)}
 						</p>
 						<ul className="text-sm text-muted-foreground">
-							{step.facts.map((fact) => (
-								<li key={fact.key}>{String(fact.value)}</li>
+							{step.facts.map((fact, index) => (
+								// Index-qualified: an open-card plan repeats the key "profile_field".
+								// biome-ignore lint/suspicious/noArrayIndexKey: facts are static per card
+								<li key={`${fact.key}-${index}`}>{String(fact.value)}</li>
 							))}
 						</ul>
 					</div>

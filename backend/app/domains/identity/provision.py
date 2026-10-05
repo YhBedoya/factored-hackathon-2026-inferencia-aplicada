@@ -54,6 +54,8 @@ _AGENT_NAMES: dict[Queue, str] = {
     "cobranza": "Diego",
     "fraudes": "Sofía",
     "reclamos": "Mateo",
+    "creditos": "Valentina",
+    "retencion": "Andrés",
 }
 _ADMIN_USERNAME = "admin"
 _ADMIN_DISPLAY_NAME = "Swip Admin"
@@ -129,9 +131,14 @@ def main() -> None:
         cur.execute("SELECT customer_id, document_type, document_number FROM bank.customers")
         customers = cur.fetchall()
 
-        # `app.handoffs.agent_id` references accounts (0005), so Postgres
-        # refuses a lone TRUNCATE; the golden DB holds no handoffs anyway.
-        cur.execute("TRUNCATE identity.accounts, app.handoffs")
+        # `app.handoffs.agent_id` references accounts (0005) and 0011 adds
+        # `app.card_requests` (-> accounts, handoffs) and the profile history
+        # (-> card_requests), so Postgres refuses a lone TRUNCATE; the golden
+        # DB holds none of these rows anyway.
+        cur.execute(
+            "TRUNCATE identity.accounts, app.handoffs, app.card_requests, "
+            "app.customer_profile_history"
+        )
         with cur.copy(
             "COPY identity.accounts "
             "(account_id, role, customer_id, login_key, password_hash, status) "

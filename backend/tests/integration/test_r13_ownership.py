@@ -14,6 +14,7 @@ See `docs/specs/d2-a-login-read-tools-api.md` "Contracts" -> the three
 `docs/solution-docs/04-contracts.md` §3 "Auth (ADR-025)".
 """
 
+import asyncio
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -21,6 +22,7 @@ from fastapi.testclient import TestClient
 from app.core.config import get_settings
 from app.core.db import get_engine
 from app.core.redis import get_redis
+from app.domains.customers import service as customers_service
 from app.domains.identity.tokens import CSRF_HEADER
 from app.main import create_app
 from tests.integration.conftest import ItAccount
@@ -101,3 +103,55 @@ def test_other_customer_conversation_is_404(
         )
         assert confirmation_response.status_code == 404
         assert confirmation_response.json() == _NOT_FOUND_BODY
+
+
+def test_profile_form_cross_customer_404(
+    app_client: TestClient, it_accounts: dict[str, ItAccount]
+) -> None:
+    """Customer B's GET and POST on A's conversation are `404` before the form
+    gate (R13), and A's `bank.customers` row is unchanged (R1)."""
+    account_a = it_accounts["CLI-TFMULTI00001"]
+    account_b = it_accounts["CLI-TFSINGLE0002"]
+
+    csrf_a = _login(app_client, account_a)
+    create_response = app_client.post(
+        "/api/v1/conversations", json={}, headers={CSRF_HEADER: csrf_a}
+    )
+    assert create_response.status_code == 201
+    conversation_id = create_response.json()["conversation_id"]
+
+    # Loop-bound caches, as in the test above.
+    get_settings.cache_clear()
+    get_engine.cache_clear()
+    get_redis.cache_clear()
+    before = asyncio.run(customers_service.get_profile_values("CLI-TFMULTI00001"))
+    get_engine.cache_clear()
+
+    with TestClient(create_app()) as client_b:
+        csrf_b = _login(client_b, account_b)
+        url = f"/api/v1/conversations/{conversation_id}/profile-form"
+
+        get_response = client_b.get(url)
+        assert get_response.status_code == 404
+        assert get_response.json() == _NOT_FOUND_BODY
+
+        post_response = client_b.post(
+            url,
+            json={
+                "action": "submit",
+                "values": {
+                    "email": "otro@example.com",
+                    "mobile_phone": "+5215512345678",
+                    "address": "Calle Falsa 123",
+                    "occupation": "Ingeniera",
+                    "estimated_monthly_income": "1000",
+                },
+            },
+            headers={CSRF_HEADER: csrf_b},
+        )
+        assert post_response.status_code == 404
+        assert post_response.json() == _NOT_FOUND_BODY
+
+    get_engine.cache_clear()
+    after = asyncio.run(customers_service.get_profile_values("CLI-TFMULTI00001"))
+    assert after == before

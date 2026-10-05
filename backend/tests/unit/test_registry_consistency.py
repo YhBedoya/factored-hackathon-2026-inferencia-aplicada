@@ -63,7 +63,6 @@ def test_classifier_labels() -> None:
         "investments",
         "insurance",
         "transfers",
-        "new_card",
         "other",
     )
 
@@ -95,7 +94,7 @@ def test_every_classifier_intent_has_an_eval_item() -> None:
 # Scope topics added after the served bundle was trained. The classifier loads
 # (its labels are a subset of the registry) but never predicts them until the
 # next retrain adds their training data; then drop them from this set.
-_NOT_YET_TRAINED = {"new_card"}
+_NOT_YET_TRAINED: set[str] = set()
 
 
 def test_every_classifier_label_has_training_data_in_all_locales() -> None:

@@ -17,6 +17,7 @@ from app.domains.localization.format import Queue
 
 __all__ = [
     "ActionTaken",
+    "CardRequestBlock",
     "CaseSummary",
     "CustomerHistory",
     "Friction",
@@ -50,6 +51,8 @@ HandoffReason = Literal[
     "priority_claim",
     "agent_round_cap",
     "step_up_failed",
+    "card_open_request",
+    "card_close_request",
 ]
 Priority = Literal["high", "normal"]
 HandoffStatus = Literal["queued", "claimed", "returned"]
@@ -140,6 +143,17 @@ class Friction(_Frozen):
     non_answers: int
 
 
+class CardRequestBlock(_Frozen):
+    """The card request a handoff carries (D9-C); built from the verified read-back."""
+
+    request_id: UUID
+    reference: str
+    kind: Literal["open", "close"]
+    card_kind: Literal["credit", "debit"]
+    card_mask: str | None
+    reason_code: str | None
+
+
 class HandoffPacket(_Frozen):
     """The `04` §4 packet. `request` and `case_summary` are the LLM-written fields."""
 
@@ -164,6 +178,7 @@ class HandoffPacket(_Frozen):
     risk: RiskSignals | None = None
     history: CustomerHistory | None = None
     friction: Friction | None = None
+    card_request: CardRequestBlock | None = None
 
 
 class HandoffSummary(_Frozen):

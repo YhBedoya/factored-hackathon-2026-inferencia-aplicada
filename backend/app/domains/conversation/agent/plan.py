@@ -13,6 +13,8 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field, model_validator
 
 from app.core.errors import PolicyDenied, StepUpRequired
+from app.domains.cards.schemas import CardDetails
+from app.domains.conversation.agent.card_request import check_close, check_open
 from app.domains.conversation.agent.dispute import (
     build_claim_plan,
     check_claim,
@@ -20,6 +22,11 @@ from app.domains.conversation.agent.dispute import (
     has_claim,
 )
 from app.domains.conversation.agent.refs import TurnRefs
+from app.domains.conversation.card_request_messages import (
+    balance_unavailable_text,
+    cancel_reason_label,
+    profile_field_label,
+)
 from app.domains.conversation.flows.actions import handoff
 from app.domains.conversation.flows.replacement import _card_eligible
 from app.domains.conversation.graph import GraphState
@@ -33,9 +40,11 @@ from app.domains.conversation.ui import (
     ConfirmStepView,
     OtpRequiredEvent,
     OtpRequiredPayload,
+    ProfileFormEvent,
+    ProfileFormPayload,
 )
 from app.domains.localization import mask_card
-from app.domains.localization.format import CardKind
+from app.domains.localization.format import CardKind, Country, format_money, kind_label
 from app.domains.policy.confirmation import PlanStep, ToolArg
 from app.domains.policy.escalation import rule_queue
 from app.domains.policy.registry import get_policies
@@ -44,6 +53,7 @@ from app.domains.policy.tools_policy import ToolsPolicy, step_up_rule
 __all__ = [
     "AGENT_ADDRESS_PAUSE",
     "AGENT_OTP_PAUSE",
+    "AGENT_PROFILE_FORM_PAUSE",
     "PlanBox",
     "PlanHandoff",
     "ProposeArgs",
@@ -65,6 +75,8 @@ _TOOL_BY_ACTION = {
     "unlock": "cards.unlock_card",
     "replace": "cards.order_replacement",
     "claim": "disputes.create_claim",
+    "open": "cards.request_card",
+    "close": "cards.request_closure",
 }
 _SUMMARY_BY_ACTION = {
     "lock": "lock_card",
@@ -72,6 +84,8 @@ _SUMMARY_BY_ACTION = {
     "unlock": "unlock_card",
     "replace": "order_replacement",
     "claim": "create_claim",
+    "open": "request_card",
+    "close": "request_closure",
 }
 # (intent, route) per action: lock and block are one request type.
 _INTENT_BY_ACTION = {
@@ -80,10 +94,17 @@ _INTENT_BY_ACTION = {
     "unlock": ("card_unlock", "card_unlock"),
     "replace": ("replacement_request", "replacement"),
     "claim": ("unrecognized_charge", "unrecognized_charge"),
+    "open": ("new_card", "card_request"),
+    "close": ("card_cancel", "card_request"),
 }
 
 AGENT_OTP_PAUSE = {"flow": "agent", "node": "otp", "awaiting_slot": "otp"}
 AGENT_ADDRESS_PAUSE = {"flow": "agent", "node": "address", "awaiting_slot": "address"}
+AGENT_PROFILE_FORM_PAUSE = {
+    "flow": "agent",
+    "node": "profile_form",
+    "awaiting_slot": "profile_form",
+}
 
 
 class PlanHandoff(Exception):
@@ -95,7 +116,7 @@ class PlanHandoff(Exception):
 
 
 class ProposedStep(BaseModel):
-    action: Literal["lock", "block", "unlock", "replace", "claim"]
+    action: Literal["lock", "block", "unlock", "replace", "claim", "open", "close"]
     card: str | None = Field(
         default=None,
         description="Card reference from this turn's results (c1). Not for a claim step.",
@@ -112,9 +133,37 @@ class ProposedStep(BaseModel):
         default=None,
         description="Only for claim: the customer's yes/no answer to each dispute question id.",
     )
+    kind: Literal["credit", "debit"] | None = Field(
+        default=None,
+        description="Only for open: the kind of card the customer wants. Stands alone.",
+    )
+
+    reason: str | None = Field(
+        default=None,
+        description="Only for close: one reason code from this tool's description list.",
+    )
 
     @model_validator(mode="after")
     def _fields_by_action(self) -> "ProposedStep":
+        if self.action != "open" and self.kind is not None:
+            raise ValueError("kind is only for an open step")
+        if self.action != "close" and self.reason is not None:
+            raise ValueError("reason is only for a close step")
+        if self.action == "close":
+            # The code itself is checked against policy in `check_steps` (invalid_reason).
+            if self.card is None or self.reason is None:
+                raise ValueError("a close step needs card and reason")
+            if self.address is not None or self.charges is not None or self.answers is not None:
+                raise ValueError("a close step takes only card and reason")
+            return self
+        if self.action == "open":
+            # A `card` on an open step is not a schema error: the plan check rejects it
+            # whole as `request_alone`, a result the model can read and correct.
+            if self.kind is None:
+                raise ValueError("an open step needs kind: credit or debit")
+            if self.address is not None or self.charges is not None or self.answers is not None:
+                raise ValueError("an open step takes only kind")
+            return self
         if self.action == "claim":
             if self.card is not None or self.address is not None:
                 raise ValueError("a claim step takes charges, not card or address")
@@ -287,12 +336,43 @@ async def check_steps(
     escalation = get_policies().escalation
     not_active = escalation.customer_not_active
     profile = await bank_tools.get_profile()
+    # An opening skips this handoff: its own check rejects a customer who is not active
+    # as `customer_not_active` and explains it (spec D9).
     if profile.customer_status in not_active.statuses and any(
-        _TOOL_BY_ACTION[step.action].split(".")[-1] not in not_active.allowed for step in steps
+        step.action != "open"
+        and _TOOL_BY_ACTION[step.action].split(".")[-1] not in not_active.allowed
+        for step in steps
     ):
         raise PlanHandoff(
             handoff(rule_queue(escalation, "customer_not_active"), "customer_not_active", language)
         )
+
+    opening = next((step for step in steps if step.action == "open"), None)
+    if opening is not None:
+        if len(steps) > 1 or opening.card is not None or opening.kind is None:
+            return ["request_alone"] * len(steps)
+        pre = tools_policy.tools["cards.request_card"].preconditions
+        if pre is not None and pre.request_eligible:
+            return [await check_open(opening.kind, bank_tools, write_tools)]
+        return [None]
+
+    closing = next((step for step in steps if step.action == "close"), None)
+    if closing is not None:
+        if len(steps) > 1:
+            return ["request_alone"] * len(steps)
+        card_id = refs.card_id(closing.card or "")
+        if card_id is None:
+            return ["unknown_reference"]
+        policy = tools_policy.tools.get(_TOOL_BY_ACTION["close"])
+        return [
+            await check_close(
+                card_id,
+                closing.reason,
+                bank_tools,
+                write_tools,
+                policy.preconditions if policy is not None else None,
+            )
+        ]
 
     claim = next((step for step in steps if step.action == "claim"), None)
     if claim is not None:
@@ -365,12 +445,57 @@ async def issue_stored_plan(
     plan_steps: list[PlanStep] = []
     views: list[ConfirmStepView] = []
     address_masked: str | None = None
+    language: Language = state.get("language", "es")
     for step in steps:
+        if step["action"] == "open":
+            # Names only (R5): the form values stay in the vault; the writer reads them there.
+            kind = state.get("card_request_kind") or step["kind"]
+            changed = list(state.get("profile_changed_fields") or [])
+            open_args: dict[str, ToolArg] = {"kind": kind, "changed_fields": changed}
+            open_tool = _TOOL_BY_ACTION["open"]
+            plan_steps.append(PlanStep(tool=open_tool, args=open_args))
+            views.append(
+                ConfirmStepView(
+                    tool=open_tool,
+                    summary_key="request_card",
+                    facts=[
+                        Fact(
+                            key="kind_label",
+                            value=kind_label(kind, language),
+                            source=open_tool,
+                        ),
+                        *(
+                            Fact(
+                                key="profile_field",
+                                value=profile_field_label(name, language),
+                                source=open_tool,
+                            )
+                            for name in changed
+                        ),
+                    ],
+                )
+            )
+            continue
         details = await bank_tools.get_card_details(step["card_id"])
         tool = _TOOL_BY_ACTION[step["action"]]
         call_args: dict[str, ToolArg] = {"card_id": step["card_id"]}
         facts = [Fact(key="card_mask", value=mask_card(details.last4), source=details.source)]
-        if step["action"] == "block":
+        if step["action"] == "close":
+            reason = step["reason"]
+            call_args["reason"] = reason
+            facts += [
+                Fact(
+                    key="cancel_reason_label",
+                    value=cancel_reason_label(reason, language),
+                    source=tool,
+                ),
+                Fact(
+                    key="close_balance",
+                    value=close_balance_text(details, state["country"], language),
+                    source=details.source,
+                ),
+            ]
+        elif step["action"] == "block":
             # The block reason is set here, never by the model (S1 D8).
             call_args["reason"] = "lost_or_stolen"
         elif step["action"] == "replace":
@@ -418,6 +543,26 @@ async def propose_plan(
 
     await cancel_open_plan(state, config, box)
 
+    opening = next((step for step in args.steps if step.action == "open"), None)
+    if opening is not None:
+        assert opening.kind is not None  # the validator and check_steps accepted it
+        open_steps: list[AgentPlanStep] = [{"action": "open", "kind": opening.kind}]
+        form = ProfileFormEvent(
+            kind="profile_form", payload=ProfileFormPayload(card_kind=opening.kind)
+        )
+        box.pause(
+            {
+                "agent_plan_steps": open_steps,
+                "pending": dict(AGENT_PROFILE_FORM_PAUSE),
+                "card_request_kind": opening.kind,
+                "profile_changed_fields": None,
+                "ui": [form],
+                "asked_ui": [form],
+                "intent_segments": plan_segments(open_steps, "awaiting", "profile_form"),
+            }
+        )
+        return "accepted (form_required)"
+
     claim = next((step for step in args.steps if step.action == "claim"), None)
     if claim is not None:
         # Code builds the whole claim plan (D10); it never reads the model's steps again.
@@ -428,6 +573,9 @@ async def propose_plan(
         card_id = refs.card_id(step.card or "")
         assert card_id is not None  # check_steps accepted it
         kept: AgentPlanStep = {"action": step.action, "card_id": card_id}
+        if step.action == "close":
+            assert step.reason is not None  # the validator required it
+            kept["reason"] = step.reason
         if step.action == "replace" and step.address == "on_file":
             kept["address_ref"] = "on_file"
         kept_steps.append(kept)
@@ -444,6 +592,8 @@ async def propose_plan(
         token_id, event = await issue_stored_plan(state, config, kept_steps)
     except StepUpRequired:
         box.pause(otp_pause_update(kept_steps, language))
+        if kept_steps[0]["action"] == "close":
+            return await _accepted_close(kept_steps[0], bank_tools, refs, state)
         return "accepted (step_up_required)"
     except PolicyDenied:
         return _rejected(args.steps, ["tool_not_allowed"] * len(args.steps))
@@ -451,8 +601,31 @@ async def propose_plan(
     return "accepted"
 
 
+def close_balance_text(details: CardDetails, country: Country, language: Language) -> str:
+    """The card's balance as the customer reads it, built in code (R4). A card with no
+    balance on record gets neutral wording, never a zero."""
+    if details.current_balance is None:
+        return balance_unavailable_text(language)
+    return format_money(details.current_balance, details.currency, country)
+
+
+async def _accepted_close(
+    step: AgentPlanStep, bank_tools: BankReadTools, refs: TurnRefs, state: GraphState
+) -> str:
+    """A close goes straight to the OTP pause; Cardy's reply needs the balance, which only
+    code writes (`{close_balance}`, R4)."""
+    details = await bank_tools.get_card_details(step["card_id"])
+    fact = Fact(
+        key="close_balance",
+        value=close_balance_text(details, state["country"], state["language"]),
+        source=details.source,
+    )
+    return f"accepted (step_up_required)\n{refs.add_value(fact)}"
+
+
 def _rejected(steps: list[ProposedStep], codes: list[str | None]) -> str:
     detail = ", ".join(
-        f"{step.card or 'claim'}: {code or 'ok'}" for step, code in zip(steps, codes, strict=True)
+        f"{'open' if step.action == 'open' else step.card or 'claim'}: {code or 'ok'}"
+        for step, code in zip(steps, codes, strict=True)
     )
     return f"rejected ({detail})"

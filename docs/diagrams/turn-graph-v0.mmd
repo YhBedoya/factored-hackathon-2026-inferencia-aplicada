@@ -14,6 +14,7 @@ graph TD;
 	agent_plan(agent_plan)
 	agent_step_up(agent_step_up)
 	agent_address(agent_address)
+	agent_profile_form(agent_profile_form)
 	smalltalk(smalltalk)
 	enqueue(enqueue)
 	card_info(card_info)
@@ -49,6 +50,10 @@ graph TD;
 	agent_plan -.-> fallback;
 	agent_plan -.-> finish;
 	agent_plan -.-> handoff_summary;
+	agent_profile_form -.-> agent;
+	agent_profile_form -.-> fallback;
+	agent_profile_form -.-> finish;
+	agent_profile_form -.-> handoff_summary;
 	agent_step_up -.-> agent;
 	agent_step_up -.-> fallback;
 	agent_step_up -.-> finish;
@@ -95,6 +100,7 @@ graph TD;
 	load_session -.-> agent;
 	load_session -.-> agent_address;
 	load_session -.-> agent_plan;
+	load_session -.-> agent_profile_form;
 	load_session -.-> agent_step_up;
 	load_session -.-> card_block;
 	load_session -.-> card_info;

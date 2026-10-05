@@ -40,6 +40,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal
+from uuid import UUID, uuid4
 
 import duckdb
 
@@ -49,12 +50,17 @@ from app.core.pii import KnownPii
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
 from app.domains.conversation.tools.bank import BankReadTools, BankToolsFactory
 from app.domains.conversation.tools.context import ToolContext
-from app.domains.conversation.tools.write import BankWriteTools, BankWriteToolsFactory
+from app.domains.conversation.tools.write import (
+    BankWriteTools,
+    BankWriteToolsFactory,
+    PendingCardRequests,
+)
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.disputes.schemas import PrioritySignals
 from app.domains.localization.schemas import FxRate
 from app.domains.policy.decline_codes import lookup_decline_code
 from app.domains.policy.disputes import load_disputes_policy
+from app.domains.safety.vault import InMemoryPiiVault
 from app.domains.transactions.schemas import DeclineExplanation, TxFilter, TxView
 
 __all__ = ["FakeBank", "FakeBankOverlay", "FakeBankWrites", "make_fakebank_factory"]
@@ -78,6 +84,16 @@ class FakeBankOverlay:
     """Each `create_claim` case id's priority (SA1): `"High"` when that call's
     `priority_flags` was non-empty, `None` otherwise. The fake dataset has no
     `bank.complaints` row to write it into."""
+    vault: InMemoryPiiVault = field(default_factory=InMemoryPiiVault)
+    """Where a test stages profile-form values (`stage_form_values`); `request_card`
+    reads them back from here, as the Postgres path reads `PostgresPiiVault`."""
+    card_requests: dict[UUID, dict[str, Any]] = field(default_factory=dict)
+    """Each request by id: `{reference, kind, card_kind, status, changed_fields,
+    product_id, reason_code, created_at}` (`status` is `"pending"` here)."""
+    profile: dict[str, str] = field(default_factory=dict)
+    """Profile values written by `request_card`, over the fixture's."""
+    profile_history: list[dict[str, Any]] = field(default_factory=list)
+    """One `{field, old, new, actor, at}` entry per field a request changed."""
 
 
 _COUNTRY_LABELS: dict[str, Literal["MX", "CO", "AR"]] = {
@@ -597,6 +613,133 @@ class FakeBankWrites:
         )
         self._overlay.results[idempotency_key] = result
         return result
+
+    async def request_card(
+        self,
+        kind: Literal["credit", "debit"],
+        changed_fields: list[str],
+        *,
+        idempotency_key: str,
+    ) -> ActionResult:
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
+        values = await self._overlay.vault.form_values(changed_fields)
+        reference = "CRQ-" + secrets.token_hex(4).upper()
+        if set(values) != set(changed_fields):
+            # A field the form never staged: nothing is written (R3).
+            result = ActionResult(
+                tool="cards.request_card",
+                status="applied",
+                verified=False,
+                readback={"status": "unknown", "kind": kind, "at": datetime.now(UTC)},
+                tracking_id=reference,
+            )
+            self._overlay.results[idempotency_key] = result
+            return result
+        now = datetime.now(UTC)
+        for name, value in values.items():
+            self._overlay.profile_history.append(
+                {
+                    "field": name,
+                    "old": self._overlay.profile.get(name),
+                    "new": value,
+                    "actor": "customer",
+                    "at": now,
+                }
+            )
+            self._overlay.profile[name] = value
+        request_id = uuid4()
+        self._overlay.card_requests[request_id] = {
+            "reference": reference,
+            "kind": "open",
+            "card_kind": kind,
+            "status": "pending",
+            "changed_fields": list(changed_fields),
+            "product_id": None,
+            "reason_code": None,
+            "created_at": now,
+        }
+        stored = self._overlay.card_requests.get(request_id)  # re-read (R3)
+        verified = (
+            stored is not None
+            and stored["reference"] == reference
+            and stored["card_kind"] == kind
+            and stored["status"] == "pending"
+            and all(self._overlay.profile.get(n) == v for n, v in values.items())
+        )
+        result = ActionResult(
+            tool="cards.request_card",
+            status="applied",
+            verified=verified,
+            # `ReadbackValue` has no list member: `fields_saved` is comma-joined.
+            readback={
+                "status": "pending" if verified else "unknown",
+                "kind": kind,
+                "fields_saved": ",".join(changed_fields),
+                "request_id": str(request_id),
+                "at": now,
+            },
+            tracking_id=reference,
+        )
+        self._overlay.results[idempotency_key] = result
+        return result
+
+    async def request_closure(
+        self, card_id: str, reason: str, *, idempotency_key: str
+    ) -> ActionResult:
+        if idempotency_key in self._overlay.results:  # D11 replay: nothing mutated
+            return self._overlay.results[idempotency_key]
+        details = await self._reads.get_card_details(card_id)  # ownership probe (R1)
+        reference = "CRQ-" + secrets.token_hex(4).upper()
+        now = datetime.now(UTC)
+        request_id = uuid4()
+        self._overlay.card_requests[request_id] = {
+            "reference": reference,
+            "kind": "close",
+            "card_kind": details.kind,
+            "status": "pending",
+            "changed_fields": [],
+            "product_id": card_id,
+            "reason_code": reason,
+            "created_at": now,
+        }
+        stored = self._overlay.card_requests.get(request_id)  # re-read (R3)
+        verified = (
+            stored is not None
+            and stored["reference"] == reference
+            and stored["kind"] == "close"
+            and stored["status"] == "pending"
+            and stored["product_id"] == card_id
+            and stored["reason_code"] == reason
+        )
+        result = ActionResult(
+            tool="cards.request_closure",
+            status="applied",
+            verified=verified,
+            readback={
+                "status": "pending" if verified else "unknown",
+                "reason": reason,
+                "request_id": str(request_id),
+                "card_id": card_id,
+                "card_kind": details.kind,
+                "last4": details.last4,
+                "current_balance": details.current_balance,  # raw: code formats it (R4)
+                "currency": details.currency,
+                "at": now,
+            },
+            tracking_id=reference,
+        )
+        self._overlay.results[idempotency_key] = result
+        return result
+
+    async def pending_card_requests(self) -> PendingCardRequests:
+        pending = [r for r in self._overlay.card_requests.values() if r["status"] == "pending"]
+        return PendingCardRequests(
+            open_pending=any(r["kind"] == "open" for r in pending),
+            close_card_ids=frozenset(
+                r["product_id"] for r in pending if r["kind"] == "close" and r["product_id"]
+            ),
+        )
 
     async def create_claim(
         self,

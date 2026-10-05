@@ -2,7 +2,7 @@
 each one and combines them into a single hash that reaches every downstream
 decision (spec D1, D2, R8).
 
-`tools`, `escalation`, `min_payment`, `scope`, `playbooks`, `disputes`,
+`tools`, `escalation`, `min_payment`, `scope`, `playbooks`, `card_requests`, `disputes`,
 `decline_codes` and `transaction_states` are validated against their own domain models --
 the same ones their existing per-file loaders (`tools_policy.py`,
 `escalation.py`, `min_payment.py`, `scope.py`, `disputes.py`,
@@ -26,6 +26,7 @@ from typing import Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from app.domains.policy.card_requests import CardRequestsPolicy
 from app.domains.policy.decline_codes import DeclineCodesPolicy
 from app.domains.policy.disputes import DisputesPolicy
 from app.domains.policy.escalation import EscalationPolicy
@@ -56,6 +57,7 @@ _MODELS_BY_STEM: dict[str, type[BaseModel]] = {
     "decline_codes": DeclineCodesPolicy,
     "transaction_states": TransactionStatesPolicy,
     "playbooks": PlaybooksPolicy,
+    "card_requests": CardRequestsPolicy,
 }
 
 
@@ -87,6 +89,7 @@ class PolicyBundle(BaseModel):
     min_payment: MinPaymentPolicy
     scope: ScopePolicy
     playbooks: PlaybooksPolicy
+    card_requests: CardRequestsPolicy
     files: list[str]
 
 
@@ -123,12 +126,14 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
     min_payment = validated.get("min_payment")
     scope = validated.get("scope")
     playbooks = validated.get("playbooks")
+    card_requests = validated.get("card_requests")
     if (
         not isinstance(tools, ToolsPolicy)
         or not isinstance(escalation, EscalationPolicy)
         or not isinstance(min_payment, MinPaymentPolicy)
         or not isinstance(scope, ScopePolicy)
         or not isinstance(playbooks, PlaybooksPolicy)
+        or not isinstance(card_requests, CardRequestsPolicy)
     ):
         missing = [
             stem
@@ -138,6 +143,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
                 ("min_payment", min_payment),
                 ("scope", scope),
                 ("playbooks", playbooks),
+                ("card_requests", card_requests),
             )
             if value is None
         ]
@@ -150,6 +156,7 @@ def load_policies(directory: Path | None = None) -> PolicyBundle:
         min_payment=min_payment,
         scope=scope,
         playbooks=playbooks,
+        card_requests=card_requests,
         files=[path.stem for path in paths],
     )
 

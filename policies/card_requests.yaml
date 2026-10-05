@@ -1,0 +1,9 @@
+provenance: team-generated-synthetic
+version: 1
+currency_by_country: {MX: USD, CO: COP, AR: ARS}       # new card's currency (MX USD per ADR-014)
+credit_limit_bounds: {USD: {min: "1000", max: "50000"}, COP: {min: "4000000", max: "200000000"}, ARS: {min: "350000", max: "17500000"}}  # dataset min/max
+max_cards_per_kind: {credit: 3, debit: 2}               # non-Closed cards
+interest_rate_by_country: {MX: "31.50", CO: "31.59", AR: "31.29"}   # % annual, credit only (dataset medians); debit 0
+expiry_years: 4                                         # dataset median (range 3-5)
+cancel_reasons: [no_longer_needed, high_cost, better_offer, too_many_cards, bad_experience, other]
+decline_reasons: [low_credit_score, insufficient_income, high_existing_debt, inconsistent_data, other]   # staff-only, never shown to the customer

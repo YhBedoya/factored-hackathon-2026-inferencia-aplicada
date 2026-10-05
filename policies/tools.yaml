@@ -1,5 +1,5 @@
 provenance: team-generated-synthetic # 04 §5 REQUIRED header; hash logged on every decision
-version: 5 # v5: disputes.create_claim gains preconditions tx_owned + answers_complete
+version: 6 # v6: cards.request_card + cards.request_closure (D9-C); v5: disputes.create_claim gains preconditions tx_owned + answers_complete
 step_up_window_minutes: 5
 step_up_max_failures: 3
 tools:
@@ -9,3 +9,5 @@ tools:
   cards.order_replacement: {requires_confirmation: true,  step_up: when_address_changed, allowed_intents: [replacement_request], preconditions: {replacement_eligible: true}}
   cards.get_block_origin:  {requires_confirmation: false, step_up: never,                allowed_intents: [card_status, card_block, card_unlock, replacement_request]}
   disputes.create_claim:   {requires_confirmation: true,  step_up: never,                allowed_intents: [unrecognized_charge], preconditions: {tx_owned: true, answers_complete: true}}
+  cards.request_card:    {requires_confirmation: true, step_up: always, allowed_intents: [], preconditions: {request_eligible: true}}
+  cards.request_closure: {requires_confirmation: true, step_up: always, allowed_intents: [], preconditions: {status_not_in: [Closed], closure_pending: false, reason_in_policy: true}}

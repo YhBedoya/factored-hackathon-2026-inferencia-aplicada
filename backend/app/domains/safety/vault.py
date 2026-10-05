@@ -14,6 +14,7 @@ conversation always maps to the same `⟨KIND_n⟩` token, numbered per kind.
 
 import re
 import uuid
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from cryptography.fernet import Fernet
@@ -36,6 +37,15 @@ __all__ = [
 ]
 
 _TOKEN_KIND_RE = re.compile(r"⟨([A-Z]+)_(\d+)⟩")
+# Form-only kinds (D9-C Q1): outside `core.pii.TOKEN_RE`, so `unmask` never
+# resolves them in chat text; only `form_values` reads them back.
+_FORM_KINDS = {
+    "email": "PFEMAIL",
+    "mobile_phone": "PFPHONE",
+    "address": "PFADDR",
+    "occupation": "PFOCC",
+    "estimated_monthly_income": "PFINCOME",
+}
 _MAX_UNMASK_DEPTH = 5  # nested tokens (an ADDR value holding a NAME token) resolve in a few passes
 
 
@@ -149,6 +159,44 @@ class InMemoryPiiVault:
         pending, self._pending = self._pending, {}
         if pending:
             await self._persist(pending)
+
+    async def stage_form_values(self, values: Mapping[str, str]) -> None:
+        """Store profile-form values under form-only tokens and persist them.
+
+        Every call mints a fresh token per field (no reuse for an equal value),
+        so the highest-numbered token of a field is always the newest submit.
+        """
+        await self._load()
+        fresh: dict[str, str] = {}
+        for field, raw in values.items():
+            kind = _FORM_KINDS[field]
+            number = 1 + self._max_number(kind)
+            token = f"⟨{kind}_{number}⟩"
+            self._values[token] = raw
+            fresh[token] = raw
+        if fresh:
+            await self._persist(fresh)
+
+    async def form_values(self, fields: Sequence[str]) -> dict[str, str]:
+        """Latest staged value per field; a field never staged is absent."""
+        await self._load()
+        out: dict[str, str] = {}
+        for field in fields:
+            kind = _FORM_KINDS[field]
+            best = self._max_number(kind)
+            if best:
+                out[field] = self._values[f"⟨{kind}_{best}⟩"]
+        return out
+
+    def _max_number(self, kind: str) -> int:
+        return max(
+            (
+                int(m.group(2))
+                for t in self._values
+                if (m := _TOKEN_KIND_RE.fullmatch(t)) and m.group(1) == kind
+            ),
+            default=0,
+        )
 
 
 class PostgresPiiVault(InMemoryPiiVault):

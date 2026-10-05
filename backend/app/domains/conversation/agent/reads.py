@@ -48,7 +48,7 @@ from app.domains.conversation.nodes.abstain import (
 )
 from app.domains.conversation.schemas import NLUSlots
 from app.domains.conversation.state import DisputeState, Fact
-from app.domains.conversation.templates import Language, get_template
+from app.domains.conversation.templates import Language
 from app.domains.conversation.tools import BankReadTools
 from app.domains.conversation.ui import TransactionListEvent, TransactionListPayload
 from app.domains.localization.format import BANK_TZ, local_today
@@ -323,10 +323,7 @@ def read_tools(state: GraphState, config: RunnableConfig, refs: TurnRefs) -> lis
         entry = topics.get(topic)
         if entry is None:
             return "unknown topic; valid topics: " + ", ".join(sorted(topics))
-        if entry.reason_key == "new_card_not_available":
-            reason = get_template("new_card_not_available", language)
-        else:
-            reason = _REASONS[entry.reason_key][language]
+        reason = _REASONS[entry.reason_key][language]
         values = {
             "topic_label": _TOPIC_LABELS[topic][language],
             "abstain_reason": reason,

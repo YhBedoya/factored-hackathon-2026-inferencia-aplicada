@@ -65,6 +65,8 @@ _INTENT = "unrecognized_charge"
 _CLEARED: dict[str, Any] = {
     "pending": None,
     "confirmation_token_id": None,
+    "card_request_kind": None,
+    "profile_changed_fields": None,
     "agent_plan_steps": None,
 }
 

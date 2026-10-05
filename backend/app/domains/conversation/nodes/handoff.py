@@ -16,6 +16,7 @@ from pydantic import JsonValue
 
 from app.core.actions import ActionResult
 from app.domains.audit.schemas import Recorder
+from app.domains.conversation.agent.card_request import card_request_block
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.templates import get_template
@@ -24,6 +25,7 @@ from app.domains.conversation.tools.handoff import HandoffTools
 from app.domains.conversation.ui import HandoffBannerEvent, HandoffBannerPayload
 from app.domains.handoff.schemas import (
     ActionTaken,
+    CardRequestBlock,
     CaseSummary,
     CustomerHistory,
     Friction,
@@ -50,6 +52,9 @@ _FACTS: dict[str, str] = {
     "cards.unlock_card": "card_unlocked",
     "cards.block_card": "card_status",
     "cards.order_replacement": "replacement_ordered",
+    # Value is the request reference (`tracking_id`); no form value rides along (R5).
+    "cards.request_card": "card_request_filed",
+    "cards.request_closure": "card_request_filed",
 }
 
 _OPEN_QUESTIONS: dict[str, dict[str, str]] = {
@@ -134,9 +139,12 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
 
     facts: list[VerifiedFact] = []
     taken: list[ActionTaken] = []
+    request_block: CardRequestBlock | None = None
     for result in state.get("actions", []):
         if not result.verified:
             continue
+        if result.tool in ("cards.request_card", "cards.request_closure"):
+            request_block = await card_request_block(result, configurable.get("bank_tools"))
         name = _fact_name(result.tool)
         source = (
             f"audit:{result.audit_event_id}"
@@ -201,6 +209,7 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
             or reason == "legal_regulator",
             unauthorized_attempts=state.get("unauthorized_attempts", 0),
         ),
+        card_request=request_block,
         history=await _history(handoff_tools, policy.handoff_packet.history_days),
         friction=Friction(
             clarifications=friction.get("clarifications", 0),
@@ -231,6 +240,8 @@ async def handoff(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
         "escalation_reason": reason,
         "pending": None,
         "confirmation_token_id": None,
+        "card_request_kind": None,
+        "profile_changed_fields": None,
         "intent_queue": [],
         "handoff_evidence": [],
         "handoff_open_questions": [],

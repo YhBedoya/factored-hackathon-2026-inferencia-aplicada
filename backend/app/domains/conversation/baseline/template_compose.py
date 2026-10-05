@@ -31,7 +31,7 @@ __all__ = [
     "baseline_understand",
 ]
 
-baseline_abstain = make_abstain(llm_wording=False)
+baseline_abstain = make_abstain(llm_wording=False, legacy_new_card=True)
 
 
 async def baseline_understand(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
