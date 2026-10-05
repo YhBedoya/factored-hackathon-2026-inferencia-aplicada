@@ -224,7 +224,7 @@ flowchart TB
 |---|---|---|
 | API | FastAPI, Pydantic v2, SQLModel + asyncpg, Alembic | Typed contracts, async I/O, OpenAPI → generated TS client |
 | Conversation | LangGraph with a Postgres checkpointer | Explicit, inspectable state machine; durable pauses (confirmation, OTP, pickers) |
-| LLM | Anthropic API during the build → Amazon Bedrock in prod (ADR-028) | Fast iteration first; IAM-role access and Region compliance in prod |
+| LLM | **Amazon Bedrock** in prod; Anthropic API during the build (ADR-028) | **Customer data never leaves AWS:** the model runs inside AWS, the provider never sees prompts, and access is by IAM role with no API keys (§6.4) |
 | Cache / bus | Redis | Confirmation tokens with TTL, pub/sub for live takeover, rate limits, turn caps, idempotency |
 | Frontend | React 19, Vite, TanStack Router + Query, shadcn/ui, Tailwind v4, Recharts | File-based routes, typed client, accessible components |
 | Data | DuckDB + dbt-duckdb, Pandera, Parquet | Fast local transforms over 5.35 GB of CSVs, tested contracts, lineage |
@@ -749,7 +749,7 @@ flowchart TB
         BE -.-> OBS
     end
     EIP --> NG
-    BE -->|instance role| BR["Bedrock<br/>us. inference profiles"]
+    BE -->|"instance role · AWS network only"| BR["Amazon Bedrock<br/>us. inference profiles"]
     HOST -->|instance role, read-only| S3[("S3 bucket (team copy of data/)")]
     SSM["SSM Parameter Store<br/>SecureStrings"] -->|render .env 0600| EC2
     OP([Operators]) -->|SSM Session Manager<br/>shell + port-forward Grafana| EC2
@@ -763,6 +763,7 @@ flowchart TB
 | Infra as code | `infra/aws/ec2-stack.yaml` (CloudFormation): security group, IAM role + profile, instance, EIP, Budget |
 | Scripts | `render-env.sh` (SSM → `.env`), `deploy.sh`, `smoke.sh`; `make infra-up`, `deploy`, `deploy-remote`, `smoke-prod` |
 | Access | No SSH; SSM Session Manager only. IMDSv2 required, least-privilege role (S3 read, Bedrock invoke, SSM) |
+| LLM | Amazon Bedrock through the instance role: customer data stays on the AWS network and never reaches the model provider (§6.4) |
 | Secrets | SSM SecureStrings rendered to a `0600` `.env`; no AWS keys on the box |
 | TLS | Let's Encrypt via certbot (HTTP-01); Route 53 domain as fallback |
 | Data | Built on the box with `make data` from the team's own S3 copy, so the date shift lands on the deploy date |
@@ -1247,14 +1248,48 @@ flowchart LR
 
 Typed addresses become vault tokens (`⟨ADDR_n⟩`) and never reach the LLM, the graph state or the checkpoint.
 
-### 6.4 Prompt injection and abuse
+### 6.4 Customer data stays inside AWS: Amazon Bedrock
+
+**Using Amazon Bedrock in production is a key architecture decision (ADR-003 / ADR-028).** A bank cannot send customer conversations to a third-party service on the public internet. With Bedrock, the model runs inside AWS: the LLM call travels from our EC2 instance to the model and back without leaving the AWS network, and the model provider never sees the data.
+
+```mermaid
+flowchart LR
+    subgraph AWS["AWS network (no public internet hop)"]
+        subgraph EC2["Our EC2 instance · us-east-2"]
+            BE["backend<br/>core/llm"]
+            MASK["PII masking<br/>(§6.3)"]
+            BE --> MASK
+        end
+        subgraph BR["Amazon Bedrock · us. inference profile<br/>(processed in a US Region)"]
+            MDA["Model deployment account<br/>owned and run by AWS"]
+        end
+        MASK -->|"HTTPS (TLS 1.2+)<br/>signed with the instance role"| MDA
+    end
+    PROV(["Model provider<br/>(Anthropic)"]) -.-x|"no access to prompts<br/>or completions"| MDA
+```
+
+| Layer of protection | How |
+|---|---|
+| **Stays on the AWS network** | Traffic from an EC2 instance to an AWS service endpoint stays on AWS's private network ([AWS VPC FAQ](https://aws.amazon.com/vpc/faqs/)). Our `us.` cross-Region inference profiles may process a request in another US Region; that traffic also stays on the AWS network, does not cross the public internet, and is encrypted in transit ([Bedrock cross-Region inference](https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html)) |
+| **The model provider never sees it** | Bedrock runs each model in a deployment account owned and operated by AWS. Model providers have no access to those accounts, so they cannot see prompts or completions ([Bedrock data protection](https://docs.aws.amazon.com/bedrock/latest/userguide/data-protection.html)). Content is not shared with model providers ([Bedrock data retention](https://docs.aws.amazon.com/bedrock/latest/userguide/data-retention.html)) |
+| **No keys to leak** | The backend calls Bedrock with the EC2 instance role. No LLM API key exists in prod, and the role may invoke only the pinned model ARNs (`BedrockModelArns` in `infra/aws/ec2-stack.yaml`) |
+| **Minimum data in the first place** | Only PII-masked text reaches the model (R5, §6.3): card numbers, documents, emails, phones, names and addresses are replaced with tokens before the call |
+| **Every call on the record** | Each attempt is written to `audit.llm_calls` with masked input, model, tokens, latency and cost (R7) |
+
+**Scope and limits, stated plainly**
+- This applies to **production**. During the build we called the Anthropic API directly, only with synthetic data, and still with PII masking on (ADR-028).
+- Processing stays within the **US** geography, not only in us-east-2, because the models are reached through `us.` inference profiles.
+- The instance reaches Bedrock through its public regional endpoint (traffic still on the AWS network). A VPC interface endpoint (AWS PrivateLink) to keep the call inside our own VPC is on the path to production (§9).
+- AWS may retain inputs and outputs for abuse detection, within AWS. They are not passed to the model provider.
+
+### 6.5 Prompt injection and abuse
 
 - The NLU flags `injection_suspected`; such turns go to `unsupported` and write no intent segment.
 - Tool output (including data fields such as merchant names or complaint text) is fenced as data; the eval suite seeds injected text into data fields to test this.
 - Even a fully compromised model cannot act: it has no write tool, cannot choose the customer, and plans run only from a code-rendered button.
 - Asking for another customer's card or document → `AccessDenied`; the second attempt hands off as `unauthorized_access`.
 
-### 6.5 Responsible AI
+### 6.6 Responsible AI
 
 - Cardy states it is an AI assistant when asked, never gives financial advice or sells products, and never decides disputes or fraud.
 - High-risk situations (fraud, regulator mentions, identity doubts, inactive customers) always go to a human.
@@ -1270,7 +1305,7 @@ Typed addresses become vault tokens (`⟨ADDR_n⟩`) and never reach the LLM, th
 |---|---|---|
 | 001 | FastAPI modular monolith + React | One deployable, enforced boundaries, typed end to end |
 | 002 | Deterministic flows + read-only answer node | Predictable actions; LLM limited to language |
-| 003 / 028 | Bedrock, model per step; Anthropic API during the build | Region and IAM compliance in prod, speed during the build |
+| 003 / 028 | Bedrock, model per step; Anthropic API during the build | Customer data stays inside AWS and never reaches the model provider (§6.4); IAM-role access; speed during the build |
 | 004 / 005 | LLM intent classification vs keyword baseline | Robust multilingual NLU, with a measured baseline |
 | 006 | Langfuse + OTel/Victoria + own audit tables | LLM tracing plus system telemetry plus a public ledger |
 | 007 | LangGraph state + Postgres checkpointer, SSE transport | Durable pauses, streaming replies |
