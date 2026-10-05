@@ -25,7 +25,6 @@ from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.card_request_messages import (
     balance_unavailable_text,
     cancel_reason_label,
-    profile_field_label,
 )
 from app.domains.conversation.flows.actions import handoff
 from app.domains.conversation.flows.replacement import _card_eligible
@@ -44,7 +43,7 @@ from app.domains.conversation.ui import (
     ProfileFormPayload,
 )
 from app.domains.localization import mask_card
-from app.domains.localization.format import CardKind, Country, format_money, kind_label
+from app.domains.localization.format import CardKind, Country, format_money
 from app.domains.policy.confirmation import PlanStep, ToolArg
 from app.domains.policy.escalation import rule_queue
 from app.domains.policy.registry import get_policies
@@ -457,22 +456,9 @@ async def issue_stored_plan(
             views.append(
                 ConfirmStepView(
                     tool=open_tool,
-                    summary_key="request_card",
-                    facts=[
-                        Fact(
-                            key="kind_label",
-                            value=kind_label(kind, language),
-                            source=open_tool,
-                        ),
-                        *(
-                            Fact(
-                                key="profile_field",
-                                value=profile_field_label(name, language),
-                                source=open_tool,
-                            )
-                            for name in changed
-                        ),
-                    ],
+                    # The question names the kind; the form values stay out of the card (R5).
+                    summary_key=f"request_card_{kind}",
+                    facts=[],
                 )
             )
             continue

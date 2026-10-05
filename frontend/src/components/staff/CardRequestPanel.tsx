@@ -73,6 +73,8 @@ export function CardRequestPanel({ handoffId, onPendingChange }: Props) {
 	const { t } = useI18n();
 	const [panel, setPanel] = useState<CardRequestPanelData | null>(null);
 	const [decision, setDecision] = useState<Decision | null>(null);
+	// The opening's chosen decision; "Enviar" takes it to the review dialog.
+	const [choice, setChoice] = useState<"approve" | "decline" | null>(null);
 	const [limit, setLimit] = useState("");
 	const [reason, setReason] = useState("");
 	const [submitting, setSubmitting] = useState(false);
@@ -181,6 +183,10 @@ export function CardRequestPanel({ handoffId, onPendingChange }: Props) {
 	const confirmBlocked =
 		(decision === "approve" && approveBlocked) ||
 		(decision === "decline" && declineBlocked);
+	const sendBlocked =
+		choice === null ||
+		(choice === "approve" && approveBlocked) ||
+		(choice === "decline" && declineBlocked);
 	const errorKey = (
 		errorCode && KNOWN_ERRORS.has(errorCode) ? errorCode : "generic"
 	) as string;
@@ -279,18 +285,32 @@ export function CardRequestPanel({ handoffId, onPendingChange }: Props) {
 					<h4 className={HEADING}>{t("staff.card_request.cards")}</h4>
 					<ul className="flex flex-col gap-1">
 						{cards.map((card) => (
-							<li
-								key={card.mask}
-								className="flex justify-between gap-2 text-sm"
-							>
+							<li key={card.mask} className="flex flex-col gap-0.5 text-sm">
 								<span>
 									{card.mask} · {t(`home.cards.kind.${card.kind}` as TKey)} ·{" "}
 									{cardStatus(card.status)}
 								</span>
-								<span>
-									{[card.balance_display, card.credit_limit_display]
-										.filter(Boolean)
-										.join(" / ")}
+								{/* Each amount carries its own label: a bare "a / b" was unreadable. */}
+								<span className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+									{card.balance_display && (
+										<span>
+											{t(
+												`staff.card_request.card_balance.${card.kind}` as TKey,
+											)}
+											:{" "}
+											<span className="text-foreground">
+												{card.balance_display}
+											</span>
+										</span>
+									)}
+									{card.credit_limit_display && (
+										<span>
+											{t("staff.card_request.credit_limit")}:{" "}
+											<span className="text-foreground">
+												{card.credit_limit_display}
+											</span>
+										</span>
+									)}
 								</span>
 							</li>
 						))}
@@ -321,7 +341,30 @@ export function CardRequestPanel({ handoffId, onPendingChange }: Props) {
 
 			{pending && request.kind === "open" && (
 				<div className={SECTION}>
-					{isCreditOpen && (
+					<fieldset className="flex flex-col gap-1.5">
+						<legend className="mb-1.5 text-sm font-medium">
+							{t("staff.card_request.decision_label")}
+						</legend>
+						<div className="flex gap-2">
+							<Button
+								variant={choice === "approve" ? "default" : "outline"}
+								data-testid="card-request-approve"
+								aria-pressed={choice === "approve"}
+								onClick={() => setChoice("approve")}
+							>
+								{t("staff.card_request.decision.approve")}
+							</Button>
+							<Button
+								variant={choice === "decline" ? "default" : "outline"}
+								data-testid="card-request-decline"
+								aria-pressed={choice === "decline"}
+								onClick={() => setChoice("decline")}
+							>
+								{t("staff.card_request.decision.decline")}
+							</Button>
+						</div>
+					</fieldset>
+					{choice === "approve" && isCreditOpen && (
 						<div className="flex flex-col gap-1.5">
 							<Label htmlFor="card-request-limit">
 								{t("staff.card_request.credit_limit")}
@@ -343,42 +386,35 @@ export function CardRequestPanel({ handoffId, onPendingChange }: Props) {
 							)}
 						</div>
 					)}
-					<div className="flex flex-col gap-1.5">
-						<Label htmlFor="card-request-reason">
-							{t("staff.card_request.reason")}
-						</Label>
-						<select
-							id="card-request-reason"
-							data-testid="card-request-reason"
-							className="h-8 rounded-lg border border-input bg-transparent px-2 text-sm"
-							value={reason}
-							onChange={(event) => setReason(event.target.value)}
-						>
-							<option value="" />
-							{DECLINE_REASONS.map((code) => (
-								<option key={code} value={code}>
-									{t(`staff.card_request.decline_reason.${code}` as TKey)}
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="flex gap-2">
-						<Button
-							data-testid="card-request-approve"
-							disabled={approveBlocked}
-							onClick={() => openDialog("approve")}
-						>
-							{t("staff.card_request.decision.approve")}
-						</Button>
-						<Button
-							variant="outline"
-							data-testid="card-request-decline"
-							disabled={declineBlocked}
-							onClick={() => openDialog("decline")}
-						>
-							{t("staff.card_request.decision.decline")}
-						</Button>
-					</div>
+					{choice === "decline" && (
+						<div className="flex flex-col gap-1.5">
+							<Label htmlFor="card-request-reason">
+								{t("staff.card_request.reason")}
+							</Label>
+							<select
+								id="card-request-reason"
+								data-testid="card-request-reason"
+								className="h-8 rounded-lg border border-input bg-bg px-2 text-sm text-foreground [color-scheme:dark]"
+								value={reason}
+								onChange={(event) => setReason(event.target.value)}
+							>
+								<option value="" />
+								{DECLINE_REASONS.map((code) => (
+									<option key={code} value={code}>
+										{t(`staff.card_request.decline_reason.${code}` as TKey)}
+									</option>
+								))}
+							</select>
+						</div>
+					)}
+					<Button
+						className="w-fit"
+						data-testid="card-request-send"
+						disabled={sendBlocked}
+						onClick={() => choice && openDialog(choice)}
+					>
+						{t("staff.card_request.send")}
+					</Button>
 				</div>
 			)}
 
