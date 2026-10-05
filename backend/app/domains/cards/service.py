@@ -49,6 +49,7 @@ from app.domains.cards.schemas import (
     CardRequestView,
     CardSummary,
     CloseCardReadback,
+    CustomerCardRequest,
     DecisionOutcome,
     PanelCard,
     PanelCreditBounds,
@@ -89,6 +90,7 @@ __all__ = [
     "pending_requests",
     "read_back_close_request",
     "read_back_open_request",
+    "recent_requests",
     "set_locked",
 ]
 
@@ -495,6 +497,12 @@ async def read_back_close_request(request_id: UUID) -> tuple[CardRequestView, Cl
 async def pending_requests(customer_id: str) -> list[CardRequestView]:
     """The customer's `pending` requests, open and close (R1)."""
     return [_to_request_view(r) for r in await repository.fetch_pending_requests(customer_id)]
+
+
+async def recent_requests(customer_id: str, limit: int = 3) -> list[CustomerCardRequest]:
+    """The customer's latest `limit` requests, newest first, without staff-only fields (R1)."""
+    rows = await repository.fetch_recent_requests(customer_id, limit)
+    return [CustomerCardRequest.model_validate(dict(row)) for row in rows]
 
 
 _PRODUCT_TYPES = {"credit": "Tarjeta Crédito", "debit": "Tarjeta Débito"}

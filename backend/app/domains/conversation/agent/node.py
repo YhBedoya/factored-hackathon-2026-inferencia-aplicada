@@ -51,7 +51,7 @@ from app.domains.conversation.agent.plan import (
 from app.domains.conversation.agent.reads import read_tools, register_tx_rows
 from app.domains.conversation.agent.refs import TurnRefs
 from app.domains.conversation.agent.schema import MAX_ROUNDS, AgentTurn, PassToFlow
-from app.domains.conversation.context import redact_values
+from app.domains.conversation.context import redact_values, speaker
 from app.domains.conversation.flows.actions import fill
 from app.domains.conversation.flows.actions import handoff as _handoff_update
 from app.domains.conversation.graph import GraphState
@@ -75,7 +75,7 @@ from app.domains.policy.registry import get_policies
 
 __all__ = ["agent", "agent_tools"]
 
-_PROMPT = PromptRef("agent", 5)
+_PROMPT = PromptRef("agent", 6)
 _PLAYBOOKS_SLOT = "<<PLAYBOOKS>>"
 # D17: both stuck-conversation counters hand off on the third turn.
 _MAX_ASKED_TURNS = 3
@@ -175,8 +175,7 @@ def _header(state: GraphState) -> list[str]:
         if context.summary:
             lines.append(f"resumen: {redact_values(context.summary)}")
         for message in context.messages:
-            speaker = "cliente" if message["role"] == "customer" else "cardy"
-            lines.append(f"{speaker}: {redact_values(message['text'])}")
+            lines.append(f"{speaker(message)}: {redact_values(message['text'])}")
         lines.append("```")
     return lines
 

@@ -13,7 +13,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.core.llm import LLMClient, LLMError, PromptRef
 from app.domains.conversation.classifier import IntentClassifier
-from app.domains.conversation.context import ConversationContext, build_context
+from app.domains.conversation.context import ConversationContext, build_context, speaker
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.nodes.route import _answer_fits
 from app.domains.conversation.prompts import load_prompt
@@ -78,8 +78,7 @@ def _build_user_message(
         if context.summary:
             lines.append(f"resumen: {context.summary}")
         for message in context.messages:
-            speaker = "cliente" if message["role"] == "customer" else "cardy"
-            lines.append(f"{speaker}: {message['text']}")
+            lines.append(f"{speaker(message)}: {message['text']}")
         lines.append("```")
     lines.append("Mensaje del cliente:")
     lines.append("```")

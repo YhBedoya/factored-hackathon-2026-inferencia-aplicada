@@ -35,7 +35,7 @@ from app.core.pii import KnownPii
 from app.core.retry import backoff_delay
 from app.domains.audit.schemas import AuditType, Recorder
 from app.domains.audit.service import AuditRecorder
-from app.domains.cards.schemas import CardDetails, CardSummary
+from app.domains.cards.schemas import CardDetails, CardSummary, CustomerCardRequest
 from app.domains.conversation.tools.bank import BankReadTools
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.executor import ConfirmedWriteTools, call_with_timeout
@@ -189,6 +189,15 @@ class RecordingBankTools:
         self.calls.append("get_priority_signals")
         return await self._read(
             "disputes.get_priority_signals", {}, self._inner.get_priority_signals
+        )
+
+    async def get_card_requests(self) -> list[CustomerCardRequest]:
+        self.calls.append("get_card_requests")
+        return await self._read(
+            "cards.get_card_requests",
+            {},
+            self._inner.get_card_requests,
+            lambda r: {"count": len(r)},
         )
 
     async def _read[T](

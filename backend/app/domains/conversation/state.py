@@ -87,10 +87,11 @@ class Pending(TypedDict):
 class HistoryMessage(TypedDict):
     """One masked message of the conversation window (naturalidad-cardy D3, R5).
 
-    `text` is `user_text` or the masked reply, never raw PII.
+    `text` is `user_text` or the masked reply, never raw PII. `agent` is a
+    human advisor's message from a takeover, folded in by `return_to_bot`.
     """
 
-    role: Literal["customer", "cardy"]
+    role: Literal["customer", "cardy", "agent"]
     text: str
 
 

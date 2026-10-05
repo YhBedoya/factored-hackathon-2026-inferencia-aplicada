@@ -24,7 +24,12 @@ from pydantic import BaseModel, ConfigDict
 
 from app.core.llm import LLMClient, LLMError, PromptRef
 from app.core.pii import find_pii
-from app.domains.conversation.context import ConversationContext, build_context, redact_values
+from app.domains.conversation.context import (
+    ConversationContext,
+    build_context,
+    redact_values,
+    speaker,
+)
 from app.domains.conversation.fact_values import record
 from app.domains.conversation.graph import GraphState
 from app.domains.conversation.prompts import load_prompt
@@ -105,6 +110,20 @@ _DECLINE_CAUSE_TEMPLATES: dict[str, TemplateKind] = {
     "invalid_card_number": "decline_cause_invalid_card_number",
     "do_not_honor": "decline_cause_do_not_honor",
     "expired_card": "decline_cause_expired_card",
+}
+# `card_request_status` facts (R4): the request's code-built status and kind,
+# mapped to their fixed ES/PT label the same way as the decline pair.
+_REQUEST_STATUS_TEMPLATES: dict[str, TemplateKind] = {
+    "pending": "card_request_status_pending",
+    "approved": "card_request_status_approved",
+    "declined": "card_request_status_declined",
+    "cancelled": "card_request_status_cancelled",
+    "kept": "card_request_status_kept",
+    "not_cancelled": "card_request_status_not_cancelled",
+}
+_REQUEST_KIND_TEMPLATES: dict[str, TemplateKind] = {
+    "open": "card_request_kind_open",
+    "close": "card_request_kind_close",
 }
 _DECLINE_NEXT_TEMPLATES: dict[str, TemplateKind] = {
     "pay_or_use_other_card": "decline_next_pay_or_use_other_card",
@@ -333,8 +352,7 @@ def _build_user_message(
         if context.summary:
             lines.append(f"resumen: {redact_values(context.summary)}")
         for message in context.messages:
-            speaker = "cliente" if message["role"] == "customer" else "cardy"
-            lines.append(f"{speaker}: {redact_values(message['text'])}")
+            lines.append(f"{speaker(message)}: {redact_values(message['text'])}")
         lines.append("```")
     return "\n".join(lines)
 
@@ -351,7 +369,7 @@ def _format_fact(
     if key == "status":
         status = cast(Literal["Active", "Blocked", "Suspended", "Closed", "Locked"], value)
         return status_label(status, language)
-    if key in ("expiry", "due_date", "tx_date", "clear_by_date"):
+    if key in ("expiry", "due_date", "tx_date", "clear_by_date", "request_date"):
         return format_date(cast(date, value))
     if key == "payment_overdue":
         return format_days(cast(int, value), language)
@@ -368,6 +386,10 @@ def _format_fact(
     # -- the LLM never sees or picks what a decline code means.
     if key == "decline_cause":
         return get_template(_DECLINE_CAUSE_TEMPLATES[cast(str, value)], language)
+    if key == "request_status":
+        return get_template(_REQUEST_STATUS_TEMPLATES[cast(str, value)], language)
+    if key == "request_kind":
+        return get_template(_REQUEST_KIND_TEMPLATES[cast(str, value)], language)
     if key == "decline_next_step":
         return get_template(_DECLINE_NEXT_TEMPLATES[cast(str, value)], language)
     # This card's B1: `policies/transaction_states.yaml`'s own key, same
