@@ -1,0 +1,45 @@
+seed_id: h-general_question-unsupported-pt-br-03
+intent: general_question
+category: unsupported
+persona: CLI-00R1HD1YN0Z6
+goal: Perguntar sobre um Pix recusado (fora do alcance de cartões).
+fact_sheet:
+  topic: pix_boleto
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - general_question
+  expected_outcome: abstained
+  required_tools: []
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-general_question-unsupported-pt-br-03.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Cardy, meu Pix foi recusado agora de manhã, por que?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-general_question-unsupported-pt-br-03.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, por que meu Pix foi recusado hoje de manhã?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-general_question-unsupported-pt-br-03.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, sabe me dizer por que recusaram meu Pix agora de manhã?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'

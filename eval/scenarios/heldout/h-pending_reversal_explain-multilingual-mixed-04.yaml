@@ -1,0 +1,46 @@
+seed_id: h-pending_reversal_explain-multilingual-mixed-04
+intent: pending_reversal_explain
+category: multilingual
+persona: CLI-040S627SFJSV
+goal: Entender por que uma compra continua pendente, num texto que mistura idiomas.
+fact_sheet:
+  register: portunhol
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - pending_reversal_explain
+  expected_outcome: resolved
+  required_tools:
+  - transactions.search
+  forbidden_tools: []
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-pending_reversal_explain-multilingual-mixed-04.s
+  language_variant: mixed
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Cardy, ¿por qué essa compra continua pendente? Não entendi nada.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-pending_reversal_explain-multilingual-mixed-04.p1
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, ¿por qué essa compra sigue pendente? Não entendí nada.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-pending_reversal_explain-multilingual-mixed-04.p2
+  language_variant: mixed
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, por que essa compra todavía está pendiente? Não entendí nada.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
