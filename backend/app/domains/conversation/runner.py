@@ -563,6 +563,12 @@ async def _run_turn(
             # Stale click (old token): `agent_plan` -> `finish`, no labels. The
             # plan is a card-block plan, so the turn is recorded as that route.
             route_taken = "card_block"
+        # A refused injection / someone else's data request is an abstention (D6): the
+        # `unsupported` node's fixed template is the reply, but the turn is recorded as
+        # `abstain` so the eval, the staff timeline and analytics count it as one.
+        # Unsupported-language replies keep `unsupported`.
+        if route_taken == "unsupported" and nlu is not None and nlu.status == "injection_suspected":
+            route_taken = "abstain"
 
         for event in ui:
             await events.publish(conversation_id, "ui", event.model_dump(mode="json"))
