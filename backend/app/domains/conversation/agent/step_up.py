@@ -127,7 +127,11 @@ async def agent_step_up(state: GraphState, config: RunnableConfig) -> dict[str, 
     update = _plan_issued(state, steps, token_id, event, language, as_reply=False)
     update["agent_plan_result"] = {
         "outcome": "issued",
-        "steps": [{"action": s["action"], "card_id": s["card_id"]} for s in steps],
+        # An `open` step has no card (D9-C): report only the keys the step carries.
+        "steps": [
+            {"action": s["action"], **({"card_id": s["card_id"]} if "card_id" in s else {})}
+            for s in steps
+        ],
     }
     return update
 

@@ -19,6 +19,11 @@ from typing import Any, Literal
 from langchain_core.runnables import RunnableConfig
 
 from app.core.actions import ActionResult
+from app.domains.conversation.agent.dispute import (
+    accept_claim_plan,
+    decline_claim_plan,
+    has_claim,
+)
 from app.domains.conversation.agent.plan import plan_segments
 from app.domains.conversation.flows.actions import (
     OFFER_REPLACEMENT_PAUSE,
@@ -52,6 +57,8 @@ _CLEARED: dict[str, Any] = {
     "pending": None,
     "confirmation_token_id": None,
     "agent_plan_steps": None,
+    "card_request_kind": None,
+    "profile_changed_fields": None,
 }
 
 
@@ -84,6 +91,7 @@ async def count_open_plan_turn(
     write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
     if token_id is not None:
         await write_tools.cancel_plan(token_id)
+    open_steps = state.get("agent_plan_steps") or []
     return {
         **handoff(
             rule_queue(get_policies().escalation, "clarification_exhausted"),
@@ -91,6 +99,8 @@ async def count_open_plan_turn(
             state.get("language", "es"),
         ),
         "agent_plan_steps": None,
+        # A claim plan's dispute ends with it (D5).
+        **({"dispute": None} if has_claim(open_steps) else {}),
         "non_answer_failures": 0,
         "intent_segments": (
             plan_segments(state.get("agent_plan_steps") or [], "handoff")
@@ -104,13 +114,18 @@ async def agent_plan(state: GraphState, config: RunnableConfig) -> dict[str, Any
     language = state.get("language", "es")
     outcome = decision(state)
     steps = state.get("agent_plan_steps") or []
+    claim_plan = has_claim(steps)
     if outcome == "cancel" and state.get("confirmation_token_id") is not None:
+        if claim_plan:
+            return await decline_claim_plan(state, config)
         return await _decline(state, config)
     if outcome != "confirm" or not steps:
         # A stale token (or a plan with nothing stored): nothing runs; the reminder and the
         # stored card go out again. The typed-turn count is kept, not reset (D17 b): only a
         # new plan resets it.
         return {**replay_open_plan(state), "non_answer_counted": True}
+    if claim_plan:
+        return await accept_claim_plan(state, config)
     return await _accept(state, config, language)
 
 
@@ -133,12 +148,16 @@ async def _accept(state: GraphState, config: RunnableConfig, language: Language)
     token_id = state.get("confirmation_token_id")
     steps = state.get("agent_plan_steps") or []
     assert token_id is not None
+    if steps[0]["action"] == "open":
+        return await _accept_open(state, config, steps[0])
+    if steps[0]["action"] == "close":
+        return await _accept_close(state, config, steps[0])
 
     last4: list[str] = []
     blocked: list[tuple[str, CardKind, str]] = []  # (card_id, kind, last4) of permanent blocks
     calls = []
     for step in steps:
-        card_id = step["card_id"]
+        card_id = step["card_id"]  # open plans never reach this loop (`_accept_open`)
         details = await bank_tools.get_card_details(card_id)
         last4.append(details.last4)
         if step["action"] == "block":
@@ -213,6 +232,61 @@ async def _accept(state: GraphState, config: RunnableConfig, language: Language)
         },
         "intent_segments": plan_segments(steps, "resolved"),
         "agent_offer": _replacement_offer(blocked, language),
+    }
+
+
+async def _accept_open(
+    state: GraphState, config: RunnableConfig, step: AgentPlanStep
+) -> dict[str, Any]:
+    """Acepto on an opening plan (D10). The one write saves the changed fields and files the
+    request; code then routes to the Créditos handoff, never to Cardy's words. A failed or
+    unverified write is the shared `action_unverified` / `tool_failure` path (R3)."""
+    write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
+    token_id = state.get("confirmation_token_id")
+    assert token_id is not None
+    kind = step["kind"]  # set on every open step (`ProposedStep` requires it)
+    changed = list(state.get("profile_changed_fields") or [])
+
+    async def call() -> ActionResult:
+        return await write_tools.request_card(kind, changed, token_id)
+
+    steps = state.get("agent_plan_steps") or []
+    results = await execute_plan(state, config, [call])
+    if isinstance(results, dict):
+        return {**results, **_CLEARED, "intent_segments": plan_segments(steps, "handoff")}
+    return {
+        **_CLEARED,
+        "actions": results,
+        "escalation_reason": "card_open_request",
+        "handoff_queue": rule_queue(get_policies().escalation, "card_open_request"),
+        "intent_segments": plan_segments(steps, "handoff"),
+    }
+
+
+async def _accept_close(
+    state: GraphState, config: RunnableConfig, step: AgentPlanStep
+) -> dict[str, Any]:
+    """Acepto on a closing plan (D10). One write files the request; code then routes to the
+    Retención handoff, never to Cardy's words. A failed or unverified write is the shared
+    `action_unverified` / `tool_failure` path (R3)."""
+    write_tools: ConfirmedWriteTools = config["configurable"]["bank_write_tools"]
+    token_id = state.get("confirmation_token_id")
+    assert token_id is not None
+    card_id, reason = step["card_id"], step["reason"]
+
+    async def call() -> ActionResult:
+        return await write_tools.request_closure(card_id, reason, token_id)
+
+    steps = state.get("agent_plan_steps") or []
+    results = await execute_plan(state, config, [call])
+    if isinstance(results, dict):
+        return {**results, **_CLEARED, "intent_segments": plan_segments(steps, "handoff")}
+    return {
+        **_CLEARED,
+        "actions": results,
+        "escalation_reason": "card_close_request",
+        "handoff_queue": rule_queue(get_policies().escalation, "card_close_request"),
+        "intent_segments": plan_segments(steps, "handoff"),
     }
 
 

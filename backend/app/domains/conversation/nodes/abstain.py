@@ -24,7 +24,7 @@ from app.domains.conversation.templates import Language, get_template, template_
 from app.domains.conversation.ui import PickerOption, QuickRepliesEvent, QuickRepliesPayload
 from app.domains.policy.registry import get_policies
 
-__all__ = ["abstain", "make_abstain"]
+__all__ = ["abstain", "card_request_unavailable_reply", "make_abstain"]
 
 _SOURCE = "policies/scope.yaml"
 
@@ -35,7 +35,6 @@ _TOPIC_LABELS: dict[str, dict[Language, str]] = {
     "insurance": {"es": "seguros", "pt": "seguros"},
     "transfers": {"es": "transferencias", "pt": "transferências"},
     "pix_boleto": {"es": "Pix y boletos", "pt": "Pix e boletos"},
-    "new_card": {"es": "tarjetas nuevas", "pt": "cartões novos"},
     "other": {"es": "eso", "pt": "isso"},
 }
 
@@ -74,15 +73,42 @@ def _closest_action(intents: list[str], language: Language) -> str:
     return ""
 
 
-def make_abstain(*, llm_wording: bool = True) -> Callable[..., Awaitable[dict[str, Any]]]:
+def card_request_unavailable_reply(language: Language) -> dict[str, Any]:
+    """The fixed "can't handle card requests here" reply plus the human chip (D3, C7).
+
+    One builder for every path that cannot serve an open/close request (the
+    pipeline's `new_card` topic, the agent with its flag off or the LLM down):
+    no LLM call, no write.
+    """
+    options = [PickerOption(label=_HUMAN_OFFERS[language])]
+    return {
+        "segments": [get_template("card_request_unavailable", language)],
+        "ui": [
+            QuickRepliesEvent(
+                kind="quick_replies",
+                payload=QuickRepliesPayload(slot="abstain", options=options),
+            )
+        ],
+    }
+
+
+def make_abstain(
+    *, llm_wording: bool = True, legacy_new_card: bool = False
+) -> Callable[..., Awaitable[dict[str, Any]]]:
     """The abstain node; `llm_wording=False` is the baseline's swap (D17, D30).
+
+    `legacy_new_card=True` keeps the baseline's old "new card not available"
+    reply for topic `new_card` (R-d); the proposed node answers with
+    `card_request_unavailable` and a human chip.
 
     Only the wording step differs: the baseline fills `abstain_fallback`
     directly and never touches the LLM. Facts, chips and `pending` are shared.
     """
 
     async def node(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
-        result, _ = await _abstain(state, config, llm_wording=llm_wording)
+        result, _ = await _abstain(
+            state, config, llm_wording=llm_wording, legacy_new_card=legacy_new_card
+        )
         return result
 
     return node
@@ -107,17 +133,20 @@ async def abstain(state: GraphState, config: RunnableConfig) -> dict[str, Any]:
 
 
 async def _abstain(
-    state: GraphState, config: RunnableConfig, *, llm_wording: bool
+    state: GraphState, config: RunnableConfig, *, llm_wording: bool, legacy_new_card: bool = False
 ) -> tuple[dict[str, Any], bool]:
     """The reply update and whether the wording call raised `LLMError`."""
     language = state["language"]
     nlu = state.get("nlu")
     topic = nlu.slots.topic if nlu is not None and nlu.slots.topic else "other"
-    entry = get_policies().scope.topics[topic]
 
-    if entry.reason_key == "new_card_not_available":
-        # Fixed wording, no compose call: the answer is a plain "not here".
-        return {"segments": [get_template("new_card_not_available", language)], "ui": []}, False
+    if topic == "new_card":
+        # Not a scope topic any more (scope v3): fixed wording, no compose call.
+        if legacy_new_card:
+            return {"segments": [get_template("new_card_not_available", language)], "ui": []}, False
+        return card_request_unavailable_reply(language), False
+
+    entry = get_policies().scope.topics[topic]
 
     topic_label = _TOPIC_LABELS[topic][language]
     reason = _REASONS[entry.reason_key][language]

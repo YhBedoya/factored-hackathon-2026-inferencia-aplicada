@@ -77,6 +77,8 @@ async def return_to_bot(host: TurnHost, conversation_id: UUID, language: Languag
                 "pending": None,
                 "intent_queue": [],
                 "confirmation_token_id": None,
+                "card_request_kind": None,
+                "profile_changed_fields": None,
                 "escalation_reason": None,
                 "handoff_queue": None,
                 "handoff_id": None,

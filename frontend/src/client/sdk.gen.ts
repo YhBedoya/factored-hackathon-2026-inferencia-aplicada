@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, CreateTestSessionApiV1TestIdpSessionsPostData, CreateTestSessionApiV1TestIdpSessionsPostErrors, CreateTestSessionApiV1TestIdpSessionsPostResponses, DemoResetApiV1AdminDemoResetPostData, DemoResetApiV1AdminDemoResetPostResponses, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetData, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetErrors, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetResponses, GetCardApiV1MeCardsCardIdGetData, GetCardApiV1MeCardsCardIdGetErrors, GetCardApiV1MeCardsCardIdGetResponses, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetData, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetErrors, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetData, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetData, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetErrors, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponses, GetSystemApiV1StaffSystemGetData, GetSystemApiV1StaffSystemGetResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, ListCardsApiV1MeCardsGetData, ListCardsApiV1MeCardsGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationsApiV1StaffConversationsGetData, ListConversationsApiV1StaffConversationsGetErrors, ListConversationsApiV1StaffConversationsGetResponses, ListHandoffsApiV1StaffHandoffsGetData, ListHandoffsApiV1StaffHandoffsGetErrors, ListHandoffsApiV1StaffHandoffsGetResponses, ListPersonasApiV1StaffPersonasGetData, ListPersonasApiV1StaffPersonasGetResponses, ListTransactionsApiV1MeTransactionsGetData, ListTransactionsApiV1MeTransactionsGetErrors, ListTransactionsApiV1MeTransactionsGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostData, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, StaffLoginApiV1AuthStaffLoginPostData, StaffLoginApiV1AuthStaffLoginPostErrors, StaffLoginApiV1AuthStaffLoginPostResponses, StaffLogoutApiV1StaffLogoutPostData, StaffLogoutApiV1StaffLogoutPostResponses, StaffMeApiV1StaffMeGetData, StaffMeApiV1StaffMeGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1StaffConversationsConversationIdStreamGetData, StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors, StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamHandoffsApiV1StaffHandoffsStreamGetData, StreamHandoffsApiV1StaffHandoffsStreamGetErrors, StreamHandoffsApiV1StaffHandoffsStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
+import type { ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostData, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostErrors, ClaimHandoffApiV1StaffHandoffsHandoffIdClaimPostResponses, CreateConversationApiV1ConversationsPostData, CreateConversationApiV1ConversationsPostErrors, CreateConversationApiV1ConversationsPostResponses, DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostData, DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostErrors, DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostResponses, DemoResetApiV1AdminDemoResetPostData, DemoResetApiV1AdminDemoResetPostResponses, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetData, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetErrors, GetAnalyticsSummaryApiV1StaffAnalyticsSummaryGetResponses, GetCardApiV1MeCardsCardIdGetData, GetCardApiV1MeCardsCardIdGetErrors, GetCardApiV1MeCardsCardIdGetResponses, GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetData, GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetErrors, GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetResponses, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetData, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetErrors, GetConversationTimelineApiV1StaffConversationsConversationIdTimelineGetResponses, GetHandoffApiV1StaffHandoffsHandoffIdGetData, GetHandoffApiV1StaffHandoffsHandoffIdGetErrors, GetHandoffApiV1StaffHandoffsHandoffIdGetResponses, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetData, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetErrors, GetPersonaCredentialsApiV1StaffPersonasPersonaIdCredentialsGetResponses, GetProfileFormApiV1ConversationsConversationIdProfileFormGetData, GetProfileFormApiV1ConversationsConversationIdProfileFormGetErrors, GetProfileFormApiV1ConversationsConversationIdProfileFormGetResponses, GetSystemApiV1StaffSystemGetData, GetSystemApiV1StaffSystemGetResponses, HealthApiV1HealthGetData, HealthApiV1HealthGetResponses, ListCardsApiV1MeCardsGetData, ListCardsApiV1MeCardsGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationsApiV1StaffConversationsGetData, ListConversationsApiV1StaffConversationsGetErrors, ListConversationsApiV1StaffConversationsGetResponses, ListHandoffsApiV1StaffHandoffsGetData, ListHandoffsApiV1StaffHandoffsGetErrors, ListHandoffsApiV1StaffHandoffsGetResponses, ListPersonasApiV1StaffPersonasGetData, ListPersonasApiV1StaffPersonasGetResponses, ListTransactionsApiV1MeTransactionsGetData, ListTransactionsApiV1MeTransactionsGetErrors, ListTransactionsApiV1MeTransactionsGetResponses, LoginApiV1AuthLoginPostData, LoginApiV1AuthLoginPostErrors, LoginApiV1AuthLoginPostResponses, LogoutApiV1AuthLogoutPostData, LogoutApiV1AuthLogoutPostResponses, MeApiV1AuthMeGetData, MeApiV1AuthMeGetResponses, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostData, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostErrors, PostConfirmationApiV1ConversationsConversationIdConfirmationsTokenIdPostResponses, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostData, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostErrors, PostConversationMessageApiV1StaffConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostData, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostProfileFormApiV1ConversationsConversationIdProfileFormPostData, PostProfileFormApiV1ConversationsConversationIdProfileFormPostErrors, PostProfileFormApiV1ConversationsConversationIdProfileFormPostResponses, RefreshApiV1AuthRefreshPostData, RefreshApiV1AuthRefreshPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, StaffLoginApiV1AuthStaffLoginPostData, StaffLoginApiV1AuthStaffLoginPostErrors, StaffLoginApiV1AuthStaffLoginPostResponses, StaffLogoutApiV1StaffLogoutPostData, StaffLogoutApiV1StaffLogoutPostResponses, StaffMeApiV1StaffMeGetData, StaffMeApiV1StaffMeGetResponses, StreamConversationApiV1ConversationsConversationIdStreamGetData, StreamConversationApiV1ConversationsConversationIdStreamGetErrors, StreamConversationApiV1ConversationsConversationIdStreamGetResponses, StreamConversationApiV1StaffConversationsConversationIdStreamGetData, StreamConversationApiV1StaffConversationsConversationIdStreamGetErrors, StreamConversationApiV1StaffConversationsConversationIdStreamGetResponses, StreamHandoffsApiV1StaffHandoffsStreamGetData, StreamHandoffsApiV1StaffHandoffsStreamGetErrors, StreamHandoffsApiV1StaffHandoffsStreamGetResponses, VerifyOtpApiV1AuthOtpVerifyPostData, VerifyOtpApiV1AuthOtpVerifyPostErrors, VerifyOtpApiV1AuthOtpVerifyPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -73,6 +73,17 @@ export const meApiV1AuthMeGet = <ThrowOnError extends boolean = false>(options?:
  * otp_invalid`; hitting `rl:otp:<account_id>`'s limit is `429
  * too_many_attempts`, checked before the code, so it wins even when the
  * code in this same request is right.
+ *
+ * With `conversation_id` (S2 D27) the conversation is loaded first, scoped
+ * to the caller (`404 not_found` before the code is checked, nothing
+ * recorded). If the code is wrong and brings the counter to
+ * `tools.step_up_max_failures`, or the counter is already there, and that
+ * conversation is open, in bot mode and paused at an OTP pause, the route
+ * starts the internal `step_up_failed` handoff turn, resets the counter
+ * and returns `429 otp_handoff`. A `turn_in_progress` there is `429
+ * too_many_attempts` with the counter kept, so the next attempt hands
+ * off. Every other case is the plain `401` / `429`. The handoff turn is
+ * server-started, so it counts toward no turn cap (A4).
  */
 export const verifyOtpApiV1AuthOtpVerifyPost = <ThrowOnError extends boolean = false>(options: Options<VerifyOtpApiV1AuthOtpVerifyPostData, ThrowOnError>): RequestResult<VerifyOtpApiV1AuthOtpVerifyPostResponses, VerifyOtpApiV1AuthOtpVerifyPostErrors, ThrowOnError> => (options.client ?? client).post<VerifyOtpApiV1AuthOtpVerifyPostResponses, VerifyOtpApiV1AuthOtpVerifyPostErrors, ThrowOnError>({
     url: '/api/v1/auth/otp/verify',
@@ -119,6 +130,30 @@ export const createConversationApiV1ConversationsPost = <ThrowOnError extends bo
  */
 export const postMessageApiV1ConversationsConversationIdMessagesPost = <ThrowOnError extends boolean = false>(options: Options<PostMessageApiV1ConversationsConversationIdMessagesPostData, ThrowOnError>): RequestResult<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError> => (options.client ?? client).post<PostMessageApiV1ConversationsConversationIdMessagesPostResponses, PostMessageApiV1ConversationsConversationIdMessagesPostErrors, ThrowOnError>({
     url: '/api/v1/conversations/{conversation_id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get Profile Form
+ *
+ * The form's initial view for the session's customer (R1). `409 form_not_open`
+ * unless the checkpoint is paused at the form. Never cached or persisted.
+ */
+export const getProfileFormApiV1ConversationsConversationIdProfileFormGet = <ThrowOnError extends boolean = false>(options: Options<GetProfileFormApiV1ConversationsConversationIdProfileFormGetData, ThrowOnError>): RequestResult<GetProfileFormApiV1ConversationsConversationIdProfileFormGetResponses, GetProfileFormApiV1ConversationsConversationIdProfileFormGetErrors, ThrowOnError> => (options.client ?? client).get<GetProfileFormApiV1ConversationsConversationIdProfileFormGetResponses, GetProfileFormApiV1ConversationsConversationIdProfileFormGetErrors, ThrowOnError>({ url: '/api/v1/conversations/{conversation_id}/profile-form', ...options });
+
+/**
+ * Post Profile Form
+ *
+ * Submit or cancel the profile form (D9-C D11). A submit stages only the
+ * *changed* values in the vault and passes their names to the turn; the values
+ * never enter the message, `ui_payload`, LLM input or checkpoint (R5).
+ */
+export const postProfileFormApiV1ConversationsConversationIdProfileFormPost = <ThrowOnError extends boolean = false>(options: Options<PostProfileFormApiV1ConversationsConversationIdProfileFormPostData, ThrowOnError>): RequestResult<PostProfileFormApiV1ConversationsConversationIdProfileFormPostResponses, PostProfileFormApiV1ConversationsConversationIdProfileFormPostErrors, ThrowOnError> => (options.client ?? client).post<PostProfileFormApiV1ConversationsConversationIdProfileFormPostResponses, PostProfileFormApiV1ConversationsConversationIdProfileFormPostErrors, ThrowOnError>({
+    url: '/api/v1/conversations/{conversation_id}/profile-form',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -226,6 +261,23 @@ export const claimHandoffApiV1StaffHandoffsHandoffIdClaimPost = <ThrowOnError ex
 export const returnHandoffApiV1StaffHandoffsHandoffIdReturnPost = <ThrowOnError extends boolean = false>(options: Options<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostData, ThrowOnError>): RequestResult<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError> => (options.client ?? client).post<ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostResponses, ReturnHandoffApiV1StaffHandoffsHandoffIdReturnPostErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/return', ...options });
 
 /**
+ * Get Card Request
+ */
+export const getCardRequestApiV1StaffHandoffsHandoffIdCardRequestGet = <ThrowOnError extends boolean = false>(options: Options<GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetData, ThrowOnError>): RequestResult<GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetResponses, GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetErrors, ThrowOnError> => (options.client ?? client).get<GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetResponses, GetCardRequestApiV1StaffHandoffsHandoffIdCardRequestGetErrors, ThrowOnError>({ url: '/api/v1/staff/handoffs/{handoff_id}/card-request', ...options });
+
+/**
+ * Decide Card Request
+ */
+export const decideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPost = <ThrowOnError extends boolean = false>(options: Options<DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostData, ThrowOnError>): RequestResult<DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostResponses, DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostErrors, ThrowOnError> => (options.client ?? client).post<DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostResponses, DecideCardRequestApiV1StaffHandoffsHandoffIdCardRequestDecisionPostErrors, ThrowOnError>({
+    url: '/api/v1/staff/handoffs/{handoff_id}/card-request/decision',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * List Conversation Messages
  */
 export const listConversationMessagesApiV1StaffConversationsConversationIdMessagesGet = <ThrowOnError extends boolean = false>(options: Options<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetData, ThrowOnError>): RequestResult<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ThrowOnError> => (options.client ?? client).get<ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetResponses, ListConversationMessagesApiV1StaffConversationsConversationIdMessagesGetErrors, ThrowOnError>({ url: '/api/v1/staff/conversations/{conversation_id}/messages', ...options });
@@ -287,19 +339,3 @@ export const getAnalyticsSummaryApiV1StaffAnalyticsSummaryGet = <ThrowOnError ex
  * must not leave the app without a host. The failure then propagates as a 500.
  */
 export const demoResetApiV1AdminDemoResetPost = <ThrowOnError extends boolean = false>(options?: Options<DemoResetApiV1AdminDemoResetPostData, ThrowOnError>): RequestResult<DemoResetApiV1AdminDemoResetPostResponses, unknown, ThrowOnError> => (options?.client ?? client).post<DemoResetApiV1AdminDemoResetPostResponses, unknown, ThrowOnError>({ url: '/api/v1/admin/demo/reset', ...options });
-
-/**
- * Create Test Session
- *
- * Mint a session for `body.customer_id` with no password check (D8),
- * set the same cookies `/auth/login` would, and return the same
- * `MeResponse` body. An unknown customer is `404 not_found`.
- */
-export const createTestSessionApiV1TestIdpSessionsPost = <ThrowOnError extends boolean = false>(options: Options<CreateTestSessionApiV1TestIdpSessionsPostData, ThrowOnError>): RequestResult<CreateTestSessionApiV1TestIdpSessionsPostResponses, CreateTestSessionApiV1TestIdpSessionsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateTestSessionApiV1TestIdpSessionsPostResponses, CreateTestSessionApiV1TestIdpSessionsPostErrors, ThrowOnError>({
-    url: '/api/v1/test-idp/sessions',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});

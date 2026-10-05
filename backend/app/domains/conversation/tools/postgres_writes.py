@@ -30,14 +30,19 @@ ignore edges this module keeps, mirroring `postgres.py`'s existing four).
 """
 
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
+from typing import Literal, cast
 
 from app.core.actions import ActionResult
 from app.domains.cards import service as cards_service
 from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.conversation.tools.postgres import PostgresBank
+from app.domains.conversation.tools.write import PendingCardRequests
+from app.domains.customers.schemas import ProfileField, ProfileValues
 from app.domains.disputes import service as disputes_service
 from app.domains.disputes.schemas import ClaimRow
+from app.domains.safety.vault import PostgresPiiVault
 
 __all__ = ["PostgresBankWrites"]
 
@@ -168,6 +173,122 @@ class PostgresBankWrites:
             readback={"status": "Open", "count": len(written), "at": datetime.now(UTC)},
             case_ids=case_ids,
         )
+
+    async def request_card(
+        self,
+        kind: Literal["credit", "debit"],
+        changed_fields: list[str],
+        *,
+        idempotency_key: str,
+    ) -> ActionResult:
+        """D10: save the staged profile values and create the pending open request
+        in one `cards.service` call, then re-read both (R3). Values come only from
+        the conversation's vault (R5) and never reach the read-back or a log: the
+        read-back carries field names only. `customer_id` is the session's (R1).
+        """
+        vault = PostgresPiiVault(self._ctx.conversation_id)
+        values = await vault.form_values(changed_fields)
+        if set(values) != set(changed_fields):
+            # A field the form never staged: nothing is written (R3).
+            return ActionResult(
+                tool="cards.request_card",
+                status="applied",
+                verified=False,
+                readback={"status": "unknown", "kind": kind, "at": datetime.now(UTC)},
+            )
+        changes = cast("dict[ProfileField, str]", values)
+        view = await cards_service.create_open_request(
+            self._ctx.customer_id,
+            self._ctx.conversation_id,
+            kind,
+            changes,
+            idempotency_key=idempotency_key,
+        )
+        stored, profile = await cards_service.read_back_open_request(view.id)  # re-read (R3)
+        verified = (
+            stored.kind == "open"
+            and stored.status == "pending"
+            and stored.card_kind == kind
+            and stored.reference == view.reference
+            and stored.customer_id == self._ctx.customer_id
+            and all(_profile_matches(profile, field, value) for field, value in changes.items())
+        )
+        return ActionResult(
+            tool="cards.request_card",
+            status="applied",
+            verified=verified,
+            # `ReadbackValue` has no list member: `fields_saved` is comma-joined.
+            readback={
+                "status": "pending" if verified else "unknown",
+                "kind": kind,
+                "fields_saved": ",".join(changed_fields),
+                "request_id": str(stored.id),
+                "at": stored.created_at,
+            },
+            tracking_id=stored.reference,
+        )
+
+    async def request_closure(
+        self, card_id: str, reason: str, *, idempotency_key: str
+    ) -> ActionResult:
+        """Create the pending close request, then re-read it with the card (R3).
+        `create_close_request` does the ownership check (R1: another customer's
+        card raises `AccessDenied`); the read-back is scoped by the request id the
+        write just returned. Balance stays a raw `Decimal` (R4)."""
+        view = await cards_service.create_close_request(
+            self._ctx.customer_id,
+            self._ctx.conversation_id,
+            card_id,
+            reason,
+            idempotency_key=idempotency_key,
+        )
+        stored, card = await cards_service.read_back_close_request(view.id)  # re-read (R3)
+        verified = (
+            stored.kind == "close"
+            and stored.status == "pending"
+            and stored.reference == view.reference
+            and stored.customer_id == self._ctx.customer_id
+            and stored.product_id == card_id
+            and stored.reason_code == reason
+        )
+        return ActionResult(
+            tool="cards.request_closure",
+            status="applied",
+            verified=verified,
+            readback={
+                "status": "pending" if verified else "unknown",
+                "reason": reason,
+                "request_id": str(stored.id),
+                "card_id": card_id,
+                "card_kind": card.kind,
+                "last4": card.last4,
+                "current_balance": card.current_balance,
+                "currency": card.currency,
+                "at": stored.created_at,
+            },
+            tracking_id=stored.reference,
+        )
+
+    async def pending_card_requests(self) -> PendingCardRequests:
+        pending = await cards_service.pending_requests(self._ctx.customer_id)
+        return PendingCardRequests(
+            open_pending=any(r.kind == "open" for r in pending),
+            close_card_ids=frozenset(
+                r.product_id for r in pending if r.kind == "close" and r.product_id
+            ),
+        )
+
+
+def _profile_matches(profile: ProfileValues, field: str, value: str) -> bool:
+    """Whether the re-read profile holds `value` for `field`; income compares as a
+    `Decimal`, the rest as trimmed text (the same normalisation the write used)."""
+    current = getattr(profile, field)
+    if field == "estimated_monthly_income":
+        try:
+            return bool(current == Decimal(value.strip()))
+        except InvalidOperation:
+            return False
+    return bool(current == value.strip())
 
 
 def _claims_match(written: list[ClaimRow], reread: list[ClaimRow]) -> bool:

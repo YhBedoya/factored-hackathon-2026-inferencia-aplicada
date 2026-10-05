@@ -26,14 +26,15 @@ from datetime import date
 from typing import Annotated, Any, Literal, NoReturn
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+import structlog
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.v1.conversations import _sse_stream
 from app.core import events
 from app.core.config import get_settings
-from app.core.errors import NotFound
+from app.core.errors import NotFound, ToolError
 from app.core.llm.registry import MODEL_REGISTRY, STEP_PROVIDER, TEMPERATURE, Step
 from app.core.llm.settings import LLMSettings
 from app.core.telemetry import get_trace_id
@@ -46,7 +47,19 @@ from app.domains.audit.schemas import (
     SystemInfo,
 )
 from app.domains.audit.service import AuditRecorder
+from app.domains.cards import service as cards_service
+from app.domains.cards.schemas import (
+    CardRequestDecision,
+    CardRequestDecisionResult,
+    CardRequestPanel,
+    CardRequestView,
+)
 from app.domains.conversation import store
+from app.domains.conversation.card_request_messages import (
+    announce_decision,
+    cancel_reason_label,
+    render_decision,
+)
 from app.domains.conversation.nodes.compose import _PROMPT as _COMPOSE_PROMPT
 from app.domains.conversation.nodes.handoff_summary import _PROMPT as _HANDOFF_SUMMARY_PROMPT
 from app.domains.conversation.nodes.understand import _PROMPT as _NLU_PROMPT
@@ -57,6 +70,7 @@ from app.domains.conversation.takeover import (
     relay_agent_message,
     return_to_bot,
 )
+from app.domains.customers import service as customers_service
 from app.domains.handoff import service as handoff_service
 from app.domains.handoff.schemas import (
     HandoffDetail,
@@ -70,6 +84,10 @@ from app.domains.identity.models import Session
 from app.domains.policy import registry as policy_registry
 
 __all__ = ["get_any_conversation", "get_claimed_conversation", "router"]
+
+_logger = structlog.get_logger(__name__)
+
+_DECISION_TOOL = "cards.decide_card_request"
 
 router = APIRouter(
     prefix="/staff",
@@ -223,6 +241,16 @@ async def return_handoff(
     # non-claimant can't change anything.
     if not await handoff_service.is_claimed_by(detail.summary.conversation_id, session.account_id):
         raise HTTPException(status_code=409, detail="not_claimant")
+    # A linked card request must be decided before the conversation goes back to
+    # the bot (AS9): the customer is waiting on that answer.
+    block = detail.packet.card_request
+    if block is not None:
+        try:
+            linked = await cards_service.get_request(block.request_id)
+        except NotFound:
+            linked = None
+        if linked is not None and linked.status == "pending":
+            raise HTTPException(status_code=409, detail="request_undecided")
     # Mode first (under the turn lock), then close the handoff: a busy lock
     # leaves everything unchanged and the agent retries.
     try:
@@ -242,6 +270,170 @@ async def return_handoff(
         {"event": "returned", "handoff_id": str(handoff_id), "queue": summary.queue},
     )
     return summary
+
+
+async def _linked_request(detail: HandoffDetail) -> CardRequestView:
+    """The card request this handoff's packet carries, or `404 not_found` when it
+    has none, doesn't exist or belongs to another conversation."""
+    block = detail.packet.card_request
+    if block is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    try:
+        view = await cards_service.get_request(block.request_id)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    if view.conversation_id != detail.summary.conversation_id:
+        raise HTTPException(status_code=404, detail="not_found")
+    return view
+
+
+async def _claimed_handoff(handoff_id: UUID, session: Session) -> HandoffDetail:
+    """The handoff, only for its claimant: `404 not_found` otherwise (R13)."""
+    try:
+        detail = await handoff_service.get_detail(handoff_id)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    if not await handoff_service.is_claimed_by(detail.summary.conversation_id, session.account_id):
+        raise HTTPException(status_code=404, detail="not_found")
+    return detail
+
+
+@router.get("/handoffs/{handoff_id}/card-request")
+async def get_card_request(
+    handoff_id: UUID, session: Annotated[Session, Depends(get_session)]
+) -> CardRequestPanel:
+    detail = await _claimed_handoff(handoff_id, session)
+    view = await _linked_request(detail)
+    language = detail.summary.language
+    panel = await cards_service.build_panel(view.id, language)
+    code = panel.request.reason_code
+    if code is None:
+        return panel
+    # `cards` can't import the wording (it lives in `conversation`), so it is added here.
+    request = panel.request.model_copy(update={"reason_label": cancel_reason_label(code, language)})
+    return panel.model_copy(update={"request": request})
+
+
+def _raise_decision_error(exc: ToolError) -> NoReturn:
+    """Map `decide_request`'s errors to spec §5's codes."""
+    if isinstance(exc, NotFound):
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    if isinstance(exc, cards_service.AlreadyDecided | cards_service.BalanceNotZero):
+        raise HTTPException(status_code=409, detail=exc.code) from exc
+    if isinstance(
+        exc,
+        cards_service.DecisionNotAllowed
+        | cards_service.LimitRequired
+        | cards_service.LimitOutOfBounds
+        | cards_service.DeclineReasonInvalid,
+    ):
+        raise HTTPException(status_code=422, detail=exc.code) from exc
+    raise exc
+
+
+@router.post("/handoffs/{handoff_id}/card-request/decision")
+async def decide_card_request(
+    handoff_id: UUID,
+    body: CardRequestDecision,
+    session: Annotated[Session, Depends(get_session)],
+    idempotency_key: Annotated[UUID, Header(alias="Idempotency-Key")],
+) -> CardRequestDecisionResult:
+    try:
+        detail = await handoff_service.get_detail(handoff_id)
+    except NotFound as exc:
+        raise HTTPException(status_code=404, detail="not_found") from exc
+    # Only the claimant decides (R13): checked before anything can be written.
+    if not await handoff_service.is_claimed_by(detail.summary.conversation_id, session.account_id):
+        raise HTTPException(status_code=409, detail="not_claimant")
+    view = await _linked_request(detail)
+    audit = _audit(session, detail.summary, detail.packet.policy_version)
+
+    async def before_write() -> None:
+        # Fail-closed (D15): if this raises, the transaction rolls back unwritten.
+        await audit.record(
+            "tool_call",
+            {
+                "tool": _DECISION_TOOL,
+                "request_id": str(view.id),
+                "decision": body.decision,
+                "credit_limit": body.credit_limit,
+                "decline_reason": body.decline_reason,
+            },
+        )
+
+    try:
+        outcome = await cards_service.decide_request(
+            view.id,
+            session.account_id,
+            body,
+            decision_key=str(idempotency_key),
+            before_write=before_write,
+        )
+    except ToolError as exc:
+        _raise_decision_error(exc)
+    if outcome.replayed:
+        # Nothing was written, so nothing is audited or announced again (R-c).
+        return CardRequestDecisionResult(request=outcome.request, verified=outcome.verified)
+
+    decided = outcome.request
+    try:
+        await audit.record(
+            "readback",
+            {
+                "tool": _DECISION_TOOL,
+                "verified": outcome.verified,
+                "readback": {
+                    "status": decided.status,
+                    "decision": decided.decision,
+                    "product_id": decided.product_id,
+                },
+            },
+        )
+        await audit.record("tool_result", {"tool": _DECISION_TOOL, "verified": outcome.verified})
+    except Exception:
+        # The write is done: log and carry on rather than fail the click (D15).
+        _logger.warning("audit.write_failed", tool=_DECISION_TOOL, type="readback")
+
+    message_id: UUID | None = None
+    if outcome.verified and decided.decision is not None:
+        message_id = await _announce(detail, decided, session)
+    return CardRequestDecisionResult(
+        request=decided, verified=outcome.verified, message_id=message_id
+    )
+
+
+async def _announce(
+    detail: HandoffDetail, decided: CardRequestView, session: Session
+) -> UUID | None:
+    """Render the decision template in code (R4) and post it as the claimant (R3)."""
+    assert decided.decision is not None
+    language = detail.summary.language
+    profile = await customers_service.get_decision_profile(decided.customer_id)
+    currency = policy_registry.get_policies().card_requests.currency_by_country[profile.country]
+    last4 = ""
+    balance = None
+    credit_limit = decided.credit_limit
+    if decided.product_id is not None:
+        card = await cards_service.get_card_details(decided.customer_id, decided.product_id)
+        last4, balance = card.last4, card.current_balance
+        currency = card.currency
+    text = render_decision(
+        decided.decision,
+        language,
+        last4=last4,
+        currency=currency,
+        country=profile.country,
+        card_kind=decided.card_kind,
+        credit_limit=credit_limit,
+        balance=balance,
+    )
+    return await announce_decision(
+        decided.conversation_id,
+        verified=True,
+        decision=decided.decision,
+        text=text,
+        agent_display_name=await _display_name(session),
+    )
 
 
 @router.get("/conversations/{conversation_id}/messages")

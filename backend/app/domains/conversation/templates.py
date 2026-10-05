@@ -138,6 +138,14 @@ TemplateKind = Literal[
     "priority_flag_repeat_complainer",
     "priority_flag_open_critical",
     "priority_flag_amount_over_threshold",
+    "card_request_approved_debit",
+    "card_request_approved_credit",
+    "card_request_declined",
+    "card_request_cancelled",
+    "card_request_kept",
+    "card_request_not_cancelled_balance",
+    "card_request_not_cancelled_no_balance",
+    "card_request_unavailable",
 ]
 
 # A value is one text, or a list of interchangeable variants (naturalidad-cardy D12):
@@ -1381,6 +1389,85 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
     "priority_flag_amount_over_threshold": {
         "es": "El monto reclamado supera el umbral de prioridad.",
         "pt": "O valor contestado supera o limite de prioridade.",
+    },
+    # D9-C: staff decision messages posted as agent text (`card_request_messages.py`
+    # fills `{card_mask}`, `{credit_limit}`, `{balance}` in code, R4); `unavailable` is Cardy's.
+    "card_request_approved_debit": {
+        "es": (
+            "¡Buenas noticias! Aprobamos tu nueva tarjeta de débito {card_mask}. Ya la puedes"
+            " ver en tu inicio."
+        ),
+        "pt": (
+            "Boas notícias! Aprovamos o seu novo cartão de débito {card_mask}. Ele já aparece"
+            " na sua tela inicial."
+        ),
+    },
+    "card_request_approved_credit": {
+        "es": (
+            "¡Buenas noticias! Aprobamos tu nueva tarjeta de crédito {card_mask} con un cupo "
+            "de {credit_limit}. Ya la puedes ver en tu inicio."
+        ),
+        "pt": (
+            "Boas notícias! Aprovamos o seu novo cartão de crédito {card_mask} com limite de "
+            "{credit_limit}. Ele já aparece na sua tela inicial."
+        ),
+    },
+    "card_request_declined": {
+        "es": (
+            "Revisamos tu solicitud y por ahora no podemos aprobar una nueva tarjeta. Gracias"
+            " por tu interés; puedes volver a intentarlo más adelante."
+        ),
+        "pt": (
+            "Analisamos a sua solicitação e, por enquanto, não podemos aprovar um novo "
+            "cartão. Obrigado pelo interesse; você pode tentar novamente mais adiante."
+        ),
+    },
+    "card_request_cancelled": {
+        "es": ("Listo: cancelamos tu tarjeta {card_mask}. Ya aparece como cerrada en tu inicio."),
+        "pt": (
+            "Pronto: cancelamos o seu cartão {card_mask}. Ele já aparece como encerrado na "
+            "sua tela inicial."
+        ),
+    },
+    "card_request_kept": {
+        "es": (
+            "Tu tarjeta {card_mask} sigue abierta, sin cambios. Gracias por seguir con nosotros."
+        ),
+        "pt": (
+            "O seu cartão {card_mask} continua aberto, sem alterações. Obrigado por continuar"
+            " com a gente."
+        ),
+    },
+    "card_request_not_cancelled_balance": {
+        "es": (
+            "Todavía no podemos cancelar tu tarjeta {card_mask}: tiene un saldo de {balance}."
+            " Cuando esté en cero, escríbenos y la cancelamos."
+        ),
+        "pt": (
+            "Ainda não podemos cancelar o seu cartão {card_mask}: ele tem saldo de {balance}."
+            " Quando estiver zerado, fale com a gente e nós o cancelamos."
+        ),
+    },
+    # Same decision when no balance is on record: no amount, never an invented zero.
+    "card_request_not_cancelled_no_balance": {
+        "es": (
+            "Todavía no podemos cancelar tu tarjeta {card_mask}: no pudimos confirmar su "
+            "saldo. Escríbenos y lo revisamos."
+        ),
+        "pt": (
+            "Ainda não podemos cancelar o seu cartão {card_mask}: não conseguimos confirmar "
+            "o saldo. Fale com a gente e nós verificamos."
+        ),
+    },
+    "card_request_unavailable": {
+        "es": (
+            "En este momento no puedo tramitar solicitudes de tarjetas por aquí. Si quieres, "
+            "te paso con una persona del equipo."
+        ),
+        "pt": (
+            "No momento não consigo tratar pedidos de cartão por aqui. Se quiser, te passo "
+            "para uma pessoa da equipe."
+        ),
     },
     # D12: the handoff happened (row, mode=human, event). `reference` is the
     # already-formatted case reference.

@@ -39,7 +39,7 @@ Country = Literal["MX", "CO", "AR"]
 CardStatus = Literal["Active", "Blocked", "Suspended", "Closed", "Locked"]
 CardKind = Literal["credit", "debit"]
 Language = Literal["es", "pt"]
-Queue = Literal["atencion", "cobranza", "fraudes", "reclamos"]
+Queue = Literal["atencion", "cobranza", "fraudes", "reclamos", "creditos", "retencion"]
 
 # `03` §5: every `bank.*` timestamp is UTC; local display uses the account
 # country's zone, never the server's or the customer's device zone.
@@ -95,12 +95,16 @@ _QUEUE_LABELS: dict[Language, dict[Queue, str]] = {
         "cobranza": "Cobranza",
         "fraudes": "Fraudes",
         "reclamos": "Reclamos",
+        "creditos": "Créditos",
+        "retencion": "Retención",
     },
     "pt": {
         "atencion": "Atendimento",
         "cobranza": "Cobrança",
         "fraudes": "Fraudes",
         "reclamos": "Reclamações",
+        "creditos": "Crédito",
+        "retencion": "Retenção",
     },
 }
 

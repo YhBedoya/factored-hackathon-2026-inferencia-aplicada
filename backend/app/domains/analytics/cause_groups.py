@@ -14,6 +14,8 @@ CAUSE_GROUPS: Final[dict[str, CauseGroup]] = {
     "legal_regulator": "by_design",
     "customer_not_active": "by_design",
     "bank_side_block": "by_design",
+    "card_open_request": "by_design",
+    "card_close_request": "by_design",
     "human_request": "customer_choice",
     "clarification_exhausted": "bot_failure",
     "tool_failure": "bot_failure",

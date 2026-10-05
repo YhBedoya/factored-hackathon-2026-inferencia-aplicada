@@ -33,6 +33,8 @@ async def step_up_failed(state: GraphState, config: RunnableConfig) -> dict[str,
         "escalation_reason": "step_up_failed",
         "agent_plan_steps": None,
         "confirmation_token_id": None,
+        "card_request_kind": None,
+        "profile_changed_fields": None,
         "segments": [get_template("step_up_failed_handoff", language)],
     }
     if pending is not None and pending["flow"] == "agent":
@@ -54,6 +56,8 @@ async def otp_cancel(state: GraphState, config: RunnableConfig) -> dict[str, Any
     update: dict[str, Any] = {
         "pending": None,
         "confirmation_token_id": None,
+        "card_request_kind": None,
+        "profile_changed_fields": None,
         "segments": [get_template("action_cancelled", language)],
     }
     if pending is not None:

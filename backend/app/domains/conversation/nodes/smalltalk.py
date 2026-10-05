@@ -121,6 +121,8 @@ def _close(language: Language) -> dict[str, Any]:
         "clarification_failures": 0,
         "non_answer_failures": 0,
         "confirmation_token_id": None,
+        "card_request_kind": None,
+        "profile_changed_fields": None,
         "closing_suggestion": None,
         # The conversation is over: memory goes with it (naturalidad-cardy D3).
         "history": [],

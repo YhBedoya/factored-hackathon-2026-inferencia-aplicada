@@ -2,7 +2,10 @@
 
 `route` sends here for `injection_suspected` and for a message in neither
 Spanish nor Portuguese (`unsupported_language`), and `_dispatch` sends here for
-any queued card-action intent with no flow yet (P3). `out_of_market` and
+any queued card-action intent with no flow yet (P3). A queued `card_cancel`
+gets the C7 "card requests unavailable" text plus the human chip (D3, D9-C):
+on the pipeline it has no flow, on the agent path it is handled before here.
+`out_of_market` and
 `out_of_scope` go to the `abstain` node (D13). Any other status gets the
 generic `unsupported_intent` text. No LLM call (D14).
 """
@@ -13,6 +16,7 @@ from langchain_core.runnables import RunnableConfig
 
 from app.domains.audit.schemas import NullAuditRecorder
 from app.domains.conversation.graph import GraphState
+from app.domains.conversation.nodes.abstain import card_request_unavailable_reply
 from app.domains.conversation.templates import TemplateKind, get_template
 from app.domains.policy.registry import get_policies
 
@@ -31,6 +35,13 @@ async def unsupported(state: GraphState, config: RunnableConfig) -> dict[str, An
     """
     language = state.get("language", "es")
     nlu = state.get("nlu")
+    queue = state.get("intent_queue") or []
+    if (
+        queue
+        and queue[0] == "card_cancel"
+        and (nlu is None or (nlu.status != "injection_suspected" and nlu.language != "other"))
+    ):
+        return card_request_unavailable_reply(language)
     kind: TemplateKind = "unsupported_intent"
     if nlu is not None:
         kind = _STATUS_TEMPLATES.get(nlu.status, "unsupported_intent")

@@ -156,10 +156,14 @@ async def start_turn(
     conversation_id: UUID,
     trace_id: str,
     text: str | None = None,
-    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None = None,
+    resume: Literal[
+        "step_up", "step_up_cancel", "step_up_failed", "profile_form", "profile_form_cancel"
+    ]
+    | None = None,
     confirmation: ConfirmationDecision | None = None,
     selection: TxSelection | None = None,
     card_selection: CardSelection | None = None,
+    form_changed_fields: list[str] | None = None,
 ) -> UUID:
     """Take the turn lock, persist the customer message (only when `text` is
     set, D6), and schedule the turn task. Exactly one of `text`, `resume`,
@@ -167,6 +171,8 @@ async def start_turn(
     otherwise. `selection` (D4-B D7) and `card_selection` (replacement picker)
     are never persisted as a message, same as `resume` and `confirmation`:
     the route's own D7 gate is the injection guard, not this function.
+    `form_changed_fields` (D9-C I11) is the profile form's changed field *names*
+    only, for a `profile_form` resume; the values never leave the vault (R5).
     Raises `TurnInProgress` (nothing persisted) if the lock is already held.
     """
     if (
@@ -218,6 +224,7 @@ async def start_turn(
             confirmation=confirmation,
             selection=selection,
             card_selection=card_selection,
+            form_changed_fields=form_changed_fields,
             trace_id=trace_id,
         )
     )
@@ -257,7 +264,9 @@ async def checkpointed_offer(
     "is a transaction list actually open", "what ids did it offer" and "how
     many can be picked". Reads `decline` (multi `False`) when
     `pending["flow"] == "decline_explain"`, `tx_offer` (multi `False`, this
-    card's B1) when the flow is `tx_search`, `tx_explain` or `agent`, else `dispute`
+    card's B1) when the flow is `tx_search`, `tx_explain` or `agent` (except the
+    agent's `dispute_pick` pause, which reads `dispute` with multi `True`: every
+    other agent pause keeps `tx_offer` with multi `False`), else `dispute`
     (multi `True`, D4-B's shape) -- none of these flows ever share a
     checkpoint slot (`state.py`'s `DeclineState`/`DisputeState`/
     `TxOfferState`). `(None, set(), True)` on a conversation with no
@@ -269,6 +278,12 @@ async def checkpointed_offer(
         decline: DeclineState | None = state.values.get("decline")
         offered = set(decline["offered_tx_ids"]) if decline is not None else set()
         return pending, offered, False
+    if pending is not None and pending["flow"] == "agent" and pending["node"] == "dispute_pick":
+        # The agent's dispute list is a multi-pick; its offer lives in `dispute`,
+        # never in the request (R1).
+        agent_dispute: DisputeState | None = state.values.get("dispute")
+        offered = set(agent_dispute["offered_tx_ids"]) if agent_dispute is not None else set()
+        return pending, offered, True
     if pending is not None and pending["flow"] in {"tx_search", "tx_explain", "agent"}:
         tx_offer: TxOfferState | None = state.values.get("tx_offer")
         offered = set(tx_offer["offered_tx_ids"]) if tx_offer is not None else set()
@@ -307,6 +322,21 @@ async def checkpointed_otp_pause(
     return "pipeline"
 
 
+async def checkpointed_form_pause(host: TurnHost, conversation_id: UUID) -> bool:
+    """True when the last checkpoint is paused at the agent's profile form (D9-C I11):
+    the gate for `GET`/`POST /profile-form` and for typed text (`409 form_required`).
+    Counts only with `AGENT_ENABLED` on, as `checkpointed_otp_pause` does (S1 D27)."""
+    if not get_settings().agent_enabled:
+        return False
+    state = await host.graph.aget_state({"configurable": {"thread_id": str(conversation_id)}})
+    pending: Pending | None = state.values.get("pending")
+    return (
+        pending is not None
+        and pending["flow"] == "agent"
+        and pending["awaiting_slot"] == "profile_form"
+    )
+
+
 _GROUNDING_RANK = {"ok": 0, "regenerated": 1, "template": 2}
 
 
@@ -337,11 +367,15 @@ async def _run_turn(
     text: str | None,
     graph_text: str | None,
     vault: PiiVault,
-    resume: Literal["step_up", "step_up_cancel", "step_up_failed"] | None,
+    resume: Literal[
+        "step_up", "step_up_cancel", "step_up_failed", "profile_form", "profile_form_cancel"
+    ]
+    | None,
     confirmation: ConfirmationDecision | None,
     selection: TxSelection | None,
     trace_id: str,
     card_selection: CardSelection | None = None,
+    form_changed_fields: list[str] | None = None,
 ) -> None:
     lock_key = f"turn:{conversation_id}"
     # `text` is the raw typed text (relay echo only); the graph gets `graph_text`.
@@ -419,6 +453,7 @@ async def _run_turn(
                 "resume": resume,
                 "selection": selection,
                 "card_selection": card_selection,
+                "form_changed_fields": form_changed_fields,
             }
             seed = await _introduced_seed(host.graph, config, conversation_id)
             if seed.get("introduced"):
@@ -460,6 +495,7 @@ async def _run_turn(
                         "agent",
                         "agent_step_up",
                         "agent_address",
+                        "agent_profile_form",
                         "step_up_failed",
                         "otp_cancel",
                     ):

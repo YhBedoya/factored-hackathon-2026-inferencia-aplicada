@@ -1,4 +1,8 @@
-"""S1 test 8 (R11): the round cap hands off, and an LLM error falls back to the pipeline."""
+"""S1 test 8 (R11): the round cap hands off, and an LLM error falls back to the pipeline.
+
+Answers that fail the checks twice (`LLMInvalidOutput`) pass the turn to the
+pipeline as it is, not degraded: the NLU and the flow still answer it.
+"""
 
 import asyncio
 from pathlib import Path
@@ -7,10 +11,12 @@ from typing import Any
 import pytest
 
 from app.core.db import get_engine
-from app.core.llm import LLMError
+from app.core.llm import LLMError, LLMInvalidOutput
 from app.domains.conversation import runner
 from app.domains.conversation.agent.schema import AgentTurn
+from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.nodes.handoff_summary import HandoffSummaryDraft
+from app.domains.conversation.schemas import NLUResult, NLUSlots
 from app.domains.conversation.templates import get_template
 from app.domains.safety.vault import InMemoryPiiVault
 from tests.conftest import AgentScript, ScriptedLLM, make_session, run_recorded_turn
@@ -89,6 +95,27 @@ def test_round_cap_hands_off_and_llm_error_degrades(
         assert reply_sent["degraded"] is True
         assert reply_sent["path"] == "pipeline"
         assert reply_sent["route"] == "card_info"
+
+        # Two answers that fail the checks: Bedrock is up, so the NLU serves the
+        # turn through the pipeline and nothing is degraded or handed off.
+        llm = ScriptedLLM(
+            {
+                "agent": [AgentScript(rounds=[], finals=[LLMInvalidOutput("bad")])],
+                "nlu": [
+                    NLUResult(
+                        language="es", intents=["card_status"], status="clear", slots=NLUSlots()
+                    )
+                ],
+                "compose": [ComposeDraft(text="Este es el estado de tu tarjeta.")],
+            }
+        )
+        session = make_session(_CUSTOMER, fakebank_dir, llm, classifier=classifier)
+        events = await run_recorded_turn(session, monkeypatch, _TEXT)
+        reply_sent = next(p for t, p in events if t == "reply_sent")
+        assert reply_sent["degraded"] is False
+        assert reply_sent["path"] == "pipeline"
+        assert reply_sent["route"] == "card_info"
+        assert "nlu" in [c.step for c in llm.calls]
 
     async def in_one_loop() -> None:
         try:

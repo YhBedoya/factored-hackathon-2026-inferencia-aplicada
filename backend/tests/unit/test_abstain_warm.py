@@ -1,5 +1,6 @@
-"""Warm abstain (naturalidad-cardy D10, D17): `new_card` is not a replacement and
-carries no human chip; loans / other keep their chips; the fallback is first person."""
+"""Warm abstain (naturalidad-cardy D10, D17): `new_card` answers `card_request_unavailable`
+with the human chip (baseline keeps the old text, D9-C R-d);
+loans / other keep their chips; the fallback is first person."""
 
 import asyncio
 from pathlib import Path
@@ -8,6 +9,7 @@ from typing import Any, Literal
 import pytest
 
 from app.domains.conversation.baseline.keyword_nlu import keyword_nlu
+from app.domains.conversation.baseline.template_compose import baseline_abstain
 from app.domains.conversation.graph import run_turn
 from app.domains.conversation.nodes.compose import ComposeDraft
 from app.domains.conversation.schemas import NLUResult, NLUSlots
@@ -47,8 +49,21 @@ def test_new_card_not_replacement(
     reply, debug, ui = _turn(fakebank_dir, language, "new_card", text, None)
 
     assert debug.route == "abstain"
-    assert reply in template_variants("new_card_not_available", language)
-    assert all(option.label != _HUMAN[language] for event in ui for option in event.payload.options)
+    assert reply in template_variants("card_request_unavailable", language)
+    (event,) = ui
+    assert [option.label for option in event.payload.options] == [_HUMAN[language]]
+    # The baseline (R-d) keeps the old reply and no chip.
+    legacy = asyncio.run(
+        baseline_abstain(
+            {"language": language, "nlu": NLUResult(
+                language=language, intents=["general_question"], status="out_of_scope",
+                slots=NLUSlots(topic="new_card"),
+            )},
+            {},
+        )
+    )  # fmt: skip
+    assert legacy["segments"][0] in template_variants("new_card_not_available", language)
+    assert legacy["ui"] == []
     nlu = keyword_nlu(forced)
     assert nlu.status == "out_of_scope"
     assert nlu.slots.topic == "new_card"

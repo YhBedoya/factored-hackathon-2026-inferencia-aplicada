@@ -393,6 +393,10 @@ def _format_fact(
         # S2 D19: the confirmed replacement's server-issued tracking id,
         # shown verbatim (an opaque reference, not money/date/mask).
         "tracking_id",
+        # S3 D14 e (R4): the server-issued claim reference, shown as it is.
+        "case_id",
+        # D9-C: the closing balance, already formatted by `format_money` in code (R4).
+        "close_balance",
     ):
         return str(value)
     raise ValueError(f"compose: no formatter for fact key {key!r}")

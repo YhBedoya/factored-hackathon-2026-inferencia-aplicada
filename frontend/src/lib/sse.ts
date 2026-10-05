@@ -40,6 +40,13 @@ export type OtpRequiredUiEvent = {
 	payload: OtpRequiredPayload;
 };
 
+/** Opens the profile-form widget; carries no form value (R5). */
+export type ProfileFormPayload = { card_kind: "credit" | "debit" };
+export type ProfileFormUiEvent = {
+	kind: "profile_form";
+	payload: ProfileFormPayload;
+};
+
 export type ConversationClosedUiEvent = {
 	kind: "conversation_closed";
 	payload: Record<string, never>;
@@ -56,7 +63,13 @@ export type TransactionListUiEvent = {
 	payload: TransactionListPayload;
 };
 
-export type Queue = "atencion" | "cobranza" | "fraudes" | "reclamos";
+export type Queue =
+	| "atencion"
+	| "cobranza"
+	| "fraudes"
+	| "reclamos"
+	| "creditos"
+	| "retencion";
 
 /**
  * `reference`, `queue_label` and every `case_ids` entry are code-formatted
@@ -74,12 +87,13 @@ export type HandoffBannerUiEvent = {
 	payload: HandoffBannerPayload;
 };
 
-/** The seven `ui` kinds this card renders (`04` §3). */
+/** The eight `ui` kinds this card renders (`04` §3). */
 export type UiEvent =
 	| CardPickerUiEvent
 	| QuickRepliesUiEvent
 	| ConfirmUiEvent
 	| OtpRequiredUiEvent
+	| ProfileFormUiEvent
 	| ConversationClosedUiEvent
 	| TransactionListUiEvent
 	| HandoffBannerUiEvent;
@@ -105,6 +119,8 @@ export type ConversationStreamHandlers = {
 	onMessage: (payload: MessagePayload) => void;
 	onUi: (event: UiEvent) => void;
 	onMode: (payload: ModePayload) => void;
+	/** `cards_changed {}`: a verified approve/cancel; the home refetches its cards. */
+	onCardsChanged: () => void;
 	onError: (payload: ErrorPayload) => void;
 	onDone: (payload: DonePayload) => void;
 	/** Fires on every drop; `EventSource` reconnects on its own, no replay. */
@@ -161,6 +177,10 @@ export function openConversationStream(
 	});
 	source.addEventListener("mode", (event) => {
 		handlers.onMode(parse<ModePayload>(event));
+	});
+
+	source.addEventListener("cards_changed", () => {
+		handlers.onCardsChanged();
 	});
 
 	source.onopen = () => handlers.onOpen();

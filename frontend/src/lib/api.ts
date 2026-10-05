@@ -11,6 +11,7 @@ import {
 	getCardApiV1MeCardsCardIdGet,
 	getConversationTimelineApiV1StaffConversationsConversationIdTimelineGet,
 	getHandoffApiV1StaffHandoffsHandoffIdGet,
+	getProfileFormApiV1ConversationsConversationIdProfileFormGet,
 	type HandoffDetail,
 	type HandoffSummary,
 	type ListConversationsApiV1StaffConversationsGetData,
@@ -24,8 +25,11 @@ import {
 	logoutApiV1AuthLogoutPost,
 	type MeResponse,
 	meApiV1AuthMeGet,
+	type ProfileFormValues,
+	type ProfileFormView,
 	postConversationMessageApiV1StaffConversationsConversationIdMessagesPost,
 	postMessageApiV1ConversationsConversationIdMessagesPost,
+	postProfileFormApiV1ConversationsConversationIdProfileFormPost,
 	type Rate,
 	type RecentInteraction,
 	refreshApiV1AuthRefreshPost,
@@ -339,6 +343,44 @@ export async function postStepUpCancel(
 			url: "/api/v1/conversations/{conversation_id}/messages",
 			path: { conversation_id: conversationId },
 			body: { resume: "step_up_cancel" },
+		}),
+	);
+	return unwrap(result).turn_id;
+}
+
+// D9-C D11: the profile form. The view and the submitted values are PII (R5):
+// they pass through here and the form's local state only.
+export async function getProfileForm(
+	conversationId: string,
+): Promise<ProfileFormView> {
+	const result = await withAuthRetry(() =>
+		getProfileFormApiV1ConversationsConversationIdProfileFormGet({
+			path: { conversation_id: conversationId },
+		}),
+	);
+	return unwrap(result);
+}
+
+export async function postProfileFormSubmit(
+	conversationId: string,
+	values: ProfileFormValues,
+): Promise<string> {
+	const result = await withAuthRetry(() =>
+		postProfileFormApiV1ConversationsConversationIdProfileFormPost({
+			path: { conversation_id: conversationId },
+			body: { action: "submit", values },
+		}),
+	);
+	return unwrap(result).turn_id;
+}
+
+export async function postProfileFormCancel(
+	conversationId: string,
+): Promise<string> {
+	const result = await withAuthRetry(() =>
+		postProfileFormApiV1ConversationsConversationIdProfileFormPost({
+			path: { conversation_id: conversationId },
+			body: { action: "cancel" },
 		}),
 	);
 	return unwrap(result).turn_id;

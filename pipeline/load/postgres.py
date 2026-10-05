@@ -67,6 +67,8 @@ def copy_all(warehouse_path: str, dsn: str) -> dict[str, int]:
             truncate_targets = [f"bank.{t}" for t in TABLES] + [
                 "identity.accounts",
                 "app.handoffs",
+                "app.card_requests",
+                "app.customer_profile_history",
             ]
             cur.execute("TRUNCATE TABLE " + ", ".join(truncate_targets))
             for table in TABLES:

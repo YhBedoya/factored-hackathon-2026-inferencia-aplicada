@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	type ReactNode,
 	useCallback,
@@ -6,7 +7,7 @@ import {
 	useState,
 } from "react";
 
-import type { MeResponse } from "@/client";
+import type { MeResponse, ProfileFormView } from "@/client";
 import { Composer } from "@/components/chat/Composer";
 import {
 	MessageList,
@@ -14,13 +15,16 @@ import {
 } from "@/components/chat/MessageList";
 import { ModeIndicator } from "@/components/chat/ModeIndicator";
 import { OtpModal } from "@/components/chat/OtpModal";
+import { ProfileForm } from "@/components/chat/ProfileForm";
 import { SessionExpiredModal } from "@/components/chat/SessionExpiredModal";
+import { CARDS_KEY } from "@/components/home/queries";
 import { Button } from "@/components/ui/button";
 import {
 	ApiError,
 	type ConfirmationDecision,
 	conversationStore,
 	createConversation,
+	getProfileForm,
 	me,
 	postCardSelection,
 	postConfirmation,
@@ -45,6 +49,7 @@ const KNOWN_ERROR_CODES = new Set([
 	"otp_invalid",
 	"confirmation_invalid",
 	"selection_required",
+	"form_required",
 ]);
 
 // D12: 429 and 5xx are mapped by HTTP status, ahead of the `code` (detail)
@@ -86,6 +91,7 @@ export function ChatView({
 	onReply,
 }: ChatViewProps) {
 	const { t, lang } = useI18n();
+	const queryClient = useQueryClient();
 	const conversationIdRef = useRef<string | null>(
 		fresh ? null : conversationStore.get(),
 	);
@@ -106,6 +112,12 @@ export function ChatView({
 	const [errorStatus, setErrorStatus] = useState<number | null>(null);
 	const [closed, setClosed] = useState(false);
 	const [otpTool, setOtpTool] = useState<string | null>(null);
+	// The open profile form (`ui.profile_form`, D11): only the card kind lives
+	// here. The form's values stay in `ProfileForm`'s own state (R5).
+	// Set by the mount probe, so the form does not fetch its view twice.
+	const [formView, setFormView] = useState<ProfileFormView | null>(null);
+	const lastFormKindRef = useRef<"credit" | "debit">("credit");
+	const [formKind, setFormKind] = useState<"credit" | "debit" | null>(null);
 	const [mode, setMode] = useState<ModePayload>({
 		mode: "bot",
 		agent_display_name: null,
@@ -128,63 +140,74 @@ export function ChatView({
 			(e) => e.kind === "card_picker" && e.payload.multi === true,
 		);
 
-	const connectStream = useCallback((id: string) => {
-		streamCleanupRef.current?.();
-		streamCleanupRef.current = openConversationStream(id, {
-			onStatus: () => setTyping(true),
-			onMessage: (payload) => {
-				setTyping(false);
-				// In human mode the server relays the customer's own text back
-				// for the agent (`04` §3); it is already in the list.
-				if (payload.role === "customer") {
-					return;
-				}
-				onReplyRef.current?.();
-				if (payload.role !== "bot") {
-					// An agent reply, or the fixed system line on return to bot.
+	const connectStream = useCallback(
+		(id: string) => {
+			streamCleanupRef.current?.();
+			streamCleanupRef.current = openConversationStream(id, {
+				onStatus: () => setTyping(true),
+				onMessage: (payload) => {
+					setTyping(false);
+					// In human mode the server relays the customer's own text back
+					// for the agent (`04` §3); it is already in the list.
+					if (payload.role === "customer") {
+						return;
+					}
+					onReplyRef.current?.();
+					if (payload.role !== "bot") {
+						// An agent reply, or the fixed system line on return to bot.
+						setMessages((prev) => [
+							...prev,
+							{
+								id: newId(),
+								role: payload.role,
+								text: payload.text,
+								author: payload.agent_display_name ?? null,
+								ui: [],
+							},
+						]);
+						return;
+					}
+					const ui = pendingUiRef.current;
+					pendingUiRef.current = [];
 					setMessages((prev) => [
 						...prev,
-						{
-							id: newId(),
-							role: payload.role,
-							text: payload.text,
-							author: payload.agent_display_name ?? null,
-							ui: [],
-						},
+						{ id: newId(), role: "bot", text: payload.text, ui },
 					]);
-					return;
-				}
-				const ui = pendingUiRef.current;
-				pendingUiRef.current = [];
-				setMessages((prev) => [
-					...prev,
-					{ id: newId(), role: "bot", text: payload.text, ui },
-				]);
-			},
-			onUi: (event) => {
-				pendingUiRef.current = [...pendingUiRef.current, event];
-				if (event.kind === "otp_required") {
-					setOtpTool(event.payload.tool);
-				} else if (event.kind === "conversation_closed") {
-					setClosed(true);
-				}
-			},
-			onMode: (payload) => setMode(payload),
-			onError: (payload) => {
-				setTyping(false);
-				// SSE `error {code}` carries no HTTP status (`04` §3); only
-				// `turn_failed` reaches here today, already in `KNOWN_ERROR_CODES`.
-				setErrorCode(payload.code);
-				setErrorStatus(null);
-			},
-			onDone: () => {
-				setTyping(false);
-				setComposerDisabled(false);
-			},
-			onReconnecting: () => setReconnecting(true),
-			onOpen: () => setReconnecting(false),
-		});
-	}, []);
+				},
+				onUi: (event) => {
+					pendingUiRef.current = [...pendingUiRef.current, event];
+					if (event.kind === "otp_required") {
+						setOtpTool(event.payload.tool);
+					} else if (event.kind === "profile_form") {
+						lastFormKindRef.current = event.payload.card_kind;
+						setFormKind(event.payload.card_kind);
+					} else if (event.kind === "conversation_closed") {
+						setClosed(true);
+					}
+				},
+				onMode: (payload) => setMode(payload),
+				// `cards_changed` (D9-C AS10): the home card list and every card detail are stale.
+				onCardsChanged: () => {
+					queryClient.invalidateQueries({ queryKey: CARDS_KEY });
+					queryClient.invalidateQueries({ queryKey: ["home", "card"] });
+				},
+				onError: (payload) => {
+					setTyping(false);
+					// SSE `error {code}` carries no HTTP status (`04` §3); only
+					// `turn_failed` reaches here today, already in `KNOWN_ERROR_CODES`.
+					setErrorCode(payload.code);
+					setErrorStatus(null);
+				},
+				onDone: () => {
+					setTyping(false);
+					setComposerDisabled(false);
+				},
+				onReconnecting: () => setReconnecting(true),
+				onOpen: () => setReconnecting(false),
+			});
+		},
+		[queryClient],
+	);
 
 	const declinedOnMountRef = useRef(false);
 	const createRef = useRef<Promise<string> | null>(null);
@@ -238,6 +261,16 @@ export function ChatView({
 				// D16: a reload loses an open agent OTP modal, so the pause is
 				// cancelled once. Chained after the picker decline so the two
 				// posts never race for the same turn; any 409 is ignored.
+				// D11: a reload keeps a pending profile-form pause, so it is
+				// re-opened. The GET answers only while the pause is pending
+				// (`409 form_not_open` otherwise, ignored): nothing to restore.
+				getProfileForm(mountId)
+					.then((view) => {
+						lastFormKindRef.current = view.card_kind ?? "credit";
+						setFormView(view);
+						setFormKind(view.card_kind ?? "credit");
+					})
+					.catch(() => {});
 				postCardSelection(mountId, [])
 					.catch(() => {})
 					.then(() => postStepUpCancel(mountId))
@@ -304,6 +337,24 @@ export function ChatView({
 				setMessages((prev) => prev.filter((m) => m.id !== typedBubbleId));
 			}
 			setOtpTool((prev) => prev ?? "agent");
+			return;
+		}
+		if (
+			err instanceof ApiError &&
+			err.status === 409 &&
+			err.code === "form_required"
+		) {
+			// Typed text at the form pause is refused (D11): drop the bubble and
+			// re-open the form (a reload lost it); the pause itself is kept.
+			if (typedBubbleId) {
+				setMessages((prev) => prev.filter((m) => m.id !== typedBubbleId));
+			}
+			setComposerDisabled(false);
+			// Fallback re-open: the form's own GET sets the title kind; until it
+			// answers, use the last kind seen.
+			setFormKind((prev) => prev ?? lastFormKindRef.current);
+			setErrorCode("form_required");
+			setErrorStatus(409);
 			return;
 		}
 		if (err instanceof ApiError && err.code === "session_replay_dropped") {
@@ -410,6 +461,14 @@ export function ChatView({
 		}
 	}
 
+	// Send and Cancel both close the form; the resumed turn's events follow on
+	// the stream, so the composer stays off until `done`.
+	function handleFormClosed() {
+		setFormKind(null);
+		setFormView(null);
+		setComposerDisabled(true);
+	}
+
 	function handleNewConversation() {
 		streamCleanupRef.current?.();
 		streamCleanupRef.current = null;
@@ -423,6 +482,8 @@ export function ChatView({
 		setComposerDisabled(false);
 		setTyping(false);
 		setOtpTool(null);
+		setFormKind(null);
+		setFormView(null);
 		setMode({ mode: "bot", agent_display_name: null });
 		startConversation(true).catch(() => {
 			// The lazy `ensureConversation` retries on the first send.
@@ -499,6 +560,14 @@ export function ChatView({
 					onHandoff={handleOtpHandoff}
 				/>
 			)}
+			{formKind && conversationId && (
+				<ProfileForm
+					conversationId={conversationId}
+					cardKind={formKind}
+					initialView={formView ?? undefined}
+					onClosed={handleFormClosed}
+				/>
+			)}
 			<SessionExpiredModal
 				open={sessionExpiredOpen}
 				identity={identity}
@@ -506,7 +575,9 @@ export function ChatView({
 				onMismatch={handleSessionMismatch}
 			/>
 			<Composer
-				disabled={composerDisabled || closed || pickerOpen || !!otpTool}
+				disabled={
+					composerDisabled || closed || pickerOpen || !!otpTool || !!formKind
+				}
 				onSend={handleSend}
 				prefill={prefill}
 			/>
