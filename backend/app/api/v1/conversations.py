@@ -461,15 +461,26 @@ async def _sse_stream(stream: AsyncIterator[tuple[str, Any]]) -> AsyncIterator[s
     """
 
     yield ": connected\n\n"
-    while True:
-        try:
-            event, data = await asyncio.wait_for(anext(stream), timeout=_PING_INTERVAL_SECONDS)
-        except TimeoutError:
-            yield ": ping\n\n"
-            continue
-        except StopAsyncIteration:
-            return
-        yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+    # One read stays pending across pings: cancelling it on a timeout would close
+    # `stream`, end the response and drop whatever is published before the reconnect.
+    pending: asyncio.Task[tuple[str, Any]] | None = None
+    try:
+        while True:
+            if pending is None:
+                pending = asyncio.ensure_future(anext(stream))
+            done, _ = await asyncio.wait({pending}, timeout=_PING_INTERVAL_SECONDS)
+            if not done:
+                yield ": ping\n\n"
+                continue
+            finished, pending = pending, None
+            try:
+                event, data = finished.result()
+            except StopAsyncIteration:
+                return
+            yield f"event: {event}\ndata: {json.dumps(data)}\n\n"
+    finally:
+        if pending is not None:
+            pending.cancel()
 
 
 @router.get("/{conversation_id}/stream")
