@@ -10,7 +10,14 @@ from dataclasses import dataclass
 
 from app.domains.conversation.state import HistoryMessage
 
-__all__ = ["WINDOW", "ConversationContext", "HistoryMessage", "build_context", "redact_values"]
+__all__ = [
+    "WINDOW",
+    "ConversationContext",
+    "HistoryMessage",
+    "build_context",
+    "redact_values",
+    "speaker",
+]
 
 WINDOW = 6
 _MARKER = "⟨valor⟩"
@@ -32,6 +39,14 @@ class ConversationContext:
 def build_context(history: list[HistoryMessage], summary: str | None) -> ConversationContext:
     """The last `WINDOW` messages plus the summary of the older ones."""
     return ConversationContext(messages=list(history[-WINDOW:]), summary=summary)
+
+
+_SPEAKERS = {"customer": "cliente", "cardy": "cardy", "agent": "asesor"}
+
+
+def speaker(message: HistoryMessage) -> str:
+    """The prompt label for a history message's author."""
+    return _SPEAKERS[message["role"]]
 
 
 def redact_values(text: str) -> str:

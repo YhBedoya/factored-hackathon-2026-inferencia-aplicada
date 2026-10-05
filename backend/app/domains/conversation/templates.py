@@ -146,6 +146,14 @@ TemplateKind = Literal[
     "card_request_not_cancelled_balance",
     "card_request_not_cancelled_no_balance",
     "card_request_unavailable",
+    "card_request_status_pending",
+    "card_request_status_approved",
+    "card_request_status_declined",
+    "card_request_status_cancelled",
+    "card_request_status_kept",
+    "card_request_status_not_cancelled",
+    "card_request_kind_open",
+    "card_request_kind_close",
 ]
 
 # A value is one text, or a list of interchangeable variants (naturalidad-cardy D12):
@@ -1469,6 +1477,25 @@ _TEMPLATES: dict[TemplateKind, dict[Language, str | list[str]]] = {
             "para uma pessoa da equipe."
         ),
     },
+    # `card_request_status`'s labels (R4): code picks one per request's status
+    # and decision; never a decline reason (staff-only, `card_requests.yaml`).
+    "card_request_status_pending": {"es": "en revisión", "pt": "em análise"},
+    "card_request_status_approved": {"es": "aprobada", "pt": "aprovada"},
+    "card_request_status_declined": {"es": "no aprobada", "pt": "não aprovada"},
+    "card_request_status_cancelled": {
+        "es": "aprobada: la tarjeta quedó cerrada",
+        "pt": "aprovada: o cartão foi encerrado",
+    },
+    "card_request_status_kept": {
+        "es": "sin cambios: la tarjeta sigue abierta",
+        "pt": "sem mudanças: o cartão continua ativo",
+    },
+    "card_request_status_not_cancelled": {
+        "es": "no se pudo cerrar la tarjeta todavía",
+        "pt": "ainda não foi possível encerrar o cartão",
+    },
+    "card_request_kind_open": {"es": "nueva tarjeta", "pt": "novo cartão"},
+    "card_request_kind_close": {"es": "cierre de tarjeta", "pt": "encerramento de cartão"},
     # D12: the handoff happened (row, mode=human, event). `reference` is the
     # already-formatted case reference.
     "handoff_transfer": {

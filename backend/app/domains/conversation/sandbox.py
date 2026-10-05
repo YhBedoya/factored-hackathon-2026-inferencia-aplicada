@@ -42,7 +42,14 @@ from app.core.config import get_settings
 from app.core.llm import LLMClient, get_llm_client
 from app.core.pii import KnownPii
 from app.domains.audit.schemas import NullAuditRecorder
-from app.domains.cards.schemas import AddressRef, BlockOrigin, BlockReason, CardDetails, CardSummary
+from app.domains.cards.schemas import (
+    AddressRef,
+    BlockOrigin,
+    BlockReason,
+    CardDetails,
+    CardSummary,
+    CustomerCardRequest,
+)
 from app.domains.conversation.graph import (
     ConfirmationDecision,
     GraphState,
@@ -115,6 +122,10 @@ class _RecordingBankTools:
     async def get_priority_signals(self) -> PrioritySignals:
         self.calls.append("get_priority_signals")
         return await self._inner.get_priority_signals()
+
+    async def get_card_requests(self) -> list[CustomerCardRequest]:
+        self.calls.append("get_card_requests")
+        return await self._inner.get_card_requests()
 
     async def get_pii_profile(self) -> KnownPii:
         # Not recorded: the masking step reads it, not an LLM node (D34).

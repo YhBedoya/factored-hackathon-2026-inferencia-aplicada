@@ -10,7 +10,7 @@ from collections.abc import Callable
 from typing import Protocol
 
 from app.core.pii import KnownPii
-from app.domains.cards.schemas import CardDetails, CardSummary
+from app.domains.cards.schemas import CardDetails, CardSummary, CustomerCardRequest
 from app.domains.conversation.tools.context import ToolContext
 from app.domains.customers.schemas import CustomerProfile
 from app.domains.disputes.schemas import PrioritySignals
@@ -62,6 +62,11 @@ class BankReadTools(Protocol):
     async def get_priority_signals(self) -> PrioritySignals:
         # Registry name: disputes.get_priority_signals. No arguments: bound
         # to this session's customer_id only (R1). May raise: ToolUnavailable.
+        ...
+
+    async def get_card_requests(self) -> list[CustomerCardRequest]:
+        # Registry name: cards.get_card_requests. The session customer's latest
+        # requests, newest first; no staff-only field (R1). May raise: ToolUnavailable.
         ...
 
     async def get_pii_profile(self) -> KnownPii:
