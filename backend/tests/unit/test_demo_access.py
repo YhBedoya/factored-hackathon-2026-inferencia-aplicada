@@ -1,9 +1,11 @@
 """Judges' quick access (ADR-036): the routes exist only behind
 `DEMO_QUICK_LOGIN`, take no `customer_id` (R1), refuse any persona outside
-the demo catalog, and the staff door opens only the seeded admin.
+the demo catalog, the staff door opens only the seeded admin, and every
+route needs `DEMO_ACCESS_CODE`, with wrong codes rate-limited.
 
 No DB, Redis or LLM: the catalog checks read the repo's YAML files, the
-route test fails before any query, and the staff session uses a fake store.
+route tests fail before any query, the staff session uses a fake store, and
+the access-code checks use a fake limiter.
 """
 
 import asyncio
@@ -22,8 +24,12 @@ from app.domains.identity import demo_access
 from app.domains.identity import service as identity_service
 from app.domains.identity.passwords import hash_password, staff_login_key
 from app.domains.identity.repository import AccountRow
-from app.domains.identity.service import InvalidCredentials, mint_session_for_staff
-from app.main import create_app
+from app.domains.identity.service import (
+    InvalidCredentials,
+    TooManyAttempts,
+    mint_session_for_staff,
+)
+from app.main import _require_demo_code_in_prod, create_app
 
 _REPO = Path(__file__).resolve().parents[3]
 _SETTINGS = Settings(identity_hmac_key="k" * 32, _env_file=None)
@@ -33,6 +39,7 @@ _SETTINGS = Settings(identity_hmac_key="k" * 32, _env_file=None)
 def demo_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[pytest.MonkeyPatch]:
     monkeypatch.setenv("APP_ENV", "dev")
     monkeypatch.setenv("DEMO_QUICK_LOGIN", "true")
+    monkeypatch.setenv("DEMO_ACCESS_CODE", "")  # no gate unless a test sets one
     monkeypatch.setenv("PERSONAS_PATH", str(_REPO / "eval" / "personas.yaml"))
     monkeypatch.setenv("DEMO_PERSONAS_PATH", str(_REPO / "eval" / "demo_personas.yaml"))
     get_settings.cache_clear()
@@ -138,3 +145,64 @@ def test_staff_session_refuses_customer_account(monkeypatch: pytest.MonkeyPatch)
         asyncio.run(
             mint_session_for_staff("admin", store=_FakeStaffStore("customer"), settings=_SETTINGS)
         )
+
+
+class _FakeLimiter:
+    def __init__(self, failures: int = 0) -> None:
+        self.failures = failures
+
+    async def get_failures(self, key: str) -> int:
+        assert key == "rl:demo:203.0.113.7"
+        return self.failures
+
+    async def record_failure(self, key: str, *, window_seconds: int) -> None:
+        self.failures += 1
+
+    async def reset(self, key: str) -> None:
+        self.failures = 0
+
+
+_CODE_SETTINGS = Settings(demo_access_code="swip-k7qm", _env_file=None)
+
+
+def _check(code: str | None, limiter: _FakeLimiter) -> None:
+    asyncio.run(
+        demo_access.check_access_code(code, "203.0.113.7", limiter=limiter, settings=_CODE_SETTINGS)
+    )
+
+
+def test_routes_need_the_access_code(demo_env: pytest.MonkeyPatch) -> None:
+    demo_env.setenv("DEMO_ACCESS_CODE", "swip-k7qm")
+    get_settings.cache_clear()
+    client = TestClient(create_app())
+    for method, path in (
+        ("get", "/api/v1/demo/catalog"),
+        ("post", "/api/v1/demo/sessions/customer"),
+        ("post", "/api/v1/demo/sessions/staff"),
+    ):
+        response = getattr(client, method)(path)
+        assert response.status_code == 401
+        assert response.json() == {"detail": "demo_code_required"}
+        assert "session" not in response.cookies
+
+
+def test_wrong_code_counts_and_throttles(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(demo_access, "_logger", structlog.get_logger())
+    limiter = _FakeLimiter()
+    _check(" SWIP-K7QM ", limiter)  # case and stray spaces don't matter
+    with pytest.raises(demo_access.DemoCodeRequired):
+        _check(None, limiter)
+    assert limiter.failures == 0  # a missing code is not a guess
+    with pytest.raises(demo_access.DemoCodeInvalid):
+        _check("swip-aaaa", limiter)
+    assert limiter.failures == 1
+    limiter.failures = _CODE_SETTINGS.login_max_failures
+    with pytest.raises(TooManyAttempts):
+        _check("swip-k7qm", limiter)  # throttled even with the right code
+
+
+def test_prod_refuses_quick_access_without_code() -> None:
+    with pytest.raises(RuntimeError, match="DEMO_ACCESS_CODE"):
+        _require_demo_code_in_prod(demo_quick_login=True, demo_access_code=" ", app_env="prod")
+    _require_demo_code_in_prod(demo_quick_login=True, demo_access_code="", app_env="dev")
+    _require_demo_code_in_prod(demo_quick_login=False, demo_access_code="", app_env="prod")

@@ -23,7 +23,9 @@ clears `get_settings`'s cache between two `create_app()` calls must see the
 route appear and disappear, not just once at import time. It is
 `include_router`ed under the same `/api/v1` prefix as `api_router`, same as
 every other router. `demo_access.router` (ADR-036) follows the same
-pattern, gated on `DEMO_QUICK_LOGIN` instead of `APP_ENV`.
+pattern, gated on `DEMO_QUICK_LOGIN` instead of `APP_ENV`; under
+`APP_ENV=prod` the lifespan refuses to start with that flag on and an empty
+`DEMO_ACCESS_CODE`.
 """
 
 from collections.abc import AsyncIterator
@@ -90,6 +92,19 @@ def _refuse_faults_in_prod(*, faults: frozenset[str], app_env: str) -> None:
         raise RuntimeError("refusing to start: FAULTS is set under APP_ENV=prod")
 
 
+def _require_demo_code_in_prod(
+    *, demo_quick_login: bool, demo_access_code: str, app_env: str
+) -> None:
+    """Refuse to start with the judges' quick access open to anyone (ADR-036):
+    under `APP_ENV=prod`, `DEMO_QUICK_LOGIN` needs a `DEMO_ACCESS_CODE`.
+    """
+    if demo_quick_login and not demo_access_code.strip() and app_env == "prod":
+        raise RuntimeError(
+            "refusing to start: DEMO_QUICK_LOGIN is on under APP_ENV=prod with an empty "
+            "DEMO_ACCESS_CODE"
+        )
+
+
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """FastAPI's usual `422 {"detail": [...]}` shape, but every error item
     keeps only `type`/`loc`/`msg` (D2): a request body that fails validation
@@ -114,6 +129,11 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     _require_eval_for_baseline(agent_system=settings.agent_system, app_env=settings.app_env)
     _refuse_faults_in_prod(faults=settings.faults, app_env=settings.app_env)
+    _require_demo_code_in_prod(
+        demo_quick_login=settings.demo_quick_login,
+        demo_access_code=settings.demo_access_code,
+        app_env=settings.app_env,
+    )
     # Fails the whole startup on a header-less or malformed policy file (D1);
     # the combined hash below is what every audit event's `policy_version`
     # carries for the rest of the process's life (D2).

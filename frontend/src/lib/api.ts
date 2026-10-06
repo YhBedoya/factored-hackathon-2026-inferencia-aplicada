@@ -618,13 +618,69 @@ export type DemoCatalog = {
 	links: { repo: string | null; docs: string | null };
 };
 
+// Every `/demo/*` call needs the judges' access code (`DEMO_ACCESS_CODE`)
+// in this header. It is kept for the tab only, and every
+// storage access is guarded: private windows can throw.
+const DEMO_CODE_HEADER = "X-Demo-Access-Code";
+const DEMO_CODE_STORAGE_KEY = "swip.demo-access-code";
+
+export function getDemoCode(): string | null {
+	try {
+		return window.sessionStorage.getItem(DEMO_CODE_STORAGE_KEY);
+	} catch {
+		return null;
+	}
+}
+
+export function setDemoCode(code: string): void {
+	try {
+		window.sessionStorage.setItem(DEMO_CODE_STORAGE_KEY, code.trim());
+	} catch {
+		// Not stored: the next catalog call asks again.
+	}
+}
+
+export function clearDemoCode(): void {
+	try {
+		window.sessionStorage.removeItem(DEMO_CODE_STORAGE_KEY);
+	} catch {
+		// Nothing stored to clear.
+	}
+}
+
+function demoHeaders(): Record<string, string> {
+	const code = getDemoCode();
+	return code ? { [DEMO_CODE_HEADER]: code } : {};
+}
+
+// Quick access is on but this tab has no valid code yet: `required` (none
+// sent), `invalid` (wrong code) or `throttled` (too many wrong codes).
+export type DemoLocked = {
+	locked: true;
+	reason: "required" | "invalid" | "throttled";
+};
+
 // `null` when the quick access is off (the route is a 404).
-export async function getDemoCatalog(): Promise<DemoCatalog | null> {
+export async function getDemoCatalog(): Promise<
+	DemoCatalog | DemoLocked | null
+> {
 	const result = await client.get<{ 200: DemoCatalog }, unknown>({
 		url: "/api/v1/demo/catalog",
+		headers: demoHeaders(),
 	});
-	if (statusOf(result) === 404) {
+	const status = statusOf(result);
+	if (status === 404) {
 		return null;
+	}
+	if (status === 429) {
+		return { locked: true, reason: "throttled" };
+	}
+	if (status === 401) {
+		const invalid = errorCode(result.error) === "demo_code_invalid";
+		if (invalid) {
+			clearDemoCode(); // never resend a code the server already refused
+		}
+		return { locked: true, reason: invalid ? "invalid" : "required" };
 	}
 	return unwrap(result);
 }
@@ -635,6 +691,7 @@ export async function demoLoginCustomer(
 	const result = await client.post<{ 200: MeResponse }, unknown>({
 		url: "/api/v1/demo/sessions/customer",
 		body: { persona_id: personaId },
+		headers: demoHeaders(),
 	});
 	return unwrap(result);
 }
@@ -642,6 +699,7 @@ export async function demoLoginCustomer(
 export async function demoLoginStaff(): Promise<StaffMeResponse> {
 	const result = await client.post<{ 200: StaffMeResponse }, unknown>({
 		url: "/api/v1/demo/sessions/staff",
+		headers: demoHeaders(),
 	});
 	return unwrap(result);
 }
