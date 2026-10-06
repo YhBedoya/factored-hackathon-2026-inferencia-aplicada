@@ -23,12 +23,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
 	type DemoChip,
+	type DemoLocked,
 	type DemoPersona,
 	demoLoginCustomer,
 	demoLoginStaff,
 	getDemoCatalog,
+	setDemoCode,
 } from "@/lib/api";
 import { type TKey, useI18n } from "@/lib/i18n";
 
@@ -38,8 +42,10 @@ const DEMO_CATALOG_QUERY_KEY = ["demo-catalog"] as const;
  * ADR-036: the judges' quick access, top-left on the landing. The button only
  * renders when `GET /demo/catalog` answers (the backend runs with
  * `DEMO_QUICK_LOGIN=true`); otherwise the route is a 404 and nothing shows.
- * The panel logs in as a curated demo persona (lands on `/home`) or as the
- * seeded admin (lands on `/staff`) without any password reaching the browser.
+ * Until this tab has sent the right access code (emailed to the judges) the
+ * catalog is locked and the panel asks for it; then it logs in as a curated
+ * demo persona (lands on `/home`) or as the seeded admin (lands on `/staff`)
+ * without any password reaching the browser.
  */
 export function DemoAccessMenu() {
 	const { t } = useI18n();
@@ -73,20 +79,96 @@ export function DemoAccessMenu() {
 					data-testid="demo-access-dialog"
 					className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
 				>
-					<DialogHeader>
-						<DialogTitle>{t("landing.demo.title")}</DialogTitle>
-						<DialogDescription>{t("landing.demo.intro")}</DialogDescription>
-					</DialogHeader>
-					<CustomerSection personas={catalog.data.personas} />
-					<StaffSection />
-					<ExtrasSection
-						otpCode={catalog.data.otp_code}
-						repo={catalog.data.links.repo}
-						docs={catalog.data.links.docs}
-					/>
+					{"locked" in catalog.data ? (
+						<CodeForm
+							reason={catalog.data.reason}
+							onSubmit={async (code) => {
+								setDemoCode(code);
+								await catalog.refetch();
+							}}
+						/>
+					) : (
+						<>
+							<DialogHeader>
+								<DialogTitle>{t("landing.demo.title")}</DialogTitle>
+								<DialogDescription>{t("landing.demo.intro")}</DialogDescription>
+							</DialogHeader>
+							<CustomerSection personas={catalog.data.personas} />
+							<StaffSection />
+							<ExtrasSection
+								otpCode={catalog.data.otp_code}
+								repo={catalog.data.links.repo}
+								docs={catalog.data.links.docs}
+							/>
+						</>
+					)}
 				</DialogContent>
 			</Dialog>
 		</>
+	);
+}
+
+// The gate in front of the panel: one field for the judges' access code.
+function CodeForm({
+	reason,
+	onSubmit,
+}: {
+	reason: DemoLocked["reason"];
+	onSubmit: (code: string) => Promise<void>;
+}) {
+	const { t } = useI18n();
+	const [code, setCode] = useState("");
+	const [pending, setPending] = useState(false);
+
+	async function handleSubmit(event: React.FormEvent) {
+		event.preventDefault();
+		setPending(true);
+		try {
+			await onSubmit(code);
+		} finally {
+			setPending(false);
+		}
+	}
+
+	return (
+		<form
+			onSubmit={handleSubmit}
+			className="flex flex-col gap-3"
+			data-testid="demo-code-form"
+		>
+			<DialogHeader>
+				<DialogTitle>{t("landing.demo.title")}</DialogTitle>
+				<DialogDescription>{t("landing.demo.code.hint")}</DialogDescription>
+			</DialogHeader>
+			<Label htmlFor="demo-code">{t("landing.demo.code.label")}</Label>
+			<Input
+				id="demo-code"
+				type="text"
+				autoComplete="off"
+				autoCapitalize="none"
+				spellCheck={false}
+				placeholder={t("landing.demo.code.placeholder")}
+				value={code}
+				onChange={(event) => setCode(event.target.value)}
+				data-testid="demo-code-input"
+			/>
+			{reason !== "required" && (
+				<p role="alert" className="text-destructive text-xs">
+					{t(
+						reason === "throttled"
+							? "landing.demo.code.throttled"
+							: "landing.demo.code.invalid",
+					)}
+				</p>
+			)}
+			<Button
+				type="submit"
+				disabled={!code.trim() || pending}
+				data-testid="demo-code-submit"
+			>
+				{t("landing.demo.code.submit")}
+			</Button>
+		</form>
 	);
 }
 

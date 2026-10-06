@@ -707,7 +707,7 @@ All routes are under `/api/v1`. Roles are enforced with router-level dependencie
 | Staff | `POST /auth/staff/login`, `GET /staff/handoffs`, `…/stream`, `…/{id}`, `…/claim`, `…/return`, staff chat + stream | agent, admin |
 | Traceability | `GET /staff/conversations`, `GET /staff/conversations/{id}/timeline`, `GET /staff/system` | agent, admin |
 | Admin | `GET /staff/analytics/summary`, `GET /staff/personas…`, `POST /admin/demo/reset` (gated by `DEMO_RESET_ENABLED`) | admin |
-| Judges | `GET /demo/catalog`, `POST /demo/sessions/customer`, `/staff` (only when `DEMO_QUICK_LOGIN`) | public |
+| Judges | `GET /demo/catalog`, `POST /demo/sessions/customer`, `/staff` (only when `DEMO_QUICK_LOGIN`) | access code (`X-Demo-Access-Code`) |
 | Eval | `POST /test-idp/sessions` (only when `APP_ENV=eval`) | eval |
 
 **SSE events:** `status {step}` · `message {role, text, sources}` · `ui {card_picker | confirm | transaction_list | otp_required | handoff_banner | quick_replies | conversation_closed}` · `mode {bot | human}` · `error {code}` · `done {turn_id}` · `debug` (non-prod only).
@@ -1500,7 +1500,7 @@ Prerequisites, `.env` setup and troubleshooting are in [`README.md`](README.md).
 
 ### 8.2 Judges' quick access
 
-When `DEMO_QUICK_LOGIN=true` (judging window only), the landing page lists 10 curated demo personas (`eval/demo_personas.yaml`) with their country, cards, what to try, and suggested prompts in ES and PT. One click opens a customer session; another opens the admin staff console. The demo OTP is shown on the landing page.
+When `DEMO_QUICK_LOGIN=true` (judging window only), the "Acceso evaluadores" button first asks for the access code from the judges' email (`DEMO_ACCESS_CODE`); five wrong codes lock that IP out for 15 minutes. Then the landing page lists 10 curated demo personas (`eval/demo_personas.yaml`) with their country, cards, what to try, and suggested prompts in ES and PT. One click opens a customer session; another opens the admin staff console. The demo OTP is shown on the landing page.
 
 ### 8.3 Repository map
 

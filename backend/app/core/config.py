@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     # Judges' quick access (ADR-036): mounts the public `/demo/*` routes. Off
     # by default; turned on only for the judging window.
     demo_quick_login: bool = False
+    # The code every `/demo/*` call must carry (`X-Demo-Access-Code`).
+    # Never committed, shared with judges by email. Empty means
+    # no gate, which `main.py` refuses under APP_ENV=prod.
+    demo_access_code: str = ""
     demo_personas_path: Path = Path("/app/eval/demo_personas.yaml")
     demo_repo_url: str = ""
     demo_docs_url: str = ""

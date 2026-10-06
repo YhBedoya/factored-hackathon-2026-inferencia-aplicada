@@ -9,24 +9,33 @@ frontend translates. The display name is read from `bank.customers` at
 request time and is never logged.
 
 The routes are mounted only when `DEMO_QUICK_LOGIN=true`
-(`app/api/v1/demo_access.py`).
+(`app/api/v1/demo_access.py`), and each call must carry `DEMO_ACCESS_CODE`
+(`check_access_code`). Wrong codes count against `rl:demo:<client>`, the
+same D7 counter shape as login, so the short code can't be guessed.
 """
 
+import hmac
 from typing import Any, Literal
 
+import structlog
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.errors import NotFound
 from app.domains.customers import service as customers_service
 from app.domains.identity import personas
+from app.domains.identity import service as identity_service
+from app.domains.identity.service import LoginLimiter, TooManyAttempts
 
 __all__ = [
+    "DemoCodeInvalid",
+    "DemoCodeRequired",
     "DemoPersona",
     "InvalidDemoCatalog",
     "Localized",
     "LocalizedList",
+    "check_access_code",
     "list_demo_personas",
     "load_demo_catalog",
     "resolve_customer_id",
@@ -45,8 +54,23 @@ Chip = Literal[
 ]
 
 
+_logger = structlog.get_logger()
+
+_RATE_LIMIT_KEY_PREFIX = "rl:demo:"
+
+
 class InvalidDemoCatalog(ValueError):
     """`demo_personas.yaml` names an id that is not a `dev` persona."""
+
+
+class DemoCodeRequired(Exception):
+    """The call carried no access code. Not counted: every landing-page load
+    asks for the catalog without one.
+    """
+
+
+class DemoCodeInvalid(Exception):
+    """The access code didn't match `DEMO_ACCESS_CODE`; counted as a failure."""
 
 
 class Localized(BaseModel):
@@ -154,3 +178,41 @@ async def list_demo_personas() -> list[DemoPersona]:
         )
         for entry, persona in pairs
     ]
+
+
+def _normalize(code: str) -> str:
+    # Judges type or paste it: case and stray spaces don't matter.
+    return code.strip().lower()
+
+
+async def check_access_code(
+    code: str | None,
+    client: str,
+    *,
+    limiter: LoginLimiter | None = None,
+    settings: Settings | None = None,
+) -> None:
+    """Pass when `code` matches `DEMO_ACCESS_CODE` (or none is set, dev only).
+
+    Raises `DemoCodeRequired` for a missing code, `DemoCodeInvalid` for a
+    wrong one (counted against `rl:demo:<client>`), and `TooManyAttempts`
+    once that counter is at `login_max_failures`, even for the right code.
+    Neither the code nor `client` is ever logged.
+    """
+    settings = settings or get_settings()
+    expected = _normalize(settings.demo_access_code)
+    if not expected:
+        return
+    given = _normalize(code or "")
+    if not given:
+        raise DemoCodeRequired("demo access code missing")
+
+    limiter = limiter or identity_service._default_limiter
+    key = f"{_RATE_LIMIT_KEY_PREFIX}{client}"
+    if await limiter.get_failures(key) >= settings.login_max_failures:
+        _logger.warning("demo.code_throttled")
+        raise TooManyAttempts("too many wrong demo access codes")
+    if not hmac.compare_digest(given.encode(), expected.encode()):
+        await limiter.record_failure(key, window_seconds=settings.login_window_seconds)
+        _logger.warning("demo.code_failed")
+        raise DemoCodeInvalid("demo access code did not match")

@@ -242,7 +242,9 @@ First user: `unrecognized_charge` with suspected compromise, where the plan is `
 - `POST /demo/sessions/staff` opens a session for the seeded `admin`.
 
 No password ever reaches the browser. The flag is off by default, and `test_demo_access.py` asserts the routes are absent without it.
-**Risk:** while the flag is on, anyone who reaches the URL can enter as those 10 personas or as admin and change their demo data. *Mitigation:* the data is synthetic, the flag is on only for the judging window, and `make demo-reset` on the box restores the golden DB (`POST /admin/demo/reset` is off in prod, `DEMO_RESET_ENABLED=false`, since admin is a one-click login there).
+
+*Amended 2026-10-05 (access code):* every `/demo/*` call also needs `DEMO_ACCESS_CODE` in `X-Demo-Access-Code`. It is a short code from SSM, sent with the judges' email and kept in the tab's `sessionStorage`. The button still shows, but the panel asks for the code first. The catalog is gated too, since it carries `DEMO_OTP_CODE`. Wrong codes count against `rl:demo:<X-Real-IP>` (the D7 limiter: 5 per 15 minutes, then `429` even for the right code), and `APP_ENV=prod` refuses to start with the flag on and no code. *Why:* the deployed URL is reachable by anyone who learns the IP, and the panel gave them admin in one click.
+**Risk:** anyone with the code can enter as those 10 personas or as admin and change their demo data. *Mitigation:* the code goes only to judges, guessing it is rate-limited, the data is synthetic, the flag is on only for the judging window, and `make demo-reset` on the box restores the golden DB (`POST /admin/demo/reset` is off in prod, `DEMO_RESET_ENABLED=false`, since admin is a one-click login there).
 **Alternatives:** keep credentials by email only (slower to evaluate); prefill the login forms (sends passwords to the browser); reuse `/test-idp` in prod (takes any `customer_id`, breaks R1).
 
 ### D3-A D4 — Step-up validity window · Resolved
