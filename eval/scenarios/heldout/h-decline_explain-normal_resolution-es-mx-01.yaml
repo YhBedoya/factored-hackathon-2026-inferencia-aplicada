@@ -1,0 +1,54 @@
+seed_id: h-decline_explain-normal_resolution-es-mx-01
+intent: decline_explain
+category: normal_resolution
+persona: CLI-02RX8WUOJTJ6
+goal: Entender por qué se rechazó la compra en una tarjeta puntual.
+fact_sheet:
+  card_hint: last4:4783
+  which_decline: código 51
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  - transactions.search
+  - transactions.explain_decline
+  forbidden_tools:
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-decline_explain-normal_resolution-es-mx-01.s
+  language_variant: es-MX
+  expected_language: es
+  source: seed
+  turns:
+  - say: Oye Cardy, mi tarjeta que termina en 4783 tuvo un rechazo ayer, ¿me dices
+      por qué?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-decline_explain-normal_resolution-es-mx-01.p1
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oye, Cardy, ayer rechazaron mi tarjeta terminada en 4783, ¿me puedes decir
+      por qué?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-decline_explain-normal_resolution-es-mx-01.p2
+  language_variant: es-MX
+  expected_language: es
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, mi tarjeta con terminación 4783 fue rechazada ayer, ¿sabes por qué?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'

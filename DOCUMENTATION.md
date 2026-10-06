@@ -119,7 +119,7 @@ All bank data is the organizers' synthetic LATAM Bank dataset. All policy (decli
 | | Eval scorecard in the staff console | Stretch |
 | **Frontend** | Landing, customer home ("Swip Panel"), chat, staff inbox, timeline, analytics; ES/PT toggle | Built |
 | **Eval** | Harness, simulator, judges, dev suite, metrics with CIs | Built |
-| | Frozen held-out suite run and reported | Partial |
+| | Frozen held-out suite run and reported | Built (tool-failure cases and LLM judge not run, §5.4) |
 | **Deployment** | Single EC2 + Docker Compose on AWS, TLS, SSM secrets, budget | Built |
 | | Judges' quick access (`DEMO_QUICK_LOGIN`) | Built |
 
@@ -1148,7 +1148,7 @@ flowchart LR
 
 - **Scenario labels:** expected intents and outcome (`resolved`, `clarified`, `abstained`, `handoff:<queue>`), required and forbidden tools, expected DB state, required handoff fields, expected language, eligibility for automation.
 - **Categories:** normal resolution, ambiguous, unsupported / out of market, human required, incorrect or missing data, expired session, unauthorized access, prompt injection (direct and via data fields), tool failures, multilingual ambiguity (portuñol, voseo, switches).
-- **Freeze:** held-out cases are staged in `_staging/heldout`, human-reviewed, then frozen with `make eval-freeze`; CI runs `make eval-freeze-check`. The harness refuses `--suite heldout` without the lock (R9).
+- **Freeze:** held-out cases are staged in `_staging/heldout`, human-reviewed, then frozen with `make eval-freeze`; CI runs `make eval-freeze-check`. The harness refuses `--suite heldout` without the lock (R9). Status: 150 cases (50 seeds × 3 phrasings) reviewed by one team member and frozen on 2026-10-05 (commit `4b02ebd`).
 - **Reproducibility:** each run records git SHA, model IDs, prompt versions, policy hash and suite hash.
 
 ### 5.3 Metrics
@@ -1168,12 +1168,63 @@ All rates carry *n* and a Wilson 95% CI, with breakdowns by language and custome
 
 ### 5.4 Results
 
-> **TODO.** Results will be filled in once the final runs are complete. Evaluations that exist or are planned:
-> - Trained intent classifier: cross-validation on the generated dataset (see `ml/intent/MODEL_CARD.md`).
-> - NLU comparison (keyword baseline vs trained classifier vs LLM reference) on the dev NLU items.
-> - End-to-end dev-suite runs (baseline vs proposed) under `eval/reports/`.
-> - Held-out suite run (`make eval SUITE=heldout SYSTEM=both RUNS=3 NLU=suite`): pending.
-> - LLM-judge agreement with human labels: pending.
+All numbers here are **offline evaluation**: scripted conversations against a clone of the golden database, not production traffic.
+
+#### Held-out suite (the headline)
+
+150 cases (50 seeds × 3 phrasings) across ES-MX, ES-CO, ES-AR, PT-BR and mixed language, covering every category in §5.2. The suite was frozen before it was run. 135 cases were run, and the 15 `tool_failure` cases were not (see the deviations below). Source: [`eval/reports/heldout-merged/`](eval/reports/heldout-merged/report.md).
+
+| Metric | Proposed (Cardy) | Baseline (keyword NLU) |
+|---|---|---|
+| Safe automated resolution | **60.8%** (73/120; 95% CI 51.9–69.1%) | 28.3% (34/120; 95% CI 21.0–37.0%) |
+| Containment | 88.9% (120/135) | 94.8% (128/135) |
+| Escalation recall | **100%** (15/15; 95% CI 79.6–100%) | 46.7% (7/15) |
+| Escalation precision | 100% (15/15) | 100% (7/7) |
+| Unsafe outcomes | 6.7% (9/135; see the error analysis) | 1.5% (2/135) |
+| Clarification accuracy | 80.0% (12/15) | 53.3% (8/15) |
+| Turn latency p50 / p95 | 5.7 s / 10.5 s | 86 ms / 127 ms |
+| Cost per case / per safe resolution | $0.075 / $0.140 | — |
+
+The two systems share the same flows, tools and policies, and differ only in the language layer. Cardy resolves more than twice as many eligible cases safely, and it catches every case that needs a human, where the baseline missed 8 of 15. The baseline's higher containment is not a strength: it keeps cases it should have handed off. The cost of the LLM layer is about 5.7 s per turn and $0.075 per case.
+
+**By language** (safe automated resolution, proposed / baseline): ES-MX 9/18 / 4/18 · ES-CO 14/21 / 2/21 · ES-AR 7/21 / 4/21 · PT-BR 36/39 / 20/39 · mixed 7/21 / 4/21. ES-AR and mixed-language cases are the weakest locales.
+
+**Error analysis.** We read every failing transcript. The 47 proposed misses fall into four groups:
+
+| Group | Cases | What happened |
+|---|---|---|
+| Real weak spots | 21 | Out-of-scope questions get a clarifying question instead of an abstention (5). Some declines get a question instead of the explanation (4). Mixed-language messages get a reply in the other language (6). For a block on someone else's card, Cardy asks "which card" instead of refusing, and it never reads or acts on that card (3). For an ambiguous block, it asks without first calling the required read tool (3). |
+| "Unsafe" from labels that forbid the customer's own reads | 9 | Cardy read the **signed-in customer's own** cards before asking which one, and the labels forbid that tool. No other customer's data was read and no action was taken. 3 of these also answered where the label expected a question, which is a judgment call. |
+| Out-of-date labels or test data | 15 | Cardy's clarifying question was correct for the persona's data, and the expected outcome was wrong. |
+| Doubtful language labels | 2 | Correct refusals. The message is almost all Portuguese, Cardy replied in Portuguese, and the label expects Spanish. |
+
+The suite is frozen, so no label was changed, and all 47 count as misses in the headline. The baseline's 2 unsafe cases are real: it explained a decline for another person, identified by their DNI. The per-seed list is in the merged report. Passing cases have a wording issue too: a plain prompt injection gets the same fixed template as a request for someone else's data ("if it's about another account, its holder must write to us"), which doesn't fit it. It is still a correct refusal.
+
+**How the number was produced, and deviations from the design:**
+
+- **Three runs, merged.** The first full run (`4b02ebd`, $7.89) ran out of API credits near the end, and 32 proposed cases got LLM errors. Their 11 seeds were re-run on the same code ($2.37). Each case keeps its latest verdict, and the baseline (deterministic) comes from the first run.
+- **One fix after the held-out run.** The first run showed that correct refusals of prompt injection or someone else's data (the fixed `injection_suspected` template, no tool calls) were recorded as route `unsupported` instead of `abstain`, so the harness scored them as `resolved`. Commit `db069bc` changes only the recorded route, not the reply or behavior, and the 7 affected seeds were re-run ($0.98). Before the fix the headline was 45.0% (54/120).
+- **One reviewer, not two (D11).** One team member reviewed all 150 cases before the freeze.
+- **One run, not three, and no LLM judge.** The proposed system ran once per case to stay within the API budget, and the NLU has no fixed temperature (ADR-031), so results vary between runs. Reply quality (the LLM judge) and its agreement with human labels were not measured.
+- **Tool-failure cases not run.** The driver skips any case with an injected fault, so the 15 `tool_failure` cases are not in any denominator. Fault handling is covered by unit tests (R11) and the degraded-mode runs below.
+- **Model.** The run used `claude-sonnet-5-5` for the agent and NLU (prompts `agent@v6`, `nlu@v7`) and Haiku 4.5 for handoff summaries, through the Anthropic API. Production runs Sonnet 4.6 on Bedrock (§4.1.13), so these numbers do not carry over directly to the deployed system.
+
+#### Degraded mode (LLM off) on the dev suite
+
+With the LLM disabled, the same 8 dev cases (4 seeds × 2 phrasings) were run three ways (`eval/reports/dev-db8b7c5706-*`):
+
+| Configuration | Safe automated resolution | Containment |
+|---|---|---|
+| No classifier (every degraded turn hands off) | 0/8 | 0/8 |
+| Trained classifier, every intent answered | 7/8 | 8/8 |
+| Trained classifier + shipped policy (`decline_explain`, `transaction_search`, `general_question` hand off in degraded mode) | 4/8 | 5/8 |
+
+We ship the third configuration on purpose: without the LLM, intents where a wrong answer costs more go to a human.
+
+#### Other evaluations
+
+- **Trained intent classifier:** macro-F1 0.941 (95% CI 0.924–0.958) in 5-fold cross-validation grouped by seed family. See §4.3.3 and `ml/intent/MODEL_CARD.md`.
+- **Dev suite smoke run** (`eval/reports/dev-c64dd67067`, 5 cases, 3 proposed runs): proposed 4/4 safe resolutions in every run, 0 unsafe; baseline 3/4, with 1 unsafe and its one needed handoff missed.
 
 ### 5.5 Testing strategy and CI
 
@@ -1479,7 +1530,7 @@ docs/               solution design, decision log, specs, plans, requirements, b
 - The trained classifier is trained on generated text; PT-BR is its weakest locale.
 - The production deployment uses Sonnet 4.6 for NLU and agent (the AWS project cannot call Claude 5 models).
 - Langfuse is local only; the public record is `audit.llm_calls`.
-- Held-out evaluation and LLM-judge agreement are pending (§5.4).
+- The held-out suite had one reviewer instead of two and one run instead of three; its 15 tool-failure cases were not run, and LLM-judge agreement is pending (§5.4).
 - Staff one-click actions and the eval scorecard are not built.
 
 **Path to production**

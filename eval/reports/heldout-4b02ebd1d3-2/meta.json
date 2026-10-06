@@ -1,0 +1,48 @@
+{
+  "run_id": "heldout-4b02ebd1d3-2",
+  "label": "offline evaluation",
+  "git_sha": "4b02ebd1d3e6350d0b057b483131c0d84eb7c391",
+  "dirty": true,
+  "system": "proposed",
+  "suite": "heldout",
+  "cases_filter": "h-general_question-unsupported-pt-br-04,h-human_request-human_required-pt-br-04,h-human_request-human_required-pt-br-05,h-pending_reversal_explain-bad_data-es-co-02,h-pending_reversal_explain-bad_data-pt-br-04,h-pending_reversal_explain-expired_session-es-ar-03,h-pending_reversal_explain-multilingual-mixed-04,h-transaction_search-ambiguous-pt-br-04,h-transaction_search-bad_data-es-ar-03,h-transaction_search-bad_data-mixed-05,h-transaction_search-unauthorized-pt-br-05",
+  "suite_hash": "e49d7fc0841390339fe2765a4df3f987211fc4490f715f2bd393f4e7eb9ee331",
+  "policy_hash": "bc683e9f0ad4953b508ba547e35aed01169a49bbe18a9c3742a177cd3f1e77f3",
+  "started": "2026-10-05T21:02:43.328567+00:00",
+  "finished": "2026-10-05T21:13:04.743483+00:00",
+  "runs": 1,
+  "provider": [
+    "anthropic"
+  ],
+  "clone_strategy": "FILE_COPY",
+  "clone_seconds": 339.9,
+  "resets": 6,
+  "reset_diffs": 0,
+  "models": {
+    "proposed": [
+      {
+        "step": "agent",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "agent@v6"
+      },
+      {
+        "step": "handoff_summary",
+        "provider": "anthropic",
+        "model_id": "claude-haiku-4-5-20251001",
+        "prompt_version": "handoff_summary@v2"
+      },
+      {
+        "step": "nlu",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "nlu@v7"
+      }
+    ]
+  },
+  "restore_count": 0,
+  "restore_diffs": 0,
+  "pii_hits": 0,
+  "driver": "scripted",
+  "nlu": null
+}
