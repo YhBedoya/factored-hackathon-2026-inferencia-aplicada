@@ -172,6 +172,7 @@ def test_r1_foreign_or_unpicked_charge_refused(
 
     monkeypatch.setattr(conversations_module, "start_turn", _recorder)
     monkeypatch.setattr(conversations_module, "_check_turn_caps", _no_caps)
+    monkeypatch.setattr(conversations_module, "_count_turn", _no_caps)
 
     async def run() -> None:
         # (a) the pick gate at the agent's dispute pause.
