@@ -60,7 +60,7 @@ All data shown is synthetic.
 
 ## 3. Try it
 
-During judging, the deployed app runs with **judges' quick access** on (`DEMO_QUICK_LOGIN=true`, ADR-036). An **"Acceso evaluadores"** button on the landing page opens a panel with:
+During judging, the deployed app runs with **judges' quick access** on (`DEMO_QUICK_LOGIN=true`, ADR-036). An **"Acceso evaluadores"** button on the landing page asks for the **access code** sent with the judges' email, then opens a panel with:
 
 - **10 demo personas** (`eval/demo_personas.yaml`) across MX, CO and AR. Each card says what that persona is good for: a bank-blocked card that routes to Fraudes, a card in arrears that routes to Cobranza, a recent decline with code 05 or 51, a pending charge, a reversed charge, a card about to expire, and more.
 - **Staff login as admin**, for the inbox, conversations and analytics.
@@ -68,7 +68,7 @@ During judging, the deployed app runs with **judges' quick access** on (`DEMO_QU
 
 Things to try: *"Perdí mi tarjeta, quiero bloquearla"*, *"¿Por qué rechazaron mi compra?"*, *"Não reconheço essa compra"*, *"Quiero hablar con una persona"*. Then open the staff inbox in another browser and take over the case.
 
-Quick access is off by default and only on during the judging window. To use it locally, set `DEMO_QUICK_LOGIN=true` in `.env` (see [§7](#7-run-it-locally)).
+Quick access is off by default and only on during the judging window. To use it locally, set `DEMO_QUICK_LOGIN=true` in `.env` (see [§7](#7-run-it-locally)); leave `DEMO_ACCESS_CODE` empty to skip the code prompt.
 
 ## 4. Architecture
 
@@ -178,7 +178,7 @@ What's in it:
 - **`SOURCE` / `LOAD_DATE`:** ingest source and date-offset overrides (see §7.5).
 - **LLM:** `LLM_PROVIDER` (`anthropic` locally, `bedrock` in prod) and `ANTHROPIC_API_KEY`.
 - **Observability:** `OTEL_EXPORTER_OTLP_ENDPOINT`, set by the compose observability overlay. Empty disables exporting.
-- **Judges' quick access:** `DEMO_QUICK_LOGIN=true` adds the "Acceso evaluadores" button (§3). It also shows `DEMO_OTP_CODE` and the `DEMO_REPO_URL` / `DEMO_DOCS_URL` links. Off by default.
+- **Judges' quick access:** `DEMO_QUICK_LOGIN=true` adds the "Acceso evaluadores" button (§3). It also shows `DEMO_OTP_CODE` and the `DEMO_REPO_URL` / `DEMO_DOCS_URL` links. `DEMO_ACCESS_CODE` is the code the panel asks for first (empty = no prompt; required under `APP_ENV=prod`). Off by default.
 
 ### 7.3 `make setup`
 
