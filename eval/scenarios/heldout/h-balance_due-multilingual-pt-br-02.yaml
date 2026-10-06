@@ -1,0 +1,50 @@
+seed_id: h-balance_due-multilingual-pt-br-02
+intent: balance_due
+category: multilingual
+persona: CLI-001KTTVQ14AC
+goal: Entender quanto precisa pagar, com um tom bem coloquial.
+fact_sheet:
+  register: pt_br_colloquial
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - balance_due
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools:
+  - cards.lock_card
+  - cards.unlock_card
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-balance_due-multilingual-pt-br-02.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: E aí Cardy, tipo, quanto que eu preciso pagar no cartão esse mês?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-balance_due-multilingual-pt-br-02.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: E aí, Cardy, quanto eu tenho que pagar no cartão este mês?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-balance_due-multilingual-pt-br-02.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oi, Cardy, qual valor preciso pagar no cartão neste mês?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'

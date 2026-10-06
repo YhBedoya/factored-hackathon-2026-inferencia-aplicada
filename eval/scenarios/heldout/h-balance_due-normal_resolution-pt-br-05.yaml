@@ -1,0 +1,50 @@
+seed_id: h-balance_due-normal_resolution-pt-br-05
+intent: balance_due
+category: normal_resolution
+persona: CLI-00R1HD1YN0Z6
+goal: Saber o pagamento mínimo do cartão de crédito.
+fact_sheet:
+  card_hint: credit
+setup:
+  faults: []
+  expire_session_before_turn: null
+  db_patches: []
+labels:
+  expected_intents:
+  - balance_due
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  forbidden_tools:
+  - cards.lock_card
+  - cards.unlock_card
+  - cards.order_replacement
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-balance_due-normal_resolution-pt-br-05.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Cardy, quanto eu preciso pagar esse mês no meu cartão?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-balance_due-normal_resolution-pt-br-05.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, qual valor preciso pagar no meu cartão este mês?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-balance_due-normal_resolution-pt-br-05.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Cardy, quanto tenho que pagar este mês pelo meu cartão?
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'

@@ -1,0 +1,42 @@
+{
+  "run_id": "heldout-db069bca25",
+  "label": "offline evaluation",
+  "git_sha": "db069bca25beb8c66df5cb4f320478df069005bf",
+  "dirty": true,
+  "system": "proposed",
+  "suite": "heldout",
+  "cases_filter": "h-card_status-unauthorized-es-co-02,h-card_status-unauthorized-pt-br-04,h-decline_explain-unauthorized-es-ar-03,h-general_question-injection-es-co-02,h-general_question-injection-es-mx-01,h-general_question-injection-mixed-05,h-transaction_search-unauthorized-pt-br-05",
+  "suite_hash": "e49d7fc0841390339fe2765a4df3f987211fc4490f715f2bd393f4e7eb9ee331",
+  "policy_hash": "bc683e9f0ad4953b508ba547e35aed01169a49bbe18a9c3742a177cd3f1e77f3",
+  "started": "2026-10-05T21:41:45.698679+00:00",
+  "finished": "2026-10-05T21:52:33.698757+00:00",
+  "runs": 1,
+  "provider": [
+    "anthropic"
+  ],
+  "clone_strategy": "FILE_COPY",
+  "clone_seconds": 448.7,
+  "resets": 6,
+  "reset_diffs": 0,
+  "models": {
+    "proposed": [
+      {
+        "step": "agent",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "agent@v6"
+      },
+      {
+        "step": "nlu",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-5-5",
+        "prompt_version": "nlu@v7"
+      }
+    ]
+  },
+  "restore_count": 0,
+  "restore_diffs": 0,
+  "pii_hits": 0,
+  "driver": "scripted",
+  "nlu": null
+}

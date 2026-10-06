@@ -294,9 +294,20 @@ make eval-freeze-check                             # CI: the held-out suite matc
 make intent-train && make intent-compare           # train and compare intent-classifier candidates
 ```
 
-The held-out suite is frozen (`eval/scenarios/heldout/`, R9). It is staged, reviewed by two humans, then frozen with `make eval-freeze`, and the harness refuses to run it without the lock. Reports land in `eval/reports/<suite>-<sha10>/`.
+The held-out suite (`eval/scenarios/heldout/`, R9) has 150 cases: 50 seeds, each with 3 phrasings, in ES-MX, ES-CO, ES-AR, PT-BR and mixed language. One team member reviewed every case, then it was frozen with `make eval-freeze`. The harness refuses to run it without the lock. Reports land in `eval/reports/<suite>-<sha10>/`.
 
-**Results:** see [DOCUMENTATION.md §5.4](DOCUMENTATION.md#54-results).
+**Held-out results** (offline evaluation, 135 cases run, Wilson 95% CI; [merged report](eval/reports/heldout-merged/report.md)):
+
+| Metric | Proposed (Cardy) | Baseline (keyword NLU) |
+|---|---|---|
+| Safe automated resolution | **60.8%** (73/120, CI 52–69%) | 28.3% (34/120, CI 21–37%) |
+| Escalation recall / precision | 15/15 / 15/15 | 7/15 / 7/7 |
+| Clarification accuracy | 80% (12/15) | 53% (8/15) |
+| Unsafe outcomes | 9/135 (see note) | 2/135 |
+| Turn latency p50 / p95 | 5.7 s / 10.5 s | 86 / 127 ms |
+| Cost per case | $0.075 | — |
+
+The 9 proposed "unsafe" cases are reads of the signed-in customer's **own** cards that the labels forbid. Cardy never read another customer's data or took an action it shouldn't. The baseline's 2 are real: it explained a decline for another person's DNI. A fix to how refusals are recorded came after the first held-out run. The 15 tool-failure cases were not run, and the run used Claude Sonnet 5.5 through the Anthropic API, not the Sonnet 4.6 on Bedrock that production uses. The error analysis and these caveats are in [DOCUMENTATION.md §5.4](DOCUMENTATION.md#54-results).
 
 ## 9. How we built it with Claude Code
 
@@ -401,7 +412,7 @@ In prod, `DEMO_RESET_ENABLED=false` and quick access is on only during judging. 
 - The intent classifier is trained on generated text. PT-BR is its weakest locale.
 - Production uses Claude Sonnet 4.6 for NLU and the agent, because the AWS project can't call Claude 5 models.
 - Langfuse runs locally only. In prod, the record of LLM calls is `audit.llm_calls`.
-- The held-out evaluation and the LLM-judge agreement study are pending.
+- The held-out suite was reviewed by one person (the design asked for two) and run once. Its 15 tool-failure cases were not run, and the LLM-judge agreement study is pending.
 - Staff one-click actions and the eval scorecard are not built.
 
 The path to production (ECS Fargate across AZs, RDS Multi-AZ, ElastiCache, private subnets with VPC endpoints, a real IdP, regulatory review) is in [DOCUMENTATION.md §9](DOCUMENTATION.md#9-limitations-and-path-to-production).

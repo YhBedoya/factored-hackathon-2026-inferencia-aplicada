@@ -1,0 +1,55 @@
+seed_id: h-decline_explain-expired_session-pt-br-04
+intent: decline_explain
+category: expired_session
+persona: CLI-00K5DRIG1GZT
+goal: Entender uma recusa e continuar a conversa depois que a sessão expira.
+fact_sheet:
+  card_hint: last4:0374
+setup:
+  faults: []
+  expire_session_before_turn: 1
+  db_patches: []
+labels:
+  expected_intents:
+  - decline_explain
+  expected_outcome: resolved
+  required_tools:
+  - cards.list_cards
+  - cards.get_card_details
+  - transactions.search
+  - transactions.explain_decline
+  forbidden_tools:
+  - cards.order_replacement
+  - disputes.create_claim
+  expected_db_state: []
+  required_handoff_fields: []
+  eligible_for_automation: true
+cases:
+- case_id: h-decline_explain-expired_session-pt-br-04.s
+  language_variant: pt-BR
+  expected_language: pt
+  source: seed
+  turns:
+  - say: Oi, minha compra foi recusada no cartão, pode me explicar por quê?
+  - say: Você ainda está aí? Continuo esperando saber o motivo.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-decline_explain-expired_session-pt-br-04.p1
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Oi, meu cartão recusou a compra. Você pode me dizer o motivo?
+  - say: Você ainda está por aí? Continuo aguardando para saber o motivo.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
+- case_id: h-decline_explain-expired_session-pt-br-04.p2
+  language_variant: pt-BR
+  expected_language: pt
+  source: paraphrase:gpt-6-luna:paraphrase@v1
+  turns:
+  - say: Olá, a compra que fiz foi recusada no cartão. Você consegue explicar por
+      quê?
+  - say: Ainda está aí? Sigo esperando até agora para entender o motivo.
+  reviewer: Yhorman Bedoya
+  reviewed_at: '2026-10-05'
